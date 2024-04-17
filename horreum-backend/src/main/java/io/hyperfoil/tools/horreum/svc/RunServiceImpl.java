@@ -572,7 +572,6 @@ public class RunServiceImpl implements RunService {
                 Optional.ofNullable(schemaUri), mapper);
 
         List<Integer> runIds = new ArrayList<>();
-        String responseString;
         if (datastore.uploadType() == Datastore.UploadType.MUILTI
                 && response.payload instanceof ArrayNode) {
 

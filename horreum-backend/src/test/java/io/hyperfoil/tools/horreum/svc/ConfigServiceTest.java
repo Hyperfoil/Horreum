@@ -11,6 +11,7 @@ import org.junit.jupiter.api.TestInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.hyperfoil.tools.horreum.api.data.datastore.CollectorApiDatastoreConfig;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
 import io.hyperfoil.tools.horreum.api.data.datastore.PostgresDatastoreConfig;
@@ -46,6 +47,34 @@ public class ConfigServiceTest extends BaseServiceTest {
 
     @org.junit.jupiter.api.Test
     public void parseDynamicConfig(TestInfo testInfo) {
+        String collectorApiDatastore = """
+                {
+                    "name":"CollectorAPI - Default",
+                    "config": {
+                        "url": "https://localhost",
+                        "apiKey": "RandomToken"
+                    },
+                    "type":"COLLECTORAPI",
+                    "owner":"dev-team",
+                    "access":2
+                }
+                """;
+
+        Datastore datastore = null;
+        Object config = null;
+        try {
+            datastore = mapper.readValue(collectorApiDatastore, Datastore.class);
+
+            config = mapper.readValue(datastore.config.toString(), datastore.type.getTypeReference());
+
+        } catch (JsonProcessingException e) {
+            fail(e);
+        }
+
+        assertNotNull(datastore);
+        assertNotNull(config);
+        assertTrue(config instanceof CollectorApiDatastoreConfig);
+
         String elasticDatastore = """
                 {
                     "name":"Elastic - Default",
@@ -61,8 +90,8 @@ public class ConfigServiceTest extends BaseServiceTest {
                 }
                 """;
 
-        Datastore datastore = null;
-        Object config = null;
+        datastore = null;
+        config = null;
         try {
             datastore = mapper.readValue(elasticDatastore, Datastore.class);
 

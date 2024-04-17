@@ -2524,6 +2524,23 @@ components:
       - RELATIVE_DIFFERENCE
       - EDIVISIVE
       type: string
+    CollectorApiDatastoreConfig:
+      description: Type of backend datastore
+      required:
+      - builtIn
+      - apiKey
+      - url
+      type: object
+      properties:
+        builtIn:
+          description: Built In
+          type: boolean
+        apiKey:
+          description: Collector API KEY
+          type: string
+        url:
+          description: "Collector url, e.g. https://collector.foci.life/api/v1/image-stats"
+          type: string
     ComparisonResult:
       description: Result of performing a Comparison
       type: object
@@ -2844,6 +2861,7 @@ components:
           enum:
           - POSTGRES
           - ELASTICSEARCH
+          - COLLECTORAPI
           type: string
           example: ELASTICSEARCH
     DatastoreTestResponse:
@@ -2858,6 +2876,7 @@ components:
       enum:
       - POSTGRES
       - ELASTICSEARCH
+      - COLLECTORAPI
       type: string
       example: ELASTICSEARCH
     EDivisiveDetectionConfig:
