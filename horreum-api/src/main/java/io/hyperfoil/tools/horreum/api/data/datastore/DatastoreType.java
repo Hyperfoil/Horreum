@@ -11,6 +11,8 @@ public enum DatastoreType {
     POSTGRES("POSTGRES", new TypeReference<PostgresDatastoreConfig>() {
     }),
     ELASTICSEARCH("ELASTICSEARCH", new TypeReference<ElasticsearchDatastoreConfig>() {
+    }),
+    COLLECTORAPI("COLLECTORAPI", new TypeReference<CollectorApiDatastoreConfig>() {
     });
 
     private static final DatastoreType[] VALUES = values();
