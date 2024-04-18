@@ -675,6 +675,7 @@ paths:
         description: query string to filter runs
         schema:
           type: string
+        example: $.*
       - name: matchAll
         in: query
         description: match all Runs?
@@ -3062,6 +3063,7 @@ components:
     FixedThresholdDetectionConfig:
       required:
       - builtIn
+      - model
       - min
       - max
       type: object
@@ -3069,6 +3071,10 @@ components:
         builtIn:
           description: Built In
           type: boolean
+        model:
+          enum:
+          - fixedThreshold
+          type: string
         min:
           description: Lower bound for acceptable datapoint values
           type: object
@@ -3462,6 +3468,7 @@ components:
     RelativeDifferenceDetectionConfig:
       required:
       - builtIn
+      - model
       - filter
       - window
       - threshold
@@ -3471,6 +3478,10 @@ components:
         builtIn:
           description: Built In
           type: boolean
+        model:
+          enum:
+          - relativeDifference
+          type: string
         filter:
           description: Relative Difference Detection filter
           type: string
