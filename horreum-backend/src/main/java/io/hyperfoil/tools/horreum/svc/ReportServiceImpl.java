@@ -271,16 +271,11 @@ public class ReportServiceImpl implements ReportService {
    @WithRoles
    @Transactional
    @Override
-   public void importTableReportConfig(JsonNode json) {
-      TableReportConfig config;
-      try {
-         config = Util.OBJECT_MAPPER.treeToValue(json, TableReportConfig.class);
-      } catch (JsonProcessingException e) {
-         throw ServiceException.badRequest("Cannot deserialize table report configuration: " + e.getMessage());
-      }
+   public void importTableReportConfig(TableReportConfig config) {
       validateTableConfig(config);
       config.ensureLinked();
-      em.merge(config);
+      TableReportConfigDAO trc = TableReportMapper.toTableReportConfig(config);
+      em.merge(trc);
    }
 
    @PermitAll

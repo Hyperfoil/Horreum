@@ -69,7 +69,7 @@ public interface ReportService {
 
    @POST
    @Path("table/config/import")
-   void importTableReportConfig(JsonNode config);
+   void importTableReportConfig(TableReportConfig config);
    
    class AllTableReports {
       @NotNull
