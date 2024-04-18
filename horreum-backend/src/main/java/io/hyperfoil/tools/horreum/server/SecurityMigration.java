@@ -26,7 +26,7 @@ public class SecurityMigration {
     private static final Logger LOGGER = Logger.getLogger("SecurityMigration");
 
     @ConfigProperty(name = "quarkus.keycloak.admin-client.server-url") Optional<String> keycloakURL;
-    @ConfigProperty(name = "horreum.keycloak.realm", defaultValue = "horreum") String realm;
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm", defaultValue = "horreum") String realm;
 
     @ConfigProperty(name = "horreum.roles.provider", defaultValue = "keycloak") String provider;
 
