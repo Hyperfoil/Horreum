@@ -7,7 +7,7 @@ on:
       - labeled
 
 env:
-  GITHUB_TOKEN: ${{ secrets.BACKPORT_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NO_SQUASH_OPTION: true
 
 jobs:
@@ -39,9 +39,12 @@ jobs:
         run: |
           echo "NO_SQUASH_OPTION=false" >> $GITHUB_ENV
       - name: Backporting
-        uses: kiegroup/git-backporting@v4.7.1
+        uses: kiegroup/git-backporting@v4
         with:
           target-branch: 0.12.x
           pull-request: ${{ github.event.pull_request.url }}
-          auth: ${{ secrets.BACKPORT_TOKEN }}
+          auth: ${{ secrets.GITHUB_TOKEN }}
           no-squash: ${{ env.NO_SQUASH_OPTION }}
+          strategy: ort
+          strategy-option: ours
+          enable-err-notification: true
