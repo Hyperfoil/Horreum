@@ -43,7 +43,7 @@ public class KeycloakUserBackend implements UserBackEnd {
 
     private static final String[] ROLE_TYPES = new String[] { "team", Roles.VIEWER, Roles.TESTER, Roles.UPLOADER, Roles.MANAGER };
 
-    @ConfigProperty(name = "horreum.keycloak.realm", defaultValue = "horreum") String realm;
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm", defaultValue = "horreum") String realm;
 
     // please make sure all calls to this object are in a try/catch block to avoid leaking information
     @Inject Keycloak keycloak;
