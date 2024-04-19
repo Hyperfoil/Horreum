@@ -17,7 +17,4 @@ jobs:
         run: npm install prettier
 
       - name: Check formatting
-        run: |
-          if [[ -n "$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} -- horreum-web/package-lock.json)" ]]; then
-            npx prettier --check "horreum-web/package-lock.json"
-          fi
+        run: npx prettier --check "horreum-web/package-lock.json"
