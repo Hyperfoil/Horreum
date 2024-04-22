@@ -9,6 +9,7 @@ on:
 
 jobs:
   build:
+    name: Build on ${{ matrix.os.name }}
     strategy:
       matrix:
         os:
@@ -41,6 +42,17 @@ jobs:
       run: mvn --version
     - name: Build and Test
       run: mvn clean install -B --file pom.xml ${{ matrix.os.build-options }}
+    - name: Check uncommitted changes
+      if: matrix.os.name == 'ubuntu-latest'
+      run: |
+        clean=$(git status --porcelain)
+        if [[ -z "$clean" ]]; then
+          echo "Empty git status --porcelain: $clean"
+        else
+          echo "Uncommitted file changes detected: $clean"
+          git diff
+          exit 1
+        fi
     - name: Upload artifact for failed workflow
       if: failure()
       uses: actions/upload-artifact@v3
