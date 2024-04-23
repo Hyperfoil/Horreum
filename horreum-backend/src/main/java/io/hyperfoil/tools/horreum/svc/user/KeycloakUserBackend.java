@@ -32,7 +32,7 @@ import static java.text.MessageFormat.format;
 
 /**
  * Implementation of {@link UserBackEnd} using an external Keycloak server.
- * <p/>
+ * 
  * Relies on keycloak-admin-client to manage user information.
  */
 @ApplicationScoped
