@@ -63,16 +63,16 @@ git checkout horreum-web/package-lock.json
 Then run the [Maven](https://maven.apache.org/) release procedure
 
 ```bash
-mvn -DskipTests clean javadoc:javadoc install
-mvn -Darguments=-DskipTests release:prepare
-mvn -Darguments=-DskipTests release:perform
+CI=true mvn -DskipTests clean javadoc:javadoc install
+CI=true mvn -Darguments=-DskipTests release:prepare
+CI=true mvn -Darguments=-DskipTests release:perform
 ```
 
 Now we can build the tag
 
 ```bash
 git checkout <tag>
-mvn -DskipTests -DskipITs clean install
+CI=true mvn -DskipTests -DskipITs clean install
 ```
 
 and find the image using
