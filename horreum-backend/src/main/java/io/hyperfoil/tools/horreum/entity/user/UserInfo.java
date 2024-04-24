@@ -2,10 +2,6 @@ package io.hyperfoil.tools.horreum.entity.user;
 
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import io.quarkus.security.jpa.Password;
-import io.quarkus.security.jpa.Roles;
-import io.quarkus.security.jpa.UserDefinition;
-import io.quarkus.security.jpa.Username;
 import jakarta.persistence.Cacheable;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
@@ -36,21 +32,18 @@ import java.util.Set;
  */
 @Entity
 @Table(name = "userinfo")
-@UserDefinition
 @Cacheable
 public class UserInfo extends PanacheEntityBase {
     @Id
     @NotNull
-    @Username
     public String username;
 
-    @Password String password;
+    String password;
 
     @Column(name = "email") public String email;
     @Column(name = "first_name") public String firstName;
     @Column(name = "last_name") public String lastName;
 
-    @Roles
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(
