@@ -35,7 +35,7 @@ import asyncio
 > `asyncio` is required because the client leverages it to perform async requests to the server.
 
 ```python
-from horreum import new_horreum_client
+from horreum import new_horreum_client, HorreumCredentials
 ```
 
 > `new_horreum_client` utility function to setup the `HorreumClient` instance
@@ -43,7 +43,7 @@ from horreum import new_horreum_client
 Initialize the Horreum client
 
 ```python
-client = await new_horreum_client(base_url="http://localhost:8080", username="user", password="secret")
+client = await new_horreum_client(base_url="http://localhost:8080", credentials=HorreumCredentials(username=username, password=password))
 ```
 
 Now let's start playing with it
@@ -87,7 +87,13 @@ var (
 Initialize the Horreum client
 
 ```go
-client, err := horreum.NewHorreumClient("http://localhost:8080", &username, &password)
+client, err := horreum.NewHorreumClient("http://localhost:8080",
+		&horreum.HorreumCredentials{
+			Username: &username,
+			Password: &password,
+		},
+		nil,
+	)
 if err != nil {
     log.Fatalf("error creating Horreum client: %s", err.Error())
 }
