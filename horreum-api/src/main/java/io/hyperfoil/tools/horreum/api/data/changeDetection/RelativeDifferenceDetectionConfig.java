@@ -8,9 +8,8 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
  * Concrete configuration type for io.hyperfoil.tools.horreum.changedetection.RelativeDifferenceChangeDetectionModel
  */
 public class RelativeDifferenceDetectionConfig  extends BaseChangeDetectionConfig {
-    @Schema(type = SchemaType.STRING, required = true, example = "relativeDifference",
-            description = "model descriminator")
-    public static final String model = "relativeDifference";
+    @Schema(type = SchemaType.STRING, required = true, enumeration = { "relativeDifference" })
+    public String model;
     @Schema(type = SchemaType.STRING, required = true, example = "mean",
             description = "Relative Difference Detection filter")
     public String filter;

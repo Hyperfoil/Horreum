@@ -18,14 +18,16 @@ public class ChangeDetection {
     public String model;
     @NotNull
     @JsonProperty( required = true )
-    @Schema(type = SchemaType.OBJECT, discriminatorProperty = "model",
-            discriminatorMapping = {
-                    @DiscriminatorMapping(schema = RelativeDifferenceDetectionConfig.class, value = "relativeDifference"),
-                    @DiscriminatorMapping(schema = FixedThresholdDetectionConfig.class, value = "fixedThreshold")
-            },
+    @Schema(
+        type = SchemaType.OBJECT,
+        discriminatorProperty = "model",
+        discriminatorMapping = {
+            @DiscriminatorMapping(schema = RelativeDifferenceDetectionConfig.class, value = "relativeDifference"),
+            @DiscriminatorMapping(schema = FixedThresholdDetectionConfig.class, value = "fixedThreshold")
+        },
         oneOf = {
-                RelativeDifferenceDetectionConfig.class,
-                FixedThresholdDetectionConfig.class
+            RelativeDifferenceDetectionConfig.class,
+            FixedThresholdDetectionConfig.class
         }
     )
     public ObjectNode config;
