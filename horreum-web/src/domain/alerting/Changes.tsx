@@ -259,7 +259,7 @@ export default function Changes(props: ChangesProps) {
         if (lineType !== "linear") {
             query += "&line=" + lineType
         }
-        return "?" + query.replace(/^&/, '');
+        return query.replace(/^&/, '');
     }
     useEffect(() => {
         if (!selectedTest) {
@@ -267,7 +267,10 @@ export default function Changes(props: ChangesProps) {
             return
         }
         document.title = `${selectedTest.id} | Horreum`
-        navigate(location.pathname + createQuery(false))
+        const query = createQuery(false)
+        if (query !== "") {
+            navigate(location.pathname + "?" + query)
+        }
     }, [selectedTest, selectedFingerprint, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {
         setPanels([])
