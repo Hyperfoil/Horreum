@@ -209,9 +209,6 @@ type ActionsProps = {
 const Actions = (props: ActionsProps) => {
     return (
         <div>
-            <NavLink className="pf-v5-c-button pf-m-primary" to={"/changes?test=" + props.testName}>
-                Go to changes
-            </NavLink>
             {props.isTester && (
                 <>
                     <Button variant="secondary" onClick={props.onCopy}>
