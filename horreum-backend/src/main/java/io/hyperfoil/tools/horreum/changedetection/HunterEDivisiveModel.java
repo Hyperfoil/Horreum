@@ -242,6 +242,10 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
 
             try (InputStream confInputStream = HunterEDivisiveModel.class.getClassLoader().getResourceAsStream("changeDetection/hunter.yaml")) {
 
+                if ( confInputStream == null ){
+                    log.error("Could not extract Hunter configuration from archive");
+                    return;
+                }
 
                 try( OutputStream confOut = new FileOutputStream(confFile)){
                     confOut.write(confInputStream.readAllBytes());
