@@ -13,7 +13,7 @@ public interface ChangeDetectionModel {
     ConditionConfig config();
 
     ChangeDetectionModelType type();
-    void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer);
+    void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer) throws ChangeDetectionException;
     ModelType getType();
 
 }

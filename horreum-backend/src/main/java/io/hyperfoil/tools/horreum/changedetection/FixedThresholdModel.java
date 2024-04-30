@@ -39,7 +39,7 @@ public class FixedThresholdModel implements ChangeDetectionModel {
    }
 
    @Override
-   public void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer) {
+   public void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer) throws ChangeDetectionException{
       DataPointDAO dp = dataPoints.get(0);
 
       try {
@@ -64,8 +64,9 @@ public class FixedThresholdModel implements ChangeDetectionModel {
          }
 
       } catch (JsonProcessingException e) {
-         log.errorf("Failed to parse configuration for variable %d", dp.variable.id, e);
-         throw new RuntimeException(e);
+         String errMsg = String.format("Failed to parse configuration for variable %d", dp.variable.id);
+         log.error(errMsg, e);
+         throw new ChangeDetectionException(errMsg, e);
       }
 
    }
