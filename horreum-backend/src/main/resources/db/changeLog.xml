@@ -4493,4 +4493,37 @@
             WHERE changedetection.id=subquery.newID;
         </sql>
     </changeSet>
+
+    <changeSet id="120" author="johara">
+        <validCheckSum>ANY</validCheckSum>
+        <createTable tableName="changedetectionlog">
+            <column name="id" type="bigint">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="level" type="integer">
+                <constraints nullable="false" />
+            </column>
+            <column name="timestamp" type="timestamptz">
+                <constraints nullable="false" />
+            </column>
+            <column name="variableid" type="integer" />
+            <column name="fingerprint" type="jsonb" />
+            <column name="message" type="text">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+
+        <sql>
+            GRANT select, insert, delete, update ON TABLE changedetectionlog TO "${quarkus.datasource.username}";
+            ALTER TABLE changedetectionlog ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY cdl_all ON changedetectionlog FOR ALL
+                USING (has_role('horreum.system'));
+        </sql>
+
+        <createSequence sequenceName="changedetectionlog_id_generator" startValue="1" incrementBy="1" cacheSize="1" />
+        <sql>
+            select setval('changedetectionlog_id_generator', (select max(id)+1 from changedetectionlog), false);
+            GRANT ALL ON SEQUENCE changedetectionlog_id_generator TO "${quarkus.datasource.username}";
+        </sql>
+    </changeSet>
 </databaseChangeLog>

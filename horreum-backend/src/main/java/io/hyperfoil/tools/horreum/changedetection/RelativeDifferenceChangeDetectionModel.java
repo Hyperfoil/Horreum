@@ -57,7 +57,7 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
     }
 
     @Override
-    public void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer) {
+    public void analyze(List<DataPointDAO> dataPoints, JsonNode configuration, Consumer<ChangeDAO> changeConsumer) throws ChangeDetectionException {
         DataPointDAO dataPoint = dataPoints.get(0);
 
         try {
@@ -89,8 +89,9 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
                     filteredValue = windowStats.getMean();
                     break;
                 default:
-                    log.errorf("Unsupported option 'filter'='%s' for variable %d, skipping analysis.", config.filter, dataPoint.variable.id);
-                    return;
+                    String errMsg = String.format("Unsupported option 'filter'='%s' for variable %d, skipping analysis.", config.filter, dataPoint.variable.id);
+                    log.error(errMsg);
+                    throw new ChangeDetectionException(errMsg);
             }
 
             double ratio = filteredValue / previousStats.getMean();
@@ -122,8 +123,9 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
             }
 
         } catch (JsonProcessingException e) {
-            log.errorf("Failed to parse configuration for variable %d", dataPoint.variable.id, e);
-            throw new RuntimeException(e);
+            String errMsg = String.format("Failed to parse configuration for variable %d", dataPoint.variable.id);
+            log.error(errMsg, e);
+            throw new ChangeDetectionException(errMsg, e);
         }
 
 
