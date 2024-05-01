@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - 0.12.x
+      - 0.13.x
     paths:
       - "docs/site/content/en/openapi/openapi.yaml"
 
