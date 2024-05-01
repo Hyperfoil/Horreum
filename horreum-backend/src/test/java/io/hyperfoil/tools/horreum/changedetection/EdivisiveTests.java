@@ -86,8 +86,8 @@ public class EdivisiveTests extends BaseServiceTest {
 
             assertFalse(valid);
 
+            tmpFiles.cleanup();
 
-            //todo:: cleanup temp files
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -148,7 +148,7 @@ public class EdivisiveTests extends BaseServiceTest {
 
             assertEquals(1535410, changePoints.get(0).dataset.id);
 
-            model.cleanupTmpFiles(tmpFiles);
+            tmpFiles.cleanup();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
