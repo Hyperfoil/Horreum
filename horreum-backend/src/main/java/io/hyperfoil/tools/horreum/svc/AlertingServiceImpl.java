@@ -701,7 +701,7 @@ public class AlertingServiceImpl implements AlertingService {
                   });
                } catch (ChangeDetectionException e) {
                   new ChangeDetectionLogDAO(variable, fingerprint, PersistentLogDAO.ERROR, e.getLocalizedMessage()).persist();
-                  throw new RuntimeException(e);
+                  log.error("An error occurred while running change detection!", e);
                }
             }
          }

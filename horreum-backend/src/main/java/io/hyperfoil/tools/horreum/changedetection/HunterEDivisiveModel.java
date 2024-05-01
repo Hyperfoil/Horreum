@@ -102,31 +102,11 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
             );
         } finally {
             if (tmpFiles != null) {
-                cleanupTmpFiles(tmpFiles);
+                tmpFiles.cleanup();
             }
         }
     }
 
-    protected void cleanupTmpFiles(TmpFiles tmpFiles) {
-        if( tmpFiles.tmpdir.exists() ) {
-            clearDir(tmpFiles.tmpdir);
-        } else {
-            log.debugf("Trying to cleanup temp files, but they do not exist!");
-        }
-    }
-
-
-    private void clearDir(File dir){
-        Arrays.stream(dir.listFiles()).forEach(file -> {
-            if ( file.isDirectory() ){
-                clearDir(file);
-            }
-            file.delete();
-        });
-        if(!dir.delete()){
-            log.errorf("Failed to cleanup up temporary files: %s", dir.getAbsolutePath());
-        }
-    }
 
     protected void processChangePoints(Function<Integer, Optional<DataPointDAO>> changePointSupplier, Consumer<ChangeDAO> changeConsumer, TmpFiles tmpFiles, Instant sinceInstance) {
         String command = "hunter analyze horreum --since '" + sinceInstance.toString() + "'";
@@ -257,6 +237,25 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
                 log.error("Could not create temporary file for Hunter eDivisive algorithm", e);
             }
 
+        }
+        protected void cleanup() {
+            if( tmpdir.exists() ) {
+                clearDir(tmpdir);
+            } else {
+                log.debugf("Trying to cleanup temp files, but they do not exist!");
+            }
+        }
+
+        private void clearDir(File dir){
+            Arrays.stream(dir.listFiles()).forEach(file -> {
+                if ( file.isDirectory() ){
+                    clearDir(file);
+                }
+                file.delete();
+            });
+            if(!dir.delete()){
+                log.errorf("Failed to cleanup up temporary files: %s", dir.getAbsolutePath());
+            }
         }
     }
 
