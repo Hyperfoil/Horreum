@@ -15,8 +15,6 @@
         <excludeTags>CiTests</excludeTags>
     </properties>
 
-
-
     <dependencies>
         <dependency>
             <groupId>io.hyperfoil.tools</groupId>
@@ -91,6 +89,10 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc-deployment</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -252,6 +254,18 @@
                 <version>${version.maven.compiler}</version>
                 <configuration>
                     <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>io.quarkus</groupId>
+                            <artifactId>quarkus-extension-processor</artifactId>
+                            <version>${quarkus.version}</version>
+                        </path>
+                        <path>
+                            <groupId>io.quarkus</groupId>
+                            <artifactId>quarkus-panache-common</artifactId>
+                            <version>${quarkus.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
