@@ -3,4 +3,11 @@ node_modules
 package-lock.json
 package.json
 build
-.git
+
+# Ignore all HTML files:
+**/*.html
+
+**/.git
+**/.svn
+**/.hg
+.vscode
