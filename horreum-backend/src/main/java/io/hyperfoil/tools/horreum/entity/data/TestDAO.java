@@ -18,6 +18,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.NamedQuery;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.NotNull;
 
@@ -35,9 +36,16 @@ import static jakarta.persistence.GenerationType.SEQUENCE;
 import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 
+@NamedQuery(
+    name = TestDAO.QUERY_TEST_NAME,
+    query = "SELECT name FROM test WHERE id = ?1"
+)
 @Entity(name="test")
 @JsonIgnoreType
 public class TestDAO extends PanacheEntityBase {
+
+   public static final String QUERY_TEST_NAME = "TestDAO.getNameById";
+
    @Id
    @GenericGenerator(
          name = "testIdGenerator",

@@ -16,6 +16,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import jakarta.transaction.SystemException;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
@@ -178,8 +179,9 @@ public class NotificationServiceImpl implements NotificationService {
    }
 
    public void notifyMissingDataset(int testId, String ruleName, long maxStaleness, Instant lastTimestamp) {
-      TestDAO test = TestDAO.findById(testId);
-      String testName = test != null ? test.name : "<unknown test>";
+      String name = em.createNamedQuery(TestDAO.QUERY_TEST_NAME, String.class)
+         .setParameter(1, testId).getSingleResult();
+      String testName = name != null ? name : "<unknown test>";
       notifyAll(testId, n -> n.notifyMissingDataset(testName, testId, ruleName, maxStaleness, lastTimestamp));
    }
 
