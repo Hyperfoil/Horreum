@@ -9,7 +9,7 @@ RUN INSTALL_PKGS="python3 python3-devel python3-setuptools python3-pip python3-p
     rpm -V $INSTALL_PKGS && \
     rpm -e --nodeps redhat-logos-httpd && \
     microdnf -y clean all --enablerepo='*'
-USER 1001
+USER 185
 RUN pip install git+https://github.com/datastax-labs/hunter
 COPY src/main/resources/horreum.sh /deployments/
 COPY src/main/resources/k8s-setup.sh /deployments/
