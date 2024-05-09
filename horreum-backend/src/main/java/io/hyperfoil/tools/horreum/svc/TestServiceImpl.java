@@ -32,7 +32,6 @@ import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
-import io.quarkus.security.UnauthorizedException;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -40,7 +39,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
-import jakarta.persistence.Query;
 import jakarta.persistence.Tuple;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
@@ -66,8 +64,7 @@ import java.util.stream.Collectors;
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
 
-   private static final String UPDATE_NOTIFICATIONS = "UPDATE test SET notificationsenabled = ? WHERE id = ?";
-   private static final String CHANGE_ACCESS = "UPDATE test SET owner = ?, access = ? WHERE id = ?";
+   protected static final String WILDCARD = "*";
    //using find and replace because  ASC or DESC cannot be set with a parameter
    //@formatter:off
    protected static final String FILTER_PREFIX = "WHERE ";
@@ -157,9 +154,10 @@ public class TestServiceImpl implements TestService {
       TestDAO test = null;
       if (input.matches("-?\\d+")) {
          int id = Integer.parseInt(input);
+         // there could be some issue if name is numeric and corresponds to another test id
          test =  TestDAO.find("name = ?1 or id = ?2", input, id).firstResult();
       }
-      if (test == null) {//intellij is wrong, test is not always null here
+      if (test == null) {
          test =  TestDAO.find("name", input).firstResult();
       }
       if (test == null) {
@@ -169,19 +167,19 @@ public class TestServiceImpl implements TestService {
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-   public TestDAO ensureTestExists(String input, String token){
+   public TestDAO ensureTestExists(String testNameOrId, String token){
       TestDAO test;// = TestMapper.to(getByNameOrId(input)); //why does getByNameOrId not work to create the DAO?
-      if (input.matches("-?\\d+")) {
-         int id = Integer.parseInt(input);
-         test = TestDAO.find("name = ?1 or id = ?2", input, id).firstResult();
+      if (testNameOrId.matches("-?\\d+")) {
+         int id = Integer.parseInt(testNameOrId);
+         test = TestDAO.find("name = ?1 or id = ?2", testNameOrId, id).firstResult();
       } else {
-         test = TestDAO.find("name", input).firstResult();
+         test = TestDAO.find("name", testNameOrId).firstResult();
       }
       if (test != null) {// we won't return the whole entity with any data
          TestDAO detached = new TestDAO();
          detached.id = test.id;
          detached.owner = test.owner;
-         detached.name = input;
+         detached.name = testNameOrId;
          detached.backendConfig = test.backendConfig;
          if (Roles.hasRoleWithSuffix(identity, test.owner, "-uploader")) {
             return detached;
@@ -189,12 +187,12 @@ public class TestServiceImpl implements TestService {
             return detached;
          }
          log.debugf("Failed to retrieve test %s as this user (%s = %s) is not uploader for %s and token %s does not match",
-               input, identity.getPrincipal().getName(), identity.getRoles(), test.owner, token);
+               testNameOrId, identity.getPrincipal().getName(), identity.getRoles(), test.owner, token);
       } else {
-         log.debugf("Failed to retrieve test %s - could not find it in the database", input);
+         log.debugf("Failed to retrieve test %s - could not find it in the database", testNameOrId);
       }
       // we need to be vague about the test existence
-      throw ServiceException.badRequest("Cannot upload to test " + input);
+      throw ServiceException.badRequest("Cannot upload to test " + testNameOrId);
    }
 
    @Override
@@ -222,9 +220,7 @@ public class TestServiceImpl implements TestService {
          test.notificationsEnabled = true;
       }
       test.folder = normalizeFolderName(test.folder);
-      if ("*".equals(test.folder)) {
-         throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
-      }
+      checkWildcardFolder(test.folder);
       if(test.transformers != null && !test.transformers.isEmpty())
          verifyTransformersBeforeAdd(test);
       if (existing != null) {
@@ -253,7 +249,7 @@ public class TestServiceImpl implements TestService {
             test = em.merge(test);
             em.flush();
          } catch (PersistenceException e) {
-            if (e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
+            if (e instanceof org.hibernate.exception.ConstraintViolationException) {
                throw new ServiceException(Response.Status.CONFLICT, "Could not persist test due to another test.");
             } else {
                throw new WebApplicationException(e, Response.serverError().build());
@@ -322,7 +318,7 @@ public class TestServiceImpl implements TestService {
       testSql.append("datasets AS (SELECT testid, count(id) as count FROM dataset GROUP BY testid) ");
       testSql.append("SELECT test.id,test.name,test.folder,test.description, COALESCE(datasets.count, 0) AS datasets, COALESCE(runs.count, 0) AS runs,test.owner,test.access ");
       testSql.append("FROM test LEFT JOIN runs ON runs.testid = test.id LEFT JOIN datasets ON datasets.testid = test.id");
-      boolean anyFolder = "*".equals(folder);
+      boolean anyFolder = WILDCARD.equals(folder);
       if (anyFolder) {
          Roles.addRolesSql(identity, "test", testSql, roles, 1, " WHERE");
       } else {
@@ -393,16 +389,24 @@ public class TestServiceImpl implements TestService {
       if (folder == null) {
          return null;
       }
-      if (folder.endsWith("/")) {
-         folder = folder.substring(0, folder.length() - 1);
-      }
+      // cleanup the string from leading and trailing spaces before additional cleanups
       folder = folder.trim();
+      if (folder.endsWith("/")) {
+         folder = folder.substring(0, folder.length() - 1).trim();
+      }
+
       if (folder.isEmpty()) {
          folder = null;
       }
       return folder;
    }
 
+   /**
+    * This will return all distinct folder based on the provided roles plus the root folder which is
+    * represented by a null object in the returned list
+    * @param roles user roles
+    * @return list of distinct strings (the folders)
+    */
    @Override
    @PermitAll
    @WithRoles
@@ -430,12 +434,13 @@ public class TestServiceImpl implements TestService {
       }
       folders = new ArrayList<>(result);
       folders.sort(String::compareTo);
+      // this represents the root folder
       folders.add(0, null);
       return folders;
    }
 
    @Override
-   @RolesAllowed("tester")
+   @RolesAllowed(Roles.TESTER)
    @WithRoles
    @Transactional
    public int addToken(int testId, TestToken dto) {
@@ -452,7 +457,7 @@ public class TestServiceImpl implements TestService {
    }
 
    @Override
-   @RolesAllowed("tester")
+   @RolesAllowed(Roles.TESTER)
    @WithRoles
    public Collection<TestToken> tokens(int testId) {
       TestDAO t = TestDAO.findById(testId);
@@ -461,7 +466,7 @@ public class TestServiceImpl implements TestService {
    }
 
    @Override
-   @RolesAllowed("tester")
+   @RolesAllowed(Roles.TESTER)
    @WithRoles
    @Transactional
    public void dropToken(int testId, int tokenId) {
@@ -471,50 +476,49 @@ public class TestServiceImpl implements TestService {
    }
 
    @Override
-   @RolesAllowed("tester")
+   @RolesAllowed(Roles.TESTER)
    @WithRoles
    @Transactional
    // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-   public void updateAccess(int id,
-                            String owner,
-                            Access access) {
-      Query query = em.createNativeQuery(CHANGE_ACCESS);
-      query.setParameter(1, owner);
-      query.setParameter(2, access.ordinal());
-      query.setParameter(3, id);
-      try {
-         if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Access change failed (missing permissions?)");
-         }
-      } catch ( UnauthorizedException ue) {
-         throw ServiceException.forbidden("Changing access of Test " + id + " is not permitted. You are not defined as a `tester` for the `"+ owner + "` team. Please update your permissions and try again.");
-      }
-   }
+   public void updateAccess(int testId, String owner, Access access) {
+      TestDAO test = (TestDAO) TestDAO.findByIdOptional(testId).orElseThrow(() -> ServiceException.notFound("Test not found"));
 
-   @Override
-   @RolesAllowed("tester")
-   @WithRoles
-   @Transactional
-   public void updateNotifications(int id,
-                                   boolean enabled) {
-      Query query = em.createNativeQuery(UPDATE_NOTIFICATIONS)
-            .setParameter(1, enabled)
-            .setParameter(2, id);
-      if (query.executeUpdate() != 1) {
+      test.owner = owner;
+      test.access = access;
+      try {
+         // need persistAndFlush otherwise we won't catch SQLGrammarException
+         test.persistAndFlush();
+      } catch (Exception e) {
          throw ServiceException.serverError("Access change failed (missing permissions?)");
       }
    }
 
-   @RolesAllowed("tester")
+   @Override
+   @RolesAllowed(Roles.TESTER)
+   @WithRoles
+   @Transactional
+   public void updateNotifications(int testId, boolean enabled) {
+      TestDAO test = (TestDAO) TestDAO.findByIdOptional(testId).orElseThrow(() -> ServiceException.notFound("Test not found"));
+
+      test.notificationsEnabled = enabled;
+      try {
+         // need persistAndFlush otherwise we won't catch SQLGrammarException
+         test.persistAndFlush();
+      } catch (Exception e) {
+         throw ServiceException.serverError("Notification change failed (missing permissions?)");
+      }
+   }
+
+   @RolesAllowed(Roles.TESTER)
    @WithRoles
    @Transactional
    @Override
    public void updateFolder(int id, String folder) {
-      if ("*".equals(folder)) {
-         throw new IllegalArgumentException("Illegal folder name '*': this is used as wildcard.");
-      }
+      // normalize the folder before checking the wildcard
+      String normalizedFolder = normalizeFolderName(folder);
+      checkWildcardFolder(normalizedFolder);
       TestDAO test = getTestForUpdate(id);
-      test.folder = normalizeFolderName(folder);
+      test.folder = normalizedFolder;
       test.persist();
    }
 
@@ -840,9 +844,20 @@ public class TestServiceImpl implements TestService {
       if (test == null) {
          throw ServiceException.notFound("Test " + testId + " was not found");
       }
-      if (!identity.hasRole(test.owner) || !identity.hasRole(test.owner.substring(0, test.owner.length() - 4) + "tester")) {
+      if (!identity.hasRole(test.owner) || !identity.hasRole(test.owner.substring(0, test.owner.length() - 4) + Roles.TESTER)) {
          throw ServiceException.forbidden("This user is not an owner/tester for " + test.owner);
       }
       return test;
+   }
+
+   /**
+    * Check if the provided folder matches the WILDCARD, if so throws an error
+    * @param folder string folder to check
+    * @throws IllegalArgumentException if the folder matches the WILDCARD
+    */
+   protected void checkWildcardFolder(String folder) {
+      if (WILDCARD.equals(folder)) {
+         throw new IllegalArgumentException("Illegal folder name '" + WILDCARD + "': this is used as wildcard.");
+      }
    }
 }
