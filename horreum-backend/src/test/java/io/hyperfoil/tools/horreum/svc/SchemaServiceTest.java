@@ -222,11 +222,11 @@ class SchemaServiceTest extends BaseServiceTest {
    void testUpdateTokenWithInvalidSchemaId() {
       jsonRequest().post("/api/schema/9999/resetToken")
           .then()
-          .statusCode(500);
+          .statusCode(404);
 
       jsonRequest().delete("/api/schema/9999/dropToken")
           .then()
-          .statusCode(500);
+          .statusCode(404);
    }
 
    @org.junit.jupiter.api.Test
