@@ -61,7 +61,7 @@ function usageToCells(u: LabelLocation) {
                     Report config <b>{loc.title}</b> in {loc.where} {loc.name ? loc.name : ""}
                 </DataListCell>,
                 <DataListCell key={1}>
-                    <ButtonLink to={`/reports/table/config/${loc.configId}`}>Go to</ButtonLink>
+                    <ButtonLink to={`/test/${loc.testId}/reports/table/config/${loc.configId}`}>Go to</ButtonLink>
                 </DataListCell>,
             ]
         }
