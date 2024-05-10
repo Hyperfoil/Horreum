@@ -44,7 +44,7 @@ export default function ListReportsModal({ isOpen, onClose, summary, onReload }:
                             {summary.reports.map(({ id, created }) => (
                                 <Tr key={id}>
                                     <Td>
-                                        <NavLink to={`/reports/table/${id}`}>
+                                        <NavLink to={`/test/${summary.testId}/reports/table/${id}`}>
                                             <ArrowRightIcon />
                                             {"\u00A0"}
                                             {id}
