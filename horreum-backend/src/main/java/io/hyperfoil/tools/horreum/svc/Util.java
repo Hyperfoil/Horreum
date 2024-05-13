@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +16,15 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.*;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.node.*;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Default;
+import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.enterprise.inject.spi.CDI;
+import jakarta.inject.Qualifier;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.OptimisticLockException;
@@ -49,6 +59,9 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
+import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 public class Util {
    private static final Logger log = Logger.getLogger(Util.class);
    public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -64,6 +77,28 @@ public class Util {
    static {
       OBJECT_MAPPER.registerModule(new JavaTimeModule());
    }
+
+   @Qualifier
+   @Retention(RUNTIME)
+   @Target({METHOD, FIELD, PARAMETER, TYPE})
+   public @interface FailUnknownProperties {}
+
+
+   @Produces
+   @FailUnknownProperties
+   @ApplicationScoped
+   public ObjectMapper producerObjectMapper() {
+      BeanManager beanManager = CDI.current().getBeanManager();
+
+      Bean<ObjectMapper> bean = (Bean<ObjectMapper>) beanManager.resolve(beanManager.getBeans(ObjectMapper.class));
+      ObjectMapper objectMapper = beanManager.getContext(bean.getScope()).get(bean, beanManager.createCreationalContext(bean));
+
+      ObjectMapper customMapper = objectMapper.copy();
+      customMapper.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+      return customMapper;
+   }
+
 
    static String destringify(String str) {
       if (str == null || str.isEmpty()) {

@@ -1,11 +1,10 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.api.data.Extractor;
-import io.hyperfoil.tools.horreum.api.data.Label;
-import io.hyperfoil.tools.horreum.api.data.Schema;
-import io.hyperfoil.tools.horreum.api.data.Transformer;
+import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
@@ -35,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.keycloak.util.JsonSerialization.mapper;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -45,6 +45,9 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
 
    @Inject
    SchemaService schemaService;
+
+   @Inject
+   ObjectMapper objectMapper;
 
    @org.junit.jupiter.api.Test
    void testCreateSchema() {
@@ -647,6 +650,82 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
       thrown = assertThrows(ServiceException.class, () -> schemaService.deleteLabel(999, id));
       assertEquals(String.format("Label %d does not belong to schema %d", id, 999), thrown.getMessage());
       assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
+   }
+
+   @org.junit.jupiter.api.Test
+   void testImportSchemaWithValidStructure() throws JsonProcessingException {
+      String schemaImport = """
+              {
+                "labels" : [ {
+                  "name" : "kb_report_results_podLatencyQuantilesMeasurement_quantiles_Ready_P99",
+                  "filtering" : true,
+                  "metrics" : true,
+                  "schemaId" : "221",
+                  "access" : "PUBLIC",
+                  "owner" : "TEAM_NAME",
+                  "extractors" : [ {
+                    "name" : "P99",
+                    "jsonpath" : "$.results.podLatencyQuantilesMeasurement.quantiles.Ready.P99",
+                    "isarray" : false
+                  } ]
+                } ],
+                "transformers": [],
+                "id": 221,
+                "uri": "urn:kube-burner-report:0.1",
+                "name": "kube-burner-report",
+                "description": "Kube Burner test for the report variant of results",
+                "schema": {
+                  "$id": "urn:kube-burner-report:0.2",
+                  "type": "object",
+                  "$schema": "http://json-schema.org/draft-07/schema#"
+                },
+                "access": "PUBLIC",
+                "owner": "TEAM_NAME"
+              }              """;
+
+      ObjectNode schemaJson = (ObjectNode) objectMapper.readTree(schemaImport.replaceAll("TEAM_NAME", FOO_TEAM));
+      schemaService.importSchema(schemaJson);
+
+   }
+
+   @org.junit.jupiter.api.Test
+   void testImportSchemaWithInvalidStructure() throws JsonProcessingException {
+      String schemaImport = """
+              {
+                "labels" : [ {
+                  "name" : "kb_report_results_podLatencyQuantilesMeasurement_quantiles_Ready_P99",
+                  "filtering" : true,
+                  "metrics" : true,
+                  "schemaId" : "221",
+                  "acccess" : "PUBLIC",
+                  "owner" : "TEAM_NAME",
+                  "extractors" : [ {
+                    "name" : "P99",
+                    "path" : "$.results.podLatencyQuantilesMeasurement.quantiles.Ready.P99",
+                    "isarray" : false
+                  } ]
+                } ],
+                "transformers": [],
+                "id": 221,
+                "uri": "urn:kube-burner-report:0.2",
+                "name": "kube-burner-report",
+                "description": "Kube Burner test for the report variant of results",
+                "schema": {
+                  "$id": "urn:kube-burner-report:0.2",
+                  "type": "object",
+                  "$schema": "http://json-schema.org/draft-07/schema#"
+                },
+                "acccess": "PUBLIC",
+                "owner": "TEAM_NAME"
+              }        
+              """;
+
+      ObjectNode schemaJson = (ObjectNode) objectMapper.readTree(schemaImport.replaceAll("TEAM_NAME", FOO_TEAM));
+
+
+      ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.importSchema(schemaJson));
+      assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
+
    }
 
    // utility to create a schema in the db, tested with testCreateSchema
