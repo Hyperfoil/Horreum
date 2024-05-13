@@ -1,5 +1,10 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -116,6 +121,7 @@ public class SchemaServiceImpl implements SchemaService {
    Session session;
 
    @Inject
+   @Util.FailUnknownProperties
    ObjectMapper mapper;
 
    @WithToken
@@ -849,7 +855,14 @@ public class SchemaServiceImpl implements SchemaService {
    @Transactional
    @Override
    public void importSchema(ObjectNode node) {
-      SchemaExport importSchema = Util.OBJECT_MAPPER.convertValue(node, SchemaExport.class);
+      SchemaExport importSchema;
+
+      try {
+         importSchema = mapper.convertValue(node, SchemaExport.class);
+      } catch (IllegalArgumentException e){
+            throw ServiceException.badRequest("Failed to parse Schema definition: "+e.getMessage());
+      }
+
       boolean newSchema = true;
       SchemaDAO schema = null;
       if (importSchema.id != null) {

@@ -100,6 +100,7 @@ public class TestServiceImpl implements TestService {
 
    //@formatter:on
    @Inject
+   @Util.FailUnknownProperties
    ObjectMapper mapper;
 
    @Inject
@@ -818,7 +819,15 @@ public class TestServiceImpl implements TestService {
    @Transactional
    @Override
    public void importTest(ObjectNode node) {
-      TestExport newTest = Util.OBJECT_MAPPER.convertValue(node, TestExport.class);
+
+      TestExport newTest;
+
+      try {
+         newTest = mapper.convertValue(node, TestExport.class);
+      } catch (IllegalArgumentException e){
+         throw ServiceException.badRequest("Failed to parse Test definition: "+e.getMessage());
+      }
+
       //need to add logic for datastore
       if(newTest.datastore != null) {
          //first check if datastore already exists
