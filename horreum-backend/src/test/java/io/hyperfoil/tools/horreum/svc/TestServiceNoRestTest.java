@@ -1,5 +1,8 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestToken;
@@ -40,6 +43,9 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
    @Inject
    TestService testService;
+
+   @Inject
+   ObjectMapper objectMapper;
 
    @org.junit.jupiter.api.Test
    void testCreateTest() {
@@ -522,6 +528,117 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
       test = TestDAO.findById(t.id);
       assertNull(test.folder);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testImportTestWithValidStructure() throws JsonProcessingException {
+      String testImport  = """
+              {
+                "access": "PUBLIC",
+                "owner": "TEAM_NAME",
+                "name": "Quarkus - config-quickstart - JVM",
+                "folder": "quarkus",
+                "description": "",
+                "datastoreId": null,
+                "tokens": null,
+                "timelineLabels": [],
+                "timelineFunction": null,
+                "fingerprintLabels": [
+                  "buildType"
+                ],
+                "fingerprintFilter": null,
+                "compareUrl": null,
+                "transformers": [],
+                "notificationsEnabled": true,
+                "variables": [],
+                "missingDataRules": [],
+                "experiments": [],
+                "actions": [],
+                "subscriptions": null,
+                "datastore": null
+              }
+              """;
+
+      ObjectNode testJson = (ObjectNode) objectMapper.readTree(testImport .replaceAll("TEAM_NAME", FOO_TEAM));
+      testService.importTest(testJson);
+
+   }
+
+   @org.junit.jupiter.api.Test
+   void testImportTestWithIncorrectTeam() throws JsonProcessingException {
+      String testImport  = """
+              {
+                "access": "PUBLIC",
+                "owner": "perf-team",
+                "id": 14,
+                "name": "Quarkus - config-quickstart - JVM",
+                "folder": "quarkus",
+                "description": "",
+                "datastoreId": null,
+                "tokens": null,
+                "timelineLabels": [],
+                "timelineFunction": null,
+                "fingerprintLabels": [
+                  "buildType"
+                ],
+                "fingerprintFilter": null,
+                "compareUrl": null,
+                "transformers": [],
+                "notificationsEnabled": true,
+                "variables": [],
+                "missingDataRules": [],
+                "experiments": [],
+                "actions": [],
+                "subscriptions": {},
+                "datastore": null
+              }
+              """;
+
+      ObjectNode testJson = (ObjectNode) objectMapper.readTree(testImport);
+
+
+      ServiceException thrown = assertThrows(ServiceException.class, () -> testService.importTest(testJson));
+      assertEquals(Response.Status.FORBIDDEN.getStatusCode(), thrown.getResponse().getStatus());
+      assertEquals("This user does not have the perf-team role!", thrown.getMessage());
+
+   }
+
+
+      @org.junit.jupiter.api.Test
+   void testImporttestWithInvalidStructure() throws JsonProcessingException {
+         String testImport  = """
+              {
+                "accccess": "PUBLIC",
+                "ownerrr": "TEAM_NAME",
+                "name": "Quarkus - config-quickstart - JVM",
+                "folder": "quarkus",
+                "description": "",
+                "datastoreId": null,
+                "tokens": null,
+                "timelineLabels": [],
+                "timelineFunction": null,
+                "fingerprintLabels": [
+                  "buildType"
+                ],
+                "fingerprintFilter": null,
+                "compareUrl": null,
+                "transformers": [],
+                "notificationsEnabled": true,
+                "variables": [],
+                "missingDataRules": [],
+                "experiments": [],
+                "actions": [],
+                "subscriptions": null,
+                "datastore": null
+              }
+              """;
+
+      ObjectNode testJson = (ObjectNode) objectMapper.readTree(testImport.replaceAll("TEAM_NAME", FOO_TEAM));
+
+
+      ServiceException thrown = assertThrows(ServiceException.class, () -> testService.importTest(testJson));
+      assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
+
    }
 
    // utility to create a sample test and add to Horreum
