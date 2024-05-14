@@ -36,7 +36,7 @@ export default function ImportButton({label, onLoad, onImport, onImported}: Impo
     }
     return (
         <>
-            <Button variant="secondary" onClick={() => setOpen(true)}>
+            <Button style={{marginRight: "16px", width: "100pt"}} variant="secondary" onClick={() => setOpen(true)}>
                 {label || "Import"}
             </Button>
             <Modal
