@@ -1,5 +1,15 @@
 import React, {useMemo, useEffect, useState, useContext} from "react"
-import {Card, CardHeader, CardFooter, CardBody, PageSection, Pagination, Flex, FlexItem} from "@patternfly/react-core"
+import {
+    Card,
+    CardHeader,
+    CardFooter,
+    CardBody,
+    PageSection,
+    Pagination,
+    Flex,
+    FlexItem,
+    FormGroup
+} from "@patternfly/react-core"
 import {NavLink, useNavigate} from "react-router-dom"
 
 import {useTester, teamsSelector, teamToName, isAuthenticatedSelector} from "../../auth"
@@ -9,12 +19,13 @@ import Table from "../../components/Table"
 import ActionMenu, {useChangeAccess, useDelete} from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
 import {CellProps, Column} from "react-table"
-import {Access, SortDirection, Schema, schemaApi} from "../../api"
+import {Access, SortDirection, Schema, schemaApi, SchemaExport} from "../../api"
 import TeamSelect, {ONLY_MY_OWN, Team, createTeam} from "../../components/TeamSelect";
 import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
+import ImportButton from "../../components/ImportButton";
 
 type C = CellProps<Schema>
 
@@ -159,6 +170,23 @@ export default function SchemaList() {
                             </FlexItem>
 
                             <FlexItem align={{ default: 'alignRight' }}>
+                                <ImportButton
+                                    label="Import schema"
+                                    onLoad={config => {
+                                        const overridden = schemas.find(s => s.id === config.id)
+                                        return overridden ? (
+                                            <>
+                                                This configuration is going to override schema {overridden.name} ({overridden.id})
+                                                {config?.name !== overridden.name && ` using new name ${config?.name}`}.<br />
+                                                <br />
+                                                Do you really want to proceed?
+                                            </>
+                                        ) : null
+                                    }}
+                                    onImport={config => schemaApi.importSchema(config as SchemaExport)}
+                                    onImported={ reloadSchemas }
+                                />
+
                                 <ButtonLink style={{marginRight: "16px", width: "100pt"}} to="/schema/_new">New
                                     Schema</ButtonLink>
                             </FlexItem>
