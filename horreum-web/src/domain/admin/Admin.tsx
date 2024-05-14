@@ -29,6 +29,7 @@ export default function Admin() {
                                 title="Administrators"
                                 fragment="administrators"
                                 onSave={saveFunc(adminFuncsRef)}
+                                canSave={true}
                                 onReset={resetFunc(adminFuncsRef)}
                                 isModified={modifiedFunc(adminFuncsRef)}
                             >
@@ -38,6 +39,7 @@ export default function Admin() {
                                 title="Teams"
                                 fragment="teams"
                                 onSave={saveFunc(teamsFuncsRef)}
+                                canSave={true}
                                 onReset={resetFunc(teamsFuncsRef)}
                                 isModified={modifiedFunc(teamsFuncsRef)}
                             >

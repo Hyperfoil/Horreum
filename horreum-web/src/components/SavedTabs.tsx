@@ -24,6 +24,7 @@ export function modifiedFunc(ref: TabFunctionsRef) {
 }
 
 type SavedTabProps = FragmentTabProps & {
+    canSave: boolean
     onSave(): Promise<any>
     onReset?(): void
     isModified(): boolean
@@ -63,7 +64,7 @@ export default function SavedTabs(props: SavedTabsProps) {
                 onSave={() => {
                     const childProps = children[activeKey.current].props
                     if ("onSave" in childProps) {
-                        return childProps.onSave().then(_ => {
+                        return childProps.onSave?.().then(_ => {
                             blocker.proceed?.()
                             if (props.afterSave) {
                                 return props.afterSave()
@@ -91,7 +92,7 @@ export default function SavedTabs(props: SavedTabsProps) {
                     <FragmentTab key={i} {...c.props} />
                 ))}
             </FragmentTabs>
-            {props.canSave !== false && "onSave" in children[activeKey.current].props && (
+            {props.canSave !== false && "canSave" in children[activeKey.current].props && (children[activeKey.current].props as SavedTabProps).canSave && (
                 <ActionGroup style={{ marginTop: 0 }}>
                     <Button
                         variant="primary"
@@ -101,7 +102,7 @@ export default function SavedTabs(props: SavedTabsProps) {
                             const childProps = children[activeKey.current].props
                             if ("onSave" in childProps) {
                                 childProps
-                                    .onSave()
+                                    .onSave?.()
                                     .then(() => {
                                         if (props.afterSave) {
                                             return props.afterSave()

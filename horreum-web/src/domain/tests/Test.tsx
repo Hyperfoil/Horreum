@@ -8,10 +8,8 @@ import {
     BreadcrumbItem,
     Bullseye,
     Card,
-    CardBody,
-    CardHeader,
-    Flex,
-    FlexItem,
+    CardBody, Form,
+    FormGroup,
     PageSection,
     Spinner,
     Toolbar,
@@ -26,13 +24,12 @@ import TestSettings from "./TestSettings"
 import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
 import Experiments from "./Experiments"
-import TestExportImport from "./TestExportImport"
 import ActionsUI from "./ActionsUI"
 import Access from "./Access"
 import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
 import MissingDataNotifications from "./MissingDataNotifications"
-import {fetchTest, fetchViews, Test, View} from "../../api";
+import {fetchTest, fetchViews, Test, testApi, View} from "../../api";
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
@@ -40,6 +37,7 @@ import TestDatasets from "../runs/TestDatasets";
 import Changes from "../alerting/Changes";
 import Reports from "../reports/Reports";
 import RunList from "../runs/RunList";
+import ExportButton from "../../components/ExportButton";
 
 type Params = {
     testId: string
@@ -124,6 +122,7 @@ export default function TestView() {
                                 fragment="run"
                                 isHidden={testIdVal <= 0}
                                 isModified={() => modified}
+                                canSave={false}
                                 onSave={() => Promise.resolve()}
                                 onReset={() => Promise.resolve()}
                             >
@@ -134,6 +133,7 @@ export default function TestView() {
                                 fragment="data"
                                 isHidden={testIdVal <= 0}
                                 isModified={() => modified}
+                                canSave={false}
                                 onSave={() => Promise.resolve()}
                                 onReset={() => Promise.resolve()}
                             >
@@ -145,6 +145,7 @@ export default function TestView() {
                                 fragment="changes"
                                 isHidden={testIdVal <= 0}
                                 isModified={() => modified}
+                                canSave={false}
                                 onSave={() => Promise.resolve()}
                                 onReset={() => Promise.resolve()}
                             >
@@ -158,6 +159,7 @@ export default function TestView() {
                                 fragment="reports-tab"
                                 isHidden={testIdVal <= 0}
                                 isModified={() => modified}
+                                canSave={false}
                                 onSave={() => Promise.resolve()}
                                 onReset={() => Promise.resolve()}
                             >
@@ -167,6 +169,7 @@ export default function TestView() {
                             <SavedTab
                                 title="Settings"
                                 fragment="settings"
+                                canSave={true}
                                 onSave={saveFunc(generalFuncsRef)}
                                 onReset={resetFunc(generalFuncsRef)}
                                 isModified={() => modified}
@@ -181,6 +184,7 @@ export default function TestView() {
                             <SavedTab
                                 title="Access"
                                 fragment="access"
+                                canSave={true}
                                 onSave={saveFunc(accessFuncsRef)}
                                 onReset={resetFunc(accessFuncsRef)}
                                 isModified={() => modified}
@@ -191,6 +195,7 @@ export default function TestView() {
                                 title="Views"
                                 fragment="views"
                                 isHidden={testIdVal <= 0}
+                                canSave={true}
                                 onSave={saveFunc(viewFuncsRef)}
                                 onReset={resetFunc(viewFuncsRef)}
                                 isModified={() => modified}
@@ -207,6 +212,7 @@ export default function TestView() {
                                 title="Change detection"
                                 fragment="vars"
                                 isHidden={testIdVal <= 0}
+                                canSave={true}
                                 onSave={saveFunc(variablesFuncsRef)}
                                 onReset={resetFunc(variablesFuncsRef)}
                                 isModified={() => modified}
@@ -234,6 +240,7 @@ export default function TestView() {
                                 title="Missing data notifications"
                                 fragment="missingdata"
                                 isHidden={testIdVal <= 0}
+                                canSave={true}
                                 onSave={saveFunc(missingDataFuncsRef)}
                                 onReset={resetFunc(missingDataFuncsRef)}
                                 isModified={() => modified}
@@ -248,6 +255,7 @@ export default function TestView() {
                                 title="Experiments"
                                 fragment="experiments"
                                 isHidden={testIdVal <= 0}
+                                canSave={true}
                                 onSave={saveFunc(experimentsFuncsRef)}
                                 onReset={resetFunc(experimentsFuncsRef)}
                                 isModified={() => modified}
@@ -258,6 +266,7 @@ export default function TestView() {
                                 title="Actions"
                                 fragment="actions"
                                 isHidden={testIdVal <= 0 || !isTester}
+                                canSave={true}
                                 onSave={saveFunc(actionsFuncsRef)}
                                 onReset={resetFunc(actionsFuncsRef)}
                                 isModified={() => modified}
@@ -273,6 +282,7 @@ export default function TestView() {
                                 title="Subscriptions"
                                 fragment="subscriptions"
                                 isHidden={testIdVal <= 0 || !isTester}
+                                canSave={true}
                                 onSave={saveFunc(subscriptionsFuncsRef)}
                                 onReset={resetFunc(subscriptionsFuncsRef)}
                                 isModified={() => modified}
@@ -288,6 +298,7 @@ export default function TestView() {
                                 title="Transformers"
                                 fragment="transformers"
                                 isHidden={testIdVal <= 0}
+                                canSave={true}
                                 onSave={saveFunc(transformersFuncsRef)}
                                 onReset={resetFunc(transformersFuncsRef)}
                                 isModified={modifiedFunc(transformersFuncsRef)}
@@ -305,11 +316,17 @@ export default function TestView() {
                             <SavedTab
                                 title="Export"
                                 fragment="export"
-                                isHidden={testIdVal <= 0 || !isTester}
+                                canSave={false}
                                 onSave={() => Promise.resolve()}
+                                isHidden={testIdVal <= 0 || !isTester}
                                 isModified={() => false}
                             >
-                                <TestExportImport name={test?.name || "test"} id={testIdVal} />
+                                <Form isHorizontal>
+                                    <FormGroup label="Export" fieldId="export">
+                                        <ExportButton name={test?.name || "test"} export={() => testApi._export(testIdVal)} />
+                                    </FormGroup>
+                                </Form>
+
                             </SavedTab>
                         </SavedTabs>
                     </CardBody>

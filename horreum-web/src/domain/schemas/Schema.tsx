@@ -38,10 +38,10 @@ import TeamSelect from "../../components/TeamSelect"
 import Transformers from "./Transformers"
 import Labels from "./Labels"
 import {Access, getSchema, Schema as SchemaDef, schemaApi, Banner as BannerData} from "../../api"
-import SchemaExportImport from "./SchemaExportImport"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import { TimeoutBanner, TimeoutBannerProps } from "../../Banner"
+import ExportButton from "../../components/ExportButton";
 
 type SchemaParams = {
     schemaId: string
@@ -314,6 +314,7 @@ export default function Schema() {
                                 title="General"
                                 fragment="general"
                                 onSave={save}
+                                canSave={true}
                                 onReset={() => {
                                     setModifiedSchema(schema)
                                 }}
@@ -332,6 +333,7 @@ export default function Schema() {
                                 title="JSON schema"
                                 fragment="json-schema"
                                 onSave={save}
+                                canSave={true}
                                 onReset={() => {
                                     setModifiedSchema(schema)
                                     setEditorSchema(schema?.schema ? toString(schema?.schema) : undefined)
@@ -384,6 +386,7 @@ export default function Schema() {
                                 title="Transformers"
                                 fragment="transformers"
                                 onSave={saveFunc(transformersFuncsRef)}
+                                canSave={true}
                                 onReset={resetFunc(transformersFuncsRef)}
                                 isModified={modifiedFunc(transformersFuncsRef)}
                             >
@@ -397,6 +400,7 @@ export default function Schema() {
                                 title="Labels"
                                 fragment="labels"
                                 onSave={saveFunc(labelsFuncsRef)}
+                                canSave={true}
                                 onReset={resetFunc(labelsFuncsRef)}
                                 isModified={modifiedFunc(labelsFuncsRef)}
                             >
@@ -405,12 +409,18 @@ export default function Schema() {
                             <SavedTab
                                 title="Export"
                                 fragment="export"
-                                onSave={() => Promise.resolve()}
                                 onReset={noop}
+                                canSave={false}
+                                onSave={() => Promise.resolve()}
                                 isHidden={!isTester}
                                 isModified={() => false}
                             >
-                                <SchemaExportImport id={schemaIdVal} name={schema?.name || "schema"} />
+
+                                <Form isHorizontal>
+                                    <FormGroup label="Export" fieldId="export">
+                                        <ExportButton name={schema?.name || "schema"} export={() => schemaApi.exportSchema(schemaIdVal)} />
+                                    </FormGroup>
+                                </Form>
                             </SavedTab>
                         </SavedTabs>
                     </CardBody>

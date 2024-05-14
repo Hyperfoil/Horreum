@@ -115,6 +115,7 @@ export function UserSettings() {
                         <SavedTab
                             title="My profile"
                             fragment="profile"
+                            canSave={true}
                             onSave={() => updateDefaultTeam(defaultTeam.key)}
                             onReset={() => {
                                 setDefaultTeam(createTeam(prevDefaultTeam))
@@ -133,6 +134,7 @@ export function UserSettings() {
                         <SavedTab
                             title="Personal notifications"
                             fragment="personal-notifications"
+                            canSave={true}
                             onSave={() => {
                                 const username = profile?.username || "user-should-be-set"
                                 return notificationsApi.updateSettings(username, false, personal || []).catch(
@@ -157,6 +159,7 @@ export function UserSettings() {
                         <SavedTab
                             title="Team-notifications"
                             fragment="team-notifications"
+                            canSave={true}
                             onSave={() => {
                                 const teamname = selectedTeam || "team-should-be-set"
                                 return notificationsApi.updateSettings(teamname, true, team || []).catch(
@@ -210,6 +213,7 @@ export function UserSettings() {
                                 title="Managed teams"
                                 fragment="managed-teams"
                                 isModified={() => modified}
+                                canSave={true}
                                 onSave={() => teamFuncsRef.current?.save() || Promise.resolve()}
                                 onReset={() => teamFuncsRef.current?.reset()}
                             >
