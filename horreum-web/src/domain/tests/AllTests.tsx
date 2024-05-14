@@ -1,4 +1,4 @@
-import {useContext, useEffect, useMemo, useState} from "react"
+import React, {useContext, useEffect, useMemo, useState} from "react"
 
 import {useSelector} from "react-redux"
 
@@ -47,12 +47,13 @@ import {
     TestStorage,
     updateAccess,
     updateFolder,
-    fetchFolders
+    fetchFolders, testApi, TestExport
 } from "../../api"
 import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import FoldersDropDown from "../../components/FoldersDropdown";
+import ImportButton from "../../components/ImportButton";
 
 type WatchDropdownProps = {
     id: number
@@ -459,6 +460,23 @@ export default function AllTests() {
 
                         {isTester && (
                             <FlexItem align={{ default: 'alignRight' }}>
+                                <ImportButton
+                                    label="Import test"
+                                    onLoad={config => {
+                                        const overridden = allTests.find(t => t.id === config?.id)
+                                        return overridden ? (
+                                            <>
+                                                This configuration is going to override test {overridden.name} ({overridden.id})
+                                                {config?.name !== overridden.name && ` using new name ${config?.name}`}.<br />
+                                                <br />
+                                                Do you really want to proceed?
+                                            </>
+                                        ) : null
+                                    }}
+                                    onImport={config => testApi.importTest(config as TestExport)}
+                                    onImported={() => loadTests()}
+                                />
+
                                 <ButtonLink to="/test/_new#settings">New Test</ButtonLink>
                             </FlexItem>
                         )}

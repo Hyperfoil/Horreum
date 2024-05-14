@@ -14,14 +14,12 @@ import {
     TextInput, FlexItem
 } from "@patternfly/react-core"
 import FolderSelect from "../../components/FolderSelect"
-import OptionalFunction from "../../components/OptionalFunction"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
 import {Test, Access, sendTest, configApi, Datastore, apiCall} from "../../api"
 import { useTester, defaultTeamSelector } from "../../auth"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import TestImportButton from "./TestImportButton";
 
 type GeneralProps = {
     test?: Test
@@ -113,19 +111,6 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
     return (
         <>
             <Form isHorizontal={true}>
-                <FormGroup
-                    label="Import"
-                    isRequired={false}
-                    fieldId="import"
-                >
-                    {/*TODO implement the import action for real*/}
-                    <TestImportButton
-                        // tests={allTests || []}
-                        tests={[]}
-                        onImported={() => loadTests()}
-                    />
-
-                </FormGroup>
                 <FormGroup
                     label="Name"
                     isRequired={true}
