@@ -24,6 +24,7 @@ import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.it.profile.InContainerProfile;
+import io.hyperfoil.tools.horreum.svc.Roles;
 import io.quarkus.test.junit.QuarkusIntegrationTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.junit.callback.QuarkusTestAfterAllCallback;
@@ -46,6 +47,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -365,21 +367,26 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
     private void instantiateClient() {
         if (horreumClient == null) {
-            String horreumBaseUrl = "http://localhost:".concat(System.getProperty("quarkus.http.test-port"));
             horreumClient = new HorreumClient.Builder()
-                    .horreumUrl(horreumBaseUrl + "/")
-                    .horreumUser("user")
-                    .horreumPassword("secret")
+                    .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
+                    .horreumUser("horreum.bootstrap")
+                    .horreumPassword(ItResource.HORREUM_BOOTSTRAP_PASSWORD)
                     .build();
 
             Assertions.assertNotNull(horreumClient);
-
         }
     }
 
     @Override
     public void beforeClass(Class<?> testClass) {
         instantiateClient();
+
+        horreumClient.userService.addTeam("dev-team");
+        horreumClient.userService.updateTeamMembers("dev-team", Map.of("horreum.bootstrap", List.of(Roles.TESTER, Roles.UPLOADER)));
+
+        // close the client so that a new instance is created, with a new auth token with the necessary roles
+        horreumClient.close();
+        horreumClient = null;
     }
 
     @Override
