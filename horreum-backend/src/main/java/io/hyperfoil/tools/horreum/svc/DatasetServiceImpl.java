@@ -52,7 +52,7 @@ import io.quarkus.security.identity.SecurityIdentity;
 public class DatasetServiceImpl implements DatasetService {
     private static final Logger log = Logger.getLogger(DatasetServiceImpl.class);
 
-   //@formatter:off
+    //@formatter:off
    private static final String LABEL_QUERY = """
          WITH
          used_labels AS (
@@ -554,6 +554,7 @@ public class DatasetServiceImpl implements DatasetService {
     }
 
     @Transactional
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void updateFingerprints(int testId) {
         for (var dataset : DatasetDAO.<DatasetDAO> find("testid", testId).list()) {
             FingerprintDAO.deleteById(dataset.id);

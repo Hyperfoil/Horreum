@@ -113,6 +113,30 @@ public class DatasourceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
+    public void largeMultidocPayload(TestInfo info) throws InterruptedException {
+        TestConfig testConfig = createNewTestAndDatastores(info);
+
+        String payload = """
+                {
+                    "index": "large",
+                    "type": "SEARCH",
+                    "query": {
+                          "query": {
+                              "match_all" : {}
+                          }
+                    }
+                 }
+                """;
+
+        String runResponse = uploadRun(payload, testConfig.test.name, testConfig.schema.uri,
+                jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode());
+
+        assertNotNull(runResponse);
+        Assert.assertEquals("More than 10 runs uploaded, processing asynchronously", runResponse);
+
+    }
+
+    @org.junit.jupiter.api.Test
     public void multiQueryPayload(TestInfo info) throws InterruptedException {
         TestConfig testConfig = createNewTestAndDatastores(info);
 
@@ -239,6 +263,18 @@ public class DatasourceTest extends BaseServiceTest {
         uploadDoc("tfb", "uid", "data/experiment-ds2.json");
         uploadDoc("tfb", "uid", "data/experiment-ds3.json");
         uploadDoc("tfb", "uid", "data/config-quickstart.jvm.json");
+
+        uploadDoc("large", "uid", "data/experiment-ds1.json");
+        uploadDoc("large", "uid", "data/experiment-ds2.json");
+        uploadDoc("large", "uid", "data/experiment-ds3.json");
+        uploadDoc("large", "uid", "data/experiment-ds4.json");
+        uploadDoc("large", "uid", "data/experiment-ds5.json");
+        uploadDoc("large", "uid", "data/experiment-ds6.json");
+        uploadDoc("large", "uid", "data/experiment-ds7.json");
+        uploadDoc("large", "uid", "data/experiment-ds8.json");
+        uploadDoc("large", "uid", "data/experiment-ds9.json");
+        uploadDoc("large", "uid", "data/experiment-ds10.json");
+        uploadDoc("large", "uid", "data/experiment-ds11.json");
 
         //nasty hack; sleep for 10 seconds to "ensure" that the uploaded test data is indexed by ES
         try {

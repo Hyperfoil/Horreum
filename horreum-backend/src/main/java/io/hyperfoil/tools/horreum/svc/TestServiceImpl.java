@@ -74,7 +74,7 @@ public class TestServiceImpl implements TestService {
 
     protected static final String WILDCARD = "*";
     //using find and replace because  ASC or DESC cannot be set with a parameter
-   //@formatter:off
+    //@formatter:off
    protected static final String FILTER_PREFIX = "WHERE ";
    protected static final String FILTER_SEPARATOR = " AND ";
    protected static final String FILTER_BEFORE = " combined.stop < :before";
@@ -187,8 +187,8 @@ public class TestServiceImpl implements TestService {
     }
 
     /**
-     * Checks whether the provided id belongs to an existing test and if the user can access it
-     * the security check is performed by triggering the RLS at database level
+     * Checks whether the provided id belongs to an existing test and if the user can access it the security check is performed
+     * by triggering the RLS at database level
      *
      * @param id test ID
      */
@@ -470,8 +470,8 @@ public class TestServiceImpl implements TestService {
     }
 
     /**
-     * This will return all distinct folder based on the provided roles plus the root folder which is
-     * represented by a null object in the returned list
+     * This will return all distinct folder based on the provided roles plus the root folder which is represented by a null
+     * object in the returned list
      *
      * @param roles user roles
      * @return list of distinct strings (the folders)
@@ -1005,6 +1005,8 @@ public class TestServiceImpl implements TestService {
             //first check if datastore already exists
             boolean exists = DatastoreConfigDAO.findById(newTest.datastore.id) != null;
             DatastoreConfigDAO datastore = DatasourceMapper.to(newTest.datastore);
+            if (!exists)
+                datastore.id = null;
             datastore.persist();
             if (!exists) {
                 newTest.datastore.id = datastore.id;
