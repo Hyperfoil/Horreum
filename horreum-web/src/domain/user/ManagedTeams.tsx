@@ -89,6 +89,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
             <NewUserModal
                 team={team.key}
                 isOpen={createNewUser}
+                machineAccount={false}
                 onClose={() => setCreateNewUser(false)}
                 onCreate={(user, roles) => {
                     teamMembersFuncs.current && teamMembersFuncs.current.addMember(user, roles)

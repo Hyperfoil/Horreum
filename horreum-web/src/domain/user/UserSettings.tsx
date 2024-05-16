@@ -32,6 +32,7 @@ import Profile from "./Profile"
 import ManagedTeams from "./ManagedTeams"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import ManageMachineAccounts from "./MachineAccounts";
 
 
 export const UserProfileLink = () => {
@@ -218,6 +219,20 @@ export function UserSettings() {
                                 onReset={() => teamFuncsRef.current?.reset()}
                             >
                                 <ManagedTeams funcs={teamFuncsRef} onModified={setModified} />
+                            </SavedTab>
+                        ) : (
+                            <></>
+                        )}
+                        {managedTeams.length > 0 ? (
+                            <SavedTab
+                                title="Machine accounts"
+                                fragment="machine-accounts"
+                                isModified={() => modified}
+                                canSave={true}
+                                onSave={() => teamFuncsRef.current?.save() || Promise.resolve()}
+                                onReset={() => teamFuncsRef.current?.reset()}
+                            >
+                                <ManageMachineAccounts funcs={teamFuncsRef} onModified={setModified} />
                             </SavedTab>
                         ) : (
                             <></>

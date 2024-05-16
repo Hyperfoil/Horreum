@@ -31,7 +31,7 @@ public class KeycloakTestProfile extends HorreumTestProfile {
         configOverrides.put("keycloak.realm", REALM);
 
         // create the base roles used to compose team roles
-        configOverrides.put("keycloak.token.admin-roles", String.join(",", Roles.ADMIN, Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER));
+        configOverrides.put("keycloak.token.admin-roles", String.join(",", Roles.ADMIN, Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER, Roles.MACHINE));
         return configOverrides;
     }
 

@@ -76,7 +76,7 @@ public class UserInfo extends PanacheEntityBase {
     }
 
     public void setPassword(String clearPassword) {
-        password = BcryptUtil.bcryptHash(clearPassword);
+        password = clearPassword == null ? null : BcryptUtil.bcryptHash(clearPassword);
     }
 
     @Override public boolean equals(Object o) {

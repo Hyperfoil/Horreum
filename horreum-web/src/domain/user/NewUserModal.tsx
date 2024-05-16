@@ -1,17 +1,19 @@
 import {useState, useEffect, useContext} from "react"
-import { useDispatch } from "react-redux"
-import { Button, 
-    Checkbox, 
-    Form, 
+import {
+    Button,
+    Checkbox,
+    Form,
     FormGroup,
     HelperText,
     HelperTextItem,
     FormHelperText,
-    List, 
-    ListItem, 
-    Modal, 
-    Spinner, 
-    TextInput } from "@patternfly/react-core"
+    List,
+    ListItem,
+    Modal,
+    Spinner,
+    TextInput,
+    Switch
+} from "@patternfly/react-core"
 import {userApi, UserData} from "../../api"
 import { getRoles } from "./TeamMembers"
 import {AppContext} from "../../context/appContext";
@@ -20,6 +22,7 @@ import {AppContextType} from "../../context/@types/appContextTypes";
 
 type NewUserModalProps = {
     team: string
+    machineAccount: boolean
     isOpen: boolean
     onClose(): void
     onCreate(user: UserData, roles: string[]): void
@@ -60,7 +63,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                     onClick={() => {
                         setCreating(true)
                         const user = { id: "", username: username || "", email, firstName, lastName }
-                        const roles = getRoles(viewer, tester, uploader, manager)
+                        const roles = getRoles(viewer, tester, uploader, manager).concat(props.machineAccount ? ["machine"] : [])
                         userApi.createUser({ user, password, team: props.team, roles })
                             .then(() => {
                                 props.onCreate(user, roles)
@@ -101,7 +104,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                     </FormGroup>
                     <FormGroup
                         isRequired
-                        label="Temporary password"
+                        label={props.machineAccount ? "Account password" : "Temporary password"}
                         fieldId="password"
                     >
                         <TextInput
@@ -112,7 +115,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                         />
                         <FormHelperText>
                             <HelperText>
-                                <HelperTextItem>This password is only temporary and the user will change it during first login.</HelperTextItem>
+                                <HelperTextItem>{props.machineAccount ? "The password can be used with HTTP Basic Authentication" : "This password is only temporary and the user will change it during first login." }</HelperTextItem>
                             </HelperText>
                         </FormHelperText>                        
                     </FormGroup>

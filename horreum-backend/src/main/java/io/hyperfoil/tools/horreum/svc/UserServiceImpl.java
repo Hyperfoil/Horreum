@@ -13,9 +13,11 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static java.text.MessageFormat.format;
 import static java.util.Collections.emptyList;
@@ -24,6 +26,7 @@ import static java.util.Collections.emptyList;
 @ApplicationScoped
 public class UserServiceImpl implements UserService {
     private static final Logger LOG = Logger.getLogger(UserServiceImpl.class);
+    private static final int RANDOM_PASSWORD_LENGTH = 15;
 
     @Inject SecurityIdentity identity;
 
@@ -49,6 +52,7 @@ public class UserServiceImpl implements UserService {
         validateNewUser(user);
         userIsManagerForTeam(user.team);
         backend.get().createUser(user);
+        createLocalUser(user.user.username, user.team, user.roles != null && user.roles.contains(Roles.MACHINE) ? user.password : null);
         LOG.infov("{0} created user {1} {2} with username {3} on team {4}", identity.getPrincipal().getName(), user.user.firstName, user.user.lastName, user.user.username, user.team);
     }
 
@@ -81,7 +85,10 @@ public class UserServiceImpl implements UserService {
     @Override public Map<String, List<String>> teamMembers(String unsafeTeam) {
         String team = validateTeamName(unsafeTeam);
         userIsManagerForTeam(team);
-        return backend.get().teamMembers(team);
+
+        Map<String, List<String>> teamMembers = backend.get().teamMembers(team);
+        safeMachineAccounts(team).forEach(teamMembers::remove); // exclude machine accounts
+        return teamMembers;
     }
 
     // @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
@@ -92,6 +99,7 @@ public class UserServiceImpl implements UserService {
         // add existing users missing from the new roles map to get their roles removed
         Map<String, List<String>> roles = new HashMap<>(newRoles);
         backend.get().teamMembers(team).forEach((username, old) -> roles.putIfAbsent(username, emptyList()));
+        safeMachineAccounts(team).forEach(roles::remove); // exclude machine accounts
 
         backend.get().updateTeamMembers(team, roles);
     }
@@ -128,6 +136,35 @@ public class UserServiceImpl implements UserService {
         backend.get().updateAdministrators(newAdmins);
     }
 
+    // @RolesAllowed({Roles.ADMIN, Roles.MANAGER})
+    @Override public List<UserData> machineAccounts(String unsafeTeam) {
+        String team = validateTeamName(unsafeTeam);
+        userIsManagerForTeam(team);
+        return backend.get().machineAccounts(team);
+    }
+
+    // @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
+    @Transactional
+    @WithRoles(fromParams = SecondParameter.class)
+    @Override public String resetPassword(String unsafeTeam, String username) {
+        // reset the password for machine accounts of a specified team
+        // those passwords are always stored in the database, whatever is the backend
+
+        String team = validateTeamName(unsafeTeam);
+        userIsManagerForTeam(team);
+        if (backend.get().machineAccounts(team).stream().noneMatch(data -> data.username.equals(username))) {
+            throw ServiceException.badRequest(format("User {0} is not machine account of team {1}", username, team));
+        }
+        UserInfo userInfo = UserInfo.findById(username);
+        if (userInfo == null) {
+            throw ServiceException.notFound(format("User with username {0} not found", username));
+        }
+        String newPassword = new SecureRandom().ints(RANDOM_PASSWORD_LENGTH, '0', 'z' + 1).collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
+        userInfo.setPassword(newPassword);
+        LOG.infov("{0} reset password of user {1}", identity.getPrincipal().getName(), username);
+        return newPassword;
+    }
+
     private void userIsManagerForTeam(String team) {
         if (!identity.getRoles().contains(Roles.ADMIN) && !identity.hasRole(team.substring(0, team.length() - 4) + Roles.MANAGER)) {
             throw ServiceException.badRequest(format("This user is not a manager for team {0}", team));
@@ -144,11 +181,13 @@ public class UserServiceImpl implements UserService {
         }
         if (user.team != null) {
             user.team = validateTeamName(user.team);
+        } else if (user.roles != null && user.roles.contains(Roles.MACHINE)) {
+            throw ServiceException.badRequest("Machine account must have a team");
         }
     }
 
-    private static String validateTeamName(String unsafeTean) {
-        String team = Util.destringify(unsafeTean);
+    private static String validateTeamName(String unsafeTeam) {
+        String team = Util.destringify(unsafeTeam);
         if (team == null || team.isBlank()) {
             throw ServiceException.badRequest("No team name!!!");
         } else if (team.startsWith("horreum.")) {
@@ -159,5 +198,44 @@ public class UserServiceImpl implements UserService {
             throw ServiceException.badRequest("Team name too long. Please think on a shorter team name!!!");
         }
         return team;
+    }
+
+    private List<String> safeMachineAccounts(String team) {
+        try {
+            return backend.get().machineAccounts(team).stream().map(data -> data.username).toList();
+        } catch (Exception e) {
+            // ignore exception as the team may not exist
+            return List.of();
+        }
+    }
+
+    /**
+     * The user info that is always local, no matter what is the backend
+     */  
+    @Transactional
+    @WithRoles(fromParams = FirstParameter.class)
+    void createLocalUser(String username, String defaultTeam, String password) {
+        UserInfo userInfo = UserInfo.<UserInfo>findByIdOptional(username).orElse(new UserInfo(username));
+        if (defaultTeam != null) {
+            userInfo.defaultTeam = defaultTeam;
+            if (password != null) {
+                userInfo.setPassword(password);
+            }
+            userInfo.persist();
+        }
+    }
+
+    // --- //
+
+    public static final class FirstParameter implements Function<Object[], String[]> {
+        @Override public String[] apply(Object[] objects) {
+            return new String[] {(String) objects[0]};
+        }
+    }
+
+    public static final class SecondParameter implements Function<Object[], String[]> {
+        @Override public String[] apply(Object[] objects) {
+            return new String[] {(String) objects[1]};
+        }
     }
 }

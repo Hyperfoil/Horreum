@@ -26,13 +26,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 import static java.util.stream.Collectors.joining;
 
 /**
  * Implementation of {@link UserBackEnd} using an external Keycloak server.
- * 
  * Relies on keycloak-admin-client to manage user information.
  */
 @ApplicationScoped
@@ -62,7 +62,8 @@ public class KeycloakUserBackend implements UserBackEnd {
 
     @Override public List<UserService.UserData> searchUsers(String query) {
         try {
-            return keycloak.realm(realm).users().search(query, null, null).stream().map(KeycloakUserBackend::toUserInfo).toList();
+            Set<String> machineIds = keycloak.realm(realm).roles().get(Roles.MACHINE).getUserMembers(0, Integer.MAX_VALUE).stream().map(UserRepresentation::getId).collect(Collectors.toSet());
+            return keycloak.realm(realm).users().search(query, null, null).stream().filter(rep -> !machineIds.contains(rep.getId())).map(KeycloakUserBackend::toUserInfo).toList();
         } catch (Throwable t) {
             throw ServiceException.serverError("Unable to search for users");
         }
@@ -114,6 +115,11 @@ public class KeycloakUserBackend implements UserBackEnd {
             if (user.team != null) {
                 String prefix = getTeamPrefix(user.team);
                 usersResource.get(userId).roles().realmLevel().add(user.roles.stream().map(r -> ensureRole(prefix + r)).toList());
+                if (user.roles.contains(Roles.MACHINE)) {
+                    // add the base 'machine' role as well to be able to get all machine accounts
+                    // keycloak does not return the users of role inherited by composition
+                    usersResource.get(userId).roles().realmLevel().add(List.of(ensureRole(Roles.MACHINE)));
+                }
             }
 
             // also add the "view-profile" role
@@ -255,7 +261,7 @@ public class KeycloakUserBackend implements UserBackEnd {
     @Override public void addTeam(String team) { // create the "team roles"
         String prefix = getTeamPrefix(team); // perform validation of the team name
         createRole(team, null);
-        for (String role : List.of(Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER)) {
+        for (String role : List.of(Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER, Roles.MACHINE)) {
             createRole(prefix + role, Set.of(role, team));
         }
     }
@@ -339,6 +345,29 @@ public class KeycloakUserBackend implements UserBackEnd {
         } catch (Throwable t) {
             LOG.warnv(t, "Cannot fetch representation for admin role");
             throw ServiceException.serverError("Cannot find admin role");
+        }
+    }
+
+    @Override public List<UserService.UserData> machineAccounts(String team) {
+        try {
+            String prefix = getTeamPrefix(team);
+            return keycloak.realm(realm).roles().get(prefix + Roles.MACHINE).getUserMembers(0, Integer.MAX_VALUE).stream().map(KeycloakUserBackend::toUserInfo).toList();
+        } catch (Throwable t) {
+            LOG.warnv(t, "Unable to list machine accounts for team {0}", team);
+            throw ServiceException.serverError("Please verify with the System Administrators that you have the correct permissions");
+        }
+    }
+
+    @Override public void setPassword(String username, String password) {
+        try {
+            CredentialRepresentation credentials = new CredentialRepresentation();
+            credentials.setType(CredentialRepresentation.PASSWORD);
+            credentials.setValue(password);
+
+            keycloak.realm(realm).users().get(findMatchingUserId(username)).resetPassword(credentials);
+        } catch (Throwable t) {
+            LOG.warnv(t, "Failed to retrieve current representation of user {0} from Keycloak", username);
+            throw ServiceException.serverError(format("Failed to retrieve current representation of user {0} from Keycloak", username));
         }
     }
 }

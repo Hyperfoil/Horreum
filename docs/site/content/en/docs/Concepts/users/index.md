@@ -36,3 +36,18 @@ Users who explore runs, create and modify new tests should have the `engineers-t
 You can also create a role that allows read-only access to team's private runs, `engineers-viewer` consisting of `engineers-team` and `viewer`.
 
 The `admin` role is not tied to any of the teams.
+                                                    
+
+## Machine accounts
+
+A team manager can create `Machine Accounts` in his managed team(s). Those accounts can access Horreum with HTTP Basic authentication instead of authenticating with Keycloak. This is done on the `Machine Accounts` tab on the user profile.
+
+{{% imgproc machine_account_new Fit "1200x800" /%}}
+
+After an account is created it is visible in the list of `Machine Accounts`. Multiple accounts can be created for a team.  
+
+{{% imgproc machine_accounts_tab Fit "1200x800" /%}}
+
+To change the password of an existing account click on the red `Reset Password` button and confirm. A dialogue with the new generated password appears. Copy the password and close the dialogue. This is the only time the password is visible.
+
+{{% imgproc machine_pw_reset Fit "1200x800" /%}}

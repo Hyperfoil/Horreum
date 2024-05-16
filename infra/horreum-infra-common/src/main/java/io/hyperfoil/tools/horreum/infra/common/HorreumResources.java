@@ -179,6 +179,8 @@ public class HorreumResources {
                 envVariables.put("quarkus.oidc.credentials.secret", generateClientSecret.apply("horreum"));
 
                 // Create roles and example user in Keycloak
+                RoleRepresentation machineRole = getRoleID.apply("machine");
+                RoleRepresentation managerRole = getRoleID.apply("manager");
                 RoleRepresentation uploaderRole = getRoleID.apply("uploader");
                 RoleRepresentation testerRole = getRoleID.apply("tester");
                 RoleRepresentation viewerRole = getRoleID.apply("viewer");
@@ -188,7 +190,8 @@ public class HorreumResources {
                 RoleRepresentation teamViewerRole = createRole.apply(() -> RoleBuilder.create().name("dev-viewer").composite().realmComposite(devTeamRole).realmComposite(viewerRole).build());
                 RoleRepresentation teamUploaderRole = createRole.apply(() -> RoleBuilder.create().name("dev-uploader").composite().realmComposite(devTeamRole).realmComposite(uploaderRole).build());
                 RoleRepresentation teamTesterRole = createRole.apply(() -> RoleBuilder.create().name("dev-tester").composite().realmComposite(devTeamRole).realmComposite(testerRole).build());
-                RoleRepresentation teamManagerRole = createRole.apply(() -> RoleBuilder.create().name("dev-manager").composite().realmComposite(devTeamRole).build());
+                RoleRepresentation teamMachineRole = createRole.apply(() -> RoleBuilder.create().name("dev-machine").composite().realmComposite(devTeamRole).realmComposite(machineRole).build());
+                RoleRepresentation teamManagerRole = createRole.apply(() -> RoleBuilder.create().name("dev-manager").composite().realmComposite(devTeamRole).realmComposite(managerRole).build());
 
                 UserRepresentation dummyUser = createUser.apply(() ->
                         UserBuilder.create()
@@ -201,7 +204,7 @@ public class HorreumResources {
                                    .build()
                 );
 
-                keycloak.realm(HORREUM_REALM).users().get(dummyUser.getId()).roles().realmLevel().add(Arrays.asList(teamUploaderRole, teamTesterRole, teamViewerRole, teamManagerRole, adminRole));
+                keycloak.realm(HORREUM_REALM).users().get(dummyUser.getId()).roles().realmLevel().add(Arrays.asList(teamUploaderRole, teamTesterRole, teamViewerRole, teamManagerRole, teamMachineRole, adminRole));
 
                 ClientRepresentation accountClient = findClient.apply("account");
 
