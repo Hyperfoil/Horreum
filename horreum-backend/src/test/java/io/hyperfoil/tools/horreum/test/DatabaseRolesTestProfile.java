@@ -9,7 +9,6 @@ public class DatabaseRolesTestProfile extends HorreumTestProfile {
         Map<String, String> configOverrides = new HashMap<>(super.getConfigOverrides());
         configOverrides.put("horreum.roles.provider", "database");
         configOverrides.put("horreum.roles.database.override", "false");
-        configOverrides.put("quarkus.http.auth.basic", "true");
         return configOverrides;
     }
 }

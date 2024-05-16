@@ -13,6 +13,7 @@ import io.quarkus.arc.lookup.LookupIfProperty;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
@@ -50,7 +51,7 @@ public class DatabaseUserBackend implements UserBackEnd {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override public List<UserService.UserData> searchUsers(String query) {
         List<UserInfo> users = UserInfo.list("lower(firstName) like ?1 or lower(lastName) like ?1 or lower(username) like ?1", "%" + query.toLowerCase() + "%");
-        return users.stream().map(DatabaseUserBackend::toUserInfo).toList();
+        return users.stream().filter(user -> !user.roles.contains(UserRole.MACHINE)).map(DatabaseUserBackend::toUserInfo).toList();
     }
 
     @Transactional
@@ -76,20 +77,24 @@ public class DatabaseUserBackend implements UserBackEnd {
         userInfo.setPassword(user.password);
 
         if (user.team != null) {
+            // userInfo.defaultTeam = user.team; // Don't set default team to be consistent with keycloak backend
             String teamName = removeTeamSuffix(user.team);
             for (String role : user.roles) {
-                if ("viewer".equals(role)) {
+                if (Roles.VIEWER.equals(role)) {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_VIEWER);
-                } else if ("tester".equals(role)) {
+                } else if (Roles.TESTER.equals(role)) {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_TESTER);
-                } else if ("uploader".equals(role)) {
+                } else if (Roles.UPLOADER.equals(role)) {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_UPLOADER);
-                } else if ("manager".equals(role)) {
+                } else if (Roles.MANAGER.equals(role)) {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_MANAGER);
-                } else {
+                } else if (!Roles.MACHINE.equals(role)) {
                     LOG.infov("Dropping role {0} for user {1} {2}", role, userInfo.firstName, userInfo.lastName);
                 }
             }
+        }
+        if (user.roles != null && user.roles.contains(Roles.MACHINE)) {
+            userInfo.roles.add(UserRole.MACHINE);
         }
         userInfo.persist();
     }
@@ -132,7 +137,7 @@ public class DatabaseUserBackend implements UserBackEnd {
             user.ifPresent(u -> {
                 List<TeamMembership> removedMemberships = u.teams.stream().filter(t -> t.team == teamEntity && !teamRoles.contains(t.asUIRole())).toList();
                 removedMemberships.forEach(TeamMembership::delete);
-                u.teams.removeAll(removedMemberships);
+                removedMemberships.forEach(u.teams::remove);
 
                 u.teams.addAll(teamRoles.stream().map(uiRole -> TeamMembership.getEntityManager().merge(new TeamMembership(user.get(), teamEntity, uiRole))).collect(toSet()));
             });
@@ -211,6 +216,26 @@ public class DatabaseUserBackend implements UserBackEnd {
         return UserInfo.getEntityManager().createQuery(query).getResultList();
     }
 
+    @Transactional
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    @Override public List<UserService.UserData> machineAccounts(String team) {
+        CriteriaBuilder cb = UserInfo.getEntityManager().getCriteriaBuilder();
+        CriteriaQuery<UserInfo> query = cb.createQuery(UserInfo.class);
+        Root<UserInfo> userInfoRoot = query.from(UserInfo.class);
+        query.where(cb.equal(userInfoRoot.get("defaultTeam"), team), cb.isMember(UserRole.MACHINE, userInfoRoot.get("roles")));
+        return UserInfo.getEntityManager().createQuery(query).getResultStream().map(DatabaseUserBackend::toUserInfo).toList();
+    }
+    
+    @Transactional
+    @WithRoles(fromParams = ResetPasswordParameterConverter.class)
+    @Override public void setPassword(String username, String password) {
+        UserInfo user = UserInfo.findById(username);
+        if (user == null) {
+            throw ServiceException.notFound(format("User {0} not found", username));
+        }
+        user.setPassword(password);
+    }
+
     /**
      * Extracts username from parameters of `createUser()`
      */
@@ -236,6 +261,15 @@ public class DatabaseUserBackend implements UserBackEnd {
     public static final class DeleteTeamAndMembershipsParameterConverter implements Function<Object[], String[]> {
         @Override public String[] apply(Object[] objects) {
             return ((Team) objects[0]).teams.stream().map(membership -> membership.user.username).toArray(String[]::new);
+        }
+    }
+
+    /**
+     * Extract usernames from parameters of `resetPassword()`
+     */
+    public static final class ResetPasswordParameterConverter implements Function<Object[], String[]> {
+        @Override public String[] apply(Object[] objects) {
+            return new String[] {(String) objects[0]};
         }
     }
 }

@@ -90,6 +90,23 @@
         "clientRole": false,
         "containerId": "horreum",
         "attributes": {}
+      },
+      {
+        "id": "6f5adca6-7754-496d-8840-553e900ee3ea",
+        "name": "manager",
+        "description": "Allows manage users in a team",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "horreum",
+        "attributes": {}
+      },
+      {
+        "id": "86af6a80-474f-47a8-a48f-8818ce1b8846",
+        "name": "machine",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "horreum",
+        "attributes": {}
       }
     ],
     "client": {

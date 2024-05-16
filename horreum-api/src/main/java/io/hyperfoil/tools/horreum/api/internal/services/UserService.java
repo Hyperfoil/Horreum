@@ -35,8 +35,7 @@ public interface UserService {
    @Path("search")
    @Blocking
    @Operation(description="Search for user(s) with an optional query condition.")
-   List<UserData> searchUsers(@Parameter(required = true, name="query", description = "filter users by username (case insensitive)",
-      example = "user") @QueryParam("query") String query);
+   List<UserData> searchUsers(@Parameter(required = true, name="query", description = "filter users by username (case insensitive)", example = "user") @QueryParam("query") String query);
 
    @POST
    @Path("info")
@@ -73,8 +72,7 @@ public interface UserService {
    @POST
    @Path("team/{team}/members")
    @Blocking
-   void updateTeamMembers(@PathParam("team") String team,
-                                           @RequestBody(required = true) Map<String, List<String>> roles);
+   void updateTeamMembers(@PathParam("team") String team, @RequestBody(required = true) Map<String, List<String>> roles);
 
    @GET
    @Path("allTeams")
@@ -100,6 +98,18 @@ public interface UserService {
    @Path("administrators")
    @Blocking
    void updateAdministrators(@RequestBody(required = true) List<String> administrators);
+
+   @GET
+   @Path("team/{team}/machine")
+   @Blocking
+   List<UserData> machineAccounts(@PathParam("team") String team);
+
+   @POST
+   @Path("/team/{team}/reset")
+   @Consumes("text/plain")
+   @Produces("text/plain")
+   @Blocking
+   String resetPassword(@PathParam("team") String team, @RequestBody(required = true) String username);
 
    // this is a simplified copy of org.keycloak.representations.idm.UserRepresentation
    class UserData {

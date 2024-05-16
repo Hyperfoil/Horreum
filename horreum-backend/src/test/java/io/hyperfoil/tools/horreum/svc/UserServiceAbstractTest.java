@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static io.restassured.RestAssured.given;
+import static org.apache.http.HttpStatus.SC_OK;
+import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -210,6 +213,42 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
+    @Test void machineAccountTest() {
+        String testTeam = "machine-test-team";
+        userService.addTeam(testTeam);
+
+        overrideTestSecurity("manager", Set.of(Roles.MANAGER, testTeam.substring(0, testTeam.length() - 4) + Roles.MANAGER), () -> {
+            String machineUser = "machine-account";
+
+            // add a user to the team with "machine" role
+            UserService.NewUser user = new UserService.NewUser();
+            user.user = new UserService.UserData("", machineUser, "Machine", "Account", "machine@horreum.io");
+            user.password = "whatever";
+            user.team = testTeam;
+            user.roles = List.of(Roles.UPLOADER, Roles.MACHINE);
+            userService.createUser(user);
+
+            // user should not show up in search or team membership
+            assertFalse(userService.teamMembers(testTeam).containsKey(machineUser));
+            assertTrue(userService.searchUsers(machineUser).isEmpty());
+
+            // user should be able to authenticate with the password provided on create
+            given().auth().preemptive().basic(machineUser, "wrong-password").get("api/user/roles").then().statusCode(SC_UNAUTHORIZED);
+            given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then().statusCode(SC_OK);
+
+            // reset password
+            String newPassword = userService.resetPassword(testTeam, machineUser);
+            assertFalse(newPassword.isEmpty(), "Expected some generated password");
+
+            // user should be able to authenticate now
+            given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then().statusCode(SC_UNAUTHORIZED);
+            given().auth().preemptive().basic(machineUser, newPassword).get("api/user/roles").then().statusCode(SC_OK);
+        });
+
+        userService.deleteTeam(testTeam);
+    }
+
+    @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
     @Test void defaultTeamTest() {
         String testUserName = "default-team-user";
 
@@ -227,8 +266,8 @@ public abstract class UserServiceAbstractTest {
             // workaround for keycloak
             addUserInfo(testUserName);
 
-            // no default team defined
-            assertEquals("", userService.defaultTeam());
+            // default team defined
+            assertEquals("default-test-team", userService.defaultTeam());
 
             // changed to some team
             userService.setDefaultTeam(fistTeam);
@@ -418,8 +457,8 @@ public abstract class UserServiceAbstractTest {
             assertThrows(ForbiddenException.class, () -> userService.deleteTeam(null));
             assertThrows(ForbiddenException.class, userService::administrators);
             assertThrows(ForbiddenException.class, () -> userService.updateAdministrators(null));
-            assertThrows(ForbiddenException.class, () -> userService.searchUsers(null) );
-            assertThrows(ForbiddenException.class, () -> userService.info(new ArrayList<>()) );
+            assertThrows(ForbiddenException.class, () -> userService.searchUsers(null));
+            assertThrows(ForbiddenException.class, () -> userService.info(new ArrayList<>()));
         });
     }
 

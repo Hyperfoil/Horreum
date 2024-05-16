@@ -55,11 +55,11 @@ public class TeamMembership extends PanacheEntityBase {
             return false;
         }
         TeamMembership that = (TeamMembership) o;
-        return user.equals(that.user) && team.equals(that.team) && role == that.role;
+        return user.username.equals(that.user.username) && team.equals(that.team) && role == that.role;
     }
 
     @Override public int hashCode() {
-        int result = user.hashCode();
+        int result = user.username.hashCode();
         result = 31 * result + team.hashCode();
         result = 31 * result + role.hashCode();
         return result;
