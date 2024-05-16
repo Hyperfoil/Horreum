@@ -412,7 +412,7 @@ export default function AllTests() {
     useEffect(() => {
         let query = ""
         if (folder) {
-            query += "&folder=" + folder
+            query += "&folder=" + encodeURIComponent(folder)
         }
         if (rolesFilter.key !== ONLY_MY_OWN.key) {
             query += "&filter=" + rolesFilter.key
