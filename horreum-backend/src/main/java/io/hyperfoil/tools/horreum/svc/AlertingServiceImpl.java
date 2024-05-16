@@ -84,7 +84,7 @@ import io.vertx.core.Vertx;
 public class AlertingServiceImpl implements AlertingService {
     private static final Logger log = Logger.getLogger(AlertingServiceImpl.class);
 
-   //@formatter:off
+    //@formatter:off
    private static final String LOOKUP_TIMESTAMP =
          """
             SELECT timeline_function,
@@ -1030,6 +1030,10 @@ public class AlertingServiceImpl implements AlertingService {
         recalculation.clearDatapoints = clearDatapoints;
 
         try {
+            log.debugf("Updating fingerprints for test %d", testId);
+            //update fingerprints before starting recalculation
+            //TODO: check if we need to update fingerprints for all tests
+            mediator.updateFingerprints(testId);
             log.debugf("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
             //TODO:: determine if we should clear datapoints
             recalculation.datasets = getDatasetsForRecalculation(testId, from, to, clearDatapoints);

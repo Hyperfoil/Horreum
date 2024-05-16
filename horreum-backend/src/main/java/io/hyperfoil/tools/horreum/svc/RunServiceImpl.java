@@ -1,19 +1,11 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
-import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
-import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID;
-import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.QUERY_TRANSFORMER_TARGETS;
+import static io.hyperfoil.tools.horreum.entity.data.SchemaDAO.*;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -22,17 +14,9 @@ import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
-import jakarta.persistence.PersistenceException;
-import jakarta.persistence.Query;
+import jakarta.persistence.*;
 import jakarta.persistence.TransactionRequiredException;
-import jakarta.persistence.Tuple;
-import jakarta.transaction.InvalidTransactionException;
-import jakarta.transaction.SystemException;
-import jakarta.transaction.Transaction;
-import jakarta.transaction.TransactionManager;
-import jakarta.transaction.Transactional;
+import jakarta.transaction.*;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
@@ -50,10 +34,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.*;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
@@ -63,15 +51,12 @@ import io.hyperfoil.tools.horreum.datastore.DatastoreResponse;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.TransformationLogDAO;
-import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.entity.data.RunDAO;
-import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
+import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.hibernate.JsonbSetType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
+import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
@@ -82,7 +67,7 @@ import io.quarkus.security.identity.SecurityIdentity;
 @Startup
 public class RunServiceImpl implements RunService {
     private static final Logger log = Logger.getLogger(RunServiceImpl.class);
-   //@formatter:off
+    //@formatter:off
    private static final String FIND_AUTOCOMPLETE = """
          SELECT * FROM (
             SELECT DISTINCT jsonb_object_keys(q) AS key
@@ -116,6 +101,9 @@ public class RunServiceImpl implements RunService {
 
     @Inject
     SecurityIdentity identity;
+
+    @Inject
+    RoleManager roleManager;
 
     @Inject
     TransactionManager tm;
@@ -584,19 +572,57 @@ public class RunServiceImpl implements RunService {
                 Optional.ofNullable(schemaUri), mapper);
 
         List<Integer> runIds = new ArrayList<>();
-        if (datastore.uploadType() == Datastore.UploadType.MUILTI && response.payload instanceof ArrayNode) {
-            response.payload.forEach(jsonNode -> {
-                runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, null, jsonNode,
-                        testEntity));
-            });
+        String responseString;
+        if (datastore.uploadType() == Datastore.UploadType.MUILTI
+                && response.payload instanceof ArrayNode) {
+
+            //if we return more than 10 results, offload to async queue to process - this might take a LOOONG time
+            if (response.payload.size() > 10) {
+                response.payload.forEach(jsonNode -> {
+                    mediator.queueRunUpload(start, stop, test, owner, access, token, schemaUri, description, null, jsonNode,
+                            testEntity);
+                });
+            } else { //process synchronously
+                response.payload.forEach(jsonNode -> {
+                    runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, metadata,
+                            response.payload, testEntity));
+                });
+            }
         } else {
             runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, metadata,
                     response.payload, testEntity));
         }
-        //      return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId).build();
-        String reponseString = String
-                .valueOf(runIds.stream().map(val -> Integer.toString(val)).collect(Collectors.joining(", ")));
-        return Response.status(Response.Status.OK).entity(reponseString).build();
+        if (runIds.size() > 0) {
+            return Response.status(Response.Status.OK)
+                    .entity(String.valueOf(runIds.stream().map(val -> Integer.toString(val)).collect(Collectors.joining(", "))))
+                    .build();
+        } else {
+            return Response.status(Response.Status.ACCEPTED).entity("More than 10 runs uploaded, processing asynchronously")
+                    .build();
+        }
+    }
+
+    @Transactional
+    void persistRun(ServiceMediator.RunUpload runUpload) {
+        runUpload.roles.add("horreum.system");
+        roleManager.setRoles(runUpload.roles.stream().collect(Collectors.joining(",")));
+        TestDAO testEntity = TestDAO.findById(runUpload.testId);
+        if (testEntity == null) {
+            log.errorf("Could not find Test (%d) for Run Upload", runUpload.testId);
+            return;
+        }
+        try {
+            Integer runID = getPersistRun(runUpload.start, runUpload.stop, runUpload.test,
+                    runUpload.owner, runUpload.access, runUpload.token, runUpload.schemaUri,
+                    runUpload.description, runUpload.metaData, runUpload.payload, testEntity);
+
+            if (runID == null) {
+                log.errorf("Could not persist Run for Test:  %d", testEntity.name);
+            }
+        } catch (ServiceException serviceException) {
+            log.errorf("Could not persist Run for Test:  %d", testEntity.name, serviceException);
+
+        }
     }
 
     private Integer getPersistRun(String start, String stop, String test, String owner, Access access, String token,
@@ -664,6 +690,7 @@ public class RunServiceImpl implements RunService {
         }
     }
 
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     private Integer addAuthenticated(RunDAO run, TestDAO test) {
         // Id will be always generated anew
         run.id = null;

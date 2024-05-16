@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -18,17 +19,18 @@ import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.eclipse.microprofile.reactive.messaging.OnOverflow;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.api.data.Action;
-import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.Run;
-import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.api.data.TestExport;
+import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
+import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.reactive.messaging.annotations.Blocking;
 import io.vertx.core.Vertx;
 
@@ -75,6 +77,9 @@ public class ServiceMediator {
     private SchemaServiceImpl schemaService;
 
     @Inject
+    SecurityIdentity identity;
+
+    @Inject
     @ConfigProperty(name = "horreum.test-mode", defaultValue = "false")
     private Boolean testMode;
 
@@ -89,6 +94,10 @@ public class ServiceMediator {
     @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
     @Channel("schema-sync-out")
     Emitter<Integer> schemaEmitter;
+
+    @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
+    @Channel("run-upload-out")
+    Emitter<RunUpload> runUploadEmitter;
 
     private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events = new ConcurrentHashMap<>();
 
@@ -122,6 +131,7 @@ public class ServiceMediator {
     }
 
     @Transactional
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void newRun(Run run) {
         actionService.onNewRun(run);
         alertingService.removeExpected(run);
@@ -153,6 +163,7 @@ public class ServiceMediator {
     @Incoming("dataset-event-in")
     @Blocking(ordered = false, value = "horreum.dataset.pool")
     @ActivateRequestContext
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     public void processDatasetEvents(Dataset.EventNew newEvent) {
         datasetService.onNewDatasetNoLock(newEvent);
         validateDataset(newEvent.datasetId);
@@ -182,9 +193,26 @@ public class ServiceMediator {
         runService.onNewOrUpdatedSchema(schemaId);
     }
 
+    @Incoming("run-upload-in")
+    @Blocking(ordered = false, value = "horreum.run.pool")
+    @ActivateRequestContext
+    public void processRunUpload(RunUpload runUpload) {
+        log.debugf("Run Upload: %d", runUpload.testId);
+        runService.persistRun(runUpload);
+
+    }
+
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
     void queueSchemaSync(int schemaId) {
         schemaEmitter.send(schemaId);
+    }
+
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
+    public void queueRunUpload(String start, String stop, String test, String owner, Access access, String token,
+            String schemaUri, String description, JsonNode metadata, JsonNode jsonNode, TestDAO testEntity) {
+        RunUpload upload = new RunUpload(start, stop, test, owner, access, token, schemaUri, description, metadata, jsonNode,
+                testEntity.id, identity.getRoles());
+        runUploadEmitter.send(upload);
     }
 
     void dataPointsProcessed(DataPoint.DatasetProcessedEvent event) {
@@ -275,6 +303,42 @@ public class ServiceMediator {
             return (BlockingQueue<T>) queue;
         } else {
             return null;
+        }
+    }
+
+    static class RunUpload {
+        public String start;
+        public String stop;
+        public String test;
+        public String owner;
+        public Access access;
+        public String token;
+        public String schemaUri;
+        public String description;
+        public JsonNode metaData;
+        public JsonNode payload;
+        public Integer testId;
+        public Set<String> roles;
+
+        public RunUpload() {
+        }
+
+        public RunUpload(String start, String stop, String test, String owner,
+                Access access, String token, String schemaUri, String description,
+                JsonNode metaData, JsonNode payload, Integer testId,
+                Set<String> roles) {
+            this.start = start;
+            this.stop = stop;
+            this.test = test;
+            this.owner = owner;
+            this.access = access;
+            this.token = token;
+            this.schemaUri = schemaUri;
+            this.description = description;
+            this.metaData = metaData;
+            this.payload = payload;
+            this.testId = testId;
+            this.roles = roles;
         }
     }
 

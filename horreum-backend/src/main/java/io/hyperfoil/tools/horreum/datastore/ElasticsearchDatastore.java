@@ -128,6 +128,7 @@ public class ElasticsearchDatastore implements Datastore {
                         request = new Request(
                                 "GET",
                                 "/" + apiRequest.index + "/_search");
+                        request.addParameter("size", "1000");
                         request.setJsonEntity(mapper.writeValueAsString(apiRequest.query));
                         finalString = extracted(restClient, request);
 

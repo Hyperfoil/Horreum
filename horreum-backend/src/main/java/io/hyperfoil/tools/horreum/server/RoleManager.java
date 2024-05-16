@@ -32,7 +32,7 @@ public class RoleManager {
         return setRoles(String.join(",", roles));
     }
 
-    String setRoles(String roles) {
+    public String setRoles(String roles) {
         if (roles == null || roles.isEmpty() || Roles.HORREUM_SYSTEM.equals(roles)) {
             return "";
         }

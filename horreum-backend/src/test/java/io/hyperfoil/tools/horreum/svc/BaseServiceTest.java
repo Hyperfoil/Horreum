@@ -263,9 +263,13 @@ public class BaseServiceTest {
     }
 
     protected String uploadRun(Object runJson, String test, String schemaUri) {
+        return uploadRun(runJson, test, schemaUri, jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+    }
+
+    protected String uploadRun(Object runJson, String test, String schemaUri, Integer statusCode) {
         long timestamp = System.currentTimeMillis();
         String runId = uploadRun(Long.toString(timestamp), Long.toString(timestamp), test, UPLOADER_ROLES[0], Access.PUBLIC,
-                null, schemaUri, null, runJson);
+                null, schemaUri, null, statusCode, runJson);
         assertNotEquals("-1", runId);
         return runId;
     }
@@ -292,13 +296,19 @@ public class BaseServiceTest {
 
     protected String uploadRun(String start, String stop, String test, String owner, Access access, String token,
             String schemaUri, String description, Object runJson) {
+        return uploadRun(start, stop, test, owner, access, token,
+                schemaUri, description, jakarta.ws.rs.core.Response.Status.OK.getStatusCode(), runJson);
+    }
+
+    protected String uploadRun(String start, String stop, String test, String owner, Access access, String token,
+            String schemaUri, String description, Integer statusCode, Object runJson) {
         return RestAssured.given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
                 .body(runJson)
                 .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner
                         + "&access=" + access + "&token=" + token + "&schema=" + schemaUri + "&description=" + description)
                 .then()
-                .statusCode(200)
+                .statusCode(statusCode)
                 .extract().asString();
     }
 
