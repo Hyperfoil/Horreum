@@ -543,6 +543,7 @@ public class DatasetServiceImpl implements DatasetService {
    }
 
    @Transactional
+   @WithRoles( extras = Roles.HORREUM_SYSTEM)
    void updateFingerprints(int testId) {
       for(var dataset : DatasetDAO.<DatasetDAO>find("testid", testId).list()) {
          FingerprintDAO.deleteById(dataset.id);

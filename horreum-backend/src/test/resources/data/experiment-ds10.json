@@ -1,0 +1,12 @@
+{
+  "uid": "9a170eaf-d072-40f3-8fdd-eaa7f1266d70",
+  "start": "2021-07-14T04:17:48Z",
+  "stop": "2021-07-14T04:25:59Z",
+  "job": "Dummy",
+  "build-id": 10,
+  "build-timestamp": "2021-07-14T14:47:10Z",
+  "data": {
+    "cpu": 49.1,
+    "throughput": 12300
+  }
+}

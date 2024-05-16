@@ -991,6 +991,8 @@ public class TestServiceImpl implements TestService {
          //first check if datastore already exists
          boolean exists = DatastoreConfigDAO.findById(newTest.datastore.id) != null;
          DatastoreConfigDAO datastore = DatasourceMapper.to(newTest.datastore);
+         if ( !exists)
+            datastore.id = null;
          datastore.persist();
          if(!exists) {
             newTest.datastore.id = datastore.id;
