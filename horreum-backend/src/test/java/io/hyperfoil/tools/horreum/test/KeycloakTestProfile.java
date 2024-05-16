@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.test;
 
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.quarkus.keycloak.admin.client.common.KeycloakAdminClientConfig;
-import io.quarkus.test.keycloak.server.KeycloakTestResourceLifecycleManager;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,11 +30,11 @@ public class KeycloakTestProfile extends HorreumTestProfile {
         configOverrides.put("keycloak.realm", REALM);
 
         // create the base roles used to compose team roles
-        configOverrides.put("keycloak.token.admin-roles", String.join(",", Roles.ADMIN, Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER, Roles.MACHINE));
+        configOverrides.put("keycloak.token.admin-roles", String.join(",", Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER, Roles.MACHINE));
         return configOverrides;
     }
 
     @Override public List<TestResourceEntry> testResources() {
-        return List.of(new TestResourceEntry(PostgresResource.class), new TestResourceEntry(KeycloakTestResourceLifecycleManager.class));
+        return List.of(new TestResourceEntry(PostgresResource.class), new TestResourceEntry(HorreumKeycloakTestResourceLifecycleManager.class));
     }
 }
