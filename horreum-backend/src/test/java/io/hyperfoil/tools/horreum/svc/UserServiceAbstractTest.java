@@ -2,7 +2,9 @@ package io.hyperfoil.tools.horreum.svc;
 
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
+import io.hyperfoil.tools.horreum.server.SecurityBootstrap;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.hyperfoil.tools.horreum.svc.user.UserBackEnd;
 import io.quarkus.security.ForbiddenException;
 import io.quarkus.security.UnauthorizedException;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -10,6 +12,7 @@ import io.quarkus.security.runtime.QuarkusPrincipal;
 import io.quarkus.security.runtime.QuarkusSecurityIdentity;
 import io.quarkus.test.security.TestIdentityAssociation;
 import io.quarkus.test.security.TestSecurity;
+import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.spi.CDI;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -41,6 +44,10 @@ public abstract class UserServiceAbstractTest {
 
     @Inject UserServiceImpl userService;
 
+    @Inject Instance<UserBackEnd> backend;
+
+    @Inject SecurityBootstrap securitiyBootstrap;
+
     /**
      * Runs a section of a test under a different user
      */
@@ -69,11 +76,12 @@ public abstract class UserServiceAbstractTest {
         // create the admin user and give it the admin role
         try {
             userService.createUser(adminUser);
-            userService.updateAdministrators(List.of(adminUserName));
             LOG.infov("Created user {0}", adminUserName);
         } catch (ServiceException se) {
             // in the keycloak implementation this admin user already exists, and therefore the exception is expected
             assertEquals(se.getMessage(), "User exists with same username");
+        } finally {
+            userService.updateAdministrators(List.of(adminUserName));
         }
         List<String> adminList = userService.administrators().stream().map(u -> u.username).toList();
         assertTrue(adminList.size() == 1 && adminList.contains(adminUserName));
@@ -452,5 +460,19 @@ public abstract class UserServiceAbstractTest {
             assertEquals(fooBarTestTeamCount, userService.searchUsers("").size());
             assertEquals(1, userService.info(List.of(testManagerUserName)).size());
         });
+    }
+
+    @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
+    @Test void bootstrapAccount() {
+        // assert bootstrap account exists
+        assertTrue(userService.administrators().stream().map(userData -> userData.username).anyMatch("horreum.bootstrap"::equals), "Bootstrap account missing");
+
+        // reset bootstrap account
+        userService.removeUser("horreum.bootstrap");
+        backend.get().updateAdministrators(List.of()); // call the backend directly to be able to remove *ALL* administrators
+        assertTrue(userService.administrators().isEmpty());
+
+        securitiyBootstrap.checkBootstrapAccount();
+        assertTrue(userService.administrators().stream().map(userData -> userData.username).anyMatch("horreum.bootstrap"::equals), "Bootstrap account missing");
     }
 }

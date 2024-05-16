@@ -33,6 +33,7 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
     private static final Logger log = Logger.getLogger(ItResource.class);
     private static boolean started = false;
 
+    public static String  HORREUM_BOOTSTRAP_PASSWORD = "horreum.secret";
 
     @Override
     public Map<String, String> start() {
@@ -64,7 +65,8 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
                             Map.entry(HORREUM_DEV_KEYCLOAK_DB_USERNAME, DEFAULT_KC_DB_USERNAME),
                             Map.entry(HORREUM_DEV_KEYCLOAK_DB_PASSWORD, DEFAULT_KC_DB_PASSWORD),
                             Map.entry(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME, DEFAULT_KC_ADMIN_USERNAME),
-                            Map.entry(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD, DEFAULT_KC_ADMIN_PASSWORD)
+                            Map.entry(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD, DEFAULT_KC_ADMIN_PASSWORD),
+                            Map.entry("horreum.bootstrap.password", HORREUM_BOOTSTRAP_PASSWORD) // well known bootstrap password instead of a random one
                     );
                     return startContainers(containerArgs);
                 } catch (Exception e){

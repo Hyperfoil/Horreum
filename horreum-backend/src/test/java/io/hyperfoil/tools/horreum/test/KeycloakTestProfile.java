@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.test;
 
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.quarkus.keycloak.admin.client.common.KeycloakAdminClientConfig;
-import io.quarkus.test.keycloak.server.KeycloakTestResourceLifecycleManager;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +35,6 @@ public class KeycloakTestProfile extends HorreumTestProfile {
     }
 
     @Override public List<TestResourceEntry> testResources() {
-        return List.of(new TestResourceEntry(PostgresResource.class), new TestResourceEntry(KeycloakTestResourceLifecycleManager.class));
+        return List.of(new TestResourceEntry(PostgresResource.class), new TestResourceEntry(HorreumKeycloakTestResourceLifecycleManager.class));
     }
 }

@@ -2,8 +2,6 @@ package io.hyperfoil.tools.horreum.infra.common;
 
 import io.hyperfoil.tools.horreum.infra.common.resources.KeycloakResource;
 import io.hyperfoil.tools.horreum.infra.common.resources.PostgresResource;
-import io.hyperfoil.tools.horreum.infra.common.utils.RoleBuilder;
-import io.hyperfoil.tools.horreum.infra.common.utils.UserBuilder;
 import jakarta.ws.rs.client.ClientBuilder;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -18,8 +16,6 @@ import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.representations.idm.ClientRepresentation;
-import org.keycloak.representations.idm.RoleRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
@@ -36,9 +32,6 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static io.hyperfoil.tools.horreum.infra.common.Const.*;
 
@@ -48,25 +41,6 @@ public class HorreumResources {
     private static Keycloak keycloak;
     private static final String HORREUM_REALM = System.getProperty("horreum.realm", "horreum");
     private static final String KEYCLOAK_REALM = System.getProperty("keycloak.realm", "master");
-
-    static Function<String, ClientRepresentation> findClient = clientName -> keycloak.realm(HORREUM_REALM).clients().findByClientId(clientName).get(0);
-    static Function<String, String> generateClientSecret = clientName -> keycloak.realm(HORREUM_REALM).clients().get(findClient.apply(clientName).getId()).generateNewSecret().getValue();
-    static Function<String, String> getClientSecret = clientName -> keycloak.realm(HORREUM_REALM).clients().get(findClient.apply(clientName).getId()).getSecret().getValue();
-    static Function<String, RoleRepresentation> getRoleID = role -> keycloak.realm(HORREUM_REALM).roles().get(role).toRepresentation();
-    static BiFunction<String, String, RoleRepresentation> getClientRoleID = (clientId, role) -> keycloak.realm(HORREUM_REALM).clients().get(clientId).roles().get(role).toRepresentation();
-
-    static Function<Supplier<RoleRepresentation>, RoleRepresentation> createRole = roleSupplier -> {
-        RoleRepresentation roleRepresentation = roleSupplier.get();
-        keycloak.realm(HORREUM_REALM).roles().create(roleRepresentation);
-        return keycloak.realm(HORREUM_REALM).roles().get(roleRepresentation.getName()).toRepresentation();
-    };
-
-    static Function<Supplier<UserRepresentation>, UserRepresentation> createUser = userSupplier -> {
-        UserRepresentation userRepresentation = userSupplier.get();
-        keycloak.realm(HORREUM_REALM).users().create(userRepresentation);
-        return keycloak.realm(HORREUM_REALM).users().searchByUsername(userRepresentation.getUsername(), true).stream().findFirst().get();
-    };
-
 
     public static Properties configProperties;
 
@@ -216,13 +190,13 @@ public class HorreumResources {
                 String httpPort = config.getOptionalValue("quarkus.http.port", String.class).orElse("8080");
                 String httpHost = config.getOptionalValue("quarkus.http.host", String.class).orElse("localhost");
 
-                ClientRepresentation clientRepresentation = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum-ui").get(0);
-                clientRepresentation.getWebOrigins().add("http://".concat(httpHost).concat(":").concat(httpPort));
-                clientRepresentation.getRedirectUris().add("http://".concat(httpHost).concat(":").concat(httpPort).concat("/*"));
+                ClientRepresentation uiClient = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum-ui").get(0);
+                uiClient.getWebOrigins().add("http://".concat(httpHost).concat(":").concat(httpPort));
+                uiClient.getRedirectUris().add("http://".concat(httpHost).concat(":").concat(httpPort).concat("/*"));
+                keycloak.realm(HORREUM_REALM).clients().get(uiClient.getId()).update(uiClient);
 
-                envVariables.put("quarkus.oidc.credentials.secret", getClientSecret.apply("horreum"));
-
-                keycloak.realm(HORREUM_REALM).clients().get(clientRepresentation.getId()).update(clientRepresentation);
+                ClientRepresentation mainClient = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum").get(0);
+                envVariables.put("quarkus.oidc.credentials.secret", keycloak.realm(HORREUM_REALM).clients().get(mainClient.getId()).getSecret().getValue());
             } catch (Exception e) {
                 log.error("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
             }
