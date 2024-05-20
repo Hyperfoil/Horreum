@@ -1043,6 +1043,13 @@ paths:
           multiple:
             description: excluding multiple labels
             value: "id,count"
+      - name: multiFilter
+        in: query
+        description: enable filtering for multiple values with an array of values
+        schema:
+          default: false
+          type: boolean
+        example: true
       responses:
         "200":
           description: label Values
@@ -2155,6 +2162,13 @@ paths:
           multiple:
             description: excluding multiple labels
             value: "id,count"
+      - name: multiFilter
+        in: query
+        description: enable filtering for multiple values with an array of values
+        schema:
+          default: false
+          type: boolean
+        example: true
       responses:
         "200":
           description: OK

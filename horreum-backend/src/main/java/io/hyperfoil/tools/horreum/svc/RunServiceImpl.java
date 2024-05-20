@@ -19,6 +19,7 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.hibernate.JsonbSetType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -274,37 +275,27 @@ public class RunServiceImpl implements RunService {
    //this is nearly identical to TestServiceImpl.labelValues (except the return object)
    //this reads from the dataset table but provides data specific to the run...
    @Override
-   public List<ExportedLabelValues> labelValues(int runId, String filter, String sort, String direction, int limit, int page, List<String> include, List<String> exclude){
+   public List<ExportedLabelValues> labelValues(int runId, String filter, String sort, String direction, int limit, int page, List<String> include, List<String> exclude, boolean multiFilter){
       List<ExportedLabelValues> rtrn = new ArrayList<>();
       Run run = getRun(runId,null);
       if(run == null){
          throw ServiceException.serverError("Cannot find run "+runId);
       }
       Object filterObject = Util.getFilterObject(filter);
-      String filterSql = "";
-      if(filterObject instanceof JsonNode && ((JsonNode)filterObject).getNodeType() == JsonNodeType.OBJECT){
-         filterSql = "WHERE "+TestServiceImpl.LABEL_VALUES_FILTER_CONTAINS_JSON;
-      }else {
-         Util.CheckResult jsonpathResult = Util.castCheck(filter,"jsonpath",em);
-         if(jsonpathResult.ok()) {
-            filterSql = "WHERE "+TestServiceImpl.LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
-         } else {
-            if(filter!=null && filter.startsWith("{") && filter.endsWith("}")) {
-               Util.CheckResult jsonbResult = Util.castCheck(filter, "jsonb", em);
-               if (!jsonbResult.ok()) {
-                  //we expect this error (because filterObject is not JsonNode
-               } else {
-                  //this would be a surprise and quite a problem
-               }
-            } else {
-               //how do we report back invalid jsonpath
-            }
-         }
+
+      TestServiceImpl.FilterDef filterDef = TestServiceImpl.getFilterDef(filter,null,null,multiFilter,(str)->
+              labelValues(runId,str,sort,direction,limit,page,include,exclude,false),em);
+
+      String filterSql = filterDef.sql();
+      if(filterDef.filterObject()!=null){
+         filterObject = filterDef.filterObject();
       }
+
       if(filterSql.isBlank() && filter != null && !filter.isBlank()){
          //TODO there was an error with the filter, do we return that info to the user?
       }
       String orderSql = "";
+
       String orderDirection = direction.equalsIgnoreCase("ascending") ? "ASC" : "DESC";
       if(!sort.isBlank()){
          Util.CheckResult jsonpathResult = Util.castCheck(sort, "jsonpath", em);
@@ -315,12 +306,13 @@ public class RunServiceImpl implements RunService {
          }
       }
       String includeExcludeSql = "";
+      List<String> mutableInclude = new ArrayList<>(include);
+
       if (include!=null && !include.isEmpty()) {
          if (exclude != null && !exclude.isEmpty()) {
-            include = new ArrayList<>(include);
-            include.removeAll(exclude);
+            mutableInclude.removeAll(exclude);
          }
-         if (!include.isEmpty()) {
+         if (!mutableInclude.isEmpty()) {
             includeExcludeSql = " AND label.name in :include";
          }
       }
@@ -349,12 +341,21 @@ public class RunServiceImpl implements RunService {
       if(!filterSql.isEmpty()) {
          if (filterSql.contains(TestServiceImpl.LABEL_VALUES_FILTER_CONTAINS_JSON)) {
             query.setParameter("filter", filterObject, JsonBinaryType.INSTANCE);
-         } else {
+         } else if (filterSql.contains(TestServiceImpl.LABEL_VALUES_FILTER_MATCHES_NOT_NULL)){
             query.setParameter("filter", filter);
          }
       }
+      if(!filterDef.multis().isEmpty() && filterDef.filterObject()!=null){
+         ObjectNode fullFilterObject = (ObjectNode) Util.getFilterObject(filter);
+         for(int i=0; i<filterDef.multis().size(); i++){
+            String key = filterDef.multis().get(i);
+            ArrayNode value = (ArrayNode) fullFilterObject.get(key);
+            query.setParameter("key"+i,"$."+key);
+            query.setParameter("value"+i,value, JsonbSetType.INSTANCE);
+         }
+      }
       if(includeExcludeSql.contains(":include")){
-         query.setParameter("include",include);
+         query.setParameter("include",mutableInclude);
       }else if (includeExcludeSql.contains(":exclude")){
          query.setParameter("exclude",exclude);
       }
@@ -369,7 +370,6 @@ public class RunServiceImpl implements RunService {
               .addScalar("datasetId",Integer.class)
               .addScalar("start", StandardBasicTypes.INSTANT)
               .addScalar("stop", StandardBasicTypes.INSTANT);
-
       //casting because type inference cannot detect there will be two scalars in the result
       //TODO replace this with strictly typed entries
       ((List<Object[]>) query.getResultList()).forEach(objects->{

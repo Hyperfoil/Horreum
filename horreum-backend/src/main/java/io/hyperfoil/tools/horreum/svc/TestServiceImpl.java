@@ -2,6 +2,8 @@ package io.hyperfoil.tools.horreum.svc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
@@ -22,6 +24,7 @@ import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestTokenDAO;
 import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
 import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
+import io.hyperfoil.tools.horreum.hibernate.JsonbSetType;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
@@ -57,6 +60,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
@@ -542,19 +546,6 @@ public class TestServiceImpl implements TestService {
             .getResultList());
    }
 
-
-   //TODO filter should be a json object not a string but that probably requires lots of work for the api
-
-   /**
-    * Wrapper around the result from checking the cast attempt in postgres
-    * @param ok true of no errors were found
-    * @param message the error message or an empty string if it does not exist
-    * @param detail the error details or an empty string if it does not exist
-    * @param hint the error hint or an empty string if it does not exist
-    */
-
-
-
    /**
     * returns true if the jsonpath input appears to be a predicate jsonpath (always returns true or false) versus a filtering path (returns null or a value)
     * @param input
@@ -570,29 +561,86 @@ public class TestServiceImpl implements TestService {
       return false;
    }
 
-   @Transactional
-   @WithRoles
-   @Override
-   public List<ExportedLabelValues> labelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page, List<String> include, List<String> exclude) {
-      Test test = get(testId,null);
-      if(test == null){
-         throw ServiceException.serverError("Cannot find test "+testId);
+   // returns a map of label name to a set of possible label types
+   private Map<String, Set<String>> getValueTypes(int testId) {
+      Map<String,Set<String>> rtrn = new HashMap<>();
+      List<Object[]> rows = em.createNativeQuery(
+         """
+         select l.name,jsonb_agg(distinct jsonb_typeof(lv.value))
+         from dataset d
+         left join label_values lv on d.id = lv.dataset_id
+         left join label l on l.id = lv.label_id
+         where d.testid = :testId and l.name is not null group by l.name
+         """,Object[].class
+         )
+         .setParameter("testId",testId)
+         .unwrap(NativeQuery.class)
+         .addScalar("name",StandardBasicTypes.STRING)
+         .addScalar("values", JsonBinaryType.INSTANCE)
+         .getResultList();
+
+      for (Object[] row : rows) {
+         String name = (String) row[0];
+         Set<String> set = new HashSet<>();
+         ArrayNode types = (ArrayNode) row[1];
+         types.forEach(v->set.add(v.textValue()));
+         rtrn.put(name, set);
       }
+      return rtrn;
+   }
 
+   protected record FilterDef(String sql,ObjectNode filterObject,Set<String> names,List<String> multis){}
+
+   protected static FilterDef getFilterDef(String filter, Instant before, Instant after, boolean multiFilter, Function<String,List<ExportedLabelValues>> checkFilter,EntityManager em){
       Object filterObject = Util.getFilterObject(filter);
-
+      ObjectNode objectNode = null;
       String filterSql = "";
-      String orderSql = "";
-
-      Instant beforeInstant = Util.toInstant(before);
-      Instant afterInstant = Util.toInstant(after);
+      Set<String> names = new HashSet<>();
+      List<String> assumeMulti = new ArrayList<>();
 
       if(filterObject instanceof JsonNode && ((JsonNode)filterObject).getNodeType() == JsonNodeType.OBJECT){
-         filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_CONTAINS_JSON;
+         //check for arrays
+         objectNode = (ObjectNode) filterObject;
+         if(multiFilter) { //TODO create custom query rather than N queries
+            objectNode.fields().forEachRemaining(e -> {
+               String key = e.getKey();
+               JsonNode value = e.getValue();
+               if (value.getNodeType() == JsonNodeType.ARRAY) {//check if there are any matches
+                  ObjectNode arrayFilter = (ObjectNode) new JsonNodeFactory(false).objectNode().set(key, value);
+                  //this is returning a non-zero count when it should be zero
+//                  List<ExportedLabelValues> found = labelValues(testId, arrayFilter.toString(), before, after, filtering, metrics, sort, direction, limit, page, include, exclude, false);
+                  List<ExportedLabelValues> found = checkFilter.apply(arrayFilter.toString());
+                  if (found.isEmpty()) {
+                     assumeMulti.add(key);
+                  }
+               }
+            });
+            if (!assumeMulti.isEmpty()) {
+               assumeMulti.forEach(objectNode::remove);
+            }
+         }
+         if(!objectNode.isEmpty()) {
+            filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_CONTAINS_JSON;
+            names.add("filter");
+         }
+         if(!assumeMulti.isEmpty()){
+            if(filterSql.isEmpty()) {
+               filterSql = FILTER_PREFIX;
+            }
+            for(int i=0; i<assumeMulti.size(); i++){
+               if(!filterSql.endsWith(FILTER_PREFIX)){
+                  filterSql+=FILTER_SEPARATOR;
+               }
+               filterSql += " jsonb_path_query_first(combined.values,CAST( :key"+i+" as jsonpath)) = ANY(:value"+i+") ";
+               names.add("key"+i);
+               names.add("value"+i);
+            }
+         }
       }else {
          Util.CheckResult jsonpathResult = Util.castCheck(filter,"jsonpath",em);
          if(jsonpathResult.ok()){
             filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
+            names.add("filter");
          }else{
             //an attempt to see if the user was trying to provide json
             if(filter!=null && filter.startsWith("{") && filter.endsWith("}")){
@@ -607,28 +655,59 @@ public class TestServiceImpl implements TestService {
             }
          }
       }
-      if(beforeInstant!=null){
+      if(before!=null){
          if(filterSql.isEmpty()){
-            filterSql=FILTER_PREFIX+FILTER_BEFORE;
+            filterSql=FILTER_PREFIX;
          }else{
-            filterSql+=FILTER_SEPARATOR+FILTER_BEFORE;
+            filterSql+=FILTER_SEPARATOR;
          }
+         filterSql+=FILTER_BEFORE;
+         names.add("before");
       }
-      if(afterInstant!=null){
+      if(after!=null){
          if(filterSql.isEmpty()){
-            filterSql=FILTER_PREFIX+FILTER_AFTER;
+            filterSql=FILTER_PREFIX;
          }else{
-            filterSql+=FILTER_SEPARATOR+FILTER_AFTER;
+            filterSql+=FILTER_SEPARATOR;
          }
+         filterSql+=FILTER_AFTER;
+         names.add("after");
+      }
+      return new FilterDef(filterSql,objectNode,names,assumeMulti);
+   }
+
+   @Transactional
+   @WithRoles
+   @Override
+   public List<ExportedLabelValues> labelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page, List<String> include, List<String> exclude, boolean multiFilter) {
+      Test test = get(testId,null);
+      if(test == null){
+         throw ServiceException.serverError("Cannot find test "+testId);
+      }
+      Object filterObject = Util.getFilterObject(filter);
+
+      String orderSql = "";
+
+      Instant beforeInstant = Util.toInstant(before);
+      Instant afterInstant = Util.toInstant(after);
+
+      FilterDef filterDef = getFilterDef(filter,beforeInstant,afterInstant,multiFilter,(str)->
+         labelValues(testId, str, before, after, filtering, metrics, sort, direction, limit, page, include, exclude, false)
+      ,em);
+
+      String filterSql = filterDef.sql();
+      if(filterDef.filterObject()!=null){
+         filterObject = filterDef.filterObject();
       }
 
       String includeExcludeSql = "";
+      List<String> mutableInclude = new ArrayList<>(include);
+
       if (include!=null && !include.isEmpty()){
          if(exclude!=null && !exclude.isEmpty()){
-            include = new ArrayList<>(include);
-            include.removeAll(exclude);
+            mutableInclude.removeAll(exclude);
          }
-         if(!include.isEmpty()) {
+         if(!mutableInclude.isEmpty()) {
             includeExcludeSql = " AND label.name in :include";
          }
       }
@@ -659,7 +738,6 @@ public class TestServiceImpl implements TestService {
          }
 
       }
-
           String sql = LABEL_VALUES_QUERY
                   .replace("FILTER_PLACEHOLDER",filterSql)
                   .replace("INCLUDE_EXCLUDE_PLACEHOLDER",includeExcludeSql)
@@ -673,7 +751,7 @@ public class TestServiceImpl implements TestService {
            if(!filterSql.isEmpty()){
               if(filterSql.contains(LABEL_VALUES_FILTER_CONTAINS_JSON)){
                  query.setParameter("filter",filterObject,JsonBinaryType.INSTANCE);
-              }else{
+              }else if (filterSql.contains(LABEL_VALUES_FILTER_MATCHES_NOT_NULL)){
                  query.setParameter("filter",filter);
               }
               if(beforeInstant!=null){
@@ -683,8 +761,17 @@ public class TestServiceImpl implements TestService {
                  query.setParameter("after",afterInstant, StandardBasicTypes.INSTANT);
               }
            }
+           if(!filterDef.multis().isEmpty() && filterDef.filterObject()!=null){
+              ObjectNode fullFilterObject = (ObjectNode) Util.getFilterObject(filter);
+              for(int i=0; i<filterDef.multis().size(); i++){
+                 String key = filterDef.multis().get(i);
+                 ArrayNode value = (ArrayNode) fullFilterObject.get(key);
+                 query.setParameter("key"+i,"$."+key);
+                 query.setParameter("value"+i,value, JsonbSetType.INSTANCE);
+              }
+           }
            if(includeExcludeSql.contains(":include")){
-              query.setParameter("include",include);
+              query.setParameter("include",mutableInclude);
            }else if (includeExcludeSql.contains(":exclude")){
               query.setParameter("exclude",exclude);
            }
@@ -701,9 +788,6 @@ public class TestServiceImpl implements TestService {
                 .addScalar("start", StandardBasicTypes.INSTANT)
                 .addScalar("stop", StandardBasicTypes.INSTANT);
            return ExportedLabelValues.parse( query.getResultList() );
-
-
-
    }
 
    @WithRoles
