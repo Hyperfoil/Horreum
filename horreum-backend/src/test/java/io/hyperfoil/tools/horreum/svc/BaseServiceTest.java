@@ -20,8 +20,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
@@ -249,7 +251,6 @@ public class BaseServiceTest {
       assertNotEquals(-1, runId);
       return runId;
    }
-
    protected String uploadRun(Object runJson, String test, String schemaUri) {
       long timestamp = System.currentTimeMillis();
       String runId = uploadRun(Long.toString(timestamp), Long.toString(timestamp), test, UPLOADER_ROLES[0], Access.PUBLIC, null, schemaUri, null, runJson);
@@ -659,6 +660,7 @@ public class BaseServiceTest {
       Transformer transformer = new Transformer();
       transformer.name = name;
       transformer.extractors = new ArrayList<>();
+
       for (Extractor path : paths) {
          if (path != null) {
             transformer.extractors.add(path);

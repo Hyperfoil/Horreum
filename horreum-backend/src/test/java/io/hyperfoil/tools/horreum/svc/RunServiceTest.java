@@ -19,6 +19,7 @@ import java.util.stream.StreamSupport;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
@@ -36,6 +37,7 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import jakarta.ws.rs.core.MediaType;
+import org.apache.groovy.util.Maps;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.TestInfo;
 
@@ -108,7 +110,8 @@ public class RunServiceTest extends BaseServiceTest {
       assertFalse(run.trashed);
       assertNewDataset(dataSetQueue, runId);
    }
-   private int labelValuesSetup(Test t) throws JsonProcessingException {
+
+   private String labelValuesSetup(Test t,boolean load) throws JsonProcessingException {
       Schema fooSchema = createSchema("foo","urn:foo");
       Extractor fooExtractor = new Extractor();
       fooExtractor.name="foo";
@@ -116,21 +119,72 @@ public class RunServiceTest extends BaseServiceTest {
       Extractor barExtractor = new Extractor();
       barExtractor.name="bar";
       barExtractor.jsonpath="$.bar";
+
       addLabel(fooSchema,"labelFoo","",fooExtractor);
       addLabel(fooSchema,"labelBar","",barExtractor);
 
-
-      ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);;
-      JsonNode data = mapper.readTree("{ \"foo\": \"uno\", \"bar\": \"dox\"}");
-      String idString = uploadRun(data,t.name,fooSchema.uri);
-      int id = Integer.parseInt(idString);
-      return id;
+      if(load) {
+         return uploadRun("{ \"foo\": \"uno\", \"bar\": \"dox\"}",t.name,fooSchema.uri);
+      }else{
+         return "-1";
+      }
    }
+   private String createTransformingSchema(Test t) throws JsonProcessingException {
+      Schema fooSchema = createSchema("foo","urn:fooBar");
+      Schema postTransformSchema = createSchema("foo-post-function",postFunctionSchemaUri(fooSchema));
+      Extractor fooExtractor = new Extractor();
+      fooExtractor.name="foo";
+      fooExtractor.jsonpath="$.foo";
+      Extractor barExtractor = new Extractor();
+      barExtractor.name="bar";
+      barExtractor.jsonpath="$.bar";
 
+      addLabel(postTransformSchema,"labelFoo","",fooExtractor);
+      addLabel(postTransformSchema,"labelBar","",barExtractor);
+
+
+      Extractor transformExtractor = new Extractor();
+      transformExtractor.name="values";
+      transformExtractor.jsonpath="$.values";
+
+      Transformer transformer = createTransformer("fooBar",fooSchema,"",transformExtractor);
+      addTransformer(t,transformer);
+
+      return uploadRun("""
+              { "values":[
+                { "foo": "uno", "bar": "dox"},
+                { "foo": "dos", "bar": "box"}
+                ]
+              }
+              """,t.name,fooSchema.uri);
+   }
+   @org.junit.jupiter.api.Test
+   public void labelValuesFilterMultiSelect() throws JsonProcessingException {
+      Test t = createTest(createExampleTest("my-test"));
+      String id = createTransformingSchema(t);
+      JsonNode response = jsonRequest()
+        .queryParam("filter", Maps.of("labelBar",Arrays.asList("dox",30)))
+        .queryParam("multiFilter",true)
+        .get("/api/run/"+id+"/labelValues")
+        .then()
+        .statusCode(200)
+        .extract()
+        .body()
+        .as(JsonNode.class);
+      assertInstanceOf(ArrayNode.class,response);
+      ArrayNode arrayResponse = (ArrayNode)response;
+      assertEquals(1,arrayResponse.size(),"unexpected number of responses "+response);
+      JsonNode first = arrayResponse.get(0);
+      assertTrue(first.has("values"),first.toString());
+      JsonNode values = first.get("values");
+      assertTrue(values.has("labelBar"),values.toString());
+      assertEquals(JsonNodeType.STRING,values.get("labelBar").getNodeType());
+      assertEquals("dox",values.get("labelBar").asText());
+   }
    @org.junit.jupiter.api.Test
    public void labelValuesIncludeExcluded() throws JsonProcessingException {
       Test t = createTest(createExampleTest("my-test"));
-      int id = labelValuesSetup(t);
+      String id = labelValuesSetup(t,true);
 
       JsonNode response = jsonRequest()
               .get("/api/run/"+id+"/labelValues?include=labelFoo&exclude=labelFoo")
@@ -151,7 +205,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void labelValuesIncludeTwoParams() throws JsonProcessingException {
       Test t = createTest(createExampleTest("my-test"));
-      int id = labelValuesSetup(t);
+      String id = labelValuesSetup(t,true);
 
       JsonNode response = jsonRequest()
               .get("/api/run/"+id+"/labelValues?include=labelFoo&include=labelBar")
@@ -171,7 +225,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void labelValuesIncludeTwoSeparated() throws JsonProcessingException {
       Test t = createTest(createExampleTest("my-test"));
-      int id = labelValuesSetup(t);
+      String id = labelValuesSetup(t,true);
 
       JsonNode response = jsonRequest()
               .get("/api/run/"+id+"/labelValues?include=labelFoo,labelBar")
@@ -192,7 +246,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void labelValuesInclude() throws JsonProcessingException {
       Test t = createTest(createExampleTest("my-test"));
-      int id = labelValuesSetup(t);
+      String id = labelValuesSetup(t,true);
 
       JsonNode response = jsonRequest()
               .get("/api/run/"+id+"/labelValues?include=labelFoo")
@@ -212,7 +266,7 @@ public class RunServiceTest extends BaseServiceTest {
    @org.junit.jupiter.api.Test
    public void labelValuesExclude() throws JsonProcessingException {
       Test t = createTest(createExampleTest("my-test"));
-      int id = labelValuesSetup(t);
+      String id = labelValuesSetup(t,true);
 
       JsonNode response = jsonRequest()
               .get("/api/run/"+id+"/labelValues?exclude=labelFoo")

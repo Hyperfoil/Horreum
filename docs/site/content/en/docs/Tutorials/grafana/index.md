@@ -89,7 +89,12 @@ There are 2 ways to filter:
    and `{"version":"1.2.3","txRate":2000}` will add the `txRate=2000` requirement.
 
 > curl --query-param "filter={\"version\":\"1.2.3\",\"txRate\":2000}" <horreum>:/api/test/{id}/labelValues
- 
+
+Grafana offers a multi-select option for variables. This sends the options as an array when using `json` encoding.
+Horreum will default to looking for a label with an array value instead of any value in the array. 
+Adding the `multiFilter=true` query parameter allows Horreum to also look for any value in the array and supports Grafana mulit-select.
+
+> curl --query-param "multiFilter=true" --query-param "filter={\"count\":[1,2,4,8]}" <horreum>:/api/test/{id}/labelValues
 
 2. provide a json path (an extractor path from labels) that needs to evaluate to true  
 
@@ -97,7 +102,7 @@ There are 2 ways to filter:
 
 > curl --query-param "filter=\"$.count ? (@ > 10 && @ < 20)\"" <horreum>:/api/test/{id}/labelValues
 
-We set the `filter` parameter by editing the Query for the grafana panel but it will depend .
+We set the `filter` parameter by editing the Query for the grafana panel.  
 
 {{% imgproc json_api_panel_filter Fit "865x331" %}}
 Define filter for query

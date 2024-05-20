@@ -121,7 +121,8 @@ public interface RunService {
                     examples = {
                             @ExampleObject(name="single", value="id", description = "excluding a single label"),
                             @ExampleObject(name="multiple", value="id,count", description = "excluding multiple labels")
-                    })
+                    }),
+            @Parameter(name = "multiFilter", description = "enable filtering for multiple values with an array of values", example = "true")
     })
     @APIResponses(
             value = {
@@ -145,7 +146,8 @@ public interface RunService {
             @QueryParam("limit") @DefaultValue(""+Integer.MAX_VALUE) int limit,
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("include") @Separator(",") List<String> include,
-            @QueryParam("exclude") @Separator(",") List<String> exclude);
+            @QueryParam("exclude") @Separator(",") List<String> exclude,
+            @QueryParam("multiFilter") @DefaultValue("false") boolean multiFilter);
 
     @GET
     @Path("{id}/metadata")
