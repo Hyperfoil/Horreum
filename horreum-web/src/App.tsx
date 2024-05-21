@@ -10,7 +10,7 @@ import {
     Nav,
     NavItem,
     NavList,
-    Page, PageSidebar, PageSidebarBody, Sidebar, SidebarContent, SidebarPanel, SkipToContent, ToggleGroup, Toolbar, ToolbarContent, ToolbarGroup, ToolbarItem
+    Page, PageSidebar, PageSidebarBody, SkipToContent, Toolbar, ToolbarContent, ToolbarGroup, ToolbarItem
 } from '@patternfly/react-core';
 
 import {
@@ -22,7 +22,7 @@ import {
 } from "react-router-dom"
 
 import {Provider, useSelector} from "react-redux"
-import {isAdminSelector, isAuthenticatedSelector, isManagerSelector, LoginLogout, userProfileSelector} from "./auth"
+import {isAdminSelector, LoginLogout} from "./auth"
 import {initKeycloak} from "./keycloak"
 import {UserProfileLink, UserSettings} from "./domain/user/UserSettings"
 
@@ -44,35 +44,26 @@ import NotFound from "./404"
 
 import About from "./About"
 import ContextProvider from "./context/appContext";
-import {ONLY_MY_OWN, Team} from "./components/TeamSelect";
-import {PageHeader, PageHeaderTools} from "@patternfly/react-core/deprecated";
 import TableReportConfigPage from "./domain/reports/TableReportConfigPage";
 import TableReportPage from "./domain/reports/TableReportPage";
 
 const router = createBrowserRouter(
     createRoutesFromElements(
-        <Route element={<Main/>}>
+        <Route element={<Main/>} errorElement={<NotFound/>}>
             <Route index element={<AllTests/>}/>
             <Route path="/test" element={<AllTests/>}/>
             <Route path="/test/:testId" element={<Test/>}/>
             <Route path="/test/:testId/reports/table/config/:configId" element={<TableReportConfigPage/>}/>
             <Route path="/test/:testId/reports/table/:id" element={<TableReportPage/>}/>
 
-            {/*<Route path="/run/list/:testId" element={<RunList/>}/>*/}
-            {/*<Route path="/run/dataset/list/:testId" element={<TestDatasets/>}/>*/}
             <Route path="/run/:id" element={<Run/>}/>
             <Route path="/dataset/comparison" element={<DatasetComparison/>}/>
 
             <Route path="/schema" element={<SchemaList/>}/>
             <Route path="/schema/:schemaId" element={<Schema/>}/>
 
-            {/*<Route path="/changes" element={<Changes testID={1}/>}/>*/}
-
-            {/*<Route path="/reports" element={<Reports  testId={1}/>}/>*/}
-
             <Route path="/admin" element={<Admin/>}/>
             <Route path="/usersettings" element={<UserSettings/>}/>
-            <Route element={<NotFound/>}/>
         </Route>
     )
 );
