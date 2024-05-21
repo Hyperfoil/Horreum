@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef, useContext} from "react"
+import { useState, useEffect, useRef, useContext } from "react"
 import { useParams } from "react-router-dom"
 
 import { useSelector } from "react-redux"
@@ -25,13 +25,13 @@ import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
 import Experiments from "./Experiments"
 import ActionsUI from "./ActionsUI"
-import Access from "./Access"
+import Tokens from "./Tokens"
 import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
 import MissingDataNotifications from "./MissingDataNotifications"
-import {fetchTest, fetchViews, Test, testApi, View} from "../../api";
-import {AppContext} from "../../context/appContext";
-import {AppContextType} from "../../context/@types/appContextTypes";
+import { fetchTest, fetchViews, Test, testApi, View } from "../../api";
+import { AppContext } from "../../context/appContext";
+import { AppContextType } from "../../context/@types/appContextTypes";
 
 import TestDatasets from "../runs/TestDatasets";
 import Changes from "../alerting/Changes";
@@ -39,21 +39,14 @@ import Reports from "../reports/Reports";
 import RunList from "../runs/RunList";
 import ExportButton from "../../components/ExportButton";
 
-type Params = {
-    testId: string
-    tab: string
-}
-
-
 export default function TestView() {
     const {testId} = useParams<any>()
     const [testIdVal, setTestIdVal] = useState(testId === "_new" ? 0 : parseInt(testId ?? "-1"))
     const [test, setTest] = useState<Test | undefined>()
     const [views, setViews] = useState<View[]>( [])
     const [modified, setModified] = useState(false)
-    const dataFuncsRef = useRef<TabFunctions>()
     const generalFuncsRef = useRef<TabFunctions>()
-    const accessFuncsRef = useRef<TabFunctions>()
+    const tokensFuncsRef = useRef<TabFunctions>()
     const viewFuncsRef = useRef<TabFunctions>()
     const variablesFuncsRef = useRef<TabFunctions>()
     const missingDataFuncsRef = useRef<TabFunctions>()
@@ -66,14 +59,18 @@ export default function TestView() {
     //replace redux
     const teams = useSelector(teamsSelector)
 
+    const refetchTest = () => {
+        setLoaded(false)
+        return fetchTest(testIdVal, alerting)
+            .then(setTest)
+            .finally(() => setLoaded(true))
+    }
     const { alerting } = useContext(AppContext) as AppContextType;
     useEffect(() => {
         if (testIdVal !== 0) {
             setLoaded(false)
-            fetchTest(testIdVal, alerting)
-                .then(setTest)
-                .then( () => fetchViews(testIdVal, alerting).then(setViews) )
-                .finally(() => setLoaded(true))
+            refetchTest()
+                .then(() => fetchViews(testIdVal, alerting).then(setViews))
         }
     }, [testIdVal, teams])
 
@@ -182,14 +179,17 @@ export default function TestView() {
                                 />
                             </SavedTab>
                             <SavedTab
-                                title="Access"
-                                fragment="access"
+                                title="Tokens"
+                                fragment="tokens"
                                 canSave={true}
-                                onSave={saveFunc(accessFuncsRef)}
-                                onReset={resetFunc(accessFuncsRef)}
+                                onSave={() =>
+                                    saveFunc(tokensFuncsRef)()
+                                        .then(refetchTest)
+                                }
+                                onReset={resetFunc(tokensFuncsRef)}
                                 isModified={() => modified}
                             >
-                                <Access test={test || undefined} onModified={setModified} funcsRef={accessFuncsRef} />
+                                <Tokens test={test || undefined} onModified={setModified} funcsRef={tokensFuncsRef} />
                             </SavedTab>
                             <SavedTab
                                 title="Views"

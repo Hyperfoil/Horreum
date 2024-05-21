@@ -8,16 +8,17 @@ type ConfirmDeleteModalProps = {
     onDelete(): Promise<any>
     description: string
     extra?: string
+    deleteButtonText?: string
 }
 
-export default function ConfirmDeleteModal({isOpen, onClose, onDelete, description, extra}: ConfirmDeleteModalProps) {
+export default function ConfirmDeleteModal({isOpen, onClose, onDelete, description, extra, deleteButtonText}: ConfirmDeleteModalProps) {
     const [deleting, setDeleting] = useState(false)
     return (
         <Modal variant="small" title="Confirm Delete" isOpen={isOpen} onClose={onClose}>
 
             <Stack hasGutter>
                 <StackItem>
-                    <div>Do you really want to delete {description}?</div>
+                    <div>Do you really want to { deleteButtonText?.toLowerCase() ?? "delete"} {description}?</div>
                 </StackItem>
                 <StackItem>{extra}</StackItem>
                 <StackItem>
@@ -34,7 +35,7 @@ export default function ConfirmDeleteModal({isOpen, onClose, onDelete, descripti
                                     })
                                 }}
                             >
-                                Delete
+                                {deleteButtonText ?? "Delete"}
                                 {deleting && (
                                     <>
                                         {" "}

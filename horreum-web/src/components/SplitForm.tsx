@@ -40,6 +40,7 @@ type SplitFormProps<I extends Item> = {
     onSelected(item?: I): void
     loading: boolean
     actions?: ReactNode[] | ReactNode
+    deleteButtonText?: string
 }
 
 export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
@@ -126,7 +127,7 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
                                     }
                                 }}
                             >
-                                Delete
+                                {props.deleteButtonText ?? "Delete"}
                             </Button>
                             <ConfirmDeleteModal
                                 isOpen={deleteOpen}
@@ -135,6 +136,7 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
                                     doDelete()
                                     return Promise.resolve()
                                 }}
+                                deleteButtonText={props.deleteButtonText}
                                 description={`${props.itemType} ${(props.selected || props.items[0]).name}`}
                             />
                         </FlexItem>
