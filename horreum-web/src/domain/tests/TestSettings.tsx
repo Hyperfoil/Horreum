@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useContext } from "react"
+import React, { useState, useEffect, useContext } from "react"
 import { useSelector } from "react-redux"
 
 import {
@@ -11,15 +11,20 @@ import {
     FormSelectOption,
     Switch,
     TextArea,
-    TextInput, FlexItem
+    TextInput,
+    Title,
+    Divider,
 } from "@patternfly/react-core"
 import FolderSelect from "../../components/FolderSelect"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
-import {Test, Access, sendTest, configApi, Datastore, apiCall} from "../../api"
-import { useTester, defaultTeamSelector } from "../../auth"
-import {AppContext} from "../../context/appContext";
-import {AppContextType} from "../../context/@types/appContextTypes";
+import { Test, Access, sendTest, configApi, Datastore, apiCall } from "../../api"
+import { useTester, defaultTeamSelector, teamToName } from "../../auth"
+import { AppContext } from "../../context/appContext";
+import { AppContextType } from "../../context/@types/appContextTypes";
+import TeamSelect from "../../components/TeamSelect"
+import AccessChoice from "../../components/AccessChoice"
+import AccessIcon from "../../components/AccessIcon"
 
 type GeneralProps = {
     test?: Test
@@ -46,28 +51,32 @@ const isUrlOrBlank = (input:string|undefined):boolean=>{
 export default function TestSettings({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
     const defaultRole = useSelector(defaultTeamSelector)
+    // general settings
     const [name, setName] = useState("")
     const [folder, setFolder] = useState("")
     const [datastoreId, setDatastoreId] = useState(test?.datastoreId)
     const [description, setDescription] = useState("")
     const [compareUrl, setCompareUrl] = useState<string | undefined>(undefined)
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-
     const [datastores, setDatastores] = useState<Datastore[]>([])
-    const [owner] = useState(test?.owner || defaultRole || "")
+    // permissions
+    const [owner, setOwner] = useState(test?.owner || defaultRole || "")
+    const [access, setAccess] = useState<Access>(test?.access || Access.Public)
 
     useEffect( () => {
         apiCall(configApi.datastores(owner), alerting, "DATASTORE", "Error occurred fetching datastores")
             .then(ds => setDatastores(ds))
     }, [test])
 
-    const updateState = (test?: Test) => {
-        setName(test?.name || "")
-        setFolder(test?.folder || "")
-        setDatastoreId( test?.datastoreId || 1 )
-        setDescription(test?.description || "")
-        setCompareUrl(test?.compareUrl?.toString() || undefined)
-        setNotificationsEnabled(!test || test.notificationsEnabled)
+    const updateState = (t?: Test) => {
+        setName(t?.name || "")
+        setFolder(t?.folder || "")
+        setDatastoreId( t?.datastoreId || 1 )
+        setDescription(t?.description || "")
+        setCompareUrl(t?.compareUrl?.toString() || undefined)
+        setNotificationsEnabled(!t || t.notificationsEnabled)
+        setOwner(t?.owner || defaultRole || "")
+        setAccess(t?.access || Access.Public)
     }
     const handleOptionChange = (_ : React.FormEvent<HTMLSelectElement>, value: string) => {
         setDatastoreId(parseInt(value))
@@ -81,7 +90,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
     }, [test])
 
     funcsRef.current = {
-        save: () => {
+        save: async () => {
             const newTest: Test = {
                 id: test?.id || 0,
                 name,
@@ -90,20 +99,19 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
                 datastoreId: datastoreId || 1,
                 compareUrl: compareUrl || undefined, // when empty set to undefined
                 notificationsEnabled,
-                fingerprintLabels: [],
-                fingerprintFilter: undefined,
-                owner: test?.owner || defaultRole || "__test_created_without_a_role__",
-                access: test ? test.access : Access.Private,
-                tokens: [],
-                transformers: [],
+                fingerprintLabels: test?.fingerprintLabels || [],
+                fingerprintFilter: test?.fingerprintFilter,
+                owner: owner || defaultRole || "__test_created_without_a_role__",
+                access: access,
+                tokens: test?.tokens || [],
+                transformers: test?.transformers || [],
             }
-            return sendTest(newTest, alerting).then(response => onTestIdChange(response.id))
+            const response = await sendTest(newTest, alerting)
+            if (response.id !== test?.id) {
+                return onTestIdChange(response.id)
+            }
         },
         reset: () => updateState(test),
-    }
-
-    const loadTests = () => {
-        alerting.dispatchError("Not implemented", "Test import is not implemented yet", "IMPORT")
     }
 
     const isTester = useTester(test?.owner)
@@ -111,6 +119,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
     return (
         <>
             <Form isHorizontal={true}>
+                <Title headingLevel="h2">General settings</Title>
                 <FormGroup
                     label="Name"
                     isRequired={true}
@@ -202,23 +211,43 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
                             onModified(true)
                         }}
                     />
-                    {/* <OptionalFunction
-                        readOnly={!isTester}
-                        func={compareUrl}
-                        defaultFunc="(ids, token) => 'http://example.com/compare?ids=' + ids.join(',')"
-                        addText="Add compare function..."
-                        undefinedText="Compare function is not defined"
-                        onChange={value => {
-                            setCompareUrl(value)
-                            onModified(true)
-                        }}
-                    /> */}
                     <FormHelperText>
                         <HelperText>
                             <HelperTextItem>Horreum will append the selected run ids as id=runId&id=otherRunId to the provided url</HelperTextItem>
                             {isUrlValid ? undefined : <HelperTextItem variant="error">Cannot create a valid URL from the provided compare URL</HelperTextItem>}
                         </HelperText>
                     </FormHelperText>
+                </FormGroup>
+
+                <Divider/>
+
+                <Title headingLevel="h2">Permissions</Title>
+                <FormGroup label="Owner" fieldId="testOwner">
+                    {isTester ? (
+                        <TeamSelect
+                            includeGeneral={false}
+                            selection={teamToName(owner) || ""}
+                            onSelect={selection => {
+                                setOwner(selection.key)
+                                onModified(true)
+                            }}
+                        />
+                    ) : (
+                        <TextInput value={teamToName(owner) || ""} id="testOwner"  readOnlyVariant="default" />
+                    )}
+                </FormGroup>
+                <FormGroup label="Access rights" fieldId="testAccess">
+                    {isTester ? (
+                        <AccessChoice
+                            checkedValue={access}
+                            onChange={a => {
+                                setAccess(a)
+                                onModified(true)
+                            }}
+                        />
+                    ) : (
+                        <AccessIcon access={access} />
+                    )}
                 </FormGroup>
             </Form>
         </>
