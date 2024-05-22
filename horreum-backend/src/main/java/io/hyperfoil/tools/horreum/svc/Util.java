@@ -595,14 +595,15 @@ public class Util {
                                                    ExecutionExceptionConsumer<T> onJsEvaluationException,
                                                    Consumer<String> jsOutputConsumer) {
       ByteArrayOutputStream out = new ByteArrayOutputStream();
-      try (org.graalvm.polyglot.Context context = createContext(out)) {
-         context.enter();
-         try {
-            setupContext(context);
-            for (int i = 0; i < inputData.size(); i++) {
-               T element = inputData.get(i);
-               String jsFuncBody = jsCombinationFunction.apply(element);
-               if (jsFuncBody != null && !jsFuncBody.isBlank()) {
+
+      for (int i = 0; i < inputData.size(); i++) {
+         T element = inputData.get(i);
+         String jsFuncBody = jsCombinationFunction.apply(element);
+         if (jsFuncBody != null && !jsFuncBody.isBlank()) {
+            try (org.graalvm.polyglot.Context context = createContext(out)) {
+               context.enter();
+               try {
+                  setupContext(context);
                   StringBuilder jsCode = new StringBuilder("const __obj").append(i).append(" = ").append(evaluationInputObject.apply(element)).append(";\n");
                   jsCode.append("const __func").append(i).append(" = ").append(jsFuncBody).append(";\n");
                   jsCode.append("__func").append(i).append("(__obj").append(i).append(")");
@@ -613,18 +614,18 @@ public class Util {
                   } catch (PolyglotException e) {
                      onJsEvaluationException.accept(element, e, jsCode.toString());
                   }
-               } else {
-                  nonFuncResultConsumer.accept(element);
+               } catch (IOException e) {
+                  onJsEvaluationException.accept(null, e, "<init>");
+               } finally {
+                  context.leave();
                }
             }
-         } catch (IOException e) {
-            onJsEvaluationException.accept(null, e, "<init>");
-         } finally {
-            if (out.size() > 0) {
-               jsOutputConsumer.accept(out.toString(StandardCharsets.UTF_8));
-            }
-            context.leave();
+         } else {
+            nonFuncResultConsumer.accept(element);
          }
+      }
+      if (out.size() > 0) {
+         jsOutputConsumer.accept(out.toString(StandardCharsets.UTF_8));
       }
    }
 
