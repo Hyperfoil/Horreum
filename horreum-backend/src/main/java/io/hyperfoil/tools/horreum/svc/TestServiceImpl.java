@@ -46,6 +46,7 @@ import jakarta.persistence.Tuple;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.hibernate.Hibernate;
@@ -101,6 +102,15 @@ public class TestServiceImpl implements TestService {
                      AND (label.id IS NULL OR (:filteringLabels AND label.filtering) OR (:metricLabels AND label.metrics))
                   GROUP BY dataset.id, runId
          ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER limit :limit offset :offset
+         """;
+
+   protected static final String LABEL_VALUES_SUMMARY_QUERY = """
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value), '{}'::jsonb) AS values
+                  FROM dataset
+                  INNER JOIN label_values lv ON dataset.id = lv.dataset_id
+                  INNER JOIN label ON label.id = lv.label_id
+                  WHERE dataset.testid = :testId AND label.filtering
+                  GROUP BY dataset.id, runId
          """;
 
 
@@ -819,6 +829,26 @@ public class TestServiceImpl implements TestService {
                 .addScalar("start", StandardBasicTypes.INSTANT)
                 .addScalar("stop", StandardBasicTypes.INSTANT);
            return ExportedLabelValues.parse( query.getResultList() );
+   }
+
+   @Transactional
+   @WithRoles
+   @Override
+   public List<ObjectNode> filteringLabelValues(
+           @PathParam("id") int testId){
+
+      TestDAO.findByIdOptional(testId).orElseThrow(() -> ServiceException.serverError("Cannot find test " + testId));
+
+      NativeQuery<ObjectNode> query = ((NativeQuery<ObjectNode>) em.createNativeQuery(LABEL_VALUES_SUMMARY_QUERY))
+              .setParameter("testId", testId);
+
+      query
+              .unwrap(NativeQuery.class)
+              .addScalar("values", JsonBinaryType.INSTANCE);
+      List<ObjectNode> filters = query.getResultList();
+
+      return filters != null ? filters : new ArrayList<>();
+
    }
 
    @WithRoles

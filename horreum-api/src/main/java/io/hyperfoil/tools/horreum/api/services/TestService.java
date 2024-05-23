@@ -252,6 +252,21 @@ public interface TestService {
            @QueryParam("exclude") @Separator(",") List<String> exclude,
            @QueryParam("multiFilter") @DefaultValue("false") boolean multiFilter);
 
+   @GET
+   @Path("{id}/filteringLabelValues")
+   @Operation(description="List all unique Label Values for a Test")
+   @Parameters(value = {
+           @Parameter(name = "id", description = "Test ID to retrieve Filtering Label Values for", example = "10"),
+   })
+   @APIResponses(
+           value = { @APIResponse( responseCode = "200",
+                   content = {
+                           @Content ( schema = @Schema(type = SchemaType.ARRAY, implementation = Object.class)) }
+           )}
+   )
+   List<ObjectNode> filteringLabelValues(
+           @PathParam("id") int testId);
+
    @POST
    @Consumes(MediaType.APPLICATION_JSON)
    @Path("{id}/transformers")

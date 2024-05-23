@@ -503,11 +503,20 @@ public class BaseServiceTest {
       return lastAddedLabelId;
    }
 
+   protected int addLabel(Schema schema, String name, String function, boolean filtering, boolean metric, Extractor... extractors) {
+      lastAddedLabelId = postLabel(schema, name, function, null, filtering, metric, extractors);
+      return lastAddedLabelId;
+   }
+
    protected int updateLabel(Schema schema, int labelId, String name, String function, Extractor... extractors) {
       return postLabel(schema, name, function, l -> l.id = labelId, extractors);
    }
 
    protected int postLabel(Schema schema, String name, String function, Consumer<Label> mutate, Extractor... extractors) {
+      return postLabel(schema, name, function, mutate, true, true, extractors);
+   }
+
+   protected int postLabel(Schema schema, String name, String function, Consumer<Label> mutate, boolean filtering, boolean metric,  Extractor... extractors) {
       Label l = new Label();
       l.name = name;
       l.function = function;

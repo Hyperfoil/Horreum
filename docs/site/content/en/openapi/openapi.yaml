@@ -2032,6 +2032,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TestExport'
+  /api/test/{id}/filteringLabelValues:
+    get:
+      tags:
+      - Test
+      description: List all unique Label Values for a Test
+      operationId: filteringLabelValues
+      parameters:
+      - name: id
+        in: path
+        description: Test ID to retrieve Filtering Label Values for
+        required: true
+        schema:
+          format: int32
+          type: integer
+        example: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {}
   /api/test/{id}/fingerprint:
     get:
       tags:

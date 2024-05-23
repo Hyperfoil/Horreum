@@ -205,20 +205,9 @@ export default function TestDatasets() {
         })
         return allColumns
     }, [test, token, comparedDatasets, viewId, views])
-    const flattenLabelValues = (labelValues: Array<ExportedLabelValues>) => {
-        const resultArr : any = [];
-        labelValues.forEach( (labelValue) => {
-            resultArr.push(labelValue.values)
-        })
-        return resultArr;
-    }
 
-    const labelsSource = useCallback(() => {
-        return testApi.labelValues(testIdInt)
-            .then((result: Array<ExportedLabelValues>) => {
-                return flattenLabelValues(result);
-            })
-    }, [testIdInt, teams, token])
+    const labelsSource = useCallback(() => testApi.filteringLabelValues(testIdInt), [testIdInt, teams, token])
+
     return (
         <>
             <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
