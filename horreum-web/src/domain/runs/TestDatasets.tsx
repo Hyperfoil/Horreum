@@ -2,33 +2,24 @@ import {useCallback, useContext, useEffect, useMemo, useState} from "react"
 import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 import {
-    Breadcrumb,
-    BreadcrumbItem,
     Button,
-    Card,
-    CardHeader,
-    CardBody,
-    CardFooter,
     ExpandableSection,
     ExpandableSectionToggle,
     Flex,
     FlexItem,
-    PageSection,
-    Pagination,
-    Title,
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
+    PageSection,
 } from "@patternfly/react-core"
 import { ArrowRightIcon } from "@patternfly/react-icons"
-import { Link, NavLink } from "react-router-dom"
+import { NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
 import { toEpochMillis, fingerprintToString } from "../../utils"
 
 import { teamsSelector, teamToName, tokenSelector } from "../../auth"
 
-import Table from "../../components/Table"
 import {
     CellProps,
     UseTableOptions,
@@ -36,6 +27,7 @@ import {
     UseRowSelectRowProps,
     Column,
     UseSortByColumnOptions,
+    SortingRule,
 } from "react-table"
 import {
     DatasetSummary,
@@ -50,14 +42,13 @@ import {
     fetchViews
 } from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
-import SchemaList from "./SchemaList"
-import { NoSchemaInDataset } from "./NoSchema"
 import ButtonLink from "../../components/ButtonLink"
 import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 import ViewSelect from "../../components/ViewSelect"
 import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import CustomTable from "../../components/CustomTable"
 
 type C = CellProps<DatasetSummary> &
     UseTableOptions<DatasetSummary> &
@@ -68,6 +59,7 @@ type DatasetColumn = Column<DatasetSummary> & UseSortByColumnOptions<DatasetSumm
 const staticColumns: DatasetColumn[] = [
     {
         Header: "Data",
+        id: "runId",
         accessor: "runId",
         Cell: (arg: C) => {
             const {
@@ -90,6 +82,7 @@ const staticColumns: DatasetColumn[] = [
     },
     {
         Header: "Executed",
+        id: "start",
         accessor: "start",
         Cell: (arg: C) => ExecutionTime(arg.row.original),
     },
@@ -121,16 +114,14 @@ export default function TestDatasets() {
     const { alerting } = useContext(AppContext) as AppContextType;
     const { testId } = useParams();
     const testIdInt = parseInt(testId ?? "-1")
-    // const [tests, setTests] = useState<Test[] | undefined>(undefined)
     const [test, setTest] = useState<Test | undefined>(undefined)
     const [filter, setFilter] = useState<SelectedLabels>()
     const [filterExpanded, setFilterExpanded] = useState(false)
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
-    const [sort, setSort] = useState("start")
-    const [direction, setDirection] = useState("Descending")
+    const [sortBy, setSortBy] = useState<SortingRule<DatasetSummary>>({id: "start", desc: true})
     const [viewId, setViewId] = useState<number>()
-    const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
+    const pagination = useMemo(() => ({ page, perPage, sortBy }), [page, perPage, sortBy])
     const [loading, setLoading] = useState(false)
     const [datasets, setDatasets] = useState<DatasetList>()
     const [comparedDatasets, setComparedDatasets] = useState<DatasetSummary[]>()
@@ -146,13 +137,14 @@ export default function TestDatasets() {
 
     useEffect(() => {
         setLoading(true)
+        const direction = pagination.sortBy.desc ? SortDirection.Descending : SortDirection.Ascending
         datasetApi.listByTest(
             testIdInt,
             fingerprintToString(filter),
             pagination.perPage,
             pagination.page,
-            pagination.sort,
-            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending,
+            pagination.sortBy.id,
+            direction,
             viewId
         )
             .then(setDatasets, error =>
@@ -197,7 +189,13 @@ export default function TestDatasets() {
         components.forEach(vc => {
             allColumns.push({
                 Header: vc.headerName,
-                accessor: dataset => dataset.view && dataset.view[vc.id],
+                accessor: dataset => {
+                    const elem = dataset.view && dataset.view[vc.id]
+                    if (elem && vc.labels.length == 1) {
+                        return (elem as any)[vc.labels[0]]
+                    }
+                    return elem
+                },
                 // In general case we would have to calculate the final sortable cell value
                 // in database, or fetch all runs and sort in server doing the rendering
                 disableSortBy: (!!vc.render && vc.render !== "") || vc.labels.length > 1,
@@ -222,55 +220,54 @@ export default function TestDatasets() {
             })
     }, [testIdInt, teams, token])
     return (
-            <Card>
-                <CardHeader>
-                    <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
-                        <ToolbarGroup>
-                            <ToolbarItem>
-                                <Flex>
-                                    <FlexItem>View:</FlexItem>
-                                    <FlexItem>
-                                        <ViewSelect
-                                            views={views || []}
-                                            viewId={viewId || views?.find(v => v.name === "Default")?.id || -1}
-                                            onChange={setViewId}
-                                        />
-                                    </FlexItem>
-                                </Flex>
-                            </ToolbarItem>
-                            <ToolbarItem>
-                                <ExpandableSectionToggle
-                                    isExpanded={filterExpanded}
-                                    contentId="filter"
-                                    onToggle={setFilterExpanded}
-                                >
-                                    {filterExpanded ? "Hide filters" : "Show filters"}
-                                </ExpandableSectionToggle>
-                            </ToolbarItem>
-                            <ToolbarItem>
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => {
-                                        if (comparedDatasets) {
-                                            setComparedDatasets(undefined)
-                                        } else {
-                                            setComparedDatasets([])
-                                            setFilterExpanded(true)
-                                        }
-                                    }}
-                                >
-                                    {comparedDatasets ? "Cancel comparison" : "Select for comparison"}
-                                </Button>
-                            </ToolbarItem>
-                        </ToolbarGroup>
-                    </Toolbar>
-                </CardHeader>
-                <CardHeader style={{ margin: 0, overflowX: "auto" }}>
+        <>
+            <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
+                <ToolbarGroup>
+                    <ToolbarItem>
+                        <Flex>
+                            <FlexItem>View:</FlexItem>
+                            <FlexItem>
+                                <ViewSelect
+                                    views={views || []}
+                                    viewId={viewId || views?.find(v => v.name === "Default")?.id || -1}
+                                    onChange={setViewId}
+                                />
+                            </FlexItem>
+                        </Flex>
+                    </ToolbarItem>
+                    <ToolbarItem>
+                        <ExpandableSectionToggle
+                            isExpanded={filterExpanded}
+                            contentId="filter"
+                            onToggle={setFilterExpanded}
+                        >
+                            {filterExpanded ? "Hide filters" : "Show filters"}
+                        </ExpandableSectionToggle>
+                    </ToolbarItem>
+                    <ToolbarItem>
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                if (comparedDatasets) {
+                                    setComparedDatasets(undefined)
+                                } else {
+                                    setComparedDatasets([])
+                                    setFilterExpanded(true)
+                                }
+                            }}
+                        >
+                            {comparedDatasets ? "Cancel comparison" : "Select for comparison"}
+                        </Button>
+                    </ToolbarItem>
+                </ToolbarGroup>
+            </Toolbar>
+            {(filterExpanded || comparedDatasets) && (
+                <PageSection variant="default" isCenterAligned>
                     <ExpandableSection
                         isDetached
                         isExpanded={filterExpanded}
                         contentId="filter"
-                        style={{ display: "flex" }}
+                        style={{ display: "flex", overflowX: "auto" }}
                     >
                         <LabelsSelect
                             forceSplit={true}
@@ -283,48 +280,47 @@ export default function TestDatasets() {
                             emptyPlaceholder={<span>No filters available</span>}
                         />
                     </ExpandableSection>
-                </CardHeader>
-                {comparedDatasets && (
-                    <CardBody style={{ overflowX: "auto" }}>
-                        <Title headingLevel="h3">Datasets for comparison</Title>
-                        <Table<DatasetSummary> columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
-                        <ButtonLink
-                            to={
-                                `/dataset/comparison?testId=${testIdInt}&` +
-                                comparedDatasets.map(ds => `ds=${ds.id}_${ds.runId}_${ds.ordinal}`).join("&") +
-                                "#labels"
-                            }
-                            isDisabled={comparedDatasets.length === 0}
-                        >
-                            Compare labels
-                        </ButtonLink>
-                    </CardBody>
-                )}
-                <CardBody style={{ overflowX: "auto" }}>
-                    <Table
-                        columns={columns}
-                        data={
-                            datasets?.datasets?.filter(ds => !comparedDatasets || !comparedDatasets.includes(ds)) || []
-                        }
-                        sortBy={[{ id: sort, desc: direction === "Descending" }]}
-                        onSortBy={order => {
-                            if (order.length > 0 && order[0]) {
-                                setSort(order[0].id)
-                                setDirection(order[0].desc ? "Descending" : "Ascending")
-                            }
-                        }}
-                        isLoading={loading}
-                    />
-                </CardBody>
-                <CardFooter style={{ textAlign: "right" }}>
-                    <Pagination
-                        itemCount={datasets?.total}
-                        perPage={perPage}
-                        page={page}
-                        onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setPerPage(pp)}
-                    />
-                </CardFooter>
-            </Card>
+
+                    {comparedDatasets && comparedDatasets.length > 0 && (
+                        <div style={{ marginTop: "30px"}}>
+                            <CustomTable<DatasetSummary> title="Datasets for comparison" columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
+                            <ButtonLink
+                                to={
+                                    `/dataset/comparison?testId=${testIdInt}&` +
+                                    comparedDatasets.map(ds => `ds=${ds.id}_${ds.runId}_${ds.ordinal}`).join("&") +
+                                    "#labels"
+                                }
+                                isDisabled={comparedDatasets.length === 0}
+                                style={{ marginTop: "15px" }}
+                            >
+                                Compare labels
+                            </ButtonLink>
+                        </div>
+                    )}
+                </PageSection>
+            )}
+            <CustomTable<DatasetSummary>
+                columns={columns}
+                data={
+                    datasets?.datasets?.filter(ds => !comparedDatasets || !comparedDatasets.includes(ds)) || []
+                }
+                sortBy={[sortBy]}
+                onSortBy={order => {
+                    if (order.length > 0 && order[0]) {
+                        setSortBy(order[0])
+                    }
+                }}
+                isLoading={loading}
+                pagination={{
+                    top: true,
+                    bottom: true,
+                    count: datasets?.total,
+                    perPage: perPage,
+                    page: page,
+                    onSetPage: (e, p) => setPage(p),
+                    onPerPageSelect: (e, pp) => setPerPage(pp)
+                }}
+            />
+        </>
     )
 }

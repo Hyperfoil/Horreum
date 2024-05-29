@@ -1792,7 +1792,9 @@ paths:
         in: query
         description: Sort direction
         schema:
-          $ref: '#/components/schemas/SortDirection'
+          allOf:
+          - $ref: '#/components/schemas/SortDirection'
+          - default: Ascending
         example: Ascending
       responses:
         "200":
@@ -1909,7 +1911,8 @@ paths:
         example: 20
       - name: page
         in: query
-        description: 'filter by page number of a paginated list of '
+        description: "filter by page number of a paginated list of, set to 0 means\
+          \ return all results "
         schema:
           default: 1
           type: integer
@@ -1922,6 +1925,12 @@ paths:
           - $ref: '#/components/schemas/SortDirection'
           - default: Ascending
         example: Ascending
+      - name: name
+        in: query
+        description: Filter by test name
+        schema:
+          type: string
+        example: MyTest
       responses:
         "200":
           description: OK

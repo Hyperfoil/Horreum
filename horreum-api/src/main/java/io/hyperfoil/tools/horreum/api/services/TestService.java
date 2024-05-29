@@ -82,13 +82,13 @@ public interface TestService {
       }
    )
    TestQueryResult list(@QueryParam("roles") String roles,
-                   @QueryParam("limit") Integer limit,
-                   @QueryParam("page") Integer page,
-                   @QueryParam("sort") @DefaultValue("name") String sort,
-                   @QueryParam("direction") SortDirection direction);
+                        @QueryParam("limit") Integer limit,
+                        @QueryParam("page") Integer page,
+                        @QueryParam("sort") @DefaultValue("name") String sort,
+                        @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
 
-   public static final String DEFAULT_LIMIT = "20";
-   public static final String DEFAULT_PAGE = "1";
+   String DEFAULT_LIMIT = "20";
+   String DEFAULT_PAGE = "1";
 
    @Path("summary")
    @GET
@@ -97,14 +97,15 @@ public interface TestService {
            @Parameter(name = "roles", description = "\"__my\", \"__all\" or a comma delimited  list of roles", example = "__my"),
            @Parameter(name = "folder", description = "name of the Folder containing the Tests", example = "My Team Folder"),
            @Parameter(name = "limit", description = "limit the result count", example = DEFAULT_LIMIT, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_LIMIT)),
-           @Parameter(name = "page", description = "filter by page number of a paginated list of ", example = DEFAULT_PAGE, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_PAGE)),
-           @Parameter(name = "direction", description = "Sort direction", example ="Ascending")
-   }
-   )
+           @Parameter(name = "page", description = "filter by page number of a paginated list of, set to 0 means return all results ", example = DEFAULT_PAGE, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_PAGE)),
+           @Parameter(name = "direction", description = "Sort direction", example ="Ascending"),
+           @Parameter(name = "name", description = "Filter by test name", example ="MyTest"),
+   })
    TestListing summary(@QueryParam("roles") String roles, @QueryParam("folder") String folder,
-                  @DefaultValue(DEFAULT_LIMIT) @QueryParam("limit") Integer limit,
-                  @DefaultValue(DEFAULT_PAGE) @QueryParam("page") Integer page,
-                  @DefaultValue("Ascending") @QueryParam("direction") SortDirection direction);
+                       @DefaultValue(DEFAULT_LIMIT) @QueryParam("limit") Integer limit,
+                       @DefaultValue(DEFAULT_PAGE) @QueryParam("page") Integer page,
+                       @DefaultValue("Ascending") @QueryParam("direction") SortDirection direction,
+                       @QueryParam("name") String name);
 
    @Path("folders")
    @GET

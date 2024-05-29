@@ -10,7 +10,6 @@ import * as React from "react";
 
 import CaretDownIcon from '@patternfly/react-icons/dist/esm/icons/caret-down-icon';
 import AngleRightIcon from '@patternfly/react-icons/dist/esm/icons/angle-right-icon';
-import AngleLeftIcon from '@patternfly/react-icons/dist/esm/icons/angle-left-icon';
 
 const ROOT_FOLDER = "Horreum"
 type FoldersDropDownProps = {

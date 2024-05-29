@@ -2,16 +2,8 @@ import {useState, useMemo, useEffect, useContext} from "react"
 import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 import {
-    Breadcrumb,
-    BreadcrumbItem,
     Button,
-    Card,
-    CardHeader,
-    CardBody,
-    CardFooter,
     Checkbox,
-    PageSection,
-    Pagination,
     Toolbar,
     ToolbarGroup,
     ToolbarItem,
@@ -19,7 +11,7 @@ import {
     Split,
 } from "@patternfly/react-core"
 import { ArrowRightIcon, TrashIcon } from "@patternfly/react-icons"
-import { Link, NavLink } from "react-router-dom"
+import { NavLink } from "react-router-dom"
 
 import { Duration } from "luxon"
 import { toEpochMillis, noop } from "../../utils"
@@ -28,7 +20,6 @@ import { teamsSelector, teamToName } from "../../auth"
 
 import { fetchTest } from "../../api"
 
-import Table from "../../components/Table"
 import {
     CellProps,
     UseTableOptions,
@@ -36,6 +27,7 @@ import {
     UseRowSelectRowProps,
     Column,
     UseSortByColumnOptions,
+    SortingRule,
 } from "react-table"
 import {runApi, RunSummary, SortDirection, Test} from "../../api"
 import { NoSchemaInRun } from "./NoSchema"
@@ -45,6 +37,7 @@ import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {RunImportModal} from "./RunImportModal";
+import CustomTable from "../../components/CustomTable"
 
 type C = CellProps<RunSummary> &
     UseTableOptions<RunSummary> &
@@ -62,9 +55,8 @@ export default function RunList() {
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
-    const [sort, setSort] = useState("start")
-    const [direction, setDirection] = useState("Descending")
-    const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
+    const [sortBy, setSortBy] = useState<SortingRule<RunSummary>>({id: "start", desc: true})
+    const pagination = useMemo(() => ({ page, perPage, sortBy }), [page, perPage, sortBy])
 
     const [showTrashed, setShowTrashed] = useState(false)
     const [runs, setRuns] = useState<RunSummary[] >([])
@@ -75,13 +67,14 @@ export default function RunList() {
 
     const loadTestRuns = () => {
         setIsLoading(true)
+        const direction = pagination.sortBy.desc ? SortDirection.Descending : SortDirection.Ascending
         runApi.listTestRuns(
             testIdInt,
             showTrashed,
             pagination.perPage,
             pagination.page,
-            pagination.sort,
-            pagination.direction === "Descending" ? SortDirection.Descending : SortDirection.Ascending
+            pagination.sortBy.id,
+            direction
         ).then(
             runsSummary => {
                 setRuns(runsSummary.runs)
@@ -100,7 +93,7 @@ export default function RunList() {
     }, [testIdInt, teams])
     useEffect(() => {
         loadTestRuns()
-    }, [test, showTrashed, page, perPage, sort, direction, pagination, testIdInt])
+    }, [test, showTrashed, page, perPage, sortBy, pagination, testIdInt])
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
@@ -152,6 +145,7 @@ export default function RunList() {
         },
         {
             Header: "Id",
+            id: "id",
             accessor: "id",
             Cell: (arg: C) => {
                 const {
@@ -171,6 +165,7 @@ export default function RunList() {
         },
         {
             Header: "Schema(s)",
+            id: "schemas",
             accessor: "schemas",
             disableSortBy: true,
             Cell: (arg: C) => {
@@ -187,11 +182,13 @@ export default function RunList() {
         },
         {
             Header: "Description",
+            id: "description",
             accessor: "description",
             Cell: (arg: C) => Description(arg.cell.value),
         },
         {
             Header: "Executed",
+            id: "start",
             accessor: "start",
             Cell: (arg: C) => ExecutionTime(arg.row.original),
         },
@@ -203,8 +200,8 @@ export default function RunList() {
         },
         {
             Header: "Datasets",
-            accessor: "datasets",
-            Cell: (arg: C) => arg.cell.value.length,
+            id: "datasets",
+            accessor: (run: RunSummary) => run.datasets.length,
         },
         {
             Header: "Owner",
@@ -236,82 +233,68 @@ export default function RunList() {
     };
 
     return (
-            <Card>
-                <CardHeader>
-                    <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
-                        <ToolbarGroup>
-                            <ToolbarItem>
-                                <Checkbox
-                                    id="showTrashed"
-                                    aria-label="show trashed runs"
-                                    label="Show trashed runs"
-                                    isChecked={showTrashed}
-                                    onChange={(_event, val) => setShowTrashed(!showTrashed)}
-                                />
-                            </ToolbarItem>
-                            <ToolbarItem>
-                                <Split hasGutter>
-                                    <SplitItem>
-                                        <Button
-                                            isDisabled={false}
-                                            variant="primary"
-                                            onClick={toggleNewRunModal}
-                                        >
-                                            Import Data
-                                        </Button></SplitItem>
-                                </Split>
-                            </ToolbarItem>
-                            {test && test.compareUrl && (
-                                <ToolbarItem>
-                                    <Button
-                                        variant="primary"
-                                        component="a"
-                                        target="_blank"
-                                        href={actualCompareUrl || ""}
-                                        isDisabled={!actualCompareUrl}
-                                    >
-                                        Compare runs
-                                    </Button>
-                                </ToolbarItem>
-                            )}
-                        </ToolbarGroup>
-                    </Toolbar>
-                </CardHeader>
-                <CardHeader style={{ margin: 0, display: "block", textAlign: "right" }}>
-                    <Pagination
-                        itemCount={runCount}
-                        perPage={perPage}
-                        page={page}
-                        onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setPerPage(pp)}
-                    />
-                </CardHeader>
-                <CardBody style={{ overflowX: "auto" }}>
-                    <Table
-                        columns={tableColumns}
-                        data={runs || []}
-                        sortBy={[{ id: sort, desc: direction === "Descending" }]}
-                        onSortBy={order => {
-                            if (order.length > 0 && order[0]) {
-                                setSort(order[0].id)
-                                setDirection(order[0].desc ? "Descending" : "Ascending")
-                            }
-                        }}
-                        isLoading={isLoading}
-                        selected={selectedRows}
-                        onSelected={setSelectedRows}
-                    />
-                </CardBody>
-                <CardFooter style={{ textAlign: "right" }}>
-                    <Pagination
-                        itemCount={runCount}
-                        perPage={perPage}
-                        page={page}
-                        onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setPerPage(pp)}
-                    />
-                </CardFooter>
-                <RunImportModal isOpen={showNewRunModal} onClose={toggleNewRunModal} test={test} owner={test?.owner || ""}/>
-            </Card>
+        <>
+            <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
+                <ToolbarGroup>
+                    <ToolbarItem>
+                        <Checkbox
+                            id="showTrashed"
+                            aria-label="show trashed runs"
+                            label="Show trashed runs"
+                            isChecked={showTrashed}
+                            onChange={(_event, val) => setShowTrashed(!showTrashed)}
+                        />
+                    </ToolbarItem>
+                    <ToolbarItem>
+                        <Split hasGutter>
+                            <SplitItem>
+                                <Button
+                                    isDisabled={false}
+                                    variant="primary"
+                                    onClick={toggleNewRunModal}
+                                >
+                                    Import Data
+                                </Button></SplitItem>
+                        </Split>
+                    </ToolbarItem>
+                    {test && test.compareUrl && (
+                        <ToolbarItem>
+                            <Button
+                                variant="primary"
+                                component="a"
+                                target="_blank"
+                                href={actualCompareUrl || ""}
+                                isDisabled={!actualCompareUrl}
+                            >
+                                Compare runs
+                            </Button>
+                        </ToolbarItem>
+                    )}
+                </ToolbarGroup>
+            </Toolbar>
+            <CustomTable<RunSummary>
+                columns={tableColumns}
+                data={runs || []}
+                sortBy={[sortBy]}
+                onSortBy={order => {
+                    if (order.length > 0 && order[0]) {
+                        setSortBy(order[0])
+                    }
+                }}
+                isLoading={isLoading}
+                selected={selectedRows}
+                onSelected={setSelectedRows}
+                pagination={{
+                    top: true,
+                    bottom: true,
+                    count: runCount,
+                    perPage: perPage,
+                    page: page,
+                    onSetPage: (e, p) => setPage(p),
+                    onPerPageSelect: (e, pp) => setPerPage(pp)
+                }}
+            />
+            <RunImportModal isOpen={showNewRunModal} onClose={toggleNewRunModal} test={test} owner={test?.owner || ""}/>
+        </>
     )
 }

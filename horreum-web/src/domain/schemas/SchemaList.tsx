@@ -1,20 +1,15 @@
 import React, {useMemo, useEffect, useState, useContext} from "react"
 import {
-    Card,
-    CardHeader,
-    CardFooter,
-    CardBody,
     PageSection,
-    Pagination,
-    Flex,
-    FlexItem,
-    FormGroup
+    Toolbar,
+    ToolbarContent,
+    ToolbarItem,
+    ToolbarGroup
 } from "@patternfly/react-core"
 import {NavLink, useNavigate} from "react-router-dom"
 
-import {useTester, teamsSelector, teamToName, isAuthenticatedSelector} from "../../auth"
+import {useTester, teamsSelector, teamToName} from "../../auth"
 import {noop} from "../../utils"
-import Table from "../../components/Table"
 
 import ActionMenu, {useChangeAccess, useDelete} from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
@@ -26,6 +21,7 @@ import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
 import ImportButton from "../../components/ImportButton";
+import CustomTable from "../../components/CustomTable"
 
 type C = CellProps<Schema>
 
@@ -87,18 +83,20 @@ export default function SchemaList() {
         () => [
             {
                 Header: "Name",
+                id: "name",
                 accessor: "name",
-                disableSortBy: false,
                 Cell: (arg: C) => {
                     return <NavLink to={"/schema/" + arg.row.original.id}>{arg.cell.value}</NavLink>
                 },
             },
             {
                 Header: "URI",
+                id: "uri",
                 accessor: "uri",
             },
             {
                 Header: "Description",
+                id: "description",
                 accessor: "description",
             },
             {
@@ -120,6 +118,7 @@ export default function SchemaList() {
             {
                 Header: "Actions",
                 accessor: "id",
+                disableSortBy: true,
                 Cell: arg => {
                     const changeAccess = useChangeAccess({
                         onAccessUpdate: (id, owner, access) => {
@@ -155,21 +154,20 @@ export default function SchemaList() {
 
     return (
         <PageSection>
-            <Card>
-                {isTester && (
-                    <CardHeader>
-                        <Flex>
-                            <FlexItem>
-                                <TeamSelect
-                                    includeGeneral={true}
-                                    selection={rolesFilter}
-                                    onSelect={selection => {
-                                        setRolesFilter(selection)
-                                    }}
-                                />
-                            </FlexItem>
-
-                            <FlexItem align={{ default: 'alignRight' }}>
+            {isTester && (
+                <Toolbar>
+                    <ToolbarContent>
+                        <ToolbarItem>
+                            <TeamSelect
+                                includeGeneral={true}
+                                selection={rolesFilter}
+                                onSelect={selection => {
+                                    setRolesFilter(selection)
+                                }}
+                            />
+                        </ToolbarItem>
+                        <ToolbarGroup variant="button-group" align={{ default: 'alignRight' }}>
+                            <ToolbarItem>
                                 <ImportButton
                                     label="Import schema"
                                     onLoad={config => {
@@ -186,32 +184,29 @@ export default function SchemaList() {
                                     onImport={config => schemaApi.importSchema(config as SchemaExport)}
                                     onImported={ reloadSchemas }
                                 />
-
+                            </ToolbarItem>
+                            <ToolbarItem>
                                 <ButtonLink style={{marginRight: "16px", width: "100pt"}} to="/schema/_new">New
                                     Schema</ButtonLink>
-                            </FlexItem>
-                        </Flex>
-
-
-                    </CardHeader>
-                )}
-                <CardBody style={{overflowX: "auto"}}>
-                    <Table<Schema> columns={columns}
-                                   data={schemas || []}
-                                   sortBy={[{id: "name", desc: false}]}
-                                   isLoading={loading}
-                    />
-                </CardBody>
-                <CardFooter style={{textAlign: "right"}}>
-                    <Pagination
-                        itemCount={schemaCount || 0}
-                        perPage={perPage}
-                        page={page}
-                        onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setPerPage(pp)}
-                    />
-                </CardFooter>
-            </Card>
+                            </ToolbarItem>
+                        </ToolbarGroup>
+                    </ToolbarContent>
+                </Toolbar>
+            )}
+            <CustomTable<Schema> columns={columns}
+                           data={schemas || []}
+                           sortBy={[{id: "name", desc: false}]}
+                           isLoading={loading}
+                           pagination={{
+                               bottom: true,
+                               count: schemaCount || 0,
+                               perPage: perPage,
+                               page: page,
+                               onSetPage: (e, p) => setPage(p),
+                               onPerPageSelect: (e, pp) => setPerPage(pp)
+                           }}
+                           cellModifier="wrap"
+            />
         </PageSection>
     )
 }

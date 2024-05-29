@@ -64,6 +64,8 @@ import java.util.stream.Collectors;
 public class TestServiceImpl implements TestService {
    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
 
+   private static final String FILTER_BY_NAME_FIELD = "name";
+
    protected static final String WILDCARD = "*";
    //using find and replace because  ASC or DESC cannot be set with a parameter
    //@formatter:off
@@ -282,9 +284,12 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    @WithRoles
-   public TestQueryResult list(String roles, Integer limit, Integer page, String sort,
-                               @DefaultValue("Ascending") SortDirection direction){
+   public TestQueryResult list(String roles, Integer limit, Integer page, String sort, SortDirection direction){
       PanacheQuery<TestDAO> query;
+      StringBuilder whereClause = new StringBuilder();
+      Map<String, Object> params = new HashMap<>();
+
+      // configure roles
       Set<String> actualRoles = null;
       if (Roles.hasRolesParam(roles)) {
          if (roles.equals(Roles.MY_ROLES)) {
@@ -296,13 +301,23 @@ public class TestServiceImpl implements TestService {
          }
       }
 
-      Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
-      Sort sortOptions = Sort.by(sort).direction(sortDirection);
-      if (actualRoles == null) {
-         query = TestDAO.findAll(sortOptions);
-      } else {
-         query = TestDAO.find("owner IN ?1", sortOptions, actualRoles);
+      if (actualRoles != null && !actualRoles.isEmpty()) {
+         whereClause.append("owner IN :owner");
+         params.put("owner", actualRoles);
       }
+
+      // configure sorting
+      Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
+      Sort sortOptions = sort != null ? Sort.by(sort).direction(sortDirection) : null;
+
+      // create TestDAO query
+      if (!whereClause.isEmpty()) {
+         query = TestDAO.find(whereClause.toString(), sortOptions, params);
+      } else {
+         query = TestDAO.findAll(sortOptions);
+      }
+
+      // configure paging
       if (limit != null && page != null) {
          query.page(Page.of(page, limit));
       }
@@ -312,7 +327,8 @@ public class TestServiceImpl implements TestService {
    @Override
    @PermitAll
    @WithRoles
-   public TestListing summary(String roles, String folder, Integer limit, Integer page, SortDirection direction) {
+   public TestListing summary(String roles, String folder, Integer limit, Integer page, SortDirection direction,
+                              String name) {
       folder = normalizeFolderName(folder);
       StringBuilder testSql = new StringBuilder();
       testSql.append("WITH runs AS (SELECT testid, count(id) as count FROM run WHERE run.trashed = false OR run.trashed IS NULL GROUP BY testid), ");
@@ -326,6 +342,16 @@ public class TestServiceImpl implements TestService {
          testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
          Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
       }
+
+      // configure search by
+      if (name != null) {
+         testSql.append(testSql.toString().contains("WHERE") ? " AND " : " WHERE ")
+               .append("LOWER(")
+               .append(FILTER_BY_NAME_FIELD)
+               .append(") LIKE :searchValue");
+      }
+
+      // page set to 0 means return all results, no limits nor ordering
       if( limit > 0 && page > 0 ) {
          Util.addPaging(testSql, limit, page, "test.name", direction);
       }
@@ -340,17 +366,22 @@ public class TestServiceImpl implements TestService {
          testQuery.setParameter(1, folder);
          Roles.addRolesParam(identity, testQuery, 2, roles);
       }
+
+      if (name != null) {
+         testQuery.setParameter("searchValue", "%" + name.toLowerCase() + "%");
+      }
+
       List<TestSummary> summaryList = testQuery.getResultList();
-      if ( ! identity.isAnonymous() ) {
+      if (!identity.isAnonymous()) {
          List<Integer> testIdSet = new ArrayList<>();
          Map<Integer, Set<String>> subscriptionMap = new HashMap<>();
 
-         summaryList.stream().forEach( summary -> testIdSet.add(summary.id));
+         summaryList.forEach(summary -> testIdSet.add(summary.id));
          List<WatchDAO> subscriptions = em.createNativeQuery("SELECT * FROM watch w WHERE w.testid IN (?1)", WatchDAO.class).setParameter(1, testIdSet).getResultList();
          String username = identity.getPrincipal().getName();
          Set<String> teams = identity.getRoles().stream().filter(role -> role.endsWith("-team")).collect(Collectors.toSet());
 
-         subscriptions.stream().forEach( subscription -> {
+         subscriptions.forEach(subscription -> {
              Set<String> subscriptionSet = subscriptionMap.computeIfAbsent(subscription.test.id, k -> new HashSet<>());
              if (subscription.users.contains(username)) {
                subscriptionSet.add(username);
@@ -358,14 +389,14 @@ public class TestServiceImpl implements TestService {
             if (subscription.optout.contains(username)) {
                subscriptionSet.add("!" + username);
             }
-            subscription.teams.stream().forEach( team -> {
+            subscription.teams.forEach(team -> {
                  if (teams.contains(team)) {
                       subscriptionSet.add(team);
                  }
              });
          });
 
-          summaryList.forEach(summary -> summary.watching = subscriptionMap.computeIfAbsent(summary.id, k -> Collections.emptySet()));
+         summaryList.forEach(summary -> summary.watching = subscriptionMap.computeIfAbsent(summary.id, k -> Collections.emptySet()));
       }
 
       if (folder == null){

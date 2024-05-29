@@ -226,8 +226,8 @@ export function addUserOrTeam(id: number, userOrTeam: string, alerting: AlertCon
 export function deleteTest(id: number, alerting: AlertContextType) : Promise<void>{
     return apiCall(testApi._delete(id), alerting, "DELETE_TEST", "Failed to delete test " + id);
 }
-export function fetchTestsSummariesByFolder(alertingContext: AlertContextType, direction?: SortDirection, folder?: string, limit?: number, page?: number, roles?: string): Promise<TestListing> {
-    return apiCall(testApi.summary(roles, folder, limit, page, direction), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
+export function fetchTestsSummariesByFolder(alertingContext: AlertContextType, direction?: SortDirection, folder?: string, limit?: number, page?: number, roles?: string, name?: string): Promise<TestListing> {
+    return apiCall(testApi.summary(roles, folder, limit, page, direction, name), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
 }
 export function fetchFolders(alerting: AlertContextType): Promise<string[]> {
     return apiCall(testApi.folders(), alerting, "FETCH_FOLDERS", "Failed to fetch folders.");
