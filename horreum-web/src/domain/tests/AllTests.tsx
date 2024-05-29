@@ -7,25 +7,24 @@ import {
     BreadcrumbHeading,
     BreadcrumbItem,
     Button,
-    Card,
-    CardBody,
-    CardFooter,
-    CardHeader,
-    Flex,
-    FlexItem,
+    Dropdown,
+    DropdownItem,
+    DropdownList,
+    MenuToggle,
+    MenuToggleElement,
     Modal,
     PageSection,
-    Pagination,
+    SearchInput,
     Spinner,
     Toolbar,
     ToolbarContent,
+    ToolbarFilter,
+    ToolbarGroup,
     ToolbarItem
 } from '@patternfly/react-core';
-import {Dropdown, DropdownItem, DropdownToggle} from '@patternfly/react-core/deprecated';
 import {NavLink, useLocation, useNavigate} from "react-router-dom"
 import {EyeIcon, EyeSlashIcon, FolderOpenIcon} from "@patternfly/react-icons"
 
-import Table from "../../components/Table"
 import ActionMenu, {ActionMenuProps, MenuItem, useChangeAccess} from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
 import TeamSelect, {createTeam, ONLY_MY_OWN, Team} from "../../components/TeamSelect"
@@ -34,7 +33,7 @@ import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
 
 import {isAuthenticatedSelector, teamsSelector, teamToName, userProfileSelector, useTester} from "../../auth"
-import {CellProps, Column, UseSortByColumnOptions} from "react-table"
+import {CellProps, Column, SortingRule, UseSortByColumnOptions} from "react-table"
 import {noop} from "../../utils"
 import {
     Access,
@@ -54,6 +53,8 @@ import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import FoldersDropDown from "../../components/FoldersDropdown";
 import ImportButton from "../../components/ImportButton";
+import CustomTable from "../../components/CustomTable";
+import FilterSearchInput from "../../components/FilterSearchInput";
 
 type WatchDropdownProps = {
     id: number
@@ -67,6 +68,10 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
     const [open, setOpen] = useState(false)
     const teams = useSelector(teamsSelector)
     const profile = useSelector(userProfileSelector)
+    const onSelect = () => {
+        setOpen(false);
+    };
+
     if (watching === undefined) {
         return <Spinner size="sm" />
     }
@@ -102,11 +107,10 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
     return (
         <Dropdown
             isOpen={open}
-            isPlain
-            onSelect={_ => setOpen(false)}
-            menuAppendTo={() => document.body}
-            toggle={
-                <DropdownToggle toggleIndicator={null} onToggle={(_event, val) => setOpen(val)}>
+            onSelect={onSelect}
+            onOpenChange={(isOpen: boolean) => setOpen(isOpen)}
+            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle ref={toggleRef} onClick={() => setOpen(!open)} isExpanded={open} variant="plain">
                     {!isOptOut && (
                         <EyeIcon
                             className="watchIcon"
@@ -114,21 +118,23 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
                         />
                     )}
                     {isOptOut && <EyeSlashIcon className="watchIcon" style={{ cursor: "pointer", color: "#151515" }} />}
-                </DropdownToggle>
-            }
-        >
-            {personalItems}
-            {teams.map(team =>
-                watching.some(u => u === team) ? (
-                    <DropdownItem key={team} onClick={() => removeUserOrTeam(id, team, alerting).catch(noop)}>
-                        Stop watching as team {teamToName(team)}
-                    </DropdownItem>
-                ) : (
-                    <DropdownItem key={team} onClick={() => addUserOrTeam(id, team, alerting).catch(noop)}>
-                        Watch as team {teamToName(team)}
-                    </DropdownItem>
-                )
+                </MenuToggle>
             )}
+        >
+            <DropdownList>
+                {personalItems}
+                {teams.map(team =>
+                    watching.some(u => u === team) ? (
+                        <DropdownItem key={team} onClick={() => removeUserOrTeam(id, team, alerting).catch(noop)}>
+                            Stop watching as team {teamToName(team)}
+                        </DropdownItem>
+                    ) : (
+                        <DropdownItem key={team} onClick={() => addUserOrTeam(id, team, alerting).catch(noop)}>
+                            Watch as team {teamToName(team)}
+                        </DropdownItem>
+                    )
+                )}
+            </DropdownList>
         </Dropdown>
     )
 }
@@ -289,6 +295,7 @@ export default function AllTests() {
     document.title = "Tests | Horreum"
     const watchingColumn: Col = {
         Header: "Watching",
+        id: "watching",
         accessor: "watching",
         disableSortBy: true,
         Cell: (arg: C) => {
@@ -300,13 +307,19 @@ export default function AllTests() {
         () => [
             {
                 Header: "Name",
+                id: "name",
                 accessor: "name",
                 disableSortBy: false,
                 Cell: (arg: C) => <NavLink to={`/test/${arg.row.original.id}`}>{arg.cell.value}</NavLink>,
             },
-            { Header: "Description", accessor: "description" },
+            { 
+                Header: "Description", 
+                id: "description",
+                accessor: "description"
+            },
             {
                 Header: "Datasets",
+                id: "datasets",
                 accessor: "datasets",
                 Cell: (arg: C) => {
                     const {
@@ -344,6 +357,7 @@ export default function AllTests() {
                 Header: "Actions",
                 id: "actions",
                 accessor: "id",
+                disableSortBy: true,
                 Cell: (arg: C) => {
                     const changeAccess = useChangeAccess({
                         onAccessUpdate: (id: number, owner: string, access: Access) => {
@@ -384,15 +398,18 @@ export default function AllTests() {
     const [loading, setLoading] = useState(false)
     const [limit, setLimit] = useState(20)
     const [page, setPage] = useState(1)
-    const [direction] = useState<SortDirection>("Ascending")
-    const pagination = useMemo(() => ({ page, limit, direction, folder }), [page, limit, direction, folder])
+    const [sortBy, setSortBy] = useState<SortingRule<TestStorage>>({id: "name", desc: false})
+    const pagination = useMemo(() => ({ page, limit, sortBy, folder }), [page, limit, sortBy, folder])
+    
     const [count, setCount] = useState(0)
-
     const [folders, setFolders] = useState<string[]>([])
+
+    const [nameFilter, setNameFilter] = useState<string>("")
 
     const loadTests = () => {
         setLoading(true)
-        fetchTestsSummariesByFolder(alerting, SortDirection.Ascending, pagination.folder, pagination.limit, pagination.page, rolesFilter.key, )
+        const direction = pagination.sortBy.desc ? SortDirection.Descending : SortDirection.Ascending
+        fetchTestsSummariesByFolder(alerting, direction, pagination.folder, pagination.limit, pagination.page, rolesFilter.key, nameFilter)
             .then(summary => {
                 setTests(summary.tests?.map(t => mapTestSummaryToTest(t)) || [])
                 if (summary.count) {
@@ -402,9 +419,11 @@ export default function AllTests() {
             .finally(() => setLoading(false))
         fetchFolders(alerting).then(setFolders)
     }
+
     useEffect(() => {
         loadTests()
-    } , [isAuthenticated, teams, rolesFilter, pagination])
+    } , [isAuthenticated, teams, rolesFilter, pagination, nameFilter])
+    
     if (isAuthenticated) {
         columns = [watchingColumn, ...columns]
     }
@@ -442,11 +461,11 @@ export default function AllTests() {
                     </ToolbarItem>
                 </ToolbarContent>
             </Toolbar>
-            <Card>
-                <CardHeader>
-                    <Flex>
+            <Toolbar>
+                <ToolbarContent>
+                    <ToolbarGroup variant="button-group">
                         {isAuthenticated && (
-                            <FlexItem>
+                            <ToolbarItem>
                                 <TeamSelect
                                     includeGeneral={true}
                                     selection={rolesFilter}
@@ -454,12 +473,19 @@ export default function AllTests() {
                                         setRolesFilter(selection)
                                     }}
                                 />
-                                {/* </div> */}
-                            </FlexItem>
+                            </ToolbarItem>
                         )}
-
-                        {isTester && (
-                            <FlexItem align={{ default: 'alignRight' }}>
+                        <ToolbarItem>
+                            <FilterSearchInput 
+                                placeholder="Filter by name"
+                                onSearchBy={setNameFilter}
+                                onClearBy={() => setNameFilter("")}
+                            />
+                        </ToolbarItem>
+                    </ToolbarGroup>
+                    {isTester && (
+                        <ToolbarGroup variant="button-group" align={{ default: 'alignRight' }}>
+                            <ToolbarItem>
                                 <ImportButton
                                     label="Import test"
                                     onLoad={config => {
@@ -476,31 +502,34 @@ export default function AllTests() {
                                     onImport={config => testApi.importTest(config as TestExport)}
                                     onImported={() => loadTests()}
                                 />
-
+                            </ToolbarItem>
+                            <ToolbarItem>
                                 <ButtonLink to="/test/_new#settings">New Test</ButtonLink>
-                            </FlexItem>
-                        )}
-
-                    </Flex>
-                </CardHeader>
-                <CardBody style={{ overflowX: "auto" }}>
-                    <Table columns={columns}
-                        data={allTests || []}
-                        isLoading={loading}
-                        sortBy={[{ id: "name", desc: false }]}
-
-                    />
-                </CardBody>
-                <CardFooter style={{ textAlign: "right" }}>
-                    <Pagination
-                        itemCount={count}
-                        perPage={limit}
-                        page={page}
-                        onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setLimit(pp)}
-                    />
-                </CardFooter>
-            </Card>
+                            </ToolbarItem>
+                        </ToolbarGroup>
+                    )}
+                </ToolbarContent>
+            </Toolbar>
+            <CustomTable<TestStorage>
+                columns={columns}
+                data={allTests || []}
+                isLoading={loading}
+                sortBy={[sortBy]}
+                onSortBy={order => {
+                    if (order.length > 0 && order[0]) {
+                        setSortBy(order[0])
+                    }
+                }}
+                cellModifier="wrap"
+                pagination={{
+                    bottom: true,
+                    count: count,
+                    perPage: limit,
+                    page: page,
+                    onSetPage: (e, p) => setPage(p),
+                    onPerPageSelect: (e, pp) => setLimit(pp)
+                }}
+            />
         </PageSection>
     )
 }

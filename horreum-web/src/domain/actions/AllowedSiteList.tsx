@@ -6,24 +6,30 @@ import { Bullseye, Button, Spinner, Toolbar, ToolbarContent, ToolbarItem } from 
 import { addSite, AllowedSite, deleteSite, getAllowedSites} from "../../api"
 
 
-import Table from "../../components/Table"
 import AddAllowedSiteModal from "./AddAllowedSiteModal"
 import { Column } from "react-table"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import CustomTable, { StickyProps } from "../../components/CustomTable"
 
-type C = Column<AllowedSite> & UseSortByColumnOptions<AllowedSite>
+type C = Column<AllowedSite> & UseSortByColumnOptions<AllowedSite> & StickyProps
 
 function AllowedSiteList() {
     const { alerting } = useContext(AppContext) as AppContextType;
     const [prefixes, setPrefixes] = useState<AllowedSite[]>()
-    useEffect(() => {
+
+    const fetchAllowedSites = () => {
         setPrefixes(undefined)
         getAllowedSites(alerting).then(setPrefixes)
+    }
+
+    useEffect(() => {
+        fetchAllowedSites()
     }, [])
     const columns: C[] = [
         {
             Header: "Site prefix",
+            id: "prefix",
             accessor: "prefix",
             Cell: (arg: any) => {
                 const {
@@ -34,8 +40,11 @@ function AllowedSiteList() {
         },
         {
             Header: "",
+            id: "id",
             accessor: "id",
             disableSortBy: true,
+            isStickyColumn: true,
+            hasLeftBorder: false,
             Cell: (arg: any) => {
                 const {
                     cell: { value },
@@ -48,7 +57,7 @@ function AllowedSiteList() {
                                 if (prefixes) {
                                     setPrefixes(prefixes.filter(p => p.id !== value))
                                 }
-                                return deleteSite(value, alerting)
+                                return deleteSite(value, alerting).then(_ => fetchAllowedSites())
                             }}
                         >
                             Delete
@@ -65,7 +74,7 @@ function AllowedSiteList() {
             <AddAllowedSiteModal
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
-                onSubmit={prefix => addSite(prefix, alerting)}
+                onSubmit={prefix => addSite(prefix, alerting).then((_) => fetchAllowedSites())}
             />
             <Toolbar
                 className="pf-v5-l-toolbar pf-v5-u-justify-content-space-between pf-v5-u-mx-xl pf-v5-u-my-md"
@@ -82,7 +91,7 @@ function AllowedSiteList() {
                     <Spinner size="xl" />
                 </Bullseye>
             )}
-            {prefixes && <Table columns={columns} data={prefixes} />}
+            {prefixes && <CustomTable<AllowedSite> columns={columns} data={prefixes} />}
         </>
     )
 }

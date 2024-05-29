@@ -9,22 +9,23 @@ import {
 	Tab,
 	Tabs,
 	TextArea,
-	Switch
+	Switch,
+    Dropdown,
+    DropdownItem,
+    MenuToggle,
+    MenuToggleElement
 } from '@patternfly/react-core';
-import {
-	Dropdown,
-	DropdownItem,
-	KebabToggle
-} from '@patternfly/react-core/deprecated';
 import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import {alertingApi, Change, FingerprintValue, Variable} from "../../api"
 import { fingerprintToString, formatDateTime } from "../../utils"
 import { Column, UseSortByColumnOptions } from "react-table"
-import Table from "../../components/Table"
 import { useTester } from "../../auth"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import CustomTable from "../../components/CustomTable";
+
+import EllipsisVIcon from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon';
 
 type ChangeMenuProps = {
     change: Change
@@ -35,13 +36,24 @@ type ChangeMenuProps = {
 const ChangeMenu = ({ change, onDelete, onUpdate }: ChangeMenuProps) => {
     const [open, setOpen] = useState(false)
     const [modalChange, setModalChange] = useState<Change>()
+    const onSelect = () => {
+        setOpen(false);
+    };
+
     return (
         <>
             <Dropdown
-                toggle={<KebabToggle onToggle={() => setOpen(!open)} />}
+                onSelect={onSelect}
+                onOpenChange={(isOpen: boolean) => setOpen(isOpen)}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                    <MenuToggle ref={toggleRef} onClick={() => setOpen(!open)} isExpanded={open} variant="plain">
+                        <EllipsisVIcon />
+                    </MenuToggle>
+                )}
                 isOpen={open}
-                isPlain
-                dropdownItems={[
+                popperProps={{position: "right"}}
+            >
+                {[
                     <DropdownItem
                         key="confirm"
                         isDisabled={change.confirmed}
@@ -72,7 +84,7 @@ const ChangeMenu = ({ change, onDelete, onUpdate }: ChangeMenuProps) => {
                         Edit
                     </DropdownItem>,
                 ]}
-            />
+            </Dropdown>
             <ChangeModal
                 change={modalChange}
                 isOpen={!!modalChange}
@@ -162,17 +174,20 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
     const columns: C[] = [
         {
             Header: "Confirmed",
+            id: "confirmed",
             accessor: "confirmed",
             Cell: (arg: any) => (arg.cell.value ? <CheckIcon id={"change_" + arg.row.original.id} /> : ""),
         },
         {
             Header: "Time",
+            id: "timestamp",
             accessor: "timestamp",
             sortType: "datetime",
             Cell: (arg: any) => formatDateTime(arg.cell.value),
         },
         {
             Header: "Dataset",
+            id: "dataset",
             accessor: "dataset",
             Cell: (arg: any) => {
                 const dataset = arg.cell.value
@@ -186,6 +201,7 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
         },
         {
             Header: "Description",
+            id: "description",
             accessor: "description",
             Cell: (arg: any) => <div dangerouslySetInnerHTML={{ __html: arg.cell.value }} />,
         },
@@ -193,6 +209,7 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
     if (isTester) {
         columns.push({
             Header: "",
+            id: "id",
             accessor: "id",
             disableSortBy: true,
             Cell: (arg: any) => {
@@ -220,7 +237,7 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
     }
     // TODO: this doesn't work, table won't get updated when selected changes
     const selected = { [changes.findIndex(c => c.id === selectedChangeId)]: true }
-    return <Table columns={columns} data={changes} selected={selected} />
+    return <CustomTable<Change> columns={columns} data={changes} selected={selected} cellModifier="wrap" />
 }
 
 type ChangesTabsProps = {

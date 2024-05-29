@@ -5,19 +5,14 @@ import { NavLink } from "react-router-dom"
 import { CellProps, Column } from "react-table"
 import {
     Button,
-    Card,
-    CardHeader,
-    CardBody,
-    CardFooter,
-    Flex,
-    FlexItem,
-    PageSection,
-    Pagination,
+    Toolbar,
+    ToolbarContent,
+    ToolbarGroup,
+    ToolbarItem,
 } from "@patternfly/react-core"
 import { ArrowRightIcon, FolderOpenIcon, EditIcon } from "@patternfly/react-icons"
 
 import ImportButton from "../../components/ImportButton"
-import Table from "../../components/Table"
 import { Team } from "../../components/TeamSelect"
 import { SelectedTest } from "../../components/TestSelect"
 import { formatDateTime } from "../../utils"
@@ -29,6 +24,7 @@ import { useTester, teamsSelector } from "../../auth"
 import ListReportsModal from "./ListReportsModal"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import CustomTable from "../../components/CustomTable"
 
 type C = CellProps<TableReportSummary>
 
@@ -36,7 +32,6 @@ type ReportGroup = {
     testId: number
     title?: string
 }
-
 
 export default function Reports(props: ReportGroup) {
     document.title = "Reports | Horreum"
@@ -149,80 +144,70 @@ export default function Reports(props: ReportGroup) {
             )) ||
         undefined
     return (
-            <Card>
-                <CardHeader>
-                    <Flex style={{ width: "100%" }}>
-                        {isTester && (
-                            <FlexItem>
-                                <ButtonLink to={`/test/${test.id}/reports/table/config/__new`}>New report configuration</ButtonLink>
-                                <ImportButton
-                                    label="Import configuration"
-                                    onLoad={config => {
-                                        if (!config.id) {
-                                            return null
-                                        }
-                                        return reportApi.getTableReportConfig(config.id as number).then(
-                                            existing => (
-                                                <>
-                                                    This configuration is going to override table report configuration{" "}
-                                                    {existing.title} for test {existing.test?.name || "<unknown test>"})
-                                                    ({existing.id})
-                                                    {config?.title !== existing.title &&
-                                                        ` using new title ${config?.title}`}
-                                                    .
-                                                    <br />
-                                                    <br />
-                                                    Do you really want to proceed?
-                                                </>
-                                            ),
-                                            _ => null /* errors because the config does not exist => OK */
-                                        )
-                                    }}
-                                    onImport={config => reportApi.importTableReportConfig(config)}
-                                    onImported={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
-                                />
-                            </FlexItem>
-                        )}
-                        <FlexItem grow={{ default: "grow" }}>{"\u00A0"}</FlexItem>
-                        <FlexItem>
-                            <Pagination
-                                itemCount={tableReports?.count || 0}
-                                perPage={perPage}
-                                page={page}
-                                onSetPage={(e, p) => setPage(p)}
-                                onPerPageSelect={(e, pp) => setPerPage(pp)}
+        <>
+            <Toolbar>
+                <ToolbarContent>
+                    <ToolbarGroup variant="button-group">
+                        <ToolbarItem>
+                            <ButtonLink to={`/test/${test.id}/reports/table/config/__new`}>New report configuration</ButtonLink>
+                        </ToolbarItem>
+                        <ToolbarItem>
+                            <ImportButton
+                                label="Import configuration"
+                                onLoad={config => {
+                                    if (!config.id) {
+                                        return null
+                                    }
+                                    return reportApi.getTableReportConfig(config.id as number).then(
+                                        existing => (
+                                            <>
+                                                This configuration is going to override table report configuration{" "}
+                                                {existing.title} for test {existing.test?.name || "<unknown test>"})
+                                                ({existing.id})
+                                                {config?.title !== existing.title &&
+                                                    ` using new title ${config?.title}`}
+                                                .
+                                                <br />
+                                                <br />
+                                                Do you really want to proceed?
+                                            </>
+                                        ),
+                                        _ => null /* errors because the config does not exist => OK */
+                                    )
+                                }}
+                                onImport={config => reportApi.importTableReportConfig(config)}
+                                onImported={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
                             />
-                        </FlexItem>
-                    </Flex>
-                </CardHeader>
-                <CardBody style={{ overflowX: "auto" }}>
-                    <Table
-                        columns={columns}
-                        data={tableReports?.reports || []}
-                        onSortBy={order => {
-                            if (order.length > 0 && order[0]) {
-                                setSort(order[0].id)
-                                setDirection(order[0].desc ? "Descending" : "Ascending")
-                            }
-                        }}
-                        isLoading={loading}
-                    />
-                </CardBody>
-                <CardFooter style={{ textAlign: "right" }}>
-                    <Pagination
-                        itemCount={tableReports?.count || 0}
-                        perPage={perPage}
-                        page={page}
-                        onSetPage={(e, p) => setPage(p)}
-                        onPerPageSelect={(e, pp) => setPerPage(pp)}
-                    />
-                </CardFooter>
-                <ListReportsModal
-                    isOpen={tableReportSummary !== undefined}
-                    onClose={() => setTableReportGroup(undefined)}
-                    summary={tableReportSummary}
-                    onReload={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
-                />
-            </Card>
+                        </ToolbarItem>
+                    </ToolbarGroup>
+                </ToolbarContent>
+            </Toolbar>
+            <CustomTable<TableReportSummary>
+                columns={columns}
+                data={tableReports?.reports || []}
+                onSortBy={order => {
+                    if (order.length > 0 && order[0]) {
+                        setSort(order[0].id)
+                        setDirection(order[0].desc ? "Descending" : "Ascending")
+                    }
+                }}
+                isLoading={loading}
+                pagination={{
+                    top: true,
+                    bottom: true,
+                    count: tableReports?.count || 0,
+                    perPage: perPage,
+                    page: page,
+                    onSetPage: (e, p) => setPage(p),
+                    onPerPageSelect: (e, pp) => setPerPage(pp)
+                }}
+            />
+            <ListReportsModal
+                isOpen={tableReportSummary !== undefined}
+                onClose={() => setTableReportGroup(undefined)}
+                summary={tableReportSummary}
+                onReload={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
+            />
+        </>
     )
 }

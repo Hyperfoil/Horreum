@@ -3,6 +3,8 @@ package io.hyperfoil.tools.horreum.svc;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestToken;
@@ -240,6 +242,221 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
       // FIXME: the result would depend on the order the underlying query would give us
       Test retrieved = testService.getByNameOrId(String.valueOf(created1.id));
       assertEquals(created2.id, retrieved.id);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testListTestsWithPagination() {
+      addTest("test1", FOO_TEAM, "folder1", null);
+      addTest("test2", FOO_TEAM, "folder2", null);
+      addTest("test3", FOO_TEAM, "folder2/folder21", null);
+      addTest("test4", FOO_TEAM, "folder1", null);
+      addTest("test5", FOO_TEAM, "folder3/folder31", null);
+
+      assertEquals(5, TestDAO.count());
+
+      TestService.TestQueryResult result = testService.list(null, null, null, "name",
+            SortDirection.Ascending);
+      assertEquals(5, result.count);
+      assertEquals(5, result.tests.size());
+
+      // page 0 limited to 3 results
+      result = testService.list(null, 3, 0, null, SortDirection.Ascending);
+      assertEquals(5, result.count);
+      assertEquals(3, result.tests.size());
+
+      // page 1 limited to 3 results -> only 2 left
+      result = testService.list(null, 3, 1, null, SortDirection.Ascending);
+      assertEquals(5, result.count);
+      assertEquals(2, result.tests.size());
+
+      // page 2 limited to 3 results -> no more left
+      result = testService.list(null, 3, 2, null, SortDirection.Ascending);
+      assertEquals(5, result.count);
+      assertEquals(0, result.tests.size());
+   }
+
+   @org.junit.jupiter.api.Test
+   void testListTestsWithOrdering() {
+      addTest("test5", FOO_TEAM, "folder3/folder31", null);
+      addTest("test1", FOO_TEAM, "folder1", null);
+      addTest("test2", FOO_TEAM, "folder2", null);
+      addTest("test3", FOO_TEAM, "folder2/folder21", null);
+      addTest("test4", FOO_TEAM, "folder1", null);
+
+      assertEquals(5, TestDAO.count());
+
+      // name ascending
+      TestService.TestQueryResult result = testService.list(null, null, null, "name", SortDirection.Ascending);
+      assertEquals(5, result.count);
+      assertEquals(5, result.tests.size());
+      assertEquals("test1", result.tests.get(0).name);
+      assertEquals("test5", result.tests.get(4).name);
+
+      // name descending
+      result = testService.list(null, null, null, "name", SortDirection.Descending);
+      assertEquals(5, result.count);
+      assertEquals(5, result.tests.size());
+      assertEquals("test5", result.tests.get(0).name);
+      assertEquals("test1", result.tests.get(4).name);
+
+      // folder descending
+      result = testService.list(null, null, null, "folder", SortDirection.Descending);
+      assertEquals(5, result.count);
+      assertEquals(5, result.tests.size());
+      assertEquals("folder3/folder31", result.tests.get(0).folder);
+      assertEquals("folder1", result.tests.get(4).folder);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testSummaryWithPagination() {
+      addTest("test1", FOO_TEAM, "folder1", null);
+      addTest("test2", FOO_TEAM, "folder2", null);
+      addTest("test3", FOO_TEAM, "folder2/folder21", null);
+      addTest("test4", FOO_TEAM, "folder1", null);
+      addTest("test5", FOO_TEAM, "folder3/folder31", null);
+      addTest("test6", FOO_TEAM, null, null);
+      addTest("test7", FOO_TEAM, null, null);
+      addTest("test8", FOO_TEAM, null, null);
+
+      assertEquals(8, TestDAO.count());
+
+      // 2 tests in the root folder
+      TestService.TestListing result = testService.summary(null, null, 20, 0, null, null);
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+
+      // page set to 0, always return all
+      result = testService.summary(null, null, 2, 0, null, null);
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+
+      // page 1 limited to 2 results
+      result = testService.summary(null, null, 2, 1, null, null);
+      assertEquals(3, result.count);
+      assertEquals(2, result.tests.size());
+
+      // page 2 limited to 2 results -> only 1 left
+      result = testService.summary(null, null, 2, 2, null, null);
+      assertEquals(3, result.count);
+      assertEquals(1, result.tests.size());
+
+      // page 3 limited to 2 results -> no more left
+      result = testService.summary(null, null, 2, 3, null, null);
+      assertEquals(3, result.count);
+      assertEquals(0, result.tests.size());
+   }
+
+   @org.junit.jupiter.api.Test
+   void testSummaryInDifferentFolders() {
+      addTest("test1", FOO_TEAM, "folder1", null);
+      addTest("test2", FOO_TEAM, "folder2", null);
+      addTest("test3", FOO_TEAM, "folder2/folder21", null);
+      addTest("test4", FOO_TEAM, "folder1", null);
+      addTest("test5", FOO_TEAM, "folder3/folder31", null);
+      addTest("test6", FOO_TEAM, null, null);
+      addTest("test7", FOO_TEAM, null, null);
+      addTest("test8", FOO_TEAM, null, null);
+
+      assertEquals(8, TestDAO.count());
+
+      // 2 tests in the root folder
+      TestService.TestListing result = testService.summary(null, null, 20, 0, null, null);
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+
+      // folder folder1
+      result = testService.summary(null, "folder1", 20, 0, null, null);
+      assertEquals(2, result.count);
+      assertEquals(2, result.tests.size());
+
+      // folder folder3/folder31
+      result = testService.summary(null, "folder3/folder31", 20, 0, null, null);
+      assertEquals(1, result.count);
+      assertEquals(1, result.tests.size());
+   }
+
+   @org.junit.jupiter.api.Test
+   void testSummaryWithOrdering() {
+      addTest("test1", FOO_TEAM, "folder1", null);
+      addTest("test2", FOO_TEAM, "folder2", null);
+      addTest("test3", FOO_TEAM, "folder2/folder21", null);
+      addTest("test4", FOO_TEAM, "folder1", null);
+      addTest("test5", FOO_TEAM, "folder3/folder31", null);
+      addTest("test6", FOO_TEAM, null, null);
+      addTest("test7", FOO_TEAM, null, null);
+      addTest("test8", FOO_TEAM, null, null);
+
+      assertEquals(8, TestDAO.count());
+
+      // default is descending order
+      TestService.TestListing result = testService.summary(null, null, 20, 1, null, null);
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+      assertEquals("test8", result.tests.get(0).name);
+
+      // explicitly setting descending order
+      result = testService.summary(null, null, 20, 1, SortDirection.Descending, null);
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+      assertEquals("test8", result.tests.get(0).name);
+
+      // changing to ascending order
+      result = testService.summary(null, null, 20, 1, SortDirection.Ascending, null);
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+      assertEquals("test6", result.tests.get(0).name);
+
+      // ordering ignored when page is set to 0
+      result = testService.summary(null, null, 20, 0, SortDirection.Descending, null);
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+      assertEquals("test6", result.tests.get(0).name);
+   }
+
+   @org.junit.jupiter.api.Test
+   void testSummaryWithFiltering() {
+      addTest("test1", FOO_TEAM, "folder1", null);
+      addTest("test2", FOO_TEAM, "folder2", null);
+      addTest("test3", FOO_TEAM, "folder2/folder21", null);
+      addTest("test4", FOO_TEAM, "folder1", null);
+      addTest("test5", FOO_TEAM, "folder3/folder31", null);
+      addTest("test6", FOO_TEAM, null, null);
+      addTest("test7", FOO_TEAM, null, null);
+      addTest("test8", FOO_TEAM, null, null);
+
+      assertEquals(8, TestDAO.count());
+
+      // name filter null -> return all under that folder
+      TestService.TestListing result = testService.summary(null, null, 20, 1, null, null);
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+
+      // filter by exact match
+      result = testService.summary(null, null, 20, 1, null, "test6");
+      assertEquals(3, result.count);
+      assertEquals(1, result.tests.size());
+      assertEquals("test6", result.tests.get(0).name);
+
+      // filter by exact match with no results as in different folder
+      result = testService.summary(null, null, 20, 1, null, "test1");
+      assertEquals(3, result.count);
+      assertEquals(0, result.tests.size());
+
+      // filter by exact match in different folder
+      result = testService.summary(null, "folder1", 20, 1, null, "test1");
+      assertEquals(2, result.count);
+      assertEquals(1, result.tests.size());
+      assertEquals("test1", result.tests.get(0).name);
+
+      // filter by partial match
+      result = testService.summary(null, null, 20, 1, null, "est");
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
+
+      // filter by partial match case insesitive
+      result = testService.summary(null, null, 20, 1, null, "EsT");
+      assertEquals(3, result.count);
+      assertEquals(3, result.tests.size());
    }
 
    @org.junit.jupiter.api.Test

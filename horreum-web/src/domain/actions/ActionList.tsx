@@ -6,13 +6,13 @@ import { Button, Hint, HintBody, Switch, Toolbar, ToolbarContent, ToolbarItem } 
 import { allActions, addAction, removeAction } from "../../api"
 import { isAdminSelector } from "../../auth"
 
-import Table from "../../components/Table"
 import AddActionModal from "./AddActionModal"
 import { Column } from "react-table"
 import {Action} from "../../api"
 import ActionLogModal from "../tests/ActionLogModal"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import CustomTable from "../../components/CustomTable"
 
 export default function ActionList() {
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -21,9 +21,13 @@ export default function ActionList() {
     const [actions, setActions] = useState<Action[]>([])
     const isAdmin = useSelector(isAdminSelector)
 
+    const fetchAllActions = () => {
+        allActions(alerting).then(setActions)
+    }
+
     useEffect(() => {
         if (isAdmin) {
-            allActions(alerting).then(setActions)
+            fetchAllActions()
         }
     }, [isAdmin])
 /*
@@ -40,14 +44,17 @@ export default function ActionList() {
         () => [
             {
                 Header: "Event type",
+                id: "event",
                 accessor: "event",
             },
             {
                 Header: "Action type",
+                id: "type",
                 accessor: "type",
             },
             {
                 Header: "Run always",
+                id: "runAlways",
                 accessor: "runAlways",
                 Cell: (arg: any) => {
                     return (
@@ -62,6 +69,7 @@ export default function ActionList() {
             },
             {
                 Header: "Configuration",
+                id: "config",
                 accessor: "config",
                 Cell: (arg: any) => {
                     const config = arg.cell.value
@@ -79,8 +87,11 @@ export default function ActionList() {
             },
             {
                 Header: "",
+                id: "id",
                 accessor: "id",
                 disableSortBy: true,
+                isStickyColumn: true,
+                hasLeftBorder: false,
                 Cell: (arg: any) => {
                     const {
                         cell: { value },
@@ -89,7 +100,7 @@ export default function ActionList() {
                         <div style={{ textAlign: "right" }}>
                             <Button
                                 variant="danger"
-                                onClick={() => removeAction(value, alerting)}
+                                onClick={() => removeAction(value, alerting).then(_ => fetchAllActions())}
                             >
                                 Delete
                             </Button>
@@ -132,9 +143,9 @@ export default function ActionList() {
             <AddActionModal
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
-                onSubmit={action => addAction(action, alerting)}
+                onSubmit={action => addAction(action, alerting).then(_ => fetchAllActions())}
             />
-            <Table columns={columns} data={actions || []} />
+            <CustomTable<Action> columns={columns} data={actions || []} />
         </>
     )
 }

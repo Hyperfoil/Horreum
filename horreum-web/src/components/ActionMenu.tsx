@@ -1,17 +1,14 @@
 import { useState, useEffect, ReactElement, ReactNode } from "react"
 
-import {
-	Dropdown,
-	DropdownItem,
-	KebabToggle
-} from '@patternfly/react-core/deprecated';
-
 import { useTester } from "../auth"
 import { Access } from "../api"
 
 import ShareLinkModal from "./ShareLinkModal"
 import ChangeAccessModal from "./ChangeAccessModal"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
+import { Dropdown, DropdownItem, MenuToggle, MenuToggleElement } from "@patternfly/react-core"
+
+import EllipsisVIcon from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon';
 
 interface MenuItemProvider<C> {
     (props: ActionMenuProps, isTester: boolean, close: () => void, config: C): {
@@ -178,17 +175,26 @@ export function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
 export default function ActionMenu(props: ActionMenuProps) {
     const [menuOpen, setMenuOpen] = useState(false)
     const isTester = useTester(props.owner)
+    const onSelect = () => {
+        setMenuOpen(false);
+    };
 
     const items = props.items.map(([provider, config]) => provider(props, isTester, () => setMenuOpen(false), config))
     return (
         <>
             <Dropdown
-                menuAppendTo={() => document.body}
-                toggle={<KebabToggle onToggle={() => setMenuOpen(!menuOpen)} />}
+                onSelect={onSelect}
+                onOpenChange={(isOpen: boolean) => setMenuOpen(isOpen)}
+                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                    <MenuToggle ref={toggleRef} onClick={() => setMenuOpen(!menuOpen)} isExpanded={menuOpen} variant="plain">
+                        <EllipsisVIcon />
+                    </MenuToggle>
+                )}
                 isOpen={menuOpen}
-                isPlain
-                dropdownItems={items.map(mi => mi.item)}
-            />
+                popperProps={{position: "right"}}
+            >
+                {items.map(mi => mi.item)}
+            </Dropdown>
             {items.map(mi => mi.modal)}
         </>
     )
