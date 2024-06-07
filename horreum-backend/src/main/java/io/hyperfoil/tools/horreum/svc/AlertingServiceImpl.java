@@ -364,7 +364,7 @@ public class AlertingServiceImpl implements AlertingService {
       for (var v : test.variables) {
             VariableDAO variable = VariableMapper.to(v);
             variable.ensureLinked();
-            if(VariableDAO.findById(variable.id) == null) {
+            if(variable.id != null && VariableDAO.findById(variable.id) == null) {
                int prevId = variable.id;
                variable.flushIds();
                variable.persist();
