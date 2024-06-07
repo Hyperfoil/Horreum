@@ -82,6 +82,7 @@ public class BaseServiceTest {
    private static String UPLOADER_TOKEN;
    private static String TESTER_TOKEN;
    private static String ADMIN_TOKEN;
+   protected static JsonNodeFactory JSON_NODE_FACTORY = JsonNodeFactory.instance;
 
    int lastAddedLabelId;
 

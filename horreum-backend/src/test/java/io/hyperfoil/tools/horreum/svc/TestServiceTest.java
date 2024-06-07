@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
@@ -25,6 +26,7 @@ import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.mapper.VariableMapper;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
@@ -45,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -268,6 +271,10 @@ class TestServiceTest extends BaseServiceTest {
 
    private void testImportExport(boolean wipe) throws InterruptedException {
       Schema schema = createSchema("Example", "urn:example:1.0");
+      Extractor barExtractor = new Extractor();
+      barExtractor.name="bar";
+      barExtractor.jsonpath="$.bar";
+      addLabel(schema, "value", "", barExtractor);
       Transformer transformer = createTransformer("Foobar", schema, null, new Extractor("foo", "$.foo", false));
 
       Test test = createTest(createExampleTest("to-be-exported"));
@@ -606,6 +613,44 @@ class TestServiceTest extends BaseServiceTest {
       listing = listTestSummary("__my", "foo", limit, 1, SortDirection.Ascending);
       assertEquals(0, listing.count);
       assertEquals(0, listing.tests.size());
+   }
+
+   @org.junit.jupiter.api.Test
+   public void testImportTestWithChangeDetectionVariableWithExperimentProfile() {
+      String schema = resourceToString("data/acme_sb_schema.json");
+      jsonRequest().body(schema).post("/api/schema/import").then().statusCode(204);
+      String test = resourceToString("data/acme_new_variable_test.json");
+      jsonRequest().body(test).post("/api/test/import").then().statusCode(204);
+      VariableDAO maxRSS = VariableDAO.<VariableDAO>find("name", "Max RSS" ).firstResult();
+      assertNotNull(maxRSS);
+      assertEquals("Max RSS", maxRSS.name);
+      VariableDAO dao = new VariableDAO();
+      ArrayNode labels = JsonNodeFactory.instance.arrayNode();
+      labels.add("Quarkus - JVM - maxRss");
+      dao.labels = labels;
+      dao.changeDetection = new HashSet<>();
+      Variable mappedVariable = VariableMapper.from(dao);
+      assertNotNull(mappedVariable);
+      assertEquals(labels.size(), mappedVariable.labels.size());
+      TestDAO testDAO = TestDAO.<TestDAO>find("name", "new-variable").firstResult();
+      Response response = jsonRequest().get("/api/test/" + testDAO.id + "/export").then()
+          .statusCode(200).extract().response();
+      TestExport testExport = response.as(TestExport.class);
+      ExperimentProfile ep = new ExperimentProfile();
+      testExport.experiments.add(ep);
+      ep.testId = testExport.id;
+      ep.name = "acme Quarkus experiment";
+      ArrayNode labelsJSON = JSON_NODE_FACTORY.arrayNode();
+      ep.selectorLabels = labelsJSON;
+      labelsJSON.add("Quarkus - JVM - maxRss");
+      ep.selectorFilter = "value => {return true;}";
+      ep.baselineLabels = JSON_NODE_FACTORY.arrayNode();
+      ep.baselineFilter = "value => {return true;}";
+      ep.comparisons = new ArrayList<>();
+      ep.extraLabels = JSON_NODE_FACTORY.arrayNode();
+      jsonRequest().body(testExport).post("/api/test/import").then().statusCode(204);
+      ExperimentProfileDAO epDAO = ExperimentProfileDAO.<ExperimentProfileDAO>find("name", "acme Quarkus experiment").firstResult();
+      assertNotNull(epDAO);
    }
 
    private void addSubscription(Test test) {

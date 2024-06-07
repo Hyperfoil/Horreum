@@ -310,7 +310,8 @@ public class ExperimentServiceImpl implements ExperimentService {
    void importTest(TestExport test) {
       for (ExperimentProfile ep : test.experiments) {
          ExperimentProfileDAO profile = ExperimentProfileMapper.to(ep);
-         if(ExperimentProfileDAO.findById(ep.id) != null) {
+         profile.test = em.getReference(TestDAO.class, ep.testId);
+         if(ep.id != null && ExperimentProfileDAO.findById(ep.id) != null) {
             em.merge(profile);
          }
          else {

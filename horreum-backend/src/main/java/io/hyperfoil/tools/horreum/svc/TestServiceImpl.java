@@ -844,8 +844,8 @@ public class TestServiceImpl implements TestService {
       if(!Objects.equals(t.id, newTest.id)) {
          newTest.id = t.id;
          newTest.updateRefs();
-         mediator.importTestToAll(newTest);
       }
+      mediator.importTestToAll(newTest);
    }
 
    protected TestDAO getTestForUpdate(int testId) {
