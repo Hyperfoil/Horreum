@@ -46,6 +46,9 @@ public class VariableMapper {
                 n.add(l);
             v.labels = n;
         }
+        else {
+            v.labels = JsonNodeFactory.instance.arrayNode();
+        }
         v.calculation = dto.calculation;
         if(dto.changeDetection != null)
             v.changeDetection = dto.changeDetection.stream().map(ChangeDetectionMapper::to).collect(Collectors.toSet());

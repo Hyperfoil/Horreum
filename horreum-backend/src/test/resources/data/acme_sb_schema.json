@@ -1,0 +1,602 @@
+{
+  "owner": "foo-team",
+  "access": 0,
+  "token": null,
+  "id": 64,
+  "uri": "urn:quarkus-sb-compare:0.1",
+  "name": "quarkus-sb-compare",
+  "description": "",
+  "schema": {
+    "$id": "urn:quarkus-sb-compare:0.1",
+    "type": "object",
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "labels": [
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2317,
+      "name": "Spring - native - maxRss",
+      "extractors": [
+        {
+          "name": "springNativeMaxRss",
+          "jsonpath": "$.results.\"spring-native\".load.avMaxRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2318,
+      "name": "Quarkus - native - maxRss",
+      "extractors": [
+        {
+          "name": "quarkusJvmMaxRss",
+          "jsonpath": "$.results.\"quarkus-native\".load.avMaxRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2319,
+      "name": "Spring - JVM - maxRss",
+      "extractors": [
+        {
+          "name": "springJvmMaxRss",
+          "jsonpath": "$.results.\"spring-jvm\".load.avMaxRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2327,
+      "name": "Spring - Native - rssStartup",
+      "extractors": [
+        {
+          "name": "springNativeRssStartup",
+          "jsonpath": "$.results.\"spring-native\".rss.avStartupRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2334,
+      "name": "Spring - JVM - avBuildTime",
+      "extractors": [
+        {
+          "name": "springJvmAvBuildTime",
+          "jsonpath": "$.results.\"spring-jvm\".build.avBuildTime",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2339,
+      "name": "Spring - JVM - avTimeToFirstRequest",
+      "extractors": [
+        {
+          "name": "springJvmAvTimeToFirstRequest",
+          "jsonpath": "$.results.\"spring-jvm\".startup.avStartTime",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2341,
+      "name": "Quarkus - Native - avTimeToFirstRequest",
+      "extractors": [
+        {
+          "name": "quarkusNativeAvTimeToFirstRequest",
+          "jsonpath": "$.results.\"quarkus-native\".startup.avStartTime",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2321,
+      "name": "Quarkus - JVM - maxRss",
+      "extractors": [
+        {
+          "name": "quarkusJvmMaxRss",
+          "jsonpath": "$.results.\"quarkus-jvm\".load.avMaxRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2328,
+      "name": "Quarkus - JVM - rssStartup",
+      "extractors": [
+        {
+          "name": "quarkusJvmRssStartup",
+          "jsonpath": "$.results.\"quarkus-jvm\".rss.avStartupRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2323,
+      "name": "Quarkus - JVM - avThroughput",
+      "extractors": [
+        {
+          "name": "quarkusJvmAvThroughput",
+          "jsonpath": "$.results.\"quarkus-jvm\".load.avThroughput",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2324,
+      "name": "Spring - Native - avThroughput",
+      "extractors": [
+        {
+          "name": "springNativeAvThroughput",
+          "jsonpath": "$.results.\"spring-native\".load.avThroughput",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2325,
+      "name": "Quarkus - Native - avThroughput",
+      "extractors": [
+        {
+          "name": "quarkusNativeAvThroughput",
+          "jsonpath": "$.results.\"quarkus-native\".load.avThroughput",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2322,
+      "name": "Spring - JVM - avThroughput",
+      "extractors": [
+        {
+          "name": "springJvmAvThroughput",
+          "jsonpath": "$.results.\"spring-jvm\".load.avThroughput",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2326,
+      "name": "Quarkus - Native - rssStartup",
+      "extractors": [
+        {
+          "name": "quarkusNativeRssStartup",
+          "jsonpath": "$.results.\"quarkus-native\".rss.avStartupRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2330,
+      "name": "Quarkus - Native - rssFirstRequest",
+      "extractors": [
+        {
+          "name": "quarkusNativeRssFirstRequest",
+          "jsonpath": "$.results.\"quarkus-native\".rss.avFirstRequestRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2329,
+      "name": "Spring - JVM - rssStartup",
+      "extractors": [
+        {
+          "name": "springJvmRssStartup",
+          "jsonpath": "$.results.\"spring-jvm\".rss.avStartupRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2335,
+      "name": "Spring - Native - avBuildTime",
+      "extractors": [
+        {
+          "name": "springNativeAvBuildTime",
+          "jsonpath": "$.results.\"spring-native\".build.avBuildTime",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2336,
+      "name": "Quarkus - JVM - avBuildTime",
+      "extractors": [
+        {
+          "name": "quarkusJvmAvBuildTime",
+          "jsonpath": "$.results.\"quarkus-jvm\".build.avBuildTime",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2338,
+      "name": "Spring - Native - avTimeToFirstRequest",
+      "extractors": [
+        {
+          "name": "springNativeAvTimeToFirstRequest",
+          "jsonpath": "$.results.\"spring-native\".startup.avStartTime",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2342,
+      "name": "Quarkus - JVM - avTimeToFirstRequest",
+      "extractors": [
+        {
+          "name": "quarkusJvmAvTimeToFirstRequest",
+          "jsonpath": "$.results.\"quarkus-jvm\".startup.avStartTime",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2331,
+      "name": "Quarkus - JVM - rssFirstRequest",
+      "extractors": [
+        {
+          "name": "quarkusJvmRssFirstRequest",
+          "jsonpath": "$.results.\"quarkus-jvm\".rss.avFirstRequestRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2332,
+      "name": "Spring - Native - rssFirstRequest",
+      "extractors": [
+        {
+          "name": "springNativeRssFirstRequest",
+          "jsonpath": "$.results.\"spring-native\".rss.avFirstRequestRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2333,
+      "name": "Spring - JVM - rssFirstRequest",
+      "extractors": [
+        {
+          "name": "springJvmRssFirstRequest",
+          "jsonpath": "$.results.\"spring-jvm\".rss.avFirstRequestRss",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 2337,
+      "name": "Quarkus - Native - avBuildTime",
+      "extractors": [
+        {
+          "name": "quarkusNativeAvBuildTime",
+          "jsonpath": "$.results.\"quarkus-native\".build.avBuildTime",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 42,
+      "name": "Quarkus - Version",
+      "extractors": [
+        {
+          "name": "quarkus_version",
+          "jsonpath": "$.config.QUARKUS_VERSION",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 43,
+      "name": "Spring - Version",
+      "extractors": [
+        {
+          "name": "spring_boot_version",
+          "jsonpath": "$.config.SPRING_BOOT_VERSION",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 41,
+      "name": "Spring - Native - maxThroughputDensity",
+      "extractors": [
+        {
+          "name": "spring_native_maxThroughputDensity",
+          "jsonpath": "$.results.\"spring-native\".load.maxThroughputDensity",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 39,
+      "name": "Quarkus - Native - maxThroughputDensity",
+      "extractors": [
+        {
+          "name": "quarkus_native_maxThroughputDensity",
+          "jsonpath": "$.results.\"quarkus-native\".load.maxThroughputDensity",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 40,
+      "name": "Spring - JVM - maxThroughputDensity",
+      "extractors": [
+        {
+          "name": "spring_jvm_maxThroughputDensity",
+          "jsonpath": "$.results.\"spring-jvm\".load.maxThroughputDensity",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    },
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 38,
+      "name": "Quarkus - JVM - maxThroughputDensity",
+      "extractors": [
+        {
+          "name": "quarkus_jvm_maxThroughputDensity",
+          "jsonpath": "$.results.\"quarkus-jvm\".load.maxThroughputDensity",
+          "isarray": false
+        }
+      ],
+      "function": null,
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 64
+    }
+  ],
+  "transformers": [
+    {
+      "owner": "foo-team",
+      "access": 0,
+      "id": 3243897,
+      "name": "quarkus-sb-comparison-transformer",
+      "description": "Transformer to split sb-qurkus comparison into multiple datasets",
+      "targetSchemaUri": "urn:quarkus-sb-compare-ds:0.1",
+      "extractors": [
+        {
+          "name": "runtimeName",
+          "jsonpath": "$.results[*].keyvalue().key",
+          "isarray": true
+        },
+        {
+          "name": "rssStartup",
+          "jsonpath": "$.results[*].*.rss.avStartupRss",
+          "isarray": true
+        },
+        {
+          "name": "maxRss",
+          "jsonpath": "$.results[*].*.load.avMaxRss",
+          "isarray": true
+        },
+        {
+          "name": "avBuildTime",
+          "jsonpath": "$.results[*].*.build.avBuildTime",
+          "isarray": true
+        },
+        {
+          "name": "avTimeToFirstRequest",
+          "jsonpath": "$.results[*].*.startup.avStartTime",
+          "isarray": true
+        },
+        {
+          "name": "avThroughput",
+          "jsonpath": "$.results[*].*.load.avThroughput",
+          "isarray": true
+        },
+        {
+          "name": "rssFirstRequest",
+          "jsonpath": "$.results[*].*.rss.avFirstRequestRss",
+          "isarray": true
+        },
+        {
+          "name": "maxThroughputDensity",
+          "jsonpath": "$.results[*].*.load.maxThroughputDensity",
+          "isarray": true
+        },
+        {
+          "name": "buildId",
+          "jsonpath": "$.env.BUILD_ID",
+          "isarray": false
+        },
+        {
+          "name": "buildUrl",
+          "jsonpath": "$.env.BUILD_URL",
+          "isarray": false
+        },
+        {
+          "name": "quarkusVersion",
+          "jsonpath": "$.config.QUARKUS_VERSION",
+          "isarray": false
+        },
+        {
+          "name": "springVersion",
+          "jsonpath": "$.config.SPRING_BOOT_VERSION",
+          "isarray": false
+        }
+      ],
+      "function": "({runtimeName, rssStartup, maxRss, avBuildTime, avTimeToFirstRequest, avThroughput, rssFirstRequest, maxThroughputDensity, buildId, buildUrl, quarkusVersion, springVersion}) => {  \n   var map = runtimeName.map((name, i) => ({\n   runtime: name.split('-')[0],\n   buildType: name.split('-')[1],\n   rssStartup: rssStartup[i],\n   maxRss: maxRss[i],\n   avBuildTime: avBuildTime[i],\n   avTimeToFirstRequest: avTimeToFirstRequest[i],\n   avThroughput: avThroughput[i],\n   rssFirstRequest: rssFirstRequest[i],\n   maxThroughputDensity: maxThroughputDensity[i],\n   buildId: buildId,\n   buildUrl: buildUrl,\n   version: ((name.split('-')[0].substring(0, 6) == 'spring' ) ? springVersion: quarkusVersion )\n}))\nreturn map;\n}",
+      "schemaId": 64,
+      "schemaUri": "urn:quarkus-sb-compare:0.1",
+      "schemaName": "quarkus-sb-compare"
+    }
+  ]
+}

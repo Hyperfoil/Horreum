@@ -219,7 +219,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
    void importSubscriptions(TestExport test) {
       WatchDAO watch = WatchMapper.to(test.subscriptions);
       watch.test = em.getReference(TestDAO.class, test.id);
-      if(WatchDAO.findById(watch.id) == null) {
+      if(watch.id != null && WatchDAO.findById(watch.id) == null) {
          watch.id = null;
          watch.persist();
       }

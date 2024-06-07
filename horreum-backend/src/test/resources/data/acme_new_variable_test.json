@@ -1,0 +1,46 @@
+{
+  "id": 113,
+  "name": "new-variable",
+  "folder": "PerfNScale",
+  "description": "new CD variable",
+  "owner": "foo-team",
+  "access": 0,
+  "tokens": [],
+  "timelineLabels": [],
+  "timelineFunction": null,
+  "fingerprintLabels": [],
+  "fingerprintFilter": null,
+  "compareUrl": null,
+  "transformers": [],
+  "notificationsEnabled": true,
+  "variables": [
+    {
+      "id": null,
+      "testId": 113,
+      "name": "Max RSS",
+      "group": null,
+      "order": 0,
+      "labels": ["Quarkus - JVM - maxRss"],
+      "changeDetection": [
+        {
+          "model": "relativeDifference",
+          "config": {
+            "filter": "mean",
+            "window": 1,
+            "threshold": 0.2,
+            "minPrevious": 5
+          }
+        }
+      ]
+    }
+  ],
+  "missingDataRules": [],
+  "actions": [],
+  "experiments": [],
+  "subscriptions": {
+    "users": [],
+    "optout": [],
+    "teams": [],
+    "testId": 113
+  }
+}
