@@ -84,19 +84,34 @@ public class ActionServiceTest extends BaseServiceTest {
     * @param testInfo
     */
    @org.junit.jupiter.api.Test
-   public void testSlackAction(TestInfo testInfo) {
+   public void testSlackGoodChannelAction(TestInfo testInfo) {
+      executeTestCase(testInfo, "GOODCHANNEL", true);
+   }
+   /**
+    * @param testInfo
+    */
+   @org.junit.jupiter.api.Test
+   public void testSlackBadChannelAction(TestInfo testInfo) {
+      executeTestCase(testInfo, "BADCHANNEL", false);
+   }
+   /**
+    * @param testInfo
+    */
+   @org.junit.jupiter.api.Test
+   public void testSlackBusyChannelAction(TestInfo testInfo) {
+      executeTestCase(testInfo, "BUSYCHANNEL", true);
+   }
+   /**
+    * @param testInfo
+    */
+   @org.junit.jupiter.api.Test
+   public void testSlackErrorChannelAction(TestInfo testInfo) {
+      executeTestCase(testInfo, "ERRORCHANNEL", false);
+   }
+
+   private void executeTestCase(TestInfo testInfo, String channel, Boolean expectError){
       Test test = createTest(createExampleTest(getTestName(testInfo)));
 
-      /*
-       * Define test case "CHANNEL IDs", which match the mock slack service.
-       * The value is true if we expect the POST to succeed, or false if we
-       * expect failure.
-       */
-      Map<String, Boolean> channels = Map.of(
-            "GOODCHANNEL", true,
-            "BADCHANNEL", false,
-            "BUSYCHANNEL", true,
-            "ERRORCHANNEL", false);
       String token = "FAKETOKEN";
 
       /*
@@ -116,28 +131,26 @@ public class ActionServiceTest extends BaseServiceTest {
       action_json.set("secrets", secrets);
 
       // Iterate through the set of test cases.
-      for (Map.Entry<String, Boolean> test_case : channels.entrySet()) {
-         config.put("channel", test_case.getKey());
-         Action action = jsonRequest().auth().oauth2(getAdminToken())
-               .contentType(ContentType.JSON).body(action_json)
-               .post("/api/action")
-               .then().statusCode(200)
-               .contentType(ContentType.JSON).extract().body().as(Action.class);
+      config.put("channel", channel);
+      Action action = jsonRequest().auth().oauth2(getAdminToken())
+            .contentType(ContentType.JSON).body(action_json)
+            .post("/api/action")
+            .then().statusCode(200)
+            .contentType(ContentType.JSON).extract().body().as(Action.class);
 
-         // Dispatch the action manually
-         actionService.onNewTest(test);
-         int errors = 0;
+      // Dispatch the action manually
+      actionService.onNewTest(test);
+      int errors = 0;
 
-         // Look for Action log messages corresponding to this test case.
-         List<ActionLog> logs = jsonRequest().auth().oauth2(getTesterToken())
-               .queryParam("level", PersistentLogDAO.ERROR).get("/api/log/action/" + test.id)
-               .then().statusCode(200)
-               .contentType(ContentType.JSON).extract().body().jsonPath().getList(".", ActionLog.class);
-         for (ActionLog l : logs) {
-            if (l.type.equals(SlackChannelMessageAction.TYPE_SLACK_MESSAGE)
-                  && l.message.contains(test_case.getKey()) && l.level == 3) {
-               errors++;
-            }
+      // Look for Action log messages corresponding to this test case.
+      List<ActionLog> logs = jsonRequest().auth().oauth2(getTesterToken())
+            .queryParam("level", PersistentLogDAO.ERROR).get("/api/log/action/" + test.id)
+            .then().statusCode(200)
+            .contentType(ContentType.JSON).extract().body().jsonPath().getList(".", ActionLog.class);
+      for (ActionLog l : logs) {
+         if (l.type.equals(SlackChannelMessageAction.TYPE_SLACK_MESSAGE)
+               && l.message.contains(channel) && l.level == 3) {
+            errors++;
          }
 
          /*
@@ -146,7 +159,7 @@ public class ActionServiceTest extends BaseServiceTest {
           * retried asynchronously and we won't necessarily catch an error, but
           * it's sufficient for the other test cases.
           */
-         Assertions.assertEquals(test_case.getValue() ? 0 : 1, errors, "Test case " + test_case.getKey() + " failed");
+         Assertions.assertEquals(expectError ? 0 : 1, errors, "Test case " + channel + " failed");
 
          // Remove the action. (The test framework will remove the test.)
          given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);
