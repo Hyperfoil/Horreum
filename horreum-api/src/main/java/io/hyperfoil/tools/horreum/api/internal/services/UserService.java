@@ -47,6 +47,11 @@ public interface UserService {
    @Blocking
    void createUser(@RequestBody(required = true) NewUser user);
 
+   @DELETE
+   @Path("{username}")
+   @Blocking
+   void removeUser(@PathParam("username") String username);
+
    @GET
    @Path("teams")
    @Blocking

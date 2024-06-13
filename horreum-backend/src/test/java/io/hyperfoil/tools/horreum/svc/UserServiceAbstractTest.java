@@ -243,6 +243,10 @@ public abstract class UserServiceAbstractTest {
             // user should be able to authenticate now
             given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then().statusCode(SC_UNAUTHORIZED);
             given().auth().preemptive().basic(machineUser, newPassword).get("api/user/roles").then().statusCode(SC_OK);
+
+            // manager remove account
+            userService.removeUser(machineUser);
+            assertThrows(ServiceException.class, () -> userService.removeUser(machineUser));
         });
 
         userService.deleteTeam(testTeam);
@@ -429,6 +433,13 @@ public abstract class UserServiceAbstractTest {
         // test attempt to set admin role
         assertFalse(userService.administrators().stream().anyMatch(data -> thirdUser.equals(data.username)));
 
+        // test remove user
+        userService.removeUser(secondUser);
+        assertThrows(ServiceException.class, () -> userService.removeUser("some-non-existent-user"));
+
+        // test recreate
+        userService.createUser(anotherUser);
+
         // delete team
         userService.deleteTeam(testTeam);
     }
@@ -439,6 +450,7 @@ public abstract class UserServiceAbstractTest {
         assertThrows(UnauthorizedException.class, () -> userService.searchUsers(null));
         assertThrows(UnauthorizedException.class, () -> userService.info(null));
         assertThrows(UnauthorizedException.class, () -> userService.createUser(null));
+        assertThrows(UnauthorizedException.class, () -> userService.removeUser(null));
         assertThrows(UnauthorizedException.class, userService::getTeams);
         assertThrows(UnauthorizedException.class, userService::defaultTeam);
         assertThrows(UnauthorizedException.class, () -> userService.setDefaultTeam(null));
@@ -448,7 +460,8 @@ public abstract class UserServiceAbstractTest {
         assertThrows(UnauthorizedException.class, () -> userService.addTeam(null));
         assertThrows(UnauthorizedException.class, () -> userService.deleteTeam(null));
         assertThrows(UnauthorizedException.class, userService::administrators);
-        assertThrows(UnauthorizedException.class, () -> userService.updateAdministrators(null));
+        assertThrows(UnauthorizedException.class, () -> userService.updateAdministrators(List.of()));
+        assertThrows(UnauthorizedException.class, () -> userService.resetPassword(null, null));
 
         // user authenticated but without the necessary privileges
         overrideTestSecurity("unprivileged-user", Set.of(), () -> {
@@ -456,7 +469,7 @@ public abstract class UserServiceAbstractTest {
             assertThrows(ForbiddenException.class, () -> userService.addTeam(null));
             assertThrows(ForbiddenException.class, () -> userService.deleteTeam(null));
             assertThrows(ForbiddenException.class, userService::administrators);
-            assertThrows(ForbiddenException.class, () -> userService.updateAdministrators(null));
+            assertThrows(ForbiddenException.class, () -> userService.updateAdministrators(List.of()));
             assertThrows(ForbiddenException.class, () -> userService.searchUsers(null));
             assertThrows(ForbiddenException.class, () -> userService.info(new ArrayList<>()));
         });

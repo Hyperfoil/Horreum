@@ -1,5 +1,5 @@
 import {useRef} from "react"
-import {Card, CardBody, NavItem, PageSection} from "@patternfly/react-core"
+import {Card, CardBody, PageSection} from "@patternfly/react-core"
 
 import SavedTabs, {SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc} from "../../components/SavedTabs"
 import FragmentTabs, {FragmentTab} from "../../components/FragmentTabs"
@@ -12,6 +12,7 @@ import Administrators from "./Administrators"
 import {useSelector} from "react-redux";
 import {isAdminSelector, isManagerSelector} from "../../auth";
 import Datastores from "./Datastores";
+import RemoveUsers from "./RemoveUsers";
 
 export default function Admin() {
     const adminFuncsRef = useRef<TabFunctions>()
@@ -45,6 +46,9 @@ export default function Admin() {
                             >
                                 <Teams funcs={teamsFuncsRef}/>
                             </SavedTab>
+                            <FragmentTab title="Remove Users" fragment="remove-users">
+                                <RemoveUsers/>
+                            </FragmentTab>
                             <FragmentTab title="Global Actions" fragment="actions">
                                 <AllowedSiteList/>
                                 <br/>

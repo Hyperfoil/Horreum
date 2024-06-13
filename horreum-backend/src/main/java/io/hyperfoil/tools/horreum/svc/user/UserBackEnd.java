@@ -16,6 +16,8 @@ public interface UserBackEnd {
 
     void createUser(UserService.NewUser user);
 
+    void removeUser(String username);
+
     List<String> getTeams();
 
     Map<String, List<String>> teamMembers(String team);
@@ -35,5 +37,4 @@ public interface UserBackEnd {
     List<UserService.UserData> machineAccounts(String team);
 
     void setPassword(String username, String password);
-    
 }

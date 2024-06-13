@@ -4,6 +4,7 @@ import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.svc.user.UserBackEnd;
+import io.quarkus.logging.Log;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.RolesAllowed;
@@ -11,7 +12,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.jboss.logging.Logger;
 
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -25,7 +25,7 @@ import static java.util.Collections.emptyList;
 @Authenticated
 @ApplicationScoped
 public class UserServiceImpl implements UserService {
-    private static final Logger LOG = Logger.getLogger(UserServiceImpl.class);
+    
     private static final int RANDOM_PASSWORD_LENGTH = 15;
 
     @Inject SecurityIdentity identity;
@@ -53,7 +53,17 @@ public class UserServiceImpl implements UserService {
         userIsManagerForTeam(user.team);
         backend.get().createUser(user);
         createLocalUser(user.user.username, user.team, user.roles != null && user.roles.contains(Roles.MACHINE) ? user.password : null);
-        LOG.infov("{0} created user {1} {2} with username {3} on team {4}", identity.getPrincipal().getName(), user.user.firstName, user.user.lastName, user.user.username, user.team);
+        Log.infov("{0} created user {1} {2} with username {3} on team {4}", identity.getPrincipal().getName(), user.user.firstName, user.user.lastName, user.user.username, user.team);
+    }
+
+    @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
+    @Override public void removeUser(String username) {
+        if (identity.getPrincipal().getName().equals(username)) {
+            throw ServiceException.badRequest("Cannot remove yourself");
+        }
+        backend.get().removeUser(username);
+        removeLocalUser(username);
+        Log.infov("{0} removed user {1}", identity.getPrincipal().getName(), username);
     }
 
     @Override public List<String> getTeams() {
@@ -113,14 +123,14 @@ public class UserServiceImpl implements UserService {
     @Override public void addTeam(String unsafeTeam) {
         String team = validateTeamName(unsafeTeam);
         backend.get().addTeam(team);
-        LOG.infov("{0} created team {1}", identity.getPrincipal().getName(), team);
+        Log.infov("{0} created team {1}", identity.getPrincipal().getName(), team);
     }
 
     @RolesAllowed(Roles.ADMIN)
     @Override public void deleteTeam(String unsafeTeam) {
         String team = validateTeamName(unsafeTeam);
         backend.get().deleteTeam(team);
-        LOG.infov("{0} deleted team {1}", identity.getPrincipal().getName(), team);
+        Log.infov("{0} deleted team {1}", identity.getPrincipal().getName(), team);
     }
 
     @RolesAllowed(Roles.ADMIN)
@@ -161,7 +171,7 @@ public class UserServiceImpl implements UserService {
         }
         String newPassword = new SecureRandom().ints(RANDOM_PASSWORD_LENGTH, '0', 'z' + 1).collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
         userInfo.setPassword(newPassword);
-        LOG.infov("{0} reset password of user {1}", identity.getPrincipal().getName(), username);
+        Log.infov("{0} reset password of user {1}", identity.getPrincipal().getName(), username);
         return newPassword;
     }
 
@@ -222,6 +232,16 @@ public class UserServiceImpl implements UserService {
                 userInfo.setPassword(password);
             }
             userInfo.persist();
+        }
+    }
+
+    @Transactional
+    @WithRoles(fromParams = FirstParameter.class)
+    void removeLocalUser(String username) {
+        try {
+            UserInfo.deleteById(username);
+        } catch (Exception e) {
+            // ignore
         }
     }
 

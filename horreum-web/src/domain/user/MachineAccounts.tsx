@@ -98,6 +98,22 @@ export default function ManageMachineAccounts(props: ManageMachineAccountsProps)
                                             Reset Password
                                         </Button>
                                     </DataListAction>
+                                    <DataListAction key={"action" + i} aria-labelledby={"remove-account-" + i}
+                                                    aria-label={"remove-account-" + i} id={"remove-account-" + i}>
+                                        <Button
+                                            variant="danger" size="sm" key={"remove-account" + i}
+                                            onClick={() => {
+                                                if (confirm("Are you sure you want to remove account " + userName(u) + "?")) {
+                                                    userApi.removeUser(u.username).then(
+                                                        _ => setMachineUsers(machineUsers.filter(user => user != u)),
+                                                        error => alerting.dispatchError(error, "REMOVE_ACCOUNT", "Failed to remove account")
+                                                    )
+                                                }
+                                            }}
+                                        >
+                                            Remove Account
+                                        </Button>
+                                    </DataListAction>
                                 </DataListItemRow>
                             </DataListItem>
                         )}

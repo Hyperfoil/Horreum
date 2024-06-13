@@ -105,6 +105,14 @@ public class DatabaseUserBackend implements UserBackEnd {
     }
 
     @Transactional
+    @WithRoles(fromParams = RemoveUserParameterConverter.class)
+    @Override public void removeUser(String username) {
+        if (!UserInfo.deleteById(username)) {
+            throw ServiceException.notFound("User does not exist");
+        }
+    }
+
+    @Transactional
     @Override public List<String> getTeams() {
         List<Team> teams = Team.listAll();
         return teams.stream().map(t -> t.teamName + "-team").toList();
@@ -242,6 +250,15 @@ public class DatabaseUserBackend implements UserBackEnd {
     public static final class NewUserParameterConverter implements Function<Object[], String[]> {
         @Override public String[] apply(Object[] objects) {
             return new String[] { ((UserService.NewUser) objects[0]).user.username };
+        }
+    }
+
+    /**
+     * Extract usernames from parameters of `removeUser()`
+     */
+    public static final class RemoveUserParameterConverter implements Function<Object[], String[]> {
+        @Override public String[] apply(Object[] objects) {
+            return new String[] {(String) objects[0]};
         }
     }
 

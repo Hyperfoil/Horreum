@@ -139,6 +139,20 @@ public class KeycloakUserBackend implements UserBackEnd {
         }
     }
 
+    @Override public void removeUser(String username) {
+        try (Response response = keycloak.realm(realm).users().delete(findMatchingUserId(username))) {
+            if (response.getStatusInfo().getFamily() != Response.Status.Family.SUCCESSFUL) {
+                LOG.warnv("Got {0} response for removing user {0}", response.getStatusInfo(), username);
+                throw ServiceException.serverError(format("Unable to remove user {0}", username));
+            }
+        } catch (ServiceException se) {
+            throw se; // thrown above, re-throw
+        } catch (Throwable t) {
+            LOG.warnv(t, "Unable to remove user {0}", username);
+            throw ServiceException.serverError(format("Unable to remove user {0}", username));
+        }
+    }
+
     private static UserRepresentation convertUserRepresentation(UserService.NewUser user) {
         UserRepresentation rep = new UserRepresentation();
         rep.setUsername(user.user.username);
@@ -167,7 +181,7 @@ public class KeycloakUserBackend implements UserBackEnd {
         List<UserRepresentation> matchingUsers = keycloak.realm(realm).users().search(username, true);
         if (matchingUsers == null || matchingUsers.isEmpty()) {
             LOG.warnv("Cannot find user with username {0}", username);
-            throw ServiceException.badRequest(format("User {0} does not exist", username));
+            throw ServiceException.notFound(format("User {0} does not exist", username));
         } else if (matchingUsers.size() > 1) {
             LOG.warnv("Multiple matches for exact search for username {0}: {1}", username, matchingUsers.stream().map(UserRepresentation::getId).collect(joining(" ")));
             throw ServiceException.serverError(format("More than one user with username {0}", username));
