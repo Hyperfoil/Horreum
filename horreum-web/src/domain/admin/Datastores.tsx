@@ -19,7 +19,15 @@ import {
 import {Stack, StackItem} from "@patternfly/react-core";
 import ModifyDatastoreModal from "./datastore/ModifyDatastoreModal";
 import VerifyBackendModal from "./datastore/VerifyBackendModal";
-import {Access, apiCall, configApi, Datastore, DatastoreTypeEnum, ElasticsearchDatastoreConfig} from "../../api";
+import {
+    Access,
+    apiCall,
+    CollectorApiDatastoreConfig,
+    configApi,
+    Datastore,
+    DatastoreTypeEnum,
+    ElasticsearchDatastoreConfig
+} from "../../api";
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {noop} from "../../utils";
@@ -58,7 +66,7 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
         },
 
     ];
-    const newBackendConfig: ElasticsearchDatastoreConfig = {
+    const newBackendConfig: ElasticsearchDatastoreConfig | CollectorApiDatastoreConfig = {
         url: "",
         apiKey: "",
         builtIn: false
