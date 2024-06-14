@@ -55,7 +55,7 @@ public class ConfigServiceImpl implements ConfigService {
     @Override
     public VersionInfo version() {
         VersionInfo info = new VersionInfo();
-        info.version = Version.VERSION;
+        info.version = Version.getVersion();
         info.startTimestamp = startTimestamp;
         info.privacyStatement = privacyStatement.orElse(null);
         return info;

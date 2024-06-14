@@ -95,6 +95,9 @@
         <dev.images.postgres>postgres:16</dev.images.postgres>
         <dev.images.keycloak>quay.io/keycloak/keycloak:23.0.3</dev.images.keycloak>
 
+        <horreum.version>${project.version}</horreum.version>
+        <major-version>0.14</major-version>
+
     </properties>
 
     <developers>
