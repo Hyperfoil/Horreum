@@ -45,5 +45,5 @@ jobs:
           git commit -a -m "Next is ${{ env.NEXT_VERSION }}"
       - name: push branches
         run: |
-          git push master
-          git push ${{ env.CUR_VERSION }}
+          git push origin ${{ env.CUR_VERSION }}
+          git push
