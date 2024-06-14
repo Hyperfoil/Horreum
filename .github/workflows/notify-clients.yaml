@@ -1,5 +1,4 @@
 name: Notify clients
-
 on:
   push:
     branches:
@@ -8,7 +7,6 @@ on:
       - 0.13.x
     paths:
       - "docs/site/content/en/openapi/openapi.yaml"
-
 jobs:
   clients-notification:
     runs-on: ubuntu-latest
@@ -19,7 +17,6 @@ jobs:
             repository: Hyperfoil/horreum-client-golang
           - name: Python
             repository: Hyperfoil/horreum-client-python
-
     steps:
       - name: Extract trigger branch
         id: extractor

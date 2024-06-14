@@ -1,67 +1,58 @@
 name: Java CI with Maven
-
 on:
   push:
     branches: [ master, 0.12.x, 0.13.x ]
     tags: [ "*" ]
   pull_request:
   workflow_dispatch:
-
 jobs:
   build:
     name: Build on ${{ matrix.os.name }}
     strategy:
       matrix:
         os:
-        -  {
-            name: "windows-latest",
-            build-options: "\"-Dquarkus.container-image.build=false\" -pl '!horreum-client, !horreum-integration-tests' -DskipITs -DskipTests"
-          }
-        - {
-            name: "ubuntu-latest",
-            build-options: ""
-          }
+          - {name: "windows-latest", build-options: "\"-Dquarkus.container-image.build=false\" -pl '!horreum-client, !horreum-integration-tests' -DskipITs -DskipTests"}
+          - {name: "ubuntu-latest", build-options: ""}
     env:
       ENVIRONMENT: CI
-    runs-on:  ${{ matrix.os.name }}
-
+    runs-on: ${{ matrix.os.name }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Reclaim Disk Space
-      run: .github/scripts/ci-prerequisites.sh
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'adopt'
-        java-version: 17
-    - name: Cache Maven packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-    - name: Install Hunter
-      run: pipx install git+https://github.com/datastax-labs/hunter.git
-    - name: Maven Version
-      run: mvn --version
-    - name: Build and Test
-      run: mvn clean install -B --file pom.xml ${{ matrix.os.build-options }} -P ci
-    - name: Check uncommitted changes
-      if: matrix.os.name == 'ubuntu-latest'
-      run: |
-        clean=$(git status --porcelain)
-        if [[ -z "$clean" ]]; then
-          echo "Empty git status --porcelain: $clean"
-        else
-          echo "Uncommitted file changes detected: $clean"
-          git diff
-          exit 1
-        fi
-    - name: Upload artifact for failed workflow
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test logs
-        path: |
-          */target/surefire-reports/*
-          test-suite/target/hyperfoil/*.log
+      - uses: actions/checkout@v4
+      - name: Reclaim Disk Space
+        run: .github/scripts/ci-prerequisites.sh
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'adopt'
+          java-version: 17
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Install Hunter
+        run: pipx install git+https://github.com/datastax-labs/hunter.git
+      - name: Maven Version
+        run: mvn --version
+      - name: Build and Test
+        run: mvn clean install -B --file pom.xml ${{ matrix.os.build-options }} -P ci
+      - name: Check uncommitted changes
+        if: matrix.os.name == 'ubuntu-latest'
+        run: |
+          clean=$(git status --porcelain)
+          if [[ -z "$clean" ]]; then
+            echo "Empty git status --porcelain: $clean"
+          else
+            echo "Uncommitted file changes detected: $clean"
+            git diff
+            exit 1
+          fi
+      - name: Upload artifact for failed workflow
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test logs
+          path: |
+            */target/surefire-reports/*
+            test-suite/target/hyperfoil/*.log

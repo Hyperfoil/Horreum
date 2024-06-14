@@ -99,44 +99,20 @@ Generate release notes:
 
 https://github.com/Hyperfoil/Horreum/releases
 
-## After the release
-
-The version identifier for a release is from
-
-```
-./horreum-api/src/main/java/io/hyperfoil/tools/horreum/api/Version.java
-```
-
-so that file needs to be updated after a release.
-
 ## Creating a new Stable Branch
 
 To create a new stable branch, for example creating a `0.11.x` branch, first create the branch locally:
 
 ```bash
 git checkout origin/master
-git checkout -b 0.11.x
-git checkout origin/master
+git branch 0.11.x master
 ```
 
 Update the new main branch to the next snapshot version:
 
 ```bash
 mvn versions:set -DnewVersion=0.12-SNAPSHOT
-```
-
-Update the openapi version in the `horreum-api/pom.xml` file:
-
-```xml
-	<openapi-version>0.12</openapi-version>
-```
-
-Update the `horreum-api/src/main/java/io/hyperfoil/tools/horreum/api/Version.java` file
-
-```java
-public class Version {
-   public static final String VERSION = "0.12.0";
-}
+mvn versions:set-property -Dproperty=major-version -DnewVersion=0.12
 ```
 
 Update the Github actions to build the new stable branch for each push:
@@ -144,7 +120,7 @@ Update the Github actions to build the new stable branch for each push:
 ```yaml
 on:
   push:
-    branches: [ master, 0.12.x ]
+    branches: [ master, 0.11.x ]
     tags: [ "*" ]
   pull_request:
   workflow_dispatch:
@@ -154,9 +130,7 @@ Update the Github action to notify openapi changes to the clients on every stabl
 ```yaml
 on:
   push:
-    branches:
-      - main
-      - 0.12.x
+    branches: [ master, 0.11.x ]
     paths:
       - "docs/site/content/en/openapi/openapi.yaml"
 ```
@@ -171,7 +145,7 @@ git commit -m "Next is 0.12"
 Push the new branch and main branch to github:
     
 ```bash
-git push origin 0.12.x
+git push origin 0.11.x
 git push origin master
 ```
 

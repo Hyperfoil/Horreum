@@ -15,7 +15,6 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <openapi-version>0.14</openapi-version>
     </properties>
     <dependencies>
         <dependency>
@@ -65,7 +64,7 @@
                         </goals>
                         <configuration>
                             <configProperties>${basedir}/src/main/resources/application.properties</configProperties>
-                            <infoVersion>${openapi-version}</infoVersion>
+                            <infoVersion>${major-version}</infoVersion>
                             <scanPackages>
                                 io.hyperfoil.tools.horreum.api,
                                 io.hyperfoil.tools.horreum.api.alerting,
@@ -94,7 +93,7 @@
                         </goals>
                         <configuration>
                             <configProperties>${basedir}/src/main/resources/application.properties</configProperties>
-                            <infoVersion>${openapi-version}</infoVersion>
+                            <infoVersion>${major-version}</infoVersion>
                             <scanPackages>
                                 io.hyperfoil.tools.horreum.api,
                                 io.hyperfoil.tools.horreum.api.alerting,
@@ -203,6 +202,24 @@
                                     <filtering>true</filtering>
                                 </resource>
                             </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>properties-maven-plugin</artifactId>
+                <version>1.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>write-project-properties</goal>
+                        </goals>
+                        <configuration>
+                            <outputFile>
+                                ${project.build.outputDirectory}/build.properties
+                            </outputFile>
                         </configuration>
                     </execution>
                 </executions>
