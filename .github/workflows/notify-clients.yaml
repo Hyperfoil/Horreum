@@ -3,8 +3,7 @@ on:
   push:
     branches:
       - master
-      - 0.12.x
-      - 0.13.x
+      - 0.15
     paths:
       - "docs/site/content/en/openapi/openapi.yaml"
 jobs:

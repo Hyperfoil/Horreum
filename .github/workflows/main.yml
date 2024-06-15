@@ -1,8 +1,8 @@
 name: Java CI with Maven
 on:
   push:
-    branches: [ master, 0.12.x, 0.13.x ]
-    tags: [ "*" ]
+    branches: [master, 0.15]
+    tags: ["*"]
   pull_request:
   workflow_dispatch:
 jobs:
