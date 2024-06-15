@@ -1,10 +1,13 @@
+import React from 'react';
+import {
+    ToolbarContent,
+} from '@patternfly/react-core';
+
 import {useCallback, useContext, useEffect, useMemo, useState} from "react"
 import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 import {
     Button,
-    ExpandableSection,
-    ExpandableSectionToggle,
     Flex,
     FlexItem,
     Toolbar,
@@ -38,17 +41,16 @@ import {
     fetchTest,
     Test,
     View,
-    ExportedLabelValues,
     fetchViews
 } from "../../api"
 import { Description, ExecutionTime, renderCell } from "./components"
 import ButtonLink from "../../components/ButtonLink"
-import LabelsSelect, { SelectedLabels } from "../../components/LabelsSelect"
 import ViewSelect from "../../components/ViewSelect"
 import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
+import LabelFilter from "../../components/LabelFilter/LabelFilter";
 
 type C = CellProps<DatasetSummary> &
     UseTableOptions<DatasetSummary> &
@@ -115,8 +117,7 @@ export default function TestDatasets() {
     const { testId } = useParams();
     const testIdInt = parseInt(testId ?? "-1")
     const [test, setTest] = useState<Test | undefined>(undefined)
-    const [filter, setFilter] = useState<SelectedLabels>()
-    const [filterExpanded, setFilterExpanded] = useState(false)
+    const [filter, setFilter] = useState<any>({})
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [sortBy, setSortBy] = useState<SortingRule<DatasetSummary>>({id: "start", desc: true})
@@ -152,9 +153,11 @@ export default function TestDatasets() {
             )
             .finally(() => setLoading(false))
     }, [ testIdInt, filter, pagination, teams, viewId])
+
     useEffect(() => {
         document.title = (test?.name || "Loading...") + " | Horreum"
     }, [test])
+
     const columns = useMemo(() => {
         const allColumns = [...staticColumns]
         if (comparedDatasets) {
@@ -208,10 +211,32 @@ export default function TestDatasets() {
 
     const labelsSource = useCallback(() => testApi.filteringLabelValues(testIdInt), [testIdInt, teams, token])
 
-    return (
-        <>
-            <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
-                <ToolbarGroup>
+    const arrayOfClearCallbacks : any[] = [];
+    const clearCallback = (callback: () => void) => {
+        arrayOfClearCallbacks.push(callback);
+    }
+
+    const toolbar = (
+        <Toolbar
+            id="attribute-search-filter-toolbar"
+            clearAllFilters={() => {
+                for (const key in arrayOfClearCallbacks) {
+                    arrayOfClearCallbacks[key]();
+                }
+                setFilter({});
+            }}
+        >
+            <ToolbarContent>
+                <LabelFilter
+                    selection={filter}
+                    onSelect={setFilter}
+                    source={labelsSource}
+                    emptyPlaceholder={<span>No filters available</span>}
+                    clearCallback={clearCallback}
+                />
+
+                <ToolbarItem variant="separator" />
+                <ToolbarGroup style={{ float: "right"}}>
                     <ToolbarItem>
                         <Flex>
                             <FlexItem>View:</FlexItem>
@@ -224,15 +249,7 @@ export default function TestDatasets() {
                             </FlexItem>
                         </Flex>
                     </ToolbarItem>
-                    <ToolbarItem>
-                        <ExpandableSectionToggle
-                            isExpanded={filterExpanded}
-                            contentId="filter"
-                            onToggle={setFilterExpanded}
-                        >
-                            {filterExpanded ? "Hide filters" : "Show filters"}
-                        </ExpandableSectionToggle>
-                    </ToolbarItem>
+
                     <ToolbarItem>
                         <Button
                             variant="secondary"
@@ -241,7 +258,6 @@ export default function TestDatasets() {
                                     setComparedDatasets(undefined)
                                 } else {
                                     setComparedDatasets([])
-                                    setFilterExpanded(true)
                                 }
                             }}
                         >
@@ -249,45 +265,37 @@ export default function TestDatasets() {
                         </Button>
                     </ToolbarItem>
                 </ToolbarGroup>
-            </Toolbar>
-            {(filterExpanded || comparedDatasets) && (
-                <PageSection variant="default" isCenterAligned>
-                    <ExpandableSection
-                        isDetached
-                        isExpanded={filterExpanded}
-                        contentId="filter"
-                        style={{ display: "flex", overflowX: "auto" }}
-                    >
-                        <LabelsSelect
-                            forceSplit={true}
-                            fireOnPartial={true}
-                            showKeyHelper={true}
-                            addResetButton={true}
-                            selection={filter}
-                            onSelect={setFilter}
-                            source={labelsSource}
-                            emptyPlaceholder={<span>No filters available</span>}
-                        />
-                    </ExpandableSection>
+            </ToolbarContent>
+        </Toolbar>
+    );
 
-                    {comparedDatasets && comparedDatasets.length > 0 && (
-                        <div style={{ marginTop: "30px"}}>
-                            <CustomTable<DatasetSummary> title="Datasets for comparison" columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
-                            <ButtonLink
-                                to={
-                                    `/dataset/comparison?testId=${testIdInt}&` +
-                                    comparedDatasets.map(ds => `ds=${ds.id}_${ds.runId}_${ds.ordinal}`).join("&") +
-                                    "#labels"
-                                }
-                                isDisabled={comparedDatasets.length === 0}
-                                style={{ marginTop: "15px" }}
-                            >
-                                Compare labels
-                            </ButtonLink>
-                        </div>
-                    )}
+    return (
+        <>
+            {toolbar}
+
+            {(comparedDatasets) && (
+                <PageSection variant="default" isCenterAligned>
+
+                {comparedDatasets && comparedDatasets.length > 0 && (
+                    <div style={{ marginTop: "30px"}}>
+                        <CustomTable<DatasetSummary> title="Datasets for comparison" columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
+                        <ButtonLink
+                            to={
+                                `/dataset/comparison?testId=${testIdInt}&` +
+                                comparedDatasets.map(ds => `ds=${ds.id}_${ds.runId}_${ds.ordinal}`).join("&") +
+                                "#labels"
+                            }
+                            isDisabled={comparedDatasets.length === 0}
+                            style={{ marginTop: "15px" }}
+                        >
+                            Compare labels
+                        </ButtonLink>
+                    </div>
+                )}
+
                 </PageSection>
             )}
+
             <CustomTable<DatasetSummary>
                 columns={columns}
                 data={
