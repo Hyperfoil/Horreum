@@ -40,6 +40,8 @@ jobs:
         run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/main.yml
       - name: Update Notify clients workflow
         run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/notify-clients.yaml
+      - name: build new openapi.yaml
+        run: mvn clean package -DskipTests -DskipITs -pl horreum-api
       - name: Commit main branch changes
         run: |
           git config --global user.name "rh-appservices-perf"
