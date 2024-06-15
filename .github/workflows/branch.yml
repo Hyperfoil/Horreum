@@ -37,9 +37,9 @@ jobs:
       - name: Set major version ${{ env.NEXT_VERSION }}
         run: mvn versions:set-property -Dproperty=major-version -DnewVersion=${{ env.NEXT_VERSION }}
       - name: Update main workflow
-        run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.NEXT_VERSION }}' ]'  .github/workflows/main.yml
+        run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/main.yml
       - name: Update Notify clients workflow
-        run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.NEXT_VERSION }}' ]'  .github/workflows/notify-clients.yaml
+        run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/notify-clients.yaml
       - name: Commit main branch changes
         run: |
           git config --global user.name "rh-appservices-perf"
