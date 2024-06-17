@@ -51,7 +51,7 @@ Horreum is running on [localhost:8080](http://localhost:8080)
 
 | Role | Name | Password |
 | ---- | ---- | -------- |
-| User | `user` | `secret` |
+| User | `horreum.bootstrap` | `secret` |
 
 
 ## Tested platforms
