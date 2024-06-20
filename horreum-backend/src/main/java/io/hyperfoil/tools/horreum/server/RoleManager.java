@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.server;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.hyperfoil.tools.horreum.svc.Roles;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -15,7 +16,8 @@ import jakarta.transaction.TransactionManager;
 
 @ApplicationScoped
 public class RoleManager {
-   static final String SET_ROLES = "SELECT current_setting('horreum.userroles', true), set_config('horreum.userroles', ?, false)";
+   // from `set_config`documentation: "If is_local is true, the new value will only apply during the current transaction."
+   static final String SET_ROLES = "SELECT current_setting('horreum.userroles', true), set_config('horreum.userroles', ?, true)";
    static final String SET_TOKEN = "SELECT set_config('horreum.token', ?, false)";
    static final CloseMe NOOP = () -> {};
 
@@ -28,9 +30,10 @@ public class RoleManager {
    }
 
    String setRoles(String roles) {
-      Query setRoles = em.createNativeQuery(SET_ROLES);
-      setRoles.setParameter(1, roles == null ? "" : roles);
-      Object[] row = (Object[]) setRoles.getSingleResult();
+      if (roles == null || roles.isEmpty() || Roles.HORREUM_SYSTEM.equals(roles)) {
+         return "";
+      }
+      Object[] row = (Object[]) em.createNativeQuery(SET_ROLES).setParameter(1, roles).getSingleResult();
 
       if (Log.isDebugEnabled()) { // enabe with: `quarkus.log.category."io.hyperfoil.tools.horreum.server.RoleManager".level=DEBUG`
          try {
@@ -47,7 +50,7 @@ public class RoleManager {
          return NOOP;
       }
       String previous = setRoles(roles);
-      return () -> setRoles(previous);
+      return Roles.HORREUM_SYSTEM.equals(previous) ? NOOP : () -> setRoles(previous);
    }
 
    // --- //

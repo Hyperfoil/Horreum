@@ -37,6 +37,7 @@ import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
+import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
@@ -194,6 +195,7 @@ public class BaseServiceTest {
             DataPointDAO.deleteAll();
             ChangeDetectionDAO.deleteAll();
             VariableDAO.deleteAll();
+            FingerprintDAO.deleteAll();
 
             DatasetDAO.deleteAll();
             RunDAO.deleteAll();
@@ -201,6 +203,7 @@ public class BaseServiceTest {
             em.createNativeQuery("DELETE FROM label_extractors").executeUpdate();
             LabelDAO.deleteAll();
             SchemaDAO.deleteAll();
+            em.createNativeQuery("DELETE FROM dataset_schemas").executeUpdate();
 
             ActionDAO.deleteAll();
             AllowedSiteDAO.deleteAll();
