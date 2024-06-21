@@ -130,8 +130,8 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
 
+            <plugin>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
                 <version>${quarkus.version}</version>
@@ -146,7 +146,10 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <appArtifact>io.hyperfoil.tools:horreum-backend:${project.version}</appArtifact>
                     <systemProperties>
+                        <quarkus.quinoa>false</quarkus.quinoa>
+                        <quarkus.container-image.build>false</quarkus.container-image.build>
                         <horreum.dev-services.keycloak.image>${dev.images.keycloak}</horreum.dev-services.keycloak.image>
                         <horreum.dev-services.postgres.image>${dev.images.postgres}</horreum.dev-services.postgres.image>
                     </systemProperties>
