@@ -29,7 +29,7 @@ jobs:
           PROJECT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.4.0:evaluate -Dexpression=project.version -q -DforceStdout)
           echo PROJECT_VERSION=${PROJECT_VERSION} >> $GITHUB_ENV
           echo CUR_VERSION=$(echo ${PROJECT_VERSION} |  awk -F'.' '{print $1"."$2+0"."$3}' |  sed s/[.]$//) >> $GITHUB_ENV
-          echo NEXT_VERSION=$(echo ${PROJECT_VERSION} |  awk -F'.' '{print $1"."$2+1"."$3}' |  sed s/[.]$//) >> $GITHUB_ENV
+          echo NEXT_VERSION=$(echo ${PROJECT_VERSION} |  awk -F'.' '{print $1"."$2+1".0-SNAPSHOT"}' |  sed s/[.]$//) >> $GITHUB_ENV
       - name: Create branch ${{ env.CUR_VERSION }}
         run: git branch ${{ env.CUR_VERSION }} master
       - name: Bump next version ${{ env.NEXT_VERSION }}-SNAPSHOT
@@ -38,6 +38,8 @@ jobs:
         run: mvn versions:set-property -Dproperty=major-version -DnewVersion=${{ env.NEXT_VERSION }}
       - name: Update main workflow
         run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/main.yml
+      - name: Update release branch
+        run: ~/yq -i e '.env.RELEASE_BRANCH |= ${{ env.NEXT_VERSION }} .github/workflows/release.yml
       - name: Update Notify clients workflow
         run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/notify-clients.yaml
       - name: Update backport workflow
