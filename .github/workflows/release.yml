@@ -1,4 +1,4 @@
-name: Create New Stable Branch
+name: Perform Release
 
 on:
   workflow_dispatch:
