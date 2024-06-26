@@ -85,7 +85,7 @@ public class RunServiceImpl implements RunService {
    private static final String FIND_AUTOCOMPLETE = """
          SELECT * FROM (
             SELECT DISTINCT jsonb_object_keys(q) AS key
-            FROM run, jsonb_path_query(run.data, ? ::::jsonpath) q
+            FROM run, jsonb_path_query(run.data, ? ::jsonpath) q
             WHERE jsonb_typeof(q) = 'object') AS keys
          WHERE keys.key LIKE CONCAT(?, '%');
          """;
@@ -202,7 +202,7 @@ public class RunServiceImpl implements RunService {
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
    @Transactional
    void onNewOrUpdatedSchemaForRun(int runId, int schemaId) {
-      em.createNativeQuery("SELECT update_run_schemas(?1)::::text").setParameter(1, runId).getSingleResult();
+      em.createNativeQuery("SELECT update_run_schemas(?1)::text").setParameter(1, runId).getSingleResult();
       //clear validation error tables by schemaId
       em.createNativeQuery("DELETE FROM dataset_validationerrors WHERE schema_id = ?1")
               .setParameter(1, schemaId).executeUpdate();
@@ -226,7 +226,7 @@ public class RunServiceImpl implements RunService {
               "'testname', (SELECT name FROM test WHERE test.id = run.testid), " +
               "'datasets', (SELECT jsonb_agg(id ORDER BY id) FROM dataset WHERE runid = run.id), " +
               "'validationErrors', (SELECT jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) FROM run_validationerrors WHERE run_id = ?1)" +
-              "))::::text FROM run WHERE id = ?1", id);
+              "))::text FROM run WHERE id = ?1", id);
       try {
          runExtended = mapper.readValue(extendedData, RunExtended.class);
       } catch (JsonProcessingException e) {
@@ -266,7 +266,7 @@ public class RunServiceImpl implements RunService {
          String sqlQuery = "SELECT (CASE " +
                "WHEN rs.type = 0 THEN run.data " +
                "WHEN rs.type = 1 THEN run.data->rs.key " +
-               "ELSE run.data->(rs.key::::integer) " +
+               "ELSE run.data->(rs.key::integer) " +
                "END)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.source = 0 AND rs.uri = ?2";
          return Util.runQuery(em, sqlQuery, id, schemaUri);
       }
@@ -324,7 +324,7 @@ public class RunServiceImpl implements RunService {
       String sql = """
          WITH
          combined as (
-         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::::jsonb) AS values, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::jsonb) AS values, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
                   FROM dataset
                   LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
                   LEFT JOIN label ON label.id = lv.label_id
@@ -400,9 +400,9 @@ public class RunServiceImpl implements RunService {
    public JsonNode getMetadata(int id, String token, String schemaUri) {
       String result;
       if (schemaUri == null || schemaUri.isEmpty()) {
-         result = (String) Util.runQuery(em, "SELECT coalesce((metadata#>>'{}')::::jsonb, '{}'::::jsonb) from run where id = ?", id);
+         result = (String) Util.runQuery(em, "SELECT coalesce((metadata#>>'{}')::jsonb, '{}'::jsonb) from run where id = ?", id);
       } else {
-         String sqlQuery = "SELECT run.metadata->(rs.key::::integer)#>>'{}' FROM run " +
+         String sqlQuery = "SELECT run.metadata->(rs.key::integer)#>>'{}' FROM run " +
                "JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?1 AND rs.source = 1 AND rs.uri = ?2";
          result = (String) Util.runQuery(em, sqlQuery, id, schemaUri);
       }
@@ -763,7 +763,7 @@ public class RunServiceImpl implements RunService {
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
          .append("run.owner, run.access, run.token, run.trashed, run.description, ")
          .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
-         .append("'[]'::::jsonb AS schemas, '[]'::::jsonb AS datasets, '[]'::::jsonb AS validationErrors ")
+         .append("'[]'::jsonb AS schemas, '[]'::jsonb AS datasets, '[]'::jsonb AS validationErrors ")
          .append("FROM run JOIN test ON test.id = run.testId WHERE ");
       String[] queryParts;
       boolean whereStarted = false;
@@ -781,7 +781,7 @@ public class RunServiceImpl implements RunService {
             if (i != 0) {
                sql.append(matchAll ? " AND " : " OR ");
             }
-            sql.append("jsonb_path_exists(data, ?").append(i + 1).append(" ::::jsonpath)");
+            sql.append("jsonb_path_exists(data, ?").append(i + 1).append(" ::jsonpath)");
             if (queryParts[i].startsWith("$")) {
                // no change
             } else if (queryParts[i].startsWith("@")) {
@@ -963,7 +963,7 @@ public class RunServiceImpl implements RunService {
       StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
             .append("run.owner, run.access, run.token, run.trashed, run.description, ")
             .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
-            .append("'[]'::::jsonb AS schemas, '[]'::::jsonb AS datasets, '[]'::::jsonb AS validationErrors ")
+            .append("'[]'::jsonb AS schemas, '[]'::jsonb AS datasets, '[]'::jsonb AS validationErrors ")
             .append("FROM run_schemas rs JOIN run ON rs.runid = run.id JOIN test ON rs.testid = test.id ")
             .append("WHERE uri = ? AND NOT run.trashed");
       Util.addPaging(sql, limit, page, sort, direction);
@@ -1381,10 +1381,10 @@ public class RunServiceImpl implements RunService {
             int type = (int) row[1];
             // actual result of query is ignored
             if (type == SchemaDAO.TYPE_1ST_LEVEL) {
-               em.createNativeQuery("SELECT jsonb_path_query_first(data, (?1)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?2")
+               em.createNativeQuery("SELECT jsonb_path_query_first(data, (?1)::jsonpath)#>>'{}' FROM dataset WHERE id = ?2")
                      .setParameter(1, row[5]).setParameter(2, runId).getSingleResult();
             } else {
-               em.createNativeQuery("SELECT jsonb_path_query_first(data -> (?1), (?2)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?3")
+               em.createNativeQuery("SELECT jsonb_path_query_first(data -> (?1), (?2)::jsonpath)#>>'{}' FROM dataset WHERE id = ?3")
                      .setParameter(1, type == SchemaDAO.TYPE_2ND_LEVEL ? row[2] : Integer.parseInt((String) row[2]))
                      .setParameter(2, row[5])
                      .setParameter(3, runId).getSingleResult();
