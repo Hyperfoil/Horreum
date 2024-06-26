@@ -545,7 +545,7 @@ public class ReportServiceImpl implements ReportService {
       sql.append("SELECT id, runid, ordinal, ");
       if (labels.size() != 1) {
          // jsonb_object_agg fails when values.name is null
-         sql.append("COALESCE(jsonb_object_agg(values.name, values.value) FILTER (WHERE values.name IS NOT NULL), '{}'::::jsonb)");
+         sql.append("COALESCE(jsonb_object_agg(values.name, values.value) FILTER (WHERE values.name IS NOT NULL), '{}'::jsonb)");
       } else {
          sql.append("values.value");
       }
@@ -566,7 +566,7 @@ public class ReportServiceImpl implements ReportService {
    private List<Object[]> selectByDatasets(ArrayNode labels, List<Integer> datasets) {
       StringBuilder sql = new StringBuilder("SELECT dataset.id AS id, dataset.runid AS runid, dataset.ordinal AS ordinal, ");
       if (labels.size() != 1) {
-         sql.append("COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb)");
+         sql.append("COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)");
       } else {
          sql.append("lv.value");
       }

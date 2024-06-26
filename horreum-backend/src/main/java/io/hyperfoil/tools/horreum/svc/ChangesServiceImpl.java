@@ -105,7 +105,7 @@ public class ChangesServiceImpl implements ChangesService {
          }
          sql.append(") SELECT dp.* FROM dp ");
          if (fingerprint != null) {
-            sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id WHERE json_equals(fp.fingerprint, (?4)::::jsonb) ");
+            sql.append("LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id WHERE json_equals(fp.fingerprint, (?4)::jsonb) ");
          }
          sql.append("ORDER BY timestamp ASC");
          NativeQuery<DataPointDAO> nativeQuery = em.unwrap(Session.class).createNativeQuery(sql.toString(), DataPointDAO.class)
@@ -174,7 +174,7 @@ public class ChangesServiceImpl implements ChangesService {
       }
       sql.append(" WHERE variable_id = ?1 AND timestamp BETWEEN ?2 AND ?3 ");
       if (fingerprint != null) {
-         sql.append("AND json_equals(fp.fingerprint, (?4)::::jsonb)");
+         sql.append("AND json_equals(fp.fingerprint, (?4)::jsonb)");
       }
       NativeQuery<ChangeDAO> nativeQuery = em.unwrap(Session.class).createNativeQuery(sql.toString(), ChangeDAO.class)
             .setParameter(1, variableId)

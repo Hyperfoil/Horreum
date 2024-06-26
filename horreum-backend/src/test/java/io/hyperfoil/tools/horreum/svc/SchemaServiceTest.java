@@ -299,8 +299,8 @@ class SchemaServiceTest extends BaseServiceTest {
       assertNotNull(datasetValidation2);
       assertEquals(4, datasetValidation2.errors.size());
 
-      assertEquals(4, em.createNativeQuery("SELECT COUNT(*)::::int FROM run_validationerrors").getSingleResult());
-      assertEquals(4, em.createNativeQuery("SELECT COUNT(*)::::int FROM dataset_validationerrors").getSingleResult());
+      assertEquals(4, em.createNativeQuery("SELECT COUNT(*)::int FROM run_validationerrors").getSingleResult());
+      assertEquals(4, em.createNativeQuery("SELECT COUNT(*)::int FROM dataset_validationerrors").getSingleResult());
    }
 
    @org.junit.jupiter.api.Test
@@ -594,8 +594,8 @@ class SchemaServiceTest extends BaseServiceTest {
       assertTrue(runId > 0);
 
       // no validation errors
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM run_validationerrors").getSingleResult());
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM dataset_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM run_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM dataset_validationerrors").getSingleResult());
 
       List<?> runSchemasBefore = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
       assertEquals(0, runSchemasBefore.size());
@@ -628,8 +628,8 @@ class SchemaServiceTest extends BaseServiceTest {
       assertTrue(runId > 0);
 
       // no validation errors
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM run_validationerrors").getSingleResult());
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM dataset_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM run_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM dataset_validationerrors").getSingleResult());
 
       List<?> runSchemasBefore = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
       assertEquals(0, runSchemasBefore.size());
@@ -661,8 +661,8 @@ class SchemaServiceTest extends BaseServiceTest {
       assertTrue(runId > 0);
 
       // no validation errors
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM run_validationerrors").getSingleResult());
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM dataset_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM run_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM dataset_validationerrors").getSingleResult());
 
       List<?> runSchemasBefore = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
       assertEquals(0, runSchemasBefore.size());
@@ -698,8 +698,8 @@ class SchemaServiceTest extends BaseServiceTest {
       assertTrue(runId > 0);
 
       // no validation errors
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM run_validationerrors").getSingleResult());
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM dataset_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM run_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM dataset_validationerrors").getSingleResult());
 
       List<?> runSchemasBefore = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
       assertEquals(2, runSchemasBefore.size());
@@ -730,8 +730,8 @@ class SchemaServiceTest extends BaseServiceTest {
       assertTrue(runId > 0);
 
       // no validation errors
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM run_validationerrors").getSingleResult());
-      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::::int FROM dataset_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM run_validationerrors").getSingleResult());
+      assertEquals(0, em.createNativeQuery("SELECT COUNT(*)::int FROM dataset_validationerrors").getSingleResult());
 
       List<?> runSchemasBefore = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId).getResultList();
       assertEquals(2, runSchemasBefore.size());
