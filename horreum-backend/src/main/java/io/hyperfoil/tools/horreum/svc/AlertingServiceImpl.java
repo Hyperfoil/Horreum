@@ -91,7 +91,7 @@ public class AlertingServiceImpl implements AlertingService {
             SELECT timeline_function,
                (CASE
                   WHEN jsonb_array_length(timeline_labels) = 1 THEN jsonb_agg(lv.value)->0
-                  ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb)
+                  ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
                END) as value
             FROM test
             JOIN label ON json_contains(timeline_labels, label.name)
@@ -113,7 +113,7 @@ public class AlertingServiceImpl implements AlertingService {
                jsonb_array_length(var.labels) AS numLabels,
                (CASE
                   WHEN jsonb_array_length(var.labels) = 1 THEN jsonb_agg(lv.value)->0
-                  ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb)
+                  ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
                   END) AS value
             FROM variable var
             LEFT JOIN label ON json_contains(var.labels, label.name)
@@ -131,7 +131,7 @@ public class AlertingServiceImpl implements AlertingService {
             (CASE
                WHEN mdr.labels IS NULL OR jsonb_array_length(mdr.labels) = 0 THEN NULL
                WHEN jsonb_array_length(mdr.labels) = 1 THEN jsonb_agg(lv.value)->0
-               ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb)
+               ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
             END) as value
          FROM missingdata_rule mdr
          LEFT JOIN label ON json_contains(mdr.labels, label.name)
@@ -146,7 +146,7 @@ public class AlertingServiceImpl implements AlertingService {
              (CASE
                WHEN mdr.labels IS NULL OR jsonb_array_length(mdr.labels) = 0 THEN NULL
                WHEN jsonb_array_length(mdr.labels) = 1 THEN jsonb_agg(lv.value)->0
-               ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb)
+               ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
              END) as value
          FROM missingdata_rule mdr
          LEFT JOIN label ON json_contains(mdr.labels, label.name)
@@ -178,7 +178,7 @@ public class AlertingServiceImpl implements AlertingService {
          FROM datapoint dp
          LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id
          WHERE
-            ((fp.fingerprint IS NULL AND (?1)::::jsonb IS NULL) OR json_equals(fp.fingerprint, (?1)::::jsonb))
+            ((fp.fingerprint IS NULL AND (?1)::jsonb IS NULL) OR json_equals(fp.fingerprint, (?1)::jsonb))
             AND variable_id = ANY(?2)
          ORDER BY variable_id, timestamp DESC
          """;

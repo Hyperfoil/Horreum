@@ -28,8 +28,8 @@ import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
    @NamedNativeQuery(
       name = SchemaDAO.QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID,
       query = "SELECT te.name, (" +
-            "CASE WHEN te.isarray THEN jsonb_path_query_array(r.data, te.jsonpath::::jsonpath) " +
-            "ELSE jsonb_path_query_first(r.data,te.jsonpath::::jsonpath) END) AS value " +
+            "CASE WHEN te.isarray THEN jsonb_path_query_array(r.data, te.jsonpath::jsonpath) " +
+            "ELSE jsonb_path_query_first(r.data,te.jsonpath::jsonpath) END) AS value " +
             "FROM run r, transformer t " +
             "JOIN transformer_extractors te ON te.transformer_id = t.id " +
             "WHERE r.id = ?1 AND t.id = ?2"
@@ -37,8 +37,8 @@ import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
    @NamedNativeQuery(
       name = SchemaDAO.QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID,
       query = "SELECT te.name, (" +
-            "CASE WHEN te.isarray THEN jsonb_path_query_array((CASE WHEN ?4 = 0 THEN r.data ELSE r.metadata END)->?3, te.jsonpath::::jsonpath) " +
-            "ELSE jsonb_path_query_first((CASE WHEN ?4 = 0 THEN r.data ELSE r.metadata END)->?3, te.jsonpath::::jsonpath) END) AS value " +
+            "CASE WHEN te.isarray THEN jsonb_path_query_array((CASE WHEN ?4 = 0 THEN r.data ELSE r.metadata END)->?3, te.jsonpath::jsonpath) " +
+            "ELSE jsonb_path_query_first((CASE WHEN ?4 = 0 THEN r.data ELSE r.metadata END)->?3, te.jsonpath::jsonpath) END) AS value " +
             "FROM run r, transformer t " +
             "JOIN transformer_extractors te ON te.transformer_id = t.id " +
             "WHERE r.id = ?1 AND t.id = ?2"

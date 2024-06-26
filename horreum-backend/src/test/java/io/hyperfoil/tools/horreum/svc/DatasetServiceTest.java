@@ -336,7 +336,7 @@ public class DatasetServiceTest extends BaseServiceTest {
             assertEquals(24, vc2.get("a").asInt());
             assertEquals(42, vc2.get("b").asInt());
 
-            String labelIds = (String) em.createNativeQuery("SELECT to_json(label_ids)::::text FROM dataset_view WHERE dataset_id = ?1")
+            String labelIds = (String) em.createNativeQuery("SELECT to_json(label_ids)::text FROM dataset_view WHERE dataset_id = ?1")
                   .setParameter(1, ds.id).getSingleResult();
             Set<Integer> ids = new HashSet<>();
             StreamSupport.stream(Util.toJsonNode(labelIds).spliterator(), false).mapToInt(JsonNode::asInt).forEach(ids::add);

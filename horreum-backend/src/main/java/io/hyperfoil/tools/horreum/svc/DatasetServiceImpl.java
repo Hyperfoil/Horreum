@@ -65,9 +65,9 @@ public class DatasetServiceImpl implements DatasetService {
          lvalues AS (
             SELECT ul.label_id, le.name,
                   (CASE WHEN le.isarray THEN
-                     jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::::jsonpath)
+                     jsonb_path_query_array(dataset.data -> ds.index, le.jsonpath::jsonpath)
                  ELSE
-                     jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::::jsonpath)
+                     jsonb_path_query_first(dataset.data -> ds.index, le.jsonpath::jsonpath)
                   END) AS value
             FROM dataset
             JOIN dataset_schemas ds ON dataset.id = ds.dataset_id
@@ -79,7 +79,7 @@ public class DatasetServiceImpl implements DatasetService {
                (CASE
                   WHEN ul.count > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value)
                   WHEN ul.count = 1 THEN jsonb_agg(lvalues.value) -> 0
-                  ELSE '{}'::::jsonb END
+                  ELSE '{}'::jsonb END
                ) AS value
          FROM label
          JOIN lvalues ON lvalues.label_id = label.id
@@ -89,7 +89,7 @@ public class DatasetServiceImpl implements DatasetService {
    protected static final String LABEL_PREVIEW = """
          WITH
          le AS (
-            SELECT * FROM jsonb_populate_recordset(NULL::::extractor, (?1)::::jsonb)
+            SELECT * FROM jsonb_populate_recordset(NULL::extractor, (?1)::jsonb)
          ),
          lvalues AS (
             SELECT le.name,
@@ -103,9 +103,9 @@ public class DatasetServiceImpl implements DatasetService {
             WHERE dataset.id = ?2 AND ds.schema_id = ?3
          )
          SELECT (CASE
-               WHEN jsonb_array_length((?1)::::jsonb) > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value)
-               WHEN jsonb_array_length((?1)::::jsonb) = 1 THEN jsonb_agg(lvalues.value) -> 0
-               ELSE '{}'::::jsonb END
+               WHEN jsonb_array_length((?1)::jsonb) > 1 THEN jsonb_object_agg(COALESCE(lvalues.name, ''), lvalues.value)
+               WHEN jsonb_array_length((?1)::jsonb) = 1 THEN jsonb_agg(lvalues.value) -> 0
+               ELSE '{}'::jsonb END
             ) AS value
          FROM lvalues
          """;
@@ -113,7 +113,7 @@ public class DatasetServiceImpl implements DatasetService {
    private static final String SCHEMAS_SELECT = """
          SELECT dataset_id,
                jsonb_agg(
-                  jsonb_build_object('id', schema.id, 'uri', ds.uri, 'name', schema.name, 'source', 0, 'type', 2, 'key', ds.index::::text, 'hasJsonSchema', schema.schema IS NOT NULL)
+                  jsonb_build_object('id', schema.id, 'uri', ds.uri, 'name', schema.name, 'source', 0, 'type', 2, 'key', ds.index::text, 'hasJsonSchema', schema.schema IS NOT NULL)
                ) AS schemas
          FROM dataset_schemas ds
          JOIN dataset ON dataset.id = ds.dataset_id
@@ -155,7 +155,7 @@ public class DatasetServiceImpl implements DatasetService {
             EXTRACT(EPOCH FROM ds.start) * 1000 AS start,
             EXTRACT(EPOCH FROM ds.stop) * 1000 AS stop,
             ds.owner, ds.access, dv.value AS view,
-            schema_agg.schemas AS schemas, '[]'::::jsonb AS validationErrors
+            schema_agg.schemas AS schemas, '[]'::jsonb AS validationErrors
          FROM dataset ds
          LEFT JOIN test ON test.id = ds.testid
          LEFT JOIN schema_agg ON schema_agg.dataset_id = ds.id
@@ -164,7 +164,7 @@ public class DatasetServiceImpl implements DatasetService {
          """;
    private static final String ALL_LABELS_SELECT = """
          SELECT dataset.id as dataset_id,
-            COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::::jsonb) AS values
+            COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb) AS values
          FROM dataset
          LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
          LEFT JOIN label ON label.id = label_id
@@ -493,7 +493,7 @@ public class DatasetServiceImpl implements DatasetService {
       for (Object[] row : extractors) {
          try {
             // actual result of query is ignored
-            em.createNativeQuery("SELECT jsonb_path_query_first(data -> (?1), (?2)::::jsonpath)#>>'{}' FROM dataset WHERE id = ?3")
+            em.createNativeQuery("SELECT jsonb_path_query_first(data -> (?1), (?2)::jsonpath)#>>'{}' FROM dataset WHERE id = ?3")
                   .setParameter(1, row[3]).setParameter(2, row[4]).setParameter(3, datasetId).getSingleResult();
          } catch (PersistenceException e) {
             logMessageInNewTx(datasetId, PersistentLogDAO.ERROR, "There seems to be an error in schema <code>%s</code> label <code>%s</code>, extractor <code>%s</code>, JSONPath expression <code>%s</code>: %s",
