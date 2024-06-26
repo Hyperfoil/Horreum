@@ -94,7 +94,7 @@ public class TestServiceImpl implements TestService {
    protected static final String LABEL_VALUES_QUERY = """
          WITH
          combined as (
-         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
+         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
                   FROM dataset
                   LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
                   LEFT JOIN label ON label.id = lv.label_id
@@ -353,7 +353,7 @@ public class TestServiceImpl implements TestService {
       if (anyFolder) {
          Roles.addRolesSql(identity, "test", testSql, roles, 1, " WHERE");
       } else {
-         testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::::text, '')");
+         testSql.append(" WHERE COALESCE(folder, '') = COALESCE((?1)::text, '')");
          Roles.addRolesSql(identity, "test", testSql, roles, 2, " AND");
       }
 

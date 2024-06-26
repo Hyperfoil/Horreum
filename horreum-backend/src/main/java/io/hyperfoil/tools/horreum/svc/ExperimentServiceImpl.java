@@ -169,7 +169,7 @@ public class ExperimentServiceImpl implements ExperimentService {
                CASE
                   WHEN count > 1 THEN jsonb_object_agg(COALESCE(name, ''), lvalues.value)
                   WHEN count = 1 THEN jsonb_agg(lvalues.value) -> 0
-                  ELSE '{}'::::jsonb END
+                  ELSE '{}'::jsonb END
             ) AS value
             FROM lvalues
             GROUP BY profile_id, selector_filter, count
@@ -213,7 +213,7 @@ public class ExperimentServiceImpl implements ExperimentService {
                (CASE
                   WHEN count > 1 THEN jsonb_object_agg(COALESCE(name, ''), lvalues.value)
                   WHEN count = 1 THEN jsonb_agg(lvalues.value) -> 0
-                  ELSE '{}'::::jsonb END
+                  ELSE '{}'::jsonb END
                ) AS value,
                dataset_id
             FROM lvalues
@@ -283,7 +283,7 @@ public class ExperimentServiceImpl implements ExperimentService {
          List<Dataset.Info> baseline = datasetQuery.setParameter(1, entry.getValue()).getResultList();
 
          JsonNode extraLabels = (JsonNode) em.createNativeQuery("""
-               SELECT COALESCE(jsonb_object_agg(COALESCE(label.name, ''), lv.value), '{}'::::jsonb) AS value
+               SELECT COALESCE(jsonb_object_agg(COALESCE(label.name, ''), lv.value), '{}'::jsonb) AS value
                FROM experiment_profile ep
                JOIN label ON json_contains(ep.extra_labels, label.name)
                LEFT JOIN label_values lv ON label.id = lv.label_id

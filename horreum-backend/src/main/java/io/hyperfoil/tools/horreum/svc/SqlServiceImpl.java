@@ -62,11 +62,11 @@ public class SqlServiceImpl implements SqlService {
       try {
          if (schemaUri != null && !schemaUri.isEmpty()) {
             String sqlQuery = "SELECT " + func + "((CASE " +
-                    "WHEN rs.type = 0 THEN run.data WHEN rs.type = 1 THEN run.data->rs.key ELSE run.data->(rs.key::::integer) END)" +
-                    ", (?1)::::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?2 AND rs.uri = ?3";
+                    "WHEN rs.type = 0 THEN run.data WHEN rs.type = 1 THEN run.data->rs.key ELSE run.data->(rs.key::integer) END)" +
+                    ", (?1)::jsonpath)#>>'{}' FROM run JOIN run_schemas rs ON rs.runid = run.id WHERE id = ?2 AND rs.uri = ?3";
             result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id, schemaUri));
          } else {
-            String sqlQuery = "SELECT " + func + "(data, (?1)::::jsonpath)#>>'{}' FROM run WHERE id = ?2";
+            String sqlQuery = "SELECT " + func + "(data, (?1)::jsonpath)#>>'{}' FROM run WHERE id = ?2";
             result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, id));
          }
          result.valid = true;
@@ -86,16 +86,16 @@ public class SqlServiceImpl implements SqlService {
       try {
          if (schemaUri == null) {
             String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";
-            String sqlQuery = "SELECT " + func + "(data, ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ?";
+            String sqlQuery = "SELECT " + func + "(data, ?::jsonpath)#>>'{}' FROM dataset WHERE id = ?";
             result.value = String.valueOf(Util.runQuery(em, sqlQuery, jsonpath, datasetId));
          } else {
             // This schema-aware query already assumes that Dataset.data is an array of objects with defined schema
-            String schemaQuery = "jsonb_path_query(data, '$[*] ? (@.\"$schema\" == $schema)', ('{\"schema\":\"' || ? || '\"}')::::jsonb)";
+            String schemaQuery = "jsonb_path_query(data, '$[*] ? (@.\"$schema\" == $schema)', ('{\"schema\":\"' || ? || '\"}')::jsonb)";
             String sqlQuery;
             if (!array) {
-               sqlQuery = "SELECT jsonb_path_query_first(" + schemaQuery + ", ?::::jsonpath)#>>'{}' FROM dataset WHERE id = ? LIMIT 1";
+               sqlQuery = "SELECT jsonb_path_query_first(" + schemaQuery + ", ?::jsonpath)#>>'{}' FROM dataset WHERE id = ? LIMIT 1";
             } else {
-               sqlQuery = "SELECT jsonb_agg(v)#>>'{}' FROM (SELECT jsonb_path_query(" + schemaQuery + ", ?::::jsonpath) AS v FROM dataset WHERE id = ?) AS values";
+               sqlQuery = "SELECT jsonb_agg(v)#>>'{}' FROM (SELECT jsonb_path_query(" + schemaQuery + ", ?::jsonpath) AS v FROM dataset WHERE id = ?) AS values";
             }
             result.value = String.valueOf(Util.runQuery(em, sqlQuery, schemaUri, jsonpath, datasetId));
          }
@@ -129,7 +129,7 @@ public class SqlServiceImpl implements SqlService {
          result.reason = "Jsonpath should start with '$'";
          return result;
       }
-      Query query = em.createNativeQuery("SELECT jsonb_path_query_first('{}', ?::::jsonpath)::::text");
+      Query query = em.createNativeQuery("SELECT jsonb_path_query_first('{}', ?::jsonpath)::text");
       query.setParameter(1, jsonpath);
       try {
          query.getSingleResult();
