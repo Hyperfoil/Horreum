@@ -79,7 +79,7 @@ export default function Reports(props: ReportGroup) {
                     const configId = arg.row.original.configId
 
                     return configId === undefined ? (
-                        title
+                        <div>title</div>
                     ) : (
                         <NavLink to={`/test/${test.id}/reports/table/config/${configId}`}>
                             {title} <EditIcon />
@@ -104,7 +104,7 @@ export default function Reports(props: ReportGroup) {
                             </NavLink>
                         )
                     } else {
-                        return "No report"
+                        return <div>"No report"</div>
                     }
                 },
             },
