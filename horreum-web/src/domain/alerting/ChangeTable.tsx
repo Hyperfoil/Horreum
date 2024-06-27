@@ -176,14 +176,14 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
             Header: "Confirmed",
             id: "confirmed",
             accessor: "confirmed",
-            Cell: (arg: any) => (arg.cell.value ? <CheckIcon id={"change_" + arg.row.original.id} /> : ""),
+            Cell: (arg: any) => (arg.cell.value ? <CheckIcon id={"change_" + arg.row.original.id} /> : <></>),
         },
         {
             Header: "Time",
             id: "timestamp",
             accessor: "timestamp",
             sortType: "datetime",
-            Cell: (arg: any) => formatDateTime(arg.cell.value),
+            Cell: (arg: any) => <div>formatDateTime(arg.cell.value)</div>,
         },
         {
             Header: "Dataset",
@@ -191,7 +191,7 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
             accessor: "dataset",
             Cell: (arg: any) => {
                 const dataset = arg.cell.value
-                if (!dataset) return "<unknown>"
+                if (!dataset) return <></>
                 return (
                     <NavLink to={`/run/${dataset.runId}#dataset${dataset.ordinal}`}>
                         {dataset.runId}/{dataset.ordinal + 1}
