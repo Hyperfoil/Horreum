@@ -19,6 +19,7 @@ import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+import org.jboss.resteasy.client.jaxrs.internal.BasicAuthentication;
 import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
 import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
 import org.jboss.resteasy.plugins.providers.StringTextStar;
@@ -149,21 +150,12 @@ public class HorreumClient implements Closeable {
             }
 
             ConfigService.KeycloakConfig keycloakConfig;
-            URL url = null;
             try {
-                url = new URL(this.horreumUrl.concat(KEYCLOAK_BOOTSTRAP_URL));
-                ObjectMapper objectMapper = new ObjectMapper();
-                keycloakConfig = objectMapper.readValue(url, ConfigService.KeycloakConfig.class);
+                URL url = new URL(this.horreumUrl.concat(KEYCLOAK_BOOTSTRAP_URL));
+                keycloakConfig = new ObjectMapper().readValue(url, ConfigService.KeycloakConfig.class);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-
-            KeycloakClientRequestFilter requestFilter = new KeycloakClientRequestFilter(keycloakConfig.url,
-                    keycloakConfig.realm,
-                    horreumUser,
-                    horreumPassword,
-                    keycloakConfig.clientId,
-                    sslContext);
 
             ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
 
@@ -171,8 +163,20 @@ public class HorreumClient implements Closeable {
             clientBuilder.register(new CustomResteasyJackson2Provider(), 100);
             clientBuilder.sslContext(sslContext);
 
-            //Register Keycloak Request Filter
-            clientBuilder.register(requestFilter);
+            if (keycloakConfig.url == null || keycloakConfig.url.isEmpty()) {
+                clientBuilder.register(new BasicAuthentication(horreumUser, horreumPassword));
+            } else {
+                // register Keycloak Request Filter
+                clientBuilder.register(new KeycloakClientRequestFilter(
+                        keycloakConfig.url,
+                        keycloakConfig.realm,
+                        horreumUser,
+                        horreumPassword,
+                        keycloakConfig.clientId,
+                        sslContext)
+                );
+            }
+
             // Other MessageBodyReaders/Writers that may not be found by ServiceLoader mechanism
             clientBuilder.register(new StringTextStar());
             clientBuilder.register(new DefaultTextPlain());

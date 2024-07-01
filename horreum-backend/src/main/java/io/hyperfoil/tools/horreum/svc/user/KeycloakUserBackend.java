@@ -119,6 +119,9 @@ public class KeycloakUserBackend implements UserBackEnd {
                     // add the base 'machine' role as well to be able to get all machine accounts
                     // keycloak does not return the users of role inherited by composition
                     usersResource.get(userId).roles().realmLevel().add(List.of(ensureRole(Roles.MACHINE)));
+
+                    // reset the password, so that it does not have to be changed
+                    setPassword(user.user.username, user.password);
                 }
             }
 

@@ -1,8 +1,8 @@
 package io.hyperfoil.tools.auth;
 
 import io.hyperfoil.tools.CustomResteasyJackson2Provider;
-import org.apache.http.conn.HttpHostConnectException;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.client.jaxrs.internal.BasicAuthentication;
 import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
 import org.jboss.resteasy.plugins.providers.FormUrlEncodedProvider;
 import org.keycloak.admin.client.Keycloak;
@@ -12,14 +12,19 @@ import javax.net.ssl.SSLContext;
 import jakarta.ws.rs.client.ClientRequestContext;
 import jakarta.ws.rs.client.ClientRequestFilter;
 import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.Response;
+
+import java.io.IOException;
 
 public class KeycloakClientRequestFilter implements ClientRequestFilter {
 
 	private static final Logger LOG = Logger.getLogger(KeycloakClientRequestFilter.class);
 	private static final String BEARER_SCHEME_WITH_SPACE = "Bearer ";
 
-	Keycloak keycloak;
+	private final Keycloak keycloak;
+
+	private final BasicAuthentication basicAuthentication;
+
+	private boolean showAuthMethod = true;
 
 	public KeycloakClientRequestFilter(String keycloakBaseUrl,
 			String keycloakRealm,
@@ -28,6 +33,8 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 			String clientId,
 			//String clientSecret,
 			SSLContext sslContext) {
+
+		basicAuthentication = new BasicAuthentication(username, password);
 
 		ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl().connectionPoolSize(20);
 		clientBuilder.connectionPoolSize(20);
@@ -50,24 +57,23 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
 	}
 
 	@Override
-	public void filter(ClientRequestContext requestContext) {
+	public void filter(ClientRequestContext requestContext) throws IOException {
 		try {
-			final String accessToken = getAccessToken();
-			requestContext.getHeaders().add(HttpHeaders.AUTHORIZATION, BEARER_SCHEME_WITH_SPACE + accessToken);
-		} catch (Exception ex) {
-			LOG.warnf(ex, "Access token is not available", ex);
-			// TODO: 401 should be only on 401 response
-			if (ex.getCause() instanceof HttpHostConnectException) {
-				LOG.warnf("Aborting the request with HTTP 500 error");
-				requestContext.abortWith(Response.status(500).build());
-			} else {
-				LOG.warnf("Aborting the request with HTTP 401 error");
-				requestContext.abortWith(Response.status(401).build());
+			requestContext.getHeaders().add(HttpHeaders.AUTHORIZATION, BEARER_SCHEME_WITH_SPACE.concat(getAccessToken()));
+			if (showAuthMethod) {
+				LOG.infov("Authentication with OIDC token");
+				showAuthMethod = false;
 			}
+		} catch (Exception ex) {
+			if (showAuthMethod) {
+				LOG.infov("Using Basic authentication as OIDC server replied with {0}", ex.getMessage());
+				showAuthMethod = false;
+			}
+			basicAuthentication.filter(requestContext);
 		}
 	}
 
 	private String getAccessToken() {
-		return keycloak.tokenManager().getAccessToken().getToken();
+		return keycloak.tokenManager().getAccessTokenString();
 	}
 }

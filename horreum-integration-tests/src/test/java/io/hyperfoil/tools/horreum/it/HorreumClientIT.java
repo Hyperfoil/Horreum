@@ -20,6 +20,7 @@ import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
+import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
@@ -47,7 +48,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -330,6 +330,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
     private static Test dummyTest;
 
+    private static final String TEST_USERNAME = "it-test-user", TEST_PASSWORD = "super-secret", TEST_TEAM = "it-team";
 
     @Override
     public void beforeEach(QuarkusTestMethodContext context) {
@@ -343,7 +344,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         Assertions.assertNull(dummyTest);
         Test test = new Test();
         test.name = "test";
-        test.owner = "dev-team";
+        test.owner = TEST_TEAM;
         test.description = "This is a dummy test";
         dummyTest = horreumClient.testService.add(test);
         Assertions.assertNotNull(dummyTest);
@@ -369,8 +370,8 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         if (horreumClient == null) {
             horreumClient = new HorreumClient.Builder()
                     .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
-                    .horreumUser("horreum.bootstrap")
-                    .horreumPassword(ItResource.HORREUM_BOOTSTRAP_PASSWORD)
+                    .horreumUser(TEST_USERNAME)
+                    .horreumPassword(TEST_PASSWORD)
                     .build();
 
             Assertions.assertNotNull(horreumClient);
@@ -379,14 +380,23 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
     @Override
     public void beforeClass(Class<?> testClass) {
-        instantiateClient();
+        HorreumClient adminClient = new HorreumClient.Builder()
+                .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port", "8081")))
+                .horreumUser("horreum.bootstrap")
+                .horreumPassword(ItResource.HORREUM_BOOTSTRAP_PASSWORD)
+                .build();
 
-        horreumClient.userService.addTeam("dev-team");
-        horreumClient.userService.updateTeamMembers("dev-team", Map.of("horreum.bootstrap", List.of(Roles.TESTER, Roles.UPLOADER)));
+        adminClient.userService.addTeam(TEST_TEAM);
 
-        // close the client so that a new instance is created, with a new auth token with the necessary roles
-        horreumClient.close();
-        horreumClient = null;
+        // create machine account to be used throughout the test
+        UserService.NewUser testUser = new UserService.NewUser();
+        testUser.user = new UserService.UserData("", TEST_USERNAME, "Test", "User", "test@example.com");
+        testUser.team = TEST_TEAM;
+        testUser.password = TEST_PASSWORD;
+        testUser.roles = List.of(Roles.MACHINE, Roles.TESTER, Roles.UPLOADER);
+        adminClient.userService.createUser(testUser);
+
+        adminClient.close();
     }
 
     @Override
