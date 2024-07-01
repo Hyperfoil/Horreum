@@ -5,6 +5,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.function.Function;
 
+import io.hyperfoil.tools.horreum.svc.Roles;
+import io.quarkus.logging.Log;
 import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
 import jakarta.interceptor.AroundInvoke;
@@ -13,8 +15,6 @@ import jakarta.interceptor.InvocationContext;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Status;
 import jakarta.transaction.TransactionManager;
-
-import org.hibernate.Session;
 
 import io.hyperfoil.tools.horreum.svc.Util;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -64,7 +64,13 @@ public class RolesInterceptor {
             Collections.addAll(roles, fromParams.apply(ctx.getParameters()));
          }
       }
-      String previousRoles = roleManager.setRoles(roles);
+      String previousRoles = "";
+      if (!roles.stream().allMatch(Roles.HORREUM_SYSTEM::equals)) {
+         previousRoles = roleManager.setRoles(roles);
+         if (Roles.HORREUM_SYSTEM.equals(previousRoles)) { // don't need to reset the roles when is the default
+            previousRoles = "";
+         }
+      }
       Throwable t1 = null;
       try {
          return ctx.proceed();
@@ -73,7 +79,7 @@ public class RolesInterceptor {
          throw t;
       } finally {
          int status = tm.getStatus();
-         if (status == Status.STATUS_ACTIVE || status == Status.STATUS_NO_TRANSACTION) {
+         if (!previousRoles.isEmpty() && status == Status.STATUS_ACTIVE || status == Status.STATUS_NO_TRANSACTION) {
             try {
                roleManager.setRoles(previousRoles);
             } catch (Throwable t2) {
