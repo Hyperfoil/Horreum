@@ -2,20 +2,17 @@ package io.hyperfoil.tools.horreum.entity.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.NamedNativeQueries;
 import jakarta.persistence.NamedNativeQuery;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.Type;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
 
 @NamedNativeQueries({
    @NamedNativeQuery(
@@ -60,12 +57,10 @@ public class SchemaDAO extends ProtectedBaseEntity {
    public static final int TYPE_ARRAY_ELEMENT = 2;
 
    @Id
-   @SequenceGenerator(
-         name = "schemaIdGenerator",
-         sequenceName = "schema_id_seq",
+   @CustomSequenceGenerator(
+         name = "schema_id_seq",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "schemaIdGenerator")
    public Integer id;
 
    @NotNull

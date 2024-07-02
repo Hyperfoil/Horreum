@@ -11,30 +11,24 @@ import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderBy;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.Type;
 
 import java.util.List;
 
-import static jakarta.persistence.GenerationType.SEQUENCE;
-
 @Entity(name = "ExperimentProfile")
 @Table(name = "experiment_profile")
 public class ExperimentProfileDAO extends PanacheEntityBase {
    @Id
-   @SequenceGenerator(
-         name = "experimentProfileIdGenerator",
-         sequenceName = "experimentprofileidgenerator",
+   @CustomSequenceGenerator(
+         name = "experimentprofileidgenerator",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "experimentProfileIdGenerator")
    public Integer id;
 
    @NotNull

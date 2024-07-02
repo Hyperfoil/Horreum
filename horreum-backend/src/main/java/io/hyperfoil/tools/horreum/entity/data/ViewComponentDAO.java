@@ -4,24 +4,21 @@ import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.Type;
 
 import java.util.Objects;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
 
 /**
  * Security model: view components are owned by {@link ViewDAO} and this is owned by {@link TestDAO}, therefore
@@ -32,12 +29,10 @@ import static jakarta.persistence.GenerationType.SEQUENCE;
 @JsonIgnoreType
 public class ViewComponentDAO extends PanacheEntityBase {
    @Id
-   @SequenceGenerator(
-         name = "viewComponentIdGenerator",
-         sequenceName = "viewcomponentidgenerator",
+   @CustomSequenceGenerator(
+         name = "viewcomponentidgenerator",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "viewComponentIdGenerator")
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)

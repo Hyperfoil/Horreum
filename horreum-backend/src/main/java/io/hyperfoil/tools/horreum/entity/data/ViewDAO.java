@@ -1,24 +1,21 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Collections;
 import java.util.List;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
 
 /**
  * Security model: the access to view is limited by access to the referenced test.
@@ -28,12 +25,10 @@ import static jakarta.persistence.GenerationType.SEQUENCE;
 @JsonIgnoreType
 public class ViewDAO extends PanacheEntityBase {
    @Id
-   @SequenceGenerator(
-         name = "viewIdGenerator",
-         sequenceName = "viewidgenerator",
+   @CustomSequenceGenerator(
+         name = "viewidgenerator",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "viewIdGenerator")
    public Integer id;
 
    @NotNull

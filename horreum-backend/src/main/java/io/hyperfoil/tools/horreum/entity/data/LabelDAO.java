@@ -1,19 +1,16 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Collection;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
 
 /* When we make changes to label we need to ensure that we remove label_values where label_id = id
 *  After delete on extractors we need to execute:
@@ -22,12 +19,10 @@ import static jakarta.persistence.GenerationType.SEQUENCE;
 @Entity(name="label")
 public class LabelDAO extends OwnedEntityBase {
    @Id
-   @SequenceGenerator(
-         name = "labelIdGenerator",
-         sequenceName = "label_id_seq",
+   @CustomSequenceGenerator(
+         name = "label_id_seq",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "labelIdGenerator")
    public Integer id;
 
    @NotNull

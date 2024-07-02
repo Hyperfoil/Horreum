@@ -2,6 +2,7 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -10,16 +11,12 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.Type;
 
 import java.util.Set;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
 
 /**
  * Variable emits a single value from the {@link RunDAO#data}
@@ -31,12 +28,10 @@ import static jakarta.persistence.GenerationType.SEQUENCE;
 @JsonIgnoreType
 public class VariableDAO extends PanacheEntityBase {
    @Id
-   @SequenceGenerator(
-         name = "variableIdGenerator",
-         sequenceName = "variableidgenerator",
+   @CustomSequenceGenerator(
+         name = "variableidgenerator",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "variableIdGenerator")
    public Integer id;
 
    @NotNull

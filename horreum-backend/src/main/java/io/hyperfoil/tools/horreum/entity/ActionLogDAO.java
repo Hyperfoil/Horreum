@@ -1,23 +1,17 @@
 package io.hyperfoil.tools.horreum.entity;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.validation.constraints.NotNull;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
 
 @Entity(name = "ActionLog")
 public class ActionLogDAO extends PersistentLogDAO {
 
    @Id
-   @SequenceGenerator(
+   @CustomSequenceGenerator(
          name = "actionlog_id_generator",
-         sequenceName = "actionlog_id_generator",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "actionlog_id_generator")
    public Long id;
 
    @NotNull

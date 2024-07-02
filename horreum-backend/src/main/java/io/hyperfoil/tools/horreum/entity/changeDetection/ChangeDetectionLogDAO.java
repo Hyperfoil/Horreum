@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.entity.changeDetection;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -9,14 +10,10 @@ import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
 import org.hibernate.annotations.Type;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
 
 /**
  */
@@ -24,12 +21,10 @@ import static jakarta.persistence.GenerationType.SEQUENCE;
 public class ChangeDetectionLogDAO extends PersistentLogDAO {
 
    @Id
-   @SequenceGenerator(
+   @CustomSequenceGenerator(
          name = "changedetectionlog_id_generator",
-         sequenceName = "changedetectionlog_id_generator",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "changedetectionlog_id_generator")
    public Long id;
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)

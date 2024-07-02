@@ -1,28 +1,23 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.Type;
 
-import static jakarta.persistence.GenerationType.SEQUENCE;
-
 @Entity(name = "Action")
 public class ActionDAO extends PanacheEntityBase {
    @Id
-   @SequenceGenerator(
-         name = "actionSequence",
-         sequenceName = "action_id_seq",
+   @CustomSequenceGenerator(
+         name = "action_id_seq",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "actionSequence")
    public Integer id;
 
    @NotNull

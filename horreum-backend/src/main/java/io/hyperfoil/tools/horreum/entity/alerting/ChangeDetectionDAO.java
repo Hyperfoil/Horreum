@@ -2,31 +2,26 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.Type;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
 
 @Entity(name = "ChangeDetection")
 @JsonIgnoreType
 public class ChangeDetectionDAO extends PanacheEntityBase {
    @Id
-   @SequenceGenerator(
-         name = "changeDetectionIdGenerator",
-         sequenceName = "changedetectionidgenerator",
+   @CustomSequenceGenerator(
+         name = "changedetectionidgenerator",
          allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "changeDetectionIdGenerator")
    public Integer id;
 
    @NotNull
