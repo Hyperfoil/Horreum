@@ -4526,4 +4526,34 @@
             GRANT ALL ON SEQUENCE changedetectionlog_id_generator TO "${quarkus.datasource.username}";
         </sql>
     </changeSet>
+    <changeSet id="121" author="lampajr">
+        <validCheckSum>ANY</validCheckSum>
+        <!-- we are using actionlog_id_generator as sequence for actionlog table -->
+        <dropSequence sequenceName="actionlog_seq" />
+        <sql>
+            <!-- reset sequences that have not been properly reset in changeset 107 -->
+            select setval('allowedsite_seq', (select max(id)+50 from allowedsite), false);
+            select setval('banner_seq', (select max(id)+50 from banner), false);
+            select setval('change_seq', (select max(id)+50 from change), false);
+            select setval('datapoint_seq', (select max(id)+50 from datapoint), false);
+            select setval('datasetlog_seq', (select max(id)+50 from datasetlog), false);
+            select setval('notificationsettings_seq', (select max(id)+50 from notificationsettings), false);
+            select setval('reportcomment_seq', (select max(id)+50 from reportcomment), false);
+            select setval('reportcomponent_seq', (select max(id)+50 from reportcomponent), false);
+            select setval('reportlog_seq', (select max(id)+50 from reportlog), false);
+            select setval('run_expectation_seq', (select max(id)+50 from run_expectation), false);
+            select setval('tablereport_seq', (select max(id)+50 from tablereport), false);
+            select setval('tablereportconfig_seq', (select max(id)+50 from tablereportconfig), false);
+            select setval('transformationlog_seq', (select max(id)+50 from transformationlog), false);
+            select setval('changedetectionidgenerator', (select max(id)+1 from changedetection), false);
+            select setval('experimentprofileidgenerator', (select max(id)+1 from experiment_profile), false);
+            select setval('mdridgenerator', (select max(id)+1 from missingdata_rule), false);
+            select setval('subscriptionidgenerator', (select max(id)+1 from watch), false);
+            select setval('tokenidgenerator', (select max(id)+1 from test_token), false);
+            select setval('transformeridgenerator', (select max(id)+1 from transformer), false);
+            select setval('variableidgenerator', (select max(id)+1 from variable), false);
+            select setval('viewcomponentidgenerator', (select max(id)+1 from viewcomponent), false);
+            select setval('viewidgenerator', (select max(id)+1 from view), false);
+        </sql>
+    </changeSet>
 </databaseChangeLog>

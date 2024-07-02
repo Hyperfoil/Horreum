@@ -1,10 +1,8 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -17,24 +15,28 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Type;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-import org.hibernate.type.SqlTypes;
+import static jakarta.persistence.GenerationType.SEQUENCE;
 
 @Entity(name = "TableReport")
 @Table(name = "tablereport")
 public class TableReportDAO extends PanacheEntityBase {
    @Id
-   @GeneratedValue
+   @SequenceGenerator(
+         name = "tableReportIdGenerator",
+         sequenceName = "tablereport_seq"
+   )
+   @GeneratedValue(strategy = SEQUENCE, generator = "tableReportIdGenerator")
    public Integer id;
 
    @OneToOne(fetch = FetchType.EAGER)
