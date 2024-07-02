@@ -1,8 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import java.util.Collection;
-
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -12,24 +10,22 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreType;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
+import java.util.Collection;
 
 import static jakarta.persistence.GenerationType.SEQUENCE;
 import static java.lang.Integer.compare;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 @Entity(name = "Transformer")
 @JsonIgnoreType
 public class TransformerDAO extends OwnedEntityBase implements Comparable<TransformerDAO> {
    @Id
-   @GenericGenerator(
+   @SequenceGenerator(
          name = "transformerIdGenerator",
-         type = SeqIdGenerator.class,
-         parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
+         sequenceName = "transformeridgenerator",
+         allocationSize = 1
    )
    @GeneratedValue(strategy = SEQUENCE, generator = "transformerIdGenerator")
    public Integer id;

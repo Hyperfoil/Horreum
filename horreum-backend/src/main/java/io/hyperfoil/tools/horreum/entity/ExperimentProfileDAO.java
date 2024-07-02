@@ -1,8 +1,9 @@
 package io.hyperfoil.tools.horreum.entity;
 
-import java.util.List;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
@@ -15,29 +16,23 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import java.util.List;
 
 import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.enhanced.SequenceStyleGenerator.INCREMENT_PARAM;
 
 @Entity(name = "ExperimentProfile")
 @Table(name = "experiment_profile")
 public class ExperimentProfileDAO extends PanacheEntityBase {
    @Id
-   @GenericGenerator(
+   @SequenceGenerator(
          name = "experimentProfileIdGenerator",
-         type = SeqIdGenerator.class,
-         parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
+         sequenceName = "experimentprofileidgenerator",
+         allocationSize = 1
    )
    @GeneratedValue(strategy = SEQUENCE, generator = "experimentProfileIdGenerator")
    public Integer id;

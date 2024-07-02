@@ -1,8 +1,7 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
-import java.util.List;
-
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
@@ -12,20 +11,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
-
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
 
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import java.util.List;
 
 import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 /**
  * Records parties interested in new {@link ChangeDAO changes} in given test.
@@ -35,10 +30,10 @@ import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = "testid"))
 public class WatchDAO extends PanacheEntityBase {
    @Id
-   @GenericGenerator(
+   @SequenceGenerator(
          name = "subscriptionIdGenerator",
-         type = SeqIdGenerator.class,
-         parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
+         sequenceName = "subscriptionidgenerator",
+         allocationSize = 1
    )
    @GeneratedValue(strategy = SEQUENCE, generator = "subscriptionIdGenerator")
    public Integer id;

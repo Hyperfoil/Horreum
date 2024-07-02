@@ -1,18 +1,21 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;                  
+import jakarta.persistence.ConstraintMode;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.validation.constraints.NotNull;
 
 import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 /**
  * This table is meant to host logged events with relation to {@link DatasetDAO datasets},
@@ -22,10 +25,10 @@ import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 public class DatasetLogDAO extends PersistentLogDAO {
 
    @Id
-   @GenericGenerator(
-           name = "datasetlog_id_generator",
-           type = SeqIdGenerator.class,
-           parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
+   @SequenceGenerator(
+         name = "datasetlog_id_generator",
+         sequenceName = "datasetlog_id_generator",
+         allocationSize = 1
    )
    @GeneratedValue(strategy = SEQUENCE, generator = "datasetlog_id_generator")
    public Long id;

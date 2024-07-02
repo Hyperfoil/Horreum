@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,18 +9,22 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-
 import org.hibernate.annotations.Type;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import static jakarta.persistence.GenerationType.SEQUENCE;
 
 @Entity(name = "ReportComponent")
 @Table(name = "reportcomponent")
 public class ReportComponentDAO {
    @Id
-   @GeneratedValue
+   @SequenceGenerator(
+         name = "reportComponentIdGenerator",
+         sequenceName = "reportcomponent_seq"
+   )
+   @GeneratedValue(strategy = SEQUENCE, generator = "reportComponentIdGenerator")
    public Integer id;
 
    @ManyToOne(fetch = FetchType.LAZY)
