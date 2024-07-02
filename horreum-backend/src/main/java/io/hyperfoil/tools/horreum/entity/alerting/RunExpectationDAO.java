@@ -1,20 +1,26 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
-import java.time.Instant;
-
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.validation.constraints.NotNull;
-
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
+import java.time.Instant;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
 
 @Entity(name = "run_expectation")
 public class RunExpectationDAO extends PanacheEntityBase {
    @Id
-   @GeneratedValue
+   @SequenceGenerator(
+         name = "runExpectationIdGenerator",
+         sequenceName = "run_expectation_seq"
+   )
+   @GeneratedValue(strategy = SEQUENCE, generator = "runExpectationIdGenerator")
    public Long id;
 
    @NotNull
