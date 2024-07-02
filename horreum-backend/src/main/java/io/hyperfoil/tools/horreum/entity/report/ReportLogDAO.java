@@ -1,24 +1,19 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
-import jakarta.persistence.*;
-
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 
 @Entity(name = "ReportLog")
 public class ReportLogDAO extends PersistentLogDAO {
    @Id
-   @GenericGenerator(
-           name = "reportlog_id_generator",
-           type = SeqIdGenerator.class,
-           parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
+   @CustomSequenceGenerator(
+         name = "reportlog_id_generator",
+         allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "reportlog_id_generator")
    public Long id;
    @ManyToOne(optional = false)
    @JoinColumn(name = "report_id")

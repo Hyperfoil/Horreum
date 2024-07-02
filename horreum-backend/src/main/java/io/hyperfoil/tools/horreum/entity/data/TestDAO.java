@@ -1,50 +1,39 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import java.util.Collection;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.NotNull;
-
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
-
-import com.fasterxml.jackson.databind.JsonNode;
 import org.hibernate.type.SqlTypes;
 
-import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
-import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
+import java.util.Collection;
 
 @Entity(name="test")
 @JsonIgnoreType
 public class TestDAO extends PanacheEntityBase {
    @Id
-   @GenericGenerator(
-         name = "testIdGenerator",
-         type = SeqIdGenerator.class,
-         parameters = { @Parameter(name = SEQUENCE_PARAM, value = "test_id_seq"), @Parameter(name = INCREMENT_PARAM, value = "1") }
+   @CustomSequenceGenerator(
+         name = "test_id_seq",
+         allocationSize = 1,
+         initialValue = 10
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "testIdGenerator")
    @Column(name="id")
    public Integer id;
 

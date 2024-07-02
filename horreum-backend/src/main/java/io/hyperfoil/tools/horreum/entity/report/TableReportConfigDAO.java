@@ -1,8 +1,9 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
-import java.util.List;
-
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,14 +14,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-
-import com.fasterxml.jackson.databind.node.ArrayNode;
-
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import org.hibernate.annotations.Type;
+
+import java.util.List;
+
+import static jakarta.persistence.GenerationType.SEQUENCE;
 
 // Hyperfoil will sort runs that match the admittance filter (by default all)
 // to categories and will create a table/chart for each unique value. This is similar to tags in regression series.
@@ -30,7 +31,11 @@ import org.hibernate.annotations.Type;
 @Table(name = "tablereportconfig")
 public class TableReportConfigDAO extends PanacheEntityBase {
    @Id
-   @GeneratedValue
+   @SequenceGenerator(
+         name = "tableReportConfigIdGenerator",
+         sequenceName = "tablereportconfig_seq"
+   )
+   @GeneratedValue(strategy = SEQUENCE, generator = "tableReportConfigIdGenerator")
    public Integer id;
 
    @NotNull

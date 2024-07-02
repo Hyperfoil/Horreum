@@ -1,24 +1,16 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import java.util.Collection;
-
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotNull;
 
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
-import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
+import java.util.Collection;
 
 /* When we make changes to label we need to ensure that we remove label_values where label_id = id
 *  After delete on extractors we need to execute:
@@ -27,12 +19,10 @@ import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 @Entity(name="label")
 public class LabelDAO extends OwnedEntityBase {
    @Id
-   @GenericGenerator(
-         name = "labelIdGenerator",
-         type = SeqIdGenerator.class,
-         parameters = { @Parameter(name = SEQUENCE_PARAM, value = "label_id_seq"), @Parameter(name = INCREMENT_PARAM, value = "1") }
+   @CustomSequenceGenerator(
+         name = "label_id_seq",
+         allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "labelIdGenerator")
    public Integer id;
 
    @NotNull

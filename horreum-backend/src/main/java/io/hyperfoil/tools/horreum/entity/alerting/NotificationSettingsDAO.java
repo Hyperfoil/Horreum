@@ -1,12 +1,13 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.validation.constraints.NotNull;
-
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * Settings for notification on each change if the user/team has certain {@link WatchDAO}.
@@ -15,7 +16,11 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "notificationsettings")
 public class NotificationSettingsDAO extends PanacheEntityBase {
    @Id
-   @GeneratedValue
+   @SequenceGenerator(
+         name = "notificationSettingsIdGenerator",
+         sequenceName = "notificationsettings_seq"
+   )
+   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "notificationSettingsIdGenerator")
    public Integer id;
 
    /**
