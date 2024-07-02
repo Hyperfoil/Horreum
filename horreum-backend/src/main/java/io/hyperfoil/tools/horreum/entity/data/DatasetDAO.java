@@ -1,11 +1,10 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.smallrye.common.constraint.NotNull;
 import jakarta.persistence.Basic;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
@@ -19,15 +18,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import org.hibernate.annotations.Type;
 import org.hibernate.query.NativeQuery;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
-import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
-import io.smallrye.common.constraint.NotNull;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Purpose of this object is to represent derived run data.
@@ -40,9 +37,9 @@ public class DatasetDAO extends OwnedEntityBase {
    @SequenceGenerator(
          name="datasetSequence",
          sequenceName="dataset_id_seq",
-         allocationSize=1)
-   @GeneratedValue(strategy=GenerationType.SEQUENCE,
-         generator= "datasetSequence")
+         allocationSize=1
+   )
+   @GeneratedValue(strategy=GenerationType.SEQUENCE, generator="datasetSequence")
    public Integer id;
 
    @NotNull

@@ -1,22 +1,19 @@
 package io.hyperfoil.tools.horreum.entity.changeDetection;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-
-import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
-import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.entity.data.RunDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
+import jakarta.persistence.Column;
+import jakarta.persistence.ConstraintMode;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import org.hibernate.annotations.Type;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 
 /**
  */
@@ -24,12 +21,10 @@ import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 public class ChangeDetectionLogDAO extends PersistentLogDAO {
 
    @Id
-   @GenericGenerator(
-           name = "changedetectionlog_id_generator",
-           type = SeqIdGenerator.class,
-           parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
+   @CustomSequenceGenerator(
+         name = "changedetectionlog_id_generator",
+         allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "changedetectionlog_id_generator")
    public Long id;
 
    @ManyToOne(fetch = FetchType.LAZY, optional = false)

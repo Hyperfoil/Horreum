@@ -1,10 +1,9 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
-
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -16,11 +15,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.annotations.Type;
+
 import java.time.Instant;
 import java.util.Collection;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import org.hibernate.annotations.Type;
 
 @Entity(name = "run")
 @JsonIgnoreType
@@ -30,7 +28,8 @@ public class RunDAO extends ProtectedBaseEntity {
    @SequenceGenerator(
       name = "runSequence",
       sequenceName = "run_id_seq",
-      allocationSize = 1)
+      allocationSize = 1
+   )
    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "runSequence")
    public Integer id;
 
