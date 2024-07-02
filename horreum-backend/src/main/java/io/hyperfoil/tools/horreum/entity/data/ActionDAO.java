@@ -1,30 +1,23 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotNull;
-
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
-import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 
 @Entity(name = "Action")
 public class ActionDAO extends PanacheEntityBase {
    @Id
-   @GenericGenerator(
-         name = "actionSequence",
-         type = SeqIdGenerator.class,
-         parameters = { @Parameter(name = SEQUENCE_PARAM, value = "action_id_seq"), @Parameter(name = INCREMENT_PARAM, value = "1") }
+   @CustomSequenceGenerator(
+         name = "action_id_seq",
+         allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "actionSequence")
    public Integer id;
 
    @NotNull

@@ -1,31 +1,22 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
-import java.util.Set;
-
-import io.hyperfoil.tools.horreum.entity.SeqIdGenerator;
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
+import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
+import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.NotNull;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreType;
-import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
-import io.hyperfoil.tools.horreum.entity.data.RunDAO;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
+import java.util.Set;
 
 /**
  * Variable emits a single value from the {@link RunDAO#data}
@@ -37,12 +28,10 @@ import static org.hibernate.id.OptimizableGenerator.INCREMENT_PARAM;
 @JsonIgnoreType
 public class VariableDAO extends PanacheEntityBase {
    @Id
-   @GenericGenerator(
-         name = "variableIdGenerator",
-         type = SeqIdGenerator.class,
-         parameters = { @Parameter(name = INCREMENT_PARAM, value = "1") }
+   @CustomSequenceGenerator(
+         name = "variableidgenerator",
+         allocationSize = 1
    )
-   @GeneratedValue(strategy = SEQUENCE, generator = "variableIdGenerator")
    public Integer id;
 
    @NotNull
