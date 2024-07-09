@@ -85,7 +85,18 @@ export default function DatasetComparison() {
         [datasets]
     )
 
-    const defaultView = views?.find(v => (v.name = "Default"))
+    const fragmentTags = views.map(view => {
+        return (
+            <FragmentTab title={view.name} fragment={`view_${view.id}`} key={`view_${view.id}`}>
+                <ViewComparison headers={headers} view={view} datasets={datasets} alerting={alerting} />
+            </FragmentTab>
+        )
+    })
+    fragmentTags.unshift(
+        <FragmentTab title="Labels" fragment="labels" key="view_0">
+            <LabelsComparison headers={headers} datasets={datasets} alerting={alerting} />
+        </FragmentTab>
+    )
 
     return (
         <PageSection>
@@ -95,22 +106,14 @@ export default function DatasetComparison() {
                         <EmptyState>
                             <EmptyStateBody>No datasets have been loaded</EmptyStateBody>
                         </EmptyState>
-                    ) : (
-                        <FragmentTabs>
-                            <FragmentTab title="Labels" fragment="labels">
-                                <LabelsComparison headers={headers} datasets={datasets} alerting={alerting} />
-                            </FragmentTab>
-                            <FragmentTab title="Default view" fragment="view_default" isHidden={!test}>
-                                {defaultView ? (
-                                    <ViewComparison headers={headers} view={defaultView} datasets={datasets} alerting={alerting} />
-                                ) : (
-                                    <Bullseye>
-                                        <Spinner size="xl" />
-                                    </Bullseye>
-                                )}
-                            </FragmentTab>
-                        </FragmentTabs>
-                    )}
+                        ) :
+                        (
+                            <FragmentTabs>
+                                {fragmentTags}
+                            </FragmentTabs>
+                        )
+
+                    }
                 </CardBody>
             </Card>
         </PageSection>
