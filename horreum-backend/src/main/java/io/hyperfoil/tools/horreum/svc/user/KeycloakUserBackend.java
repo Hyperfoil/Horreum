@@ -62,10 +62,19 @@ public class KeycloakUserBackend implements UserBackEnd {
 
     @Override public List<UserService.UserData> searchUsers(String query) {
         try {
-            Set<String> machineIds = keycloak.realm(realm).roles().get(Roles.MACHINE).getUserMembers(0, Integer.MAX_VALUE).stream().map(UserRepresentation::getId).collect(Collectors.toSet());
+            Set<String> machineIds = safeMachineIds();
             return keycloak.realm(realm).users().search(query, null, null).stream().filter(rep -> !machineIds.contains(rep.getId())).map(KeycloakUserBackend::toUserInfo).toList();
         } catch (Throwable t) {
             throw ServiceException.serverError("Unable to search for users");
+        }
+    }
+
+    private Set<String> safeMachineIds() {
+        try {
+            return keycloak.realm(realm).roles().get(Roles.MACHINE).getUserMembers(0, Integer.MAX_VALUE).stream().map(UserRepresentation::getId).collect(Collectors.toSet());
+        } catch (Exception e) {
+            // ignore exception
+            return Set.of();
         }
     }
 
