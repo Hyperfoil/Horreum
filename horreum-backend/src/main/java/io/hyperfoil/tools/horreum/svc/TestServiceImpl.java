@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
@@ -41,6 +42,7 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Tuple;
 import jakarta.transaction.TransactionManager;
@@ -91,6 +93,7 @@ public class TestServiceImpl implements TestService {
    protected static final String LABEL_ORDER_STOP= "combined.stop";
    protected static final String LABEL_ORDER_JSONPATH = "jsonb_path_query(combined.values,CAST( :orderBy as jsonpath))";
 
+   private static final String COUNT_TEST_BY_ID_QUERY = "SELECT count(id) FROM test WHERE id = ?1";
    protected static final String LABEL_VALUES_QUERY = """
          WITH
          combined as (
@@ -181,6 +184,19 @@ public class TestServiceImpl implements TestService {
          throw ServiceException.notFound("No test with name or id " + input);
       }
       return TestMapper.from(test);
+   }
+
+   /**
+    * Checks whether the provided id belongs to an existing test and if the user can access it
+    * the security check is performed by triggering the RLS at database level
+    * @param id test ID
+    */
+   @WithRoles
+   @Transactional
+   protected boolean checkTestExists(int id) {
+      return 0 != em.createQuery(COUNT_TEST_BY_ID_QUERY, Long.class)
+            .setParameter(1, id)
+            .getSingleResult();
    }
 
    @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -572,8 +588,7 @@ public class TestServiceImpl implements TestService {
    @SuppressWarnings("unchecked")
    @Override
    public List<Fingerprints> listFingerprints(int testId) {
-      Test test = get(testId,null);
-      if(test == null){
+      if(!checkTestExists(testId)){
          throw ServiceException.serverError("Cannot find test "+testId);
       }
       return Fingerprints.parse( em.createNativeQuery("""
@@ -582,7 +597,7 @@ public class TestServiceImpl implements TestService {
             JOIN dataset ON dataset.id = dataset_id
             WHERE dataset.testid = ?1
             """)
-            .setParameter(1, test.id)
+            .setParameter(1, testId)
             .unwrap(NativeQuery.class).addScalar("fingerprint", JsonBinaryType.INSTANCE)
             .getResultList());
    }
@@ -721,8 +736,7 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Override
    public List<ExportedLabelValues> labelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page, List<String> include, List<String> exclude, boolean multiFilter) {
-      Test test = get(testId,null);
-      if(test == null){
+      if(!checkTestExists(testId)){
          throw ServiceException.serverError("Cannot find test "+testId);
       }
       Object filterObject = Util.getFilterObject(filter);
@@ -785,7 +799,7 @@ public class TestServiceImpl implements TestService {
                   .replace("ORDER_PLACEHOLDER",orderSql);
 
            NativeQuery query =  ((NativeQuery) em.createNativeQuery(sql))
-             .setParameter("testId", test.id)
+             .setParameter("testId", testId)
              .setParameter("filteringLabels", filtering)
              .setParameter("metricLabels", metrics)
              ;
@@ -924,15 +938,14 @@ public class TestServiceImpl implements TestService {
    @Override
    @WithRoles
    public RecalculationStatus getRecalculationStatus(int testId) {
-      Test test = get(testId,null);
-      if(test == null){
+      if(!checkTestExists(testId)){
          throw ServiceException.serverError("Cannot find test "+testId);
       }
-      RecalculationStatus status = recalculations.get(test.id);
+      RecalculationStatus status = recalculations.get(testId);
       if (status == null) {
-         status = new RecalculationStatus(RunDAO.count("testid = ?1 AND trashed = false", test.id));
+         status = new RecalculationStatus(RunDAO.count("testid = ?1 AND trashed = false", testId));
          status.finished = status.totalRuns;
-         status.datasets = DatasetDAO.count("testid", test.id);
+         status.datasets = DatasetDAO.count("testid", testId);
       }
       return status;
    }
