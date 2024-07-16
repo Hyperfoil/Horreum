@@ -143,6 +143,7 @@
                             </configOptions>
                         </configuration>
                     </execution>
+<!--
                     <execution>
                         <id>python</id>
                         <phase>prepare-package</phase>
@@ -182,6 +183,7 @@
                             </modelNameMappings>
                         </configuration>
                     </execution>
+                    -->
                 </executions>
             </plugin>
             <plugin>

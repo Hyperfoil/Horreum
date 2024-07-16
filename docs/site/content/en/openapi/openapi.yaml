@@ -28,6 +28,8 @@ tags:
 - name: User
   description: Manage user accounts
   x-smallrye-profile-external: ""
+- name: exp_label
+  description: Experimental label service.
 paths:
   /api/config/datastore:
     put:
@@ -3493,6 +3495,18 @@ components:
           description: Does the JSON path expression reference an Array?
           type: boolean
           example: false
+    Extractor1:
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        name:
+          type: string
+        jsonpath:
+          type: string
+        column_name:
+          type: string
     FingerprintValue:
       description: Representation of Fingerprint. If the Fingerprint has children
         the value will be null.
@@ -3700,6 +3714,32 @@ components:
           description: Schema ID that the Label relates to
           type: integer
           example: 101
+    Label1:
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        name:
+          type: string
+        parent:
+          $ref: '#/components/schemas/Test1'
+        target_schema:
+          type: string
+        uri:
+          type: string
+        parent_uri:
+          type: string
+        extractors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Extractor1'
+        reducer:
+          $ref: '#/components/schemas/LabelReducer'
+        multiType:
+          $ref: '#/components/schemas/MultiIterationType'
+        scalarMethod:
+          $ref: '#/components/schemas/ScalarVariableMethod'
     LabelInFingerprint:
       type: object
       allOf:
@@ -3808,6 +3848,14 @@ components:
           description: Description of errors occurred attempting to generate Label
             Value Preview
           type: string
+    LabelReducer:
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        function:
+          type: string
     LabelValue:
       description: Label Value derived from Label definition and Dataset Data
       required:
@@ -3867,6 +3915,11 @@ components:
         testId:
           format: int32
           type: integer
+    MultiIterationType:
+      enum:
+      - Length
+      - NxN
+      type: string
     PersistentLog:
       description: Persistent Log
       required:
@@ -4319,7 +4372,12 @@ components:
           description: List of Run Summaries
           type: array
           items:
-            $ref: "#/components/schemas/RunSummary"
+            $ref: '#/components/schemas/RunSummary'
+    ScalarVariableMethod:
+      enum:
+      - First
+      - All
+      type: string
     Schema:
       description: Data object that describes the schema definition for a test
       required:
@@ -4856,6 +4914,18 @@ components:
           description: Are notifications enabled for the test
           type: boolean
           example: true
+    Test1:
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        name:
+          type: string
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label1'
     TestExport:
       description: Represents a Test with all associated data used for export/import
         operations.
@@ -5146,7 +5216,24 @@ components:
           description: Validation Error Details
           type: object
           allOf:
-          - $ref: "#/components/schemas/ErrorDetails"
+          - $ref: '#/components/schemas/ErrorDetails'
+    ValueMap:
+      type: object
+      properties:
+        data:
+          type: array
+        index:
+          format: int64
+          type: integer
+        labelId:
+          format: int64
+          type: integer
+        runId:
+          format: int64
+          type: integer
+        testId:
+          format: int64
+          type: integer
     Variable:
       required:
       - id
