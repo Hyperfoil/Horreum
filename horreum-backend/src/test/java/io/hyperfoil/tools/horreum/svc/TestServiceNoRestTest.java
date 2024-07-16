@@ -32,9 +32,11 @@ import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.DEFAULT_USER;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TEAM;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TESTER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -158,6 +160,21 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
       ServiceException thrown = assertThrows(ServiceException.class, () -> testService.add(t));
       assertEquals("Could not persist test due to another test.", thrown.getMessage());
       assertEquals(Response.Status.CONFLICT.getStatusCode(), thrown.getResponse().getStatus());
+   }
+
+   @org.junit.jupiter.api.Test
+   void testCheckTestExists() {
+      Test t1 = createSampleTest("test", null, null, null);
+      Test t2 = createSampleTest("1234", null, null, null);
+
+      Test created1 = testService.add(t1);
+      assertNotNull(created1.id);
+      Test created2 = testService.add(t2);
+      assertNotNull(created2.id);
+
+      assertTrue(((TestServiceImpl) testService).checkTestExists(created1.id));
+      assertTrue(((TestServiceImpl) testService).checkTestExists(created2.id));
+      assertFalse(((TestServiceImpl) testService).checkTestExists(9999));
    }
 
    @org.junit.jupiter.api.Test
