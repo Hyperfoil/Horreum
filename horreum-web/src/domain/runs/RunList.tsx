@@ -39,10 +39,6 @@ import {AppContextType} from "../../context/@types/appContextTypes";
 import {RunImportModal} from "./RunImportModal";
 import CustomTable from "../../components/CustomTable"
 
-type C = CellProps<RunSummary> &
-    UseTableOptions<RunSummary> &
-    UseRowSelectInstanceProps<RunSummary> & { row: UseRowSelectRowProps<RunSummary> }
-
 type RunColumn = Column<RunSummary> & UseSortByColumnOptions<RunSummary>
 
 
@@ -134,7 +130,7 @@ export default function RunList() {
             Header: "",
             id: "selection",
             disableSortBy: true,
-            Cell: ({ row }: C) => {
+            Cell: ({ row }: any) => {
                 const props = row.getToggleRowSelectedProps()
                 delete props.indeterminate
                 // Note: to limit selection to 2 entries use
@@ -147,7 +143,7 @@ export default function RunList() {
             Header: "Id",
             id: "id",
             accessor: "id",
-            Cell: (arg: C) => {
+            Cell: (arg:  CellProps<RunSummary>) => {
                 const {
                     cell: { value },
                 } = arg
@@ -168,7 +164,7 @@ export default function RunList() {
             id: "schemas",
             accessor: "schemas",
             disableSortBy: true,
-            Cell: (arg: C) => {
+            Cell: (arg:  CellProps<RunSummary>) => {
                 const {
                     cell: { value },
                 } = arg
@@ -184,13 +180,13 @@ export default function RunList() {
             Header: "Description",
             id: "description",
             accessor: "description",
-            Cell: (arg: C) => Description(arg.cell.value),
+            Cell: (arg:  CellProps<RunSummary>) => Description(arg.cell.value),
         },
         {
             Header: "Executed",
             id: "start",
             accessor: "start",
-            Cell: (arg: C) => ExecutionTime(arg.row.original),
+            Cell: (arg:  CellProps<RunSummary>) => ExecutionTime(arg.row.original),
         },
         {
             Header: "Duration",
@@ -210,7 +206,7 @@ export default function RunList() {
                 owner: row.owner,
                 access: row.access,
             }),
-            Cell: (arg: C) => (
+            Cell: (arg:  CellProps<RunSummary>) => (
                 <>
                     {teamToName(arg.cell.value.owner)}
                     <span style={{ marginLeft: '8px' }}>

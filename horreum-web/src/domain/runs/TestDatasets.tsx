@@ -52,9 +52,6 @@ import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
 import LabelFilter from "../../components/LabelFilter/LabelFilter";
 
-type C = CellProps<DatasetSummary> &
-    UseTableOptions<DatasetSummary> &
-    UseRowSelectInstanceProps<DatasetSummary> & { row: UseRowSelectRowProps<DatasetSummary> }
 
 type DatasetColumn = Column<DatasetSummary> & UseSortByColumnOptions<DatasetSummary>
 
@@ -63,7 +60,7 @@ const staticColumns: DatasetColumn[] = [
         Header: "Data",
         id: "runId",
         accessor: "runId",
-        Cell: (arg: C) => {
+        Cell: (arg: CellProps<DatasetSummary>) => {
             const {
                 cell: { value },
             } = arg
@@ -80,13 +77,13 @@ const staticColumns: DatasetColumn[] = [
     {
         Header: "Description",
         accessor: "description",
-        Cell: (arg: C) => Description(arg.cell.value),
+        Cell: (arg: CellProps<DatasetSummary>) => Description(arg.cell.value),
     },
     {
         Header: "Executed",
         id: "start",
         accessor: "start",
-        Cell: (arg: C) => ExecutionTime(arg.row.original),
+        Cell: (arg: CellProps<DatasetSummary>) => ExecutionTime(arg.row.original),
     },
     {
         Header: "Duration",
@@ -101,7 +98,7 @@ const staticColumns: DatasetColumn[] = [
             owner: row.owner,
             access: row.access,
         }),
-        Cell: (arg: C) => (
+        Cell: (arg: CellProps<DatasetSummary>) => (
             <>
                 {teamToName(arg.cell.value.owner)}
                 <span style={{ marginLeft: '8px' }}>
@@ -165,7 +162,7 @@ export default function TestDatasets() {
                 Header: "",
                 accessor: "id",
                 disableSortBy: true,
-                Cell: (arg: C) => {
+                Cell: (arg: CellProps<DatasetSummary>) => {
                     if (comparedDatasets.some(ds => ds.id === arg.cell.value)) {
                         return (
                             <Button
