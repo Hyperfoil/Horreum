@@ -12,6 +12,7 @@ import io.hyperfoil.tools.horreum.exp.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.svc.Roles;
+import io.hyperfoil.tools.horreum.svc.ServiceException;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -24,6 +25,8 @@ import java.util.*;
 
 @ApplicationScoped
 public class LabelServiceImpl implements LabelService {
+
+    private static final String COUNT_TEST_BY_ID_QUERY = "SELECT count(id) FROM exp_test WHERE id = ?1";
 
     @Transactional
     @WithRoles
@@ -297,9 +300,26 @@ public class LabelServiceImpl implements LabelService {
         return LabelValueDao.find("from LabelValueDao lv where exists (from LabelValuePointerDao lvp where lvp.child = lv and lvp.target=?1 and lvp.targetIndex = ?2)",parent,index).list();
     }
 
+    /**
+     * Checks whether the provided id belongs to an existing test and if the user can access it
+     * the security check is performed by triggering the RLS at database level
+     * @param id test ID
+     */
+    @WithRoles
+    @Transactional
+    protected boolean checkTestExists(long id) {
+        return 0 != (Long) em.createNativeQuery(COUNT_TEST_BY_ID_QUERY, Long.class)
+              .setParameter(1, id)
+              .getSingleResult();
+    }
+
     //get the labelValues for all instances of a target schema for a test
     //could also have a labelValues based on label name, would that be useful? label name would not be merge-able across multiple labels
     public List<LabelService.ValueMap> labelValues(String schema,long testId, List<String> include, List<String> exclude){
+        if (!checkTestExists(testId)) {
+            throw ServiceException.serverError("Cannot find test "+testId);
+        }
+
         List<LabelService.ValueMap> rtrn = new ArrayList<>();
         String labelNameFilter = "";
         if (include!=null && !include.isEmpty()){
@@ -358,7 +378,7 @@ public class LabelServiceImpl implements LabelService {
                 .addScalar("run_id",Long.class)
                 .addScalar("test_id",Long.class)
                 .addScalar("data", JsonBinaryType.INSTANCE)
-                .list();
+                .getResultList();
 
         for(Object[] object : found){
             // tuple (labelId,index) should uniquely identify which label_value entry "owns" the ValueMap for the given test and run
@@ -388,6 +408,10 @@ public class LabelServiceImpl implements LabelService {
             List<String> include,
             List<String> exclude,
             boolean multiFilter){
+        if (!checkTestExists(testId)) {
+            throw ServiceException.serverError("Cannot find test "+testId);
+        }
+        
         List<LabelService.ValueMap> rtrn = new ArrayList<>();
         String labelNameFilter = "";
         if (include!=null && !include.isEmpty()){
@@ -441,7 +465,8 @@ public class LabelServiceImpl implements LabelService {
                 .addScalar("run_id",Long.class)
                 .addScalar("test_id",Long.class)
                 .addScalar("data",JsonBinaryType.INSTANCE)
-                .list();
+                .getResultList();
+        
         for(Object[] object : found){
             // tuple (labelId,index) should uniquely identify which label_value entry "owns" the ValueMap for the given test and run
             // note a label_value can have multiple values that are associated with a (labelId,index) if it is NxN
