@@ -4887,6 +4887,9 @@
             ADD CONSTRAINT exp_run_pkey PRIMARY KEY (id);
         ALTER TABLE ONLY public.exp_test
             ADD CONSTRAINT exp_test_pkey PRIMARY KEY (id);
+
+        CREATE INDEX exp_label_target_schema ON public.exp_label USING btree (target_schema);
+
         CREATE INDEX exp_lv_label_id ON public.exp_label_values USING btree (label_id);
         CREATE INDEX exp_lv_run_id ON public.exp_label_values USING btree (run_id);
         CREATE INDEX exp_lvp_child_label_id ON public.exp_label_value_pointer USING btree (child_label_id);
