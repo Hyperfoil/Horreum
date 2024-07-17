@@ -804,16 +804,30 @@ public class Util {
     * @param em
     * @return
     */
-   public static CheckResult castCheck(String input, String target, EntityManager em){
-      List<Object[]> results = em.createNativeQuery(CHECK_CAST).setParameter("input",input).setParameter("target",target)
-              .unwrap(NativeQuery.class)
-              .addScalar("message",String.class)
-              .addScalar("detail",String.class)
-              .addScalar("hint",String.class)
-              .addScalar("sql_error_code",String.class)
-              .getResultList();
-      //no results or null result row or no message means it passed. no result and 0 lengh result should not happen but being defensive
-      return results.isEmpty() || results.get(0).length == 0 || results.get(0)[0] == null?
+   public static CheckResult castCheck(String input, String target, EntityManager em) {
+      List<Object[]> results = null;
+      // skip db query if the input is null or blank
+      if (input != null && !input.isBlank()) {
+         results = em.createNativeQuery(CHECK_CAST).setParameter("input", input).setParameter("target", target)
+               .unwrap(NativeQuery.class)
+               .addScalar("message", String.class)
+               .addScalar("detail", String.class)
+               .addScalar("hint", String.class)
+               .addScalar("sql_error_code", String.class)
+               .getResultList();
+      }
+
+      if (results == null) {
+         return new CheckResult(
+               false,
+               "",
+               "",
+               ""
+         );
+      }
+
+      // no results or null result row or no message means it passed. no result and 0 length result should not happen but being defensive
+      return results.isEmpty() || results.get(0).length == 0 || results.get(0)[0] == null ?
               new CheckResult(true,"","","") :
               new CheckResult(
                       false,
@@ -825,23 +839,24 @@ public class Util {
 
    /**
     * returns null if no filtering, otherwise returns an object for filtering
-    * @param input
-    * @return
+    * @param input filter string
+    * @return JsonNode, original string or null
     */
    public static Object getFilterObject(String input){
-      if (input == null || input.isBlank()){//not a valid filter
+      if (input == null || input.isBlank()) {
+         // not a valid filter
          return null;
       }
       JsonNode filterJson = null;
       try {
          filterJson = new ObjectMapper().readTree(input);
       } catch (JsonProcessingException e) {
-         //TODO what to do with this error
+         // TODO what to do with this error
       }
-      if(filterJson!=null && filterJson.getNodeType() == JsonNodeType.OBJECT) {
+      if (filterJson != null && filterJson.getNodeType() == JsonNodeType.OBJECT) {
          return filterJson;
-      }else{
-         //TODO validate the jsonpath?
+      } else {
+         // TODO validate the jsonpath?
          return input;
       }
    }
