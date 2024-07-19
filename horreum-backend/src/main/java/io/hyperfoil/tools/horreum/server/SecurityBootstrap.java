@@ -30,7 +30,7 @@ import static io.quarkus.runtime.configuration.ProfileManager.getLaunchMode;
 @ApplicationScoped public class SecurityBootstrap {
 
     @ConfigProperty(name = "quarkus.keycloak.admin-client.server-url") Optional<String> keycloakURL;
-    @ConfigProperty(name = "horreum.keycloak.realm", defaultValue = "horreum") String realm;
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm", defaultValue = "horreum") String realm;
 
     @ConfigProperty(name = "horreum.roles.provider", defaultValue = "keycloak") String provider;
 
