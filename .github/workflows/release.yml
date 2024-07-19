@@ -1,3 +1,4 @@
+# This workflow will build and release Horreum to maven central and quay.io.
 name: Perform Release
 
 on:
@@ -16,14 +17,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.RH_PERF_BOT_TOKEN }}
           ref: ${{ env.RELEASE_BRANCH }}
-      - name: Configure GPG Key
-        run: |
-          export GPG_TTY=$(tty)
-          echo -n "$GPG_SIGNING_KEY" | base64 --decode | gpg --import
-        env:
-          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+      -
+        name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+      -
+        name: List keys
+        run: gpg -K
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
