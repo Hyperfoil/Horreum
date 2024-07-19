@@ -26,7 +26,6 @@ import org.jboss.resteasy.plugins.providers.StringTextStar;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
-import jakarta.ws.rs.core.UriBuilder;
 
 import java.io.Closeable;
 import java.io.FileInputStream;
@@ -182,7 +181,7 @@ public class HorreumClient implements Closeable {
             clientBuilder.register(new DefaultTextPlain());
 
             ResteasyClient client = clientBuilder.build();
-            ResteasyWebTarget target = client.target(UriBuilder.fromPath(this.horreumUrl));
+            ResteasyWebTarget target = client.target(horreumUrl);
 
             return new HorreumClient(client,
                   target.proxyBuilder(ActionService.class).build(),
