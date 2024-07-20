@@ -52,18 +52,36 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
         }
     };
 
+    const errorFormatter = (error: any) => {
+        // Check if error has a message property
+        if (error.message) {
+            return error.message;
+        }
+        // If error is a string, return it as is
+        if (typeof error === 'string') {
+            return error;
+        }
+        // If error is an object, stringify it
+        if (typeof error === 'object') {
+            return JSON.stringify(error);
+        }
+        // If none of the above, return a generic error message
+        return 'An error occurred';
+    }
+
     const saveBackend = () => {
         persistDatastore(dataStore)
             .then( () => {
                 onClose();
                 alerting.dispatchInfo("SAVE", "Saved!", "Datastore was successfully updated!", 3000)
             })
-            .catch(reason => alerting.dispatchError(reason, "Saved!", "Failed to save changes to Datastore"))
+            .catch(reason => alerting.dispatchError(reason, "Saved!", "Failed to save changes to Datastore", errorFormatter))
     }
 
     const options : datastoreOption[] = [
         { value:  DatastoreTypeEnum.Postgres, label: 'Please select...', disabled: true, urlDisabled: true, usernameDisable: true, tokenDisbaled: true },
         { value:  DatastoreTypeEnum.Elasticsearch, label: 'Elasticsearch', disabled: false, urlDisabled: false, usernameDisable: false, tokenDisbaled: false },
+        { value:  DatastoreTypeEnum.Collectorapi, label: 'Collector API', disabled: false, urlDisabled: false, usernameDisable: true, tokenDisbaled: false },
     ];
 
     const actionButtons = [
