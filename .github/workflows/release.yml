@@ -53,11 +53,11 @@ jobs:
           git config --global user.name "rh-appservices-perf"
       - name: Release to Maven
         run: |
-          PROJECT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.4.0:evaluate -Dexpression=project.version -q -DforceStdout)
-          CUR_VER=$(echo ${PROJECT_VERSION} |  awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+0}' |  sed s/[.]$//)
-          NEXT_VER=$(echo ${PROJECT_VERSION} |  awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+1"-SNAPSHOT"}' |  sed s/[.]$//)
+          echo "PROJECT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.4.0:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+          echo "CUR_VER=$(echo ${{ env.PROJECT_VERSION }} |  awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+0}' |  sed s/[.]$//)" >> $GITHUB_ENV
+          echo "NEXT_VER=$(echo ${{ env.PROJECT_VERSION }} |  awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+1"-SNAPSHOT"}' |  sed s/[.]$//)" >> $GITHUB_ENV
           mvn -DskipTests clean javadoc:javadoc install
-          mvn --batch-mode -Darguments=-DskipTests -Dtag=$CUR_VER release:prepare release:perform -DreleaseVersion=$CUR_VER -DdevelopmentVersion=$NEXT_VER -Dresume=false
+          mvn --batch-mode -Darguments=-DskipTests -Dtag=${{ env.CUR_VER }} release:prepare release:perform -DreleaseVersion=${{ env.CUR_VER }} -DdevelopmentVersion=${{ env.NEXT_VER }} -Dresume=false
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
@@ -66,10 +66,8 @@ jobs:
           CI: true
       - name: Publish image to quay.io
         run: |
-          PROJECT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.4.0:evaluate -Dexpression=project.version -q -DforceStdout)
-          CUR_VER=$(echo ${PROJECT_VERSION} |  awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+0}' |  sed s/[.]$//)
           IMAGE_TAG=$(docker images | awk '{print $2}' | awk 'NR==2')
-          docker tag quay.io/hyperfoil/horreum:$IMAGE_TAG quay.io/hyperfoil/horreum:$CUR_VER
-          docker tag quay.io/hyperfoil/horreum:$CUR_VER quay.io/hyperfoil/horreum:latest
-          docker push quay.io/hyperfoil/horreum:$CUR_VER
+          docker tag quay.io/hyperfoil/horreum:$IMAGE_TAG quay.io/hyperfoil/horreum:${{ env.CUR_VER }}
+          docker tag quay.io/hyperfoil/horreum:${{ env.CUR_VER }} quay.io/hyperfoil/horreum:latest
+          docker push quay.io/hyperfoil/horreum:${{ env.CUR_VER }}
           docker push quay.io/hyperfoil/horreum:latest
