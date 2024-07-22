@@ -650,7 +650,8 @@ public class TestServiceImpl implements TestService {
    protected static FilterDef getFilterDef(String filter, Instant before, Instant after, boolean multiFilter, Function<String,List<ExportedLabelValues>> checkFilter,EntityManager em){
       Object filterObject = Util.getFilterObject(filter);
       ObjectNode objectNode = null;
-      String filterSql = "";
+      // this does not contain the WHERE clause
+      StringBuilder filterSqlBuilder = new StringBuilder();
       Set<String> names = new HashSet<>();
       List<String> assumeMulti = new ArrayList<>();
 
@@ -676,58 +677,57 @@ public class TestServiceImpl implements TestService {
             }
          }
          if(!objectNode.isEmpty()) {
-            filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_CONTAINS_JSON;
+            filterSqlBuilder.append(LABEL_VALUES_FILTER_CONTAINS_JSON);
             names.add("filter");
          }
          if(!assumeMulti.isEmpty()){
-            if(filterSql.isEmpty()) {
-               filterSql = FILTER_PREFIX;
-            }
             for(int i=0; i<assumeMulti.size(); i++){
-               if(!filterSql.endsWith(FILTER_PREFIX)){
-                  filterSql+=FILTER_SEPARATOR;
+               if(!filterSqlBuilder.isEmpty()){
+                  filterSqlBuilder.append(FILTER_SEPARATOR);
                }
-               filterSql += " jsonb_path_query_first(combined.values,CAST( :key"+i+" as jsonpath)) = ANY(:value"+i+") ";
+               filterSqlBuilder.append(" jsonb_path_query_first(combined.values,CAST( :key")
+                     .append(i).append(" as jsonpath)) = ANY(:value").append(i).append(") ");
                names.add("key"+i);
                names.add("value"+i);
             }
          }
-      }else {
+      } else if (filterObject instanceof String) {
          Util.CheckResult jsonpathResult = Util.castCheck(filter,"jsonpath",em);
-         if(jsonpathResult.ok()){
-            filterSql = FILTER_PREFIX+LABEL_VALUES_FILTER_MATCHES_NOT_NULL;
+         if (jsonpathResult.ok()){
+            filterSqlBuilder.append(LABEL_VALUES_FILTER_MATCHES_NOT_NULL);
             names.add("filter");
-         }else{
+         } else{
             //an attempt to see if the user was trying to provide json
-            if(filter!=null && filter.startsWith("{") && filter.endsWith("}")){
+            if(filter.startsWith("{") && filter.endsWith("}")){
                Util.CheckResult jsonbResult = Util.castCheck(filter,"jsonb",em);
                if(!jsonbResult.ok()){
                   //we expect this error (because filterObject was not a JsonNode), what do we do with it?
                }else{
                   //this would be a surprise and quite a problem :)
                }
-            }else{
+            } else{
                //what do we do about the invalid jsonpath?
             }
          }
       }
       if(before!=null){
-         if(filterSql.isEmpty()){
-            filterSql=FILTER_PREFIX;
-         }else{
-            filterSql+=FILTER_SEPARATOR;
+         if(!filterSqlBuilder.isEmpty()){
+            filterSqlBuilder.append(FILTER_SEPARATOR);
          }
-         filterSql+=FILTER_BEFORE;
+         filterSqlBuilder.append(FILTER_BEFORE);
          names.add("before");
       }
       if(after!=null){
-         if(filterSql.isEmpty()){
-            filterSql=FILTER_PREFIX;
-         }else{
-            filterSql+=FILTER_SEPARATOR;
+         if(!filterSqlBuilder.isEmpty()){
+            filterSqlBuilder.append(FILTER_SEPARATOR);
          }
-         filterSql+=FILTER_AFTER;
+         filterSqlBuilder.append(FILTER_AFTER);
          names.add("after");
+      }
+
+      String filterSql = "";
+      if (!filterSqlBuilder.isEmpty()) {
+         filterSql = FILTER_PREFIX + filterSqlBuilder;
       }
       return new FilterDef(filterSql,objectNode,names,assumeMulti);
    }
