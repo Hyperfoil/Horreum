@@ -2155,7 +2155,6 @@ paths:
         description: the maximum number of results to include
         schema:
           format: int32
-          default: 2147483647
           type: integer
         example: 10
       - name: page

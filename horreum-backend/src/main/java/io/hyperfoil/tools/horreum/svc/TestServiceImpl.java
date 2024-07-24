@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
@@ -42,12 +41,10 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Tuple;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
@@ -93,18 +90,18 @@ public class TestServiceImpl implements TestService {
    protected static final String LABEL_ORDER_STOP= "combined.stop";
    protected static final String LABEL_ORDER_JSONPATH = "jsonb_path_query(combined.values,CAST( :orderBy as jsonpath))";
 
-   private static final String COUNT_TEST_BY_ID_QUERY = "SELECT count(id) FROM test WHERE id = ?1";
+   private static final String CHECK_TEST_EXISTS_BY_ID_QUERY = "SELECT EXISTS(SELECT 1 FROM test WHERE id = ?1)";
    protected static final String LABEL_VALUES_QUERY = """
          WITH
          combined as (
-         SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
+         SELECT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
                   FROM dataset
                   LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
                   LEFT JOIN label ON label.id = lv.label_id
                   WHERE dataset.testid = :testId
                      AND (label.id IS NULL OR (:filteringLabels AND label.filtering) OR (:metricLabels AND label.metrics))
                   GROUP BY dataset.id, runId
-         ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER limit :limit offset :offset
+         ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER LIMIT_PLACEHOLDER
          """;
 
    protected static final String LABEL_VALUES_SUMMARY_QUERY = """
@@ -115,9 +112,8 @@ public class TestServiceImpl implements TestService {
                   WHERE dataset.testid = :testId AND label.filtering
                   GROUP BY dataset.id, runId
          """;
-
-
    //@formatter:on
+
    @Inject
    @Util.FailUnknownProperties
    ObjectMapper mapper;
@@ -194,7 +190,7 @@ public class TestServiceImpl implements TestService {
    @WithRoles
    @Transactional
    protected boolean checkTestExists(int id) {
-      return 0 != em.createQuery(COUNT_TEST_BY_ID_QUERY, Long.class)
+      return (Boolean) em.createNativeQuery(CHECK_TEST_EXISTS_BY_ID_QUERY, Boolean.class)
             .setParameter(1, id)
             .getSingleResult();
    }
@@ -735,13 +731,11 @@ public class TestServiceImpl implements TestService {
    @Transactional
    @WithRoles
    @Override
-   public List<ExportedLabelValues> labelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, int limit, int page, List<String> include, List<String> exclude, boolean multiFilter) {
+   public List<ExportedLabelValues> labelValues(int testId, String filter, String before, String after, boolean filtering, boolean metrics, String sort, String direction, Integer limit, int page, List<String> include, List<String> exclude, boolean multiFilter) {
       if(!checkTestExists(testId)){
          throw ServiceException.serverError("Cannot find test "+testId);
       }
       Object filterObject = Util.getFilterObject(filter);
-
-      String orderSql = "";
 
       Instant beforeInstant = Util.toInstant(before);
       Instant afterInstant = Util.toInstant(after);
@@ -763,86 +757,86 @@ public class TestServiceImpl implements TestService {
             mutableInclude.removeAll(exclude);
          }
          if(!mutableInclude.isEmpty()) {
-            includeExcludeSql = " AND label.name in :include";
+            includeExcludeSql = "AND label.name in :include";
          }
       }
       //includeExcludeSql is empty if include did not contain entries after exclude removal
       if(includeExcludeSql.isEmpty() && exclude!=null && !exclude.isEmpty()){
-         includeExcludeSql=" AND label.name NOT in :exclude";
+         includeExcludeSql="AND label.name NOT in :exclude";
       }
 
       if(filterSql.isBlank() && filter != null && !filter.isBlank()){
          //TODO there was an error with the filter, do we return that info to the user?
       }
 
+      // by default order by runId
+      String orderSql = LABEL_ORDER_PREFIX + "combined.runId DESC";;
       String orderDirection = direction.equalsIgnoreCase("ascending") ? "ASC" : "DESC";
       if("start".equalsIgnoreCase(sort)){
          orderSql=LABEL_ORDER_PREFIX+LABEL_ORDER_START+" "+orderDirection+", combined.runId DESC";
-      }else if ("stop".equalsIgnoreCase(sort)){
+      } else if ("stop".equalsIgnoreCase(sort)){
          orderSql=LABEL_ORDER_PREFIX+LABEL_ORDER_STOP+" "+orderDirection+", combined.runId DESC";
-      }else {
+      } else {
          if(!sort.isBlank()) {
             Util.CheckResult jsonpathResult = Util.castCheck(sort, "jsonpath", em);
             if (jsonpathResult.ok()) {
                orderSql = LABEL_ORDER_PREFIX + LABEL_ORDER_JSONPATH + " " + orderDirection + ", combined.runId DESC";
-            }else{
-               orderSql = LABEL_ORDER_PREFIX + "combined.runId DESC";
             }
-         } else {
-               orderSql = LABEL_ORDER_PREFIX + "combined.runId DESC";
          }
 
       }
-          String sql = LABEL_VALUES_QUERY
-                  .replace("FILTER_PLACEHOLDER",filterSql)
-                  .replace("INCLUDE_EXCLUDE_PLACEHOLDER",includeExcludeSql)
-                  .replace("ORDER_PLACEHOLDER",orderSql);
+      String limitSql = "";
+      if (limit != null) {
+         limitSql = "limit " + limit + " offset " + limit * Math.max(0, page);
+      }
+      String sql = LABEL_VALUES_QUERY
+            .replace("FILTER_PLACEHOLDER", filterSql)
+            .replace("INCLUDE_EXCLUDE_PLACEHOLDER", includeExcludeSql)
+            .replace("ORDER_PLACEHOLDER", orderSql)
+            .replace("LIMIT_PLACEHOLDER", limitSql);
 
-           NativeQuery query =  ((NativeQuery) em.createNativeQuery(sql))
-             .setParameter("testId", testId)
-             .setParameter("filteringLabels", filtering)
-             .setParameter("metricLabels", metrics)
-             ;
-           if(!filterSql.isEmpty()){
-              if(filterSql.contains(LABEL_VALUES_FILTER_CONTAINS_JSON)){
-                 query.setParameter("filter",filterObject,JsonBinaryType.INSTANCE);
-              }else if (filterSql.contains(LABEL_VALUES_FILTER_MATCHES_NOT_NULL)){
-                 query.setParameter("filter",filter);
-              }
-              if(beforeInstant!=null){
-                 query.setParameter("before",beforeInstant, StandardBasicTypes.INSTANT);
-              }
-              if(afterInstant!=null){
-                 query.setParameter("after",afterInstant, StandardBasicTypes.INSTANT);
-              }
-           }
-           if(!filterDef.multis().isEmpty() && filterDef.filterObject()!=null){
-              ObjectNode fullFilterObject = (ObjectNode) Util.getFilterObject(filter);
-              for(int i=0; i<filterDef.multis().size(); i++){
-                 String key = filterDef.multis().get(i);
-                 ArrayNode value = (ArrayNode) fullFilterObject.get(key);
-                 query.setParameter("key"+i,"$."+key);
-                 query.setParameter("value"+i,value, JsonbSetType.INSTANCE);
-              }
-           }
-           if(includeExcludeSql.contains(":include")){
-              query.setParameter("include",mutableInclude);
-           }else if (includeExcludeSql.contains(":exclude")){
-              query.setParameter("exclude",exclude);
-           }
-           if(orderSql.contains(LABEL_ORDER_JSONPATH)){
-               query.setParameter("orderBy", sort);
-           }
-           query
-                .setParameter("limit",limit)
-                .setParameter("offset",limit * Math.max(0,page))
-                .unwrap(NativeQuery.class)
-                .addScalar("values", JsonBinaryType.INSTANCE)
-                .addScalar("runId",Integer.class)
-                .addScalar("datasetId",Integer.class)
-                .addScalar("start", StandardBasicTypes.INSTANT)
-                .addScalar("stop", StandardBasicTypes.INSTANT);
-           return ExportedLabelValues.parse( query.getResultList() );
+      NativeQuery query = ((NativeQuery) em.createNativeQuery(sql))
+            .setParameter("testId", testId)
+            .setParameter("filteringLabels", filtering)
+            .setParameter("metricLabels", metrics);
+      if (!filterSql.isEmpty()) {
+         if (filterSql.contains(LABEL_VALUES_FILTER_CONTAINS_JSON)) {
+            query.setParameter("filter", filterObject, JsonBinaryType.INSTANCE);
+         } else if (filterSql.contains(LABEL_VALUES_FILTER_MATCHES_NOT_NULL)) {
+            query.setParameter("filter", filter);
+         }
+         if (beforeInstant != null) {
+            query.setParameter("before", beforeInstant, StandardBasicTypes.INSTANT);
+         }
+         if (afterInstant != null) {
+            query.setParameter("after", afterInstant, StandardBasicTypes.INSTANT);
+         }
+      }
+      if (!filterDef.multis().isEmpty() && filterDef.filterObject() != null) {
+         ObjectNode fullFilterObject = (ObjectNode) Util.getFilterObject(filter);
+         for (int i = 0; i < filterDef.multis().size(); i++) {
+            String key = filterDef.multis().get(i);
+            ArrayNode value = (ArrayNode) fullFilterObject.get(key);
+            query.setParameter("key" + i, "$." + key);
+            query.setParameter("value" + i, value, JsonbSetType.INSTANCE);
+         }
+      }
+      if (includeExcludeSql.contains(":include")) {
+         query.setParameter("include", mutableInclude);
+      } else if (includeExcludeSql.contains(":exclude")) {
+         query.setParameter("exclude", exclude);
+      }
+      if (orderSql.contains(LABEL_ORDER_JSONPATH)) {
+         query.setParameter("orderBy", sort);
+      }
+      query
+            .unwrap(NativeQuery.class)
+            .addScalar("values", JsonBinaryType.INSTANCE)
+            .addScalar("runId", Integer.class)
+            .addScalar("datasetId", Integer.class)
+            .addScalar("start", StandardBasicTypes.INSTANT)
+            .addScalar("stop", StandardBasicTypes.INSTANT);
+      return ExportedLabelValues.parse(query.getResultList());
    }
 
    @Transactional

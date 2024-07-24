@@ -246,7 +246,7 @@ public interface TestService {
            @QueryParam("metrics") @DefaultValue("true") boolean metrics,
            @QueryParam("sort") @DefaultValue("") String sort,
            @QueryParam("direction") @DefaultValue("Ascending") String direction,
-           @QueryParam("limit") @DefaultValue(""+Integer.MAX_VALUE) int limit,
+           @QueryParam("limit") Integer limit,
            @QueryParam("page") @DefaultValue("0") int page,
            @QueryParam("include") @Separator(",") List<String> include,
            @QueryParam("exclude") @Separator(",") List<String> exclude,

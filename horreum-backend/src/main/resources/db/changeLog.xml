@@ -4556,4 +4556,14 @@
             select setval('viewidgenerator', (select max(id)+1 from view), false);
         </sql>
     </changeSet>
+    <changeSet id="122" author="lampajr">
+        <validCheckSum>ANY</validCheckSum>
+        <createIndex tableName="dataset" indexName="dataset_testid_key">
+            <column name="testid" />
+        </createIndex>
+        <sql>
+            CREATE INDEX idx_label_filtering_partial ON label (id) WHERE filtering = TRUE;
+            CREATE INDEX idx_label_metrics_partial ON label (id) WHERE metrics = TRUE;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
