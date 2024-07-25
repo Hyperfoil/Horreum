@@ -21,6 +21,7 @@ import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.hibernate.JsonbSetType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
+import io.hyperfoil.tools.horreum.server.RoleManager;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -115,6 +116,9 @@ public class RunServiceImpl implements RunService {
 
    @Inject
    SecurityIdentity identity;
+
+   @Inject
+   RoleManager roleManager;
 
    @Inject
    TransactionManager tm;
@@ -570,17 +574,56 @@ public class RunServiceImpl implements RunService {
       DatastoreResponse response = datastore.handleRun(data, metadata, testEntity.backendConfig, Optional.ofNullable(schemaUri), mapper);
 
       List<Integer> runIds = new ArrayList<>();
-      if (datastore.uploadType() == Datastore.UploadType.MUILTI && response.payload instanceof  ArrayNode){
-         response.payload.forEach(jsonNode -> {
-            runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, null, jsonNode, testEntity));
-         });
+      String responseString;
+      if (datastore.uploadType() == Datastore.UploadType.MUILTI
+              && response.payload instanceof ArrayNode ){
+
+         //if we return more than 10 results, offload to async queue to process - this might take a LOOONG time
+         if ( response.payload.size() > 10 ) {
+            response.payload.forEach(jsonNode -> {
+               mediator.queueRunUpload(start, stop, test, owner, access, token, schemaUri, description, null, jsonNode, testEntity);
+            });
+         } else { //process synchronously
+            response.payload.forEach(jsonNode -> {
+               runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, metadata, response.payload, testEntity));
+            });
+         }
       } else {
          runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, metadata, response.payload, testEntity));
       }
-//      return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId).build();
-      String reponseString = String.valueOf(runIds.stream().map(val -> Integer.toString(val)).collect(Collectors.joining(", ")));
-      return Response.status(Response.Status.OK).entity(reponseString).build();
+
+      if( runIds.size() > 0 ) {
+         return Response.status(Response.Status.OK)
+                 .entity(String.valueOf(runIds.stream().map(val -> Integer.toString(val)).collect(Collectors.joining(", "))))
+                 .build();
+      } else {
+         return Response.status(Response.Status.ACCEPTED).entity("More than 10 runs uploaded, processing asynchronously").build();
+      }
+
    }
+   @Transactional
+   void persistRun(ServiceMediator.RunUpload runUpload) {
+      runUpload.roles.add("horreum.system");
+      roleManager.setRoles(runUpload.roles.stream().collect(Collectors.joining(",")));
+      TestDAO testEntity = TestDAO.findById(runUpload.testId);
+      if ( testEntity == null ){
+         log.errorf("Could not find Test (%d) for Run Upload", runUpload.testId);
+         return;
+      }
+      try {
+         Integer runID = getPersistRun(runUpload.start, runUpload.stop, runUpload.test,
+                 runUpload.owner, runUpload.access, runUpload.token, runUpload.schemaUri,
+                 runUpload.description, runUpload.metaData, runUpload.payload, testEntity);
+
+         if (runID == null) {
+            log.errorf("Could not persist Run for Test:  %d", testEntity.name);
+         }
+      } catch (ServiceException serviceException){
+         log.errorf("Could not persist Run for Test:  %d", testEntity.name, serviceException);
+
+      }
+   }
+
 
    private Integer getPersistRun(String start, String stop, String test, String owner, Access access, String token, String schemaUri, String description, JsonNode metadata, JsonNode data, TestDAO testEntity) {
       Object foundStart = findIfNotSet(start, data);
@@ -646,6 +689,7 @@ public class RunServiceImpl implements RunService {
 
 
 
+   @WithRoles(extras = Roles.HORREUM_SYSTEM)
    private Integer addAuthenticated(RunDAO run, TestDAO test) {
       // Id will be always generated anew
       run.id = null;

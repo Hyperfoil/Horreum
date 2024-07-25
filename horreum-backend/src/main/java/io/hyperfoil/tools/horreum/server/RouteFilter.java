@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.server;
 
+import io.vertx.ext.web.handler.StaticHandler;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import java.util.regex.Pattern;
