@@ -69,7 +69,10 @@ yarn.lock*
 
 react-app-env.d.ts
 
-#docs
+# docs
 docs/site/.hugo_build.lock
 docs/site/public/
 docs/site/resources/
+
+# code format
+.cache
