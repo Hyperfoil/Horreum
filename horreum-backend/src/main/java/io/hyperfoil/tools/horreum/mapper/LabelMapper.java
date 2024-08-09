@@ -1,16 +1,16 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
+import java.util.stream.Collectors;
+
 import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelValueDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 
-import java.util.stream.Collectors;
-
 public class LabelMapper {
     public static Label from(LabelDAO l) {
-        if(l == null)
-            return  null;
+        if (l == null)
+            return null;
         Label dto = new Label();
         dto.id = l.id;
         dto.name = l.name;
@@ -20,7 +20,9 @@ public class LabelMapper {
         dto.owner = l.owner;
         dto.access = l.access;
         dto.schemaId = l.schema.id;
-        dto.extractors = l.extractors.stream().map(ExtractorMapper::from).collect(Collectors.toList());
+        dto.extractors = l.extractors.stream()
+                .map(ExtractorMapper::from)
+                .collect(Collectors.toList());
 
         return dto;
     }
@@ -34,9 +36,12 @@ public class LabelMapper {
         l.metrics = dto.metrics;
         l.owner = dto.owner;
         l.access = dto.access;
-        if(dto.schemaId > 0)
-            l.schema = SchemaDAO.getEntityManager().find(SchemaDAO.class, dto.schemaId);
-        l.extractors = dto.extractors.stream().map(ExtractorMapper::to).collect(Collectors.toList());
+        if (dto.schemaId > 0)
+            l.schema = SchemaDAO.getEntityManager()
+                    .find(SchemaDAO.class, dto.schemaId);
+        l.extractors = dto.extractors.stream()
+                .map(ExtractorMapper::to)
+                .collect(Collectors.toList());
 
         return l;
     }

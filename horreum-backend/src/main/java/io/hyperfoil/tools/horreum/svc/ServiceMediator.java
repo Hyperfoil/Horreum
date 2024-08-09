@@ -1,5 +1,23 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.control.ActivateRequestContext;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.eclipse.microprofile.reactive.messaging.OnOverflow;
+import org.jboss.logging.Logger;
+
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.Action;
@@ -13,22 +31,6 @@ import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.smallrye.reactive.messaging.annotations.Blocking;
 import io.vertx.core.Vertx;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.context.control.ActivateRequestContext;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
-import org.eclipse.microprofile.reactive.messaging.Incoming;
-import org.eclipse.microprofile.reactive.messaging.OnOverflow;
-import org.jboss.logging.Logger;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 
 @ApplicationScoped
 public class ServiceMediator {
@@ -73,22 +75,34 @@ public class ServiceMediator {
     private SchemaServiceImpl schemaService;
 
     @Inject
-    @ConfigProperty(name = "horreum.test-mode", defaultValue = "false")
+    @ConfigProperty(
+            name = "horreum.test-mode",
+            defaultValue = "false"
+    )
     private Boolean testMode;
 
-    @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
+    @OnOverflow(
+            value = OnOverflow.Strategy.BUFFER,
+            bufferSize = 10000
+    )
     @Channel("dataset-event-out")
     Emitter<Dataset.EventNew> dataSetEmitter;
 
-    @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
+    @OnOverflow(
+            value = OnOverflow.Strategy.BUFFER,
+            bufferSize = 10000
+    )
     @Channel("run-recalc-out")
     Emitter<Integer> runEmitter;
 
-    @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
+    @OnOverflow(
+            value = OnOverflow.Strategy.BUFFER,
+            bufferSize = 10000
+    )
     @Channel("schema-sync-out")
     Emitter<Integer> schemaEmitter;
 
-    private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events =  new ConcurrentHashMap<>();
+    private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events = new ConcurrentHashMap<>();
 
     public ServiceMediator() {
     }
@@ -100,6 +114,7 @@ public class ServiceMediator {
     boolean testMode() {
         return testMode;
     }
+
     @Transactional
     void newTest(Test test) {
         actionService.onNewTest(test);
@@ -148,7 +163,10 @@ public class ServiceMediator {
     }
 
     @Incoming("dataset-event-in")
-    @Blocking(ordered = false, value = "horreum.dataset.pool")
+    @Blocking(
+            ordered = false,
+            value = "horreum.dataset.pool"
+    )
     @ActivateRequestContext
     public void processDatasetEvents(Dataset.EventNew newEvent) {
         datasetService.onNewDatasetNoLock(newEvent);
@@ -159,8 +177,12 @@ public class ServiceMediator {
     void queueDatasetEvents(Dataset.EventNew event) {
         dataSetEmitter.send(event);
     }
+
     @Incoming("run-recalc-in")
-    @Blocking(ordered = false, value = "horreum.run.pool")
+    @Blocking(
+            ordered = false,
+            value = "horreum.run.pool"
+    )
     @ActivateRequestContext
     public void processRunRecalculation(int runId) {
         runService.transform(runId, true);
@@ -172,7 +194,10 @@ public class ServiceMediator {
     }
 
     @Incoming("schema-sync-in")
-    @Blocking(ordered = false, value = "horreum.schema.pool")
+    @Blocking(
+            ordered = false,
+            value = "horreum.schema.pool"
+    )
     @ActivateRequestContext
     public void processSchemaSync(int schemaId) {
         runService.onNewOrUpdatedSchema(schemaId);
@@ -190,18 +215,23 @@ public class ServiceMediator {
     void missingValuesDataset(MissingValuesEvent event) {
         notificationService.onMissingValues(event);
     }
+
     void newDatasetChanges(DatasetChanges changes) {
         notificationService.onNewChanges(changes);
     }
+
     int transform(int runId, boolean isRecalculation) {
         return runService.transform(runId, isRecalculation);
     }
+
     void withRecalculationLock(Runnable run) {
         datasetService.withRecalculationLock(run);
     }
+
     void newExperimentResult(ExperimentService.ExperimentResult result) {
         actionService.onNewExperimentResult(result);
     }
+
     void validate(Action dto) {
         actionService.validate(dto);
     }
@@ -219,15 +249,15 @@ public class ServiceMediator {
 
     @Transactional
     void importTestToAll(TestExport test) {
-        if(test.variables != null)
+        if (test.variables != null)
             alertingService.importVariables(test);
-        if(test.missingDataRules != null)
+        if (test.missingDataRules != null)
             alertingService.importMissingDataRules(test);
-        if(test.actions != null)
+        if (test.actions != null)
             actionService.importTest(test);
-        if(test.experiments != null && !test.experiments.isEmpty())
+        if (test.experiments != null && !test.experiments.isEmpty())
             experimentService.importTest(test);
-        if(test.subscriptions != null)
+        if (test.subscriptions != null)
             subscriptionService.importSubscriptions(test);
     }
 
@@ -238,19 +268,22 @@ public class ServiceMediator {
     public void validateRun(Integer runId) {
         schemaService.validateRunData(runId, null);
     }
+
     public void validateDataset(Integer datasetId) {
         schemaService.validateDatasetData(datasetId, null);
     }
+
     public void validateSchema(int schemaId) {
         schemaService.revalidateAll(schemaId);
     }
 
     public <T> void publishEvent(AsyncEventChannels channel, int testId, T payload) {
-        if (testMode ) {
+        if (testMode) {
             log.debugf("Publishing test %d on %s: %s", testId, channel, payload);
 //        eventBus.publish(channel.name(), new MessageBus.Message(BigInteger.ZERO.longValue(), testId, 0, payload));
             events.putIfAbsent(channel, new HashMap<>());
-            BlockingQueue<Object> queue = events.get(channel).computeIfAbsent(testId, k -> new LinkedBlockingQueue<>());
+            BlockingQueue<Object> queue = events.get(channel)
+                    .computeIfAbsent(testId, k -> new LinkedBlockingQueue<>());
             queue.add(payload);
         } else {
             //no-op
@@ -260,7 +293,8 @@ public class ServiceMediator {
     public <T> BlockingQueue<T> getEventQueue(AsyncEventChannels channel, Integer id) {
         if (testMode) {
             events.putIfAbsent(channel, new HashMap<>());
-            BlockingQueue<?> queue = events.get(channel).computeIfAbsent(id, k -> new LinkedBlockingQueue<>());
+            BlockingQueue<?> queue = events.get(channel)
+                    .computeIfAbsent(id, k -> new LinkedBlockingQueue<>());
             return (BlockingQueue<T>) queue;
         } else {
             return null;

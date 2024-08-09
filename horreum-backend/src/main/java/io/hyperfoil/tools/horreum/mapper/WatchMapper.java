@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
+import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 
 public class WatchMapper {
@@ -23,7 +23,8 @@ public class WatchMapper {
         w.teams = dto.teams;
         w.users = dto.users;
         if (dto.testId != null)
-            w.test = TestDAO.getEntityManager().getReference(TestDAO.class, dto.testId);
+            w.test = TestDAO.getEntityManager()
+                    .getReference(TestDAO.class, dto.testId);
 
         return w;
     }

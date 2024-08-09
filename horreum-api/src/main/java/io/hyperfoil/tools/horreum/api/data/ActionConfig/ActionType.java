@@ -1,13 +1,18 @@
 package io.hyperfoil.tools.horreum.api.data.ActionConfig;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.Arrays;
+
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-import java.util.Arrays;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.core.type.TypeReference;
 
-@Schema(type = SchemaType.STRING, required = true, description = "Type of Action")
+@Schema(
+        type = SchemaType.STRING,
+        required = true,
+        description = "Type of Action"
+)
 public enum ActionType {
     HTTP("http", new TypeReference<HttpActionConfig>() {
     }),
@@ -28,13 +33,13 @@ public enum ActionType {
         this.name = name;
     }
 
-    public <T extends BaseActionConfig> TypeReference<T> getTypeReference() {
-        return (TypeReference<T>) typeReference;
-    }
+    public <T extends BaseActionConfig> TypeReference<T> getTypeReference() { return (TypeReference<T>) typeReference; }
 
     @JsonCreator
     public static ActionType fromString(String str) {
-        return Arrays.stream(VALUES).filter(v -> v.name.equals(str)).findAny()
+        return Arrays.stream(VALUES)
+                .filter(v -> v.name.equals(str))
+                .findAny()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown action: " + str));
     }
 }

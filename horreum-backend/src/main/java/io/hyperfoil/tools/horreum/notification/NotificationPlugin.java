@@ -1,8 +1,9 @@
 package io.hyperfoil.tools.horreum.notification;
 
 public interface NotificationPlugin {
-   String method();
-   Notification create(String username, String data);
+    String method();
 
-   void test(String data);
+    Notification create(String username, String data);
+
+    void test(String data);
 }

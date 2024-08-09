@@ -1,12 +1,6 @@
 package io.hyperfoil.tools.horreum.hibernate;
 
-
-import org.hibernate.HibernateException;
-import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.type.CustomType;
-import org.hibernate.type.SqlTypes;
-import org.hibernate.type.spi.TypeConfiguration;
-import org.hibernate.usertype.UserType;
+import static java.lang.String.format;
 
 import java.io.Serializable;
 import java.sql.Array;
@@ -18,15 +12,19 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
-import static java.lang.String.format;
+import org.hibernate.HibernateException;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.type.spi.TypeConfiguration;
+import org.hibernate.usertype.UserType;
 
 public class IntArrayType implements UserType<int[]> {
 
     public static final CustomType INSTANCE = new CustomType<>(new IntArrayType(), new TypeConfiguration());
+
     @Override
-    public int getSqlType() {
-        return SqlTypes.ARRAY;
-    }
+    public int getSqlType() { return SqlTypes.ARRAY; }
 
     @Override
     public Class<int[]> returnedClass() {
@@ -46,14 +44,14 @@ public class IntArrayType implements UserType<int[]> {
     @Override
     public int[] nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner)
             throws SQLException {
-        if(rs.wasNull())
+        if (rs.wasNull())
             return null;
         Array array = rs.getArray(position);
         if (array == null) {
             return null;
         }
         try {
-            return  (int[]) array.getArray();
+            return (int[]) array.getArray();
         } catch (final Exception ex) {
             throw new RuntimeException("Failed to convert ResultSet to int[]: " + ex.getMessage(), ex);
         }
@@ -67,8 +65,11 @@ public class IntArrayType implements UserType<int[]> {
             return;
         }
         try {
-            Integer[] castArray = IntStream.of(value).boxed().toArray( Integer[]::new );
-            Array array = ps.getConnection().createArrayOf("integer", castArray);
+            Integer[] castArray = IntStream.of(value)
+                    .boxed()
+                    .toArray(Integer[]::new);
+            Array array = ps.getConnection()
+                    .createArrayOf("integer", castArray);
             ps.setArray(index, array);
         } catch (final Exception ex) {
             throw new RuntimeException(format("Failed to convert JSON to String: %s", ex.getMessage()), ex);
@@ -84,9 +85,7 @@ public class IntArrayType implements UserType<int[]> {
     }
 
     @Override
-    public boolean isMutable() {
-        return true;
-    }
+    public boolean isMutable() { return true; }
 
     @Override
     public Serializable disassemble(int[] value) throws HibernateException {
@@ -95,7 +94,8 @@ public class IntArrayType implements UserType<int[]> {
 
     @Override
     public int[] assemble(Serializable cached, Object owner) throws HibernateException {
-        String stringArray = cached.toString().replaceAll("[\\[\\]]", "");
+        String stringArray = cached.toString()
+                .replaceAll("[\\[\\]]", "");
         String[] tokens = stringArray.split(",");
 
         int length = tokens.length;
@@ -111,7 +111,5 @@ public class IntArrayType implements UserType<int[]> {
         return original;
     }
 
-    public String getName() {
-        return "int-array";
-    }
+    public String getName() { return "int-array"; }
 }

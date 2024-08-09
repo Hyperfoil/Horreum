@@ -1,17 +1,17 @@
 package io.hyperfoil.tools.horreum.infra.common.utils;
 
-import org.keycloak.representations.idm.CredentialRepresentation;
-import org.keycloak.representations.idm.FederatedIdentityRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.FederatedIdentityRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
+
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
- * copied from org.keycloak.testsuite.util.UserManager
+ *         copied from org.keycloak.testsuite.util.UserManager
  */
 public class UserBuilder {
 
@@ -63,7 +63,8 @@ public class UserBuilder {
         credential.setType(CredentialRepresentation.PASSWORD);
         credential.setValue(password);
 
-        rep.getCredentials().add(credential);
+        rep.getCredentials()
+                .add(credential);
         return this;
     }
 
@@ -72,7 +73,8 @@ public class UserBuilder {
             rep.setAttributes(new HashMap<>());
         }
 
-        rep.getAttributes().put(name, Arrays.asList(values));
+        rep.getAttributes()
+                .put(name, Arrays.asList(values));
         return this;
     }
 
@@ -103,7 +105,8 @@ public class UserBuilder {
         if (rep.getRealmRoles() == null) {
             rep.setRealmRoles(new ArrayList<>());
         }
-        rep.getRealmRoles().addAll(Arrays.asList(roles));
+        rep.getRealmRoles()
+                .addAll(Arrays.asList(roles));
         return this;
     }
 
@@ -111,10 +114,14 @@ public class UserBuilder {
         if (rep.getClientRoles() == null) {
             rep.setClientRoles(new HashMap<>());
         }
-        if (rep.getClientRoles().get(client) == null) {
-            rep.getClientRoles().put(client, new LinkedList<>());
+        if (rep.getClientRoles()
+                .get(client) == null) {
+            rep.getClientRoles()
+                    .put(client, new LinkedList<>());
         }
-        rep.getClientRoles().get(client).add(role);
+        rep.getClientRoles()
+                .get(client)
+                .add(role);
         return this;
     }
 
@@ -122,7 +129,8 @@ public class UserBuilder {
         if (rep.getRequiredActions() == null) {
             rep.setRequiredActions(new LinkedList<>());
         }
-        rep.getRequiredActions().add(requiredAction);
+        rep.getRequiredActions()
+                .add(requiredAction);
         return this;
     }
 
@@ -136,12 +144,13 @@ public class UserBuilder {
             rep.setCredentials(new LinkedList<>());
         }
 
-        rep.getCredentials().add(credential);
+        rep.getCredentials()
+                .add(credential);
         rep.setTotp(true);
         return this;
     }
 
-/*
+    /*
     public UserBuilder totpSecret(String totpSecret) {
         CredentialRepresentation credential = ModelToRepresentation.toRepresentation(
                 OTPCredentialModel.createTOTP(totpSecret, 6, 30, HmacOTP.HMAC_SHA1));
@@ -153,7 +162,7 @@ public class UserBuilder {
                 OTPCredentialModel.createHOTP(hotpSecret, 6, 0, HmacOTP.HMAC_SHA1));
         return secret(credential);
     }
-*/
+    */
 
     public UserBuilder otpEnabled() {
         rep.setTotp(Boolean.TRUE);
@@ -164,7 +173,8 @@ public class UserBuilder {
         if (rep.getGroups() == null) {
             rep.setGroups(new ArrayList<>());
         }
-        rep.getGroups().addAll(Arrays.asList(group));
+        rep.getGroups()
+                .addAll(Arrays.asList(group));
         return this;
     }
 
@@ -177,7 +187,8 @@ public class UserBuilder {
         federatedIdentity.setUserName(rep.getUsername());
         federatedIdentity.setIdentityProvider(identityProvider);
 
-        rep.getFederatedIdentities().add(federatedIdentity);
+        rep.getFederatedIdentities()
+                .add(federatedIdentity);
         return this;
     }
 

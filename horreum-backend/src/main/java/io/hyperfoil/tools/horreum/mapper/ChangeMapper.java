@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
+import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 
 public class ChangeMapper {
 

@@ -1,17 +1,20 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import java.io.Serializable;
+import java.util.Objects;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+
 import org.hibernate.annotations.Type;
 
-import java.io.Serializable;
-import java.util.Objects;
+import com.fasterxml.jackson.databind.JsonNode;
+
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity
 @Table(name = "label_values")

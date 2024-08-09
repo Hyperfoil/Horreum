@@ -1,10 +1,12 @@
 package io.hyperfoil.tools.horreum.mapper;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
+
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.svc.Util;
-import org.jboss.logging.Logger;
 
 public class ValidationErrorMapper {
 

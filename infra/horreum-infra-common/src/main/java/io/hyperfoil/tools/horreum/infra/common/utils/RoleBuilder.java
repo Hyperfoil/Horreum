@@ -1,16 +1,16 @@
 package io.hyperfoil.tools.horreum.infra.common.utils;
 
-import org.keycloak.representations.idm.RoleRepresentation;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.keycloak.representations.idm.RoleRepresentation;
+
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
- * copied from org.keycloak.testsuite.util.RoleBuilder
+ *         copied from org.keycloak.testsuite.util.RoleBuilder
  */
 public class RoleBuilder {
 
@@ -67,11 +67,15 @@ public class RoleBuilder {
     public RoleBuilder realmComposite(String compositeRole) {
         checkCompositesNull();
 
-        if (rep.getComposites().getRealm() == null) {
-            rep.getComposites().setRealm(new HashSet<String>());
+        if (rep.getComposites()
+                .getRealm() == null) {
+            rep.getComposites()
+                    .setRealm(new HashSet<String>());
         }
 
-        rep.getComposites().getRealm().add(compositeRole);
+        rep.getComposites()
+                .getRealm()
+                .add(compositeRole);
         return this;
     }
 
@@ -82,15 +86,24 @@ public class RoleBuilder {
     public RoleBuilder clientComposite(String client, String compositeRole) {
         checkCompositesNull();
 
-        if (rep.getComposites().getClient() == null) {
-            rep.getComposites().setClient(new HashMap<String, List<String>>());
+        if (rep.getComposites()
+                .getClient() == null) {
+            rep.getComposites()
+                    .setClient(new HashMap<String, List<String>>());
         }
 
-        if (rep.getComposites().getClient().get(client) == null) {
-            rep.getComposites().getClient().put(client, new LinkedList<String>());
+        if (rep.getComposites()
+                .getClient()
+                .get(client) == null) {
+            rep.getComposites()
+                    .getClient()
+                    .put(client, new LinkedList<String>());
         }
 
-        rep.getComposites().getClient().get(client).add(compositeRole);
+        rep.getComposites()
+                .getClient()
+                .get(client)
+                .add(compositeRole);
         return this;
     }
 

@@ -1,5 +1,22 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
 import io.hyperfoil.tools.horreum.api.Version;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
@@ -9,21 +26,6 @@ import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.security.identity.SecurityIdentity;
-import jakarta.annotation.security.PermitAll;
-import jakarta.annotation.security.RolesAllowed;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.config.ConfigProvider;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class ConfigServiceImpl implements ConfigService {
@@ -67,13 +69,17 @@ public class ConfigServiceImpl implements ConfigService {
     public List<Datastore> datastores(String team) {
         String queryWhere = "where access = 0";
         Set<String> roles = identity.getRoles();
-        long rolesCount = roles.stream().filter(role -> role.endsWith("-team")).count();
+        long rolesCount = roles.stream()
+                .filter(role -> role.endsWith("-team"))
+                .count();
         if (rolesCount != 0) { //user has access to team, retrieve the team datastore as well
             queryWhere = queryWhere.concat(" or owner in ('" + team + "')");
         }
         List<DatastoreConfigDAO> backends = DatastoreConfigDAO.list(queryWhere);
-        if ( backends.size() != 0 ) {
-            return backends.stream().map(DatasourceMapper::from).collect(Collectors.toList());
+        if (backends.size() != 0) {
+            return backends.stream()
+                    .map(DatasourceMapper::from)
+                    .collect(Collectors.toList());
         } else {
             return Collections.emptyList();
         }
@@ -88,17 +94,31 @@ public class ConfigServiceImpl implements ConfigService {
         dao.id = null;
 
         if (dao.owner == null) {
-            List<String> uploaders = identity.getRoles().stream().filter(role -> role.endsWith("-uploader")).collect(Collectors.toList());
+            List<String> uploaders = identity.getRoles()
+                    .stream()
+                    .filter(role -> role.endsWith("-uploader"))
+                    .collect(Collectors.toList());
             if (uploaders.size() != 1) {
                 log.debugf("Failed to create datastore %s: no owner, available uploaders: %s", dao.name, uploaders);
-                throw ServiceException.badRequest("Missing owner and cannot select single default owners; this user has these uploader roles: " + uploaders);
+                throw ServiceException.badRequest(
+                        "Missing owner and cannot select single default owners; this user has these uploader roles: " +
+                                uploaders
+                );
             }
             String uploader = uploaders.get(0);
             dao.owner = uploader.substring(0, uploader.length() - 9) + "-team";
-        } else if (!identity.getRoles().contains(dao.owner)) {
-            log.debugf("Failed to create datastore %s: requested owner %s, available roles: %s", dao.name, dao.owner, identity.getRoles());
-            throw ServiceException.badRequest("This user does not have permissions to upload datastore for owner=" + dao.owner);
-        }
+        } else if (!identity.getRoles()
+                .contains(dao.owner)) {
+                    log.debugf(
+                            "Failed to create datastore %s: requested owner %s, available roles: %s",
+                            dao.name,
+                            dao.owner,
+                            identity.getRoles()
+                    );
+                    throw ServiceException.badRequest(
+                            "This user does not have permissions to upload datastore for owner=" + dao.owner
+                    );
+                }
         if (dao.access == null) {
             dao.access = Access.PRIVATE;
         }
@@ -107,16 +127,19 @@ public class ConfigServiceImpl implements ConfigService {
         try {
             datastoreImpl = backendResolver.getBackend(datastore.type);
         } catch (IllegalStateException e) {
-            throw ServiceException.badRequest("Unknown datastore type: " + datastore.type + ". Please try again, if the problem persists please contact the system administrator.");
+            throw ServiceException.badRequest(
+                    "Unknown datastore type: " + datastore.type +
+                            ". Please try again, if the problem persists please contact the system administrator."
+            );
         }
 
-        if ( datastoreImpl == null ){
+        if (datastoreImpl == null) {
             throw ServiceException.badRequest("Unknown datastore type: " + datastore.type);
         }
 
         String error = datastoreImpl.validateConfig(datastore.config);
 
-        if ( error != null ) {
+        if (error != null) {
             throw ServiceException.badRequest(error);
         }
 
@@ -138,9 +161,9 @@ public class ConfigServiceImpl implements ConfigService {
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
-    public Integer updateDatastore(Datastore backend){
+    public Integer updateDatastore(Datastore backend) {
         DatastoreConfigDAO dao = DatastoreConfigDAO.findById(backend.id);
-        if ( dao == null )
+        if (dao == null)
             throw ServiceException.notFound("Datastore with id " + backend.id + " does not exist");
 
         DatastoreConfigDAO newDao = DatasourceMapper.to(backend);
@@ -173,7 +196,9 @@ public class ConfigServiceImpl implements ConfigService {
     }
 
     private String getString(String propertyName) {
-        return ConfigProvider.getConfig().getOptionalValue(propertyName, String.class).orElse("");
+        return ConfigProvider.getConfig()
+                .getOptionalValue(propertyName, String.class)
+                .orElse("");
     }
 
 }

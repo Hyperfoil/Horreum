@@ -3,18 +3,17 @@ package io.hyperfoil.tools.horreum.svc;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.graalvm.polyglot.proxy.Proxy;
 
 public class ProxyJackson {
 
-    public static Object wrap(JsonNode object){
-        if(object == null){
+    public static Object wrap(JsonNode object) {
+        if (object == null) {
             return null;
-        }else if (object.isObject()){
+        } else if (object.isObject()) {
             return new ProxyJacksonObject((ObjectNode) object);
-        }else if (object.isArray()){
+        } else if (object.isArray()) {
             return new ProxyJacksonArray((ArrayNode) object);
-        }else{
+        } else {
             return object;
         }
     }

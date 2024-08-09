@@ -5,10 +5,18 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public class SlackChannelMessageActionConfig extends BaseActionConfig {
 
-    @Schema(type = SchemaType.STRING, required = true, description = "Slack channel")
+    @Schema(
+            type = SchemaType.STRING,
+            required = true,
+            description = "Slack channel"
+    )
     public String channel;
 
-    @Schema(type = SchemaType.STRING, required = true, description = "Object markdown formatter")
+    @Schema(
+            type = SchemaType.STRING,
+            required = true,
+            description = "Object markdown formatter"
+    )
     public String formatter;
 
     public SlackChannelMessageActionConfig() {
