@@ -1,9 +1,10 @@
 package io.hyperfoil.tools.horreum.api.alerting;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
+
 import jakarta.validation.constraints.NotNull;
 
-import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class RunExpectation {
     public Long id;

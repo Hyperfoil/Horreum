@@ -1,33 +1,39 @@
 package io.hyperfoil.tools.horreum.mapper;
 
+import java.util.stream.Collectors;
+
+import io.hyperfoil.tools.horreum.api.report.TableReport;
+import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
 import io.hyperfoil.tools.horreum.entity.report.TableReportConfigDAO;
 import io.hyperfoil.tools.horreum.entity.report.TableReportDAO;
-import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
-import io.hyperfoil.tools.horreum.api.report.TableReport;
-
-import java.util.stream.Collectors;
 
 public class TableReportMapper {
     public static TableReport from(TableReportDAO tr) {
-       TableReport dto = new TableReport();
-       dto.id = tr.id;
-       dto.config = fromTableReportConfig(tr.config);
-       dto.created = tr.created;
-       if (tr.comments != null)
-           dto.comments = tr.comments.stream().map(ReportCommentMapper::from).collect(Collectors.toList());
-       if(tr.data != null)
-           dto.data = tr.data.stream().map(TableReportMapper::fromData).collect(Collectors.toList());
-       if(tr.logs != null)
-           dto.logs = tr.logs.stream().map(ReportLogMapper::from).collect(Collectors.toList());
+        TableReport dto = new TableReport();
+        dto.id = tr.id;
+        dto.config = fromTableReportConfig(tr.config);
+        dto.created = tr.created;
+        if (tr.comments != null)
+            dto.comments = tr.comments.stream()
+                    .map(ReportCommentMapper::from)
+                    .collect(Collectors.toList());
+        if (tr.data != null)
+            dto.data = tr.data.stream()
+                    .map(TableReportMapper::fromData)
+                    .collect(Collectors.toList());
+        if (tr.logs != null)
+            dto.logs = tr.logs.stream()
+                    .map(ReportLogMapper::from)
+                    .collect(Collectors.toList());
 
-       return dto;
+        return dto;
     }
 
     public static TableReportConfig fromTableReportConfig(TableReportConfigDAO trc) {
         TableReportConfig dto = new TableReportConfig();
         dto.id = trc.id;
         dto.title = trc.title;
-        if(trc.test != null)
+        if (trc.test != null)
             dto.test = TestMapper.from(trc.test);
         dto.filterLabels = trc.filterLabels;
         dto.filterFunction = trc.filterFunction;
@@ -42,7 +48,9 @@ public class TableReportMapper {
         dto.scaleFormatter = trc.scaleFormatter;
         dto.scaleDescription = trc.scaleDescription;
         if (trc.components != null)
-            dto.components = trc.components.stream().map(ReportComponentMapper::from).collect(Collectors.toList());
+            dto.components = trc.components.stream()
+                    .map(ReportComponentMapper::from)
+                    .collect(Collectors.toList());
 
         return dto;
     }
@@ -78,7 +86,9 @@ public class TableReportMapper {
         trc.scaleFormatter = dto.scaleFormatter;
         trc.scaleDescription = dto.scaleDescription;
         if (dto.components != null)
-            trc.components = dto.components.stream().map(ReportComponentMapper::to).collect(Collectors.toList());
+            trc.components = dto.components.stream()
+                    .map(ReportComponentMapper::to)
+                    .collect(Collectors.toList());
 
         return trc;
     }

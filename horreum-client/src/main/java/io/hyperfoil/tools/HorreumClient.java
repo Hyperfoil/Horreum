@@ -1,31 +1,6 @@
 package io.hyperfoil.tools;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
-import io.hyperfoil.tools.horreum.api.client.RunService;
-import io.hyperfoil.tools.horreum.api.internal.services.ActionService;
-import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
-import io.hyperfoil.tools.horreum.api.internal.services.BannerService;
-import io.hyperfoil.tools.horreum.api.internal.services.ChangesService;
-import io.hyperfoil.tools.horreum.api.services.ConfigService;
-import io.hyperfoil.tools.horreum.api.services.DatasetService;
-import io.hyperfoil.tools.horreum.api.services.ExperimentService;
-import io.hyperfoil.tools.horreum.api.internal.services.NotificationService;
-import io.hyperfoil.tools.horreum.api.internal.services.ReportService;
-import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
-import io.hyperfoil.tools.horreum.api.internal.services.SubscriptionService;
-import io.hyperfoil.tools.horreum.api.services.TestService;
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
-import org.jboss.resteasy.client.jaxrs.ResteasyClient;
-import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
-import org.jboss.resteasy.client.jaxrs.internal.BasicAuthentication;
-import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
-import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
-import org.jboss.resteasy.plugins.providers.StringTextStar;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
+import static io.hyperfoil.tools.horreum.api.services.ConfigService.KEYCLOAK_BOOTSTRAP_URL;
 
 import java.io.Closeable;
 import java.io.FileInputStream;
@@ -40,7 +15,34 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 
-import static io.hyperfoil.tools.horreum.api.services.ConfigService.KEYCLOAK_BOOTSTRAP_URL;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+
+import org.jboss.resteasy.client.jaxrs.ResteasyClient;
+import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+import org.jboss.resteasy.client.jaxrs.internal.BasicAuthentication;
+import org.jboss.resteasy.client.jaxrs.internal.ResteasyClientBuilderImpl;
+import org.jboss.resteasy.plugins.providers.DefaultTextPlain;
+import org.jboss.resteasy.plugins.providers.StringTextStar;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
+import io.hyperfoil.tools.horreum.api.client.RunService;
+import io.hyperfoil.tools.horreum.api.internal.services.ActionService;
+import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
+import io.hyperfoil.tools.horreum.api.internal.services.BannerService;
+import io.hyperfoil.tools.horreum.api.internal.services.ChangesService;
+import io.hyperfoil.tools.horreum.api.internal.services.NotificationService;
+import io.hyperfoil.tools.horreum.api.internal.services.ReportService;
+import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
+import io.hyperfoil.tools.horreum.api.internal.services.SubscriptionService;
+import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.ConfigService;
+import io.hyperfoil.tools.horreum.api.services.DatasetService;
+import io.hyperfoil.tools.horreum.api.services.ExperimentService;
+import io.hyperfoil.tools.horreum.api.services.SchemaService;
+import io.hyperfoil.tools.horreum.api.services.TestService;
 
 public class HorreumClient implements Closeable {
     private final ResteasyClient client;
@@ -60,11 +62,24 @@ public class HorreumClient implements Closeable {
     public final TestService testService;
     public final UserService userService;
 
-    private HorreumClient(ResteasyClient client,
-                          ActionService actionService, AlertingService alertingService, BannerService bannerService, ChangesService changesService, ConfigService configService,
-                          DatasetService datasetService, ExperimentService experimentService, NotificationService notificationService,
-                          ReportService reportService, RunServiceExtension runServiceExtension, SchemaService schemaService,
-                          SqlService sqlService, SubscriptionService subscriptionService, TestService horreumTestService, UserService userService) {
+    private HorreumClient(
+            ResteasyClient client,
+            ActionService actionService,
+            AlertingService alertingService,
+            BannerService bannerService,
+            ChangesService changesService,
+            ConfigService configService,
+            DatasetService datasetService,
+            ExperimentService experimentService,
+            NotificationService notificationService,
+            ReportService reportService,
+            RunServiceExtension runServiceExtension,
+            SchemaService schemaService,
+            SqlService sqlService,
+            SubscriptionService subscriptionService,
+            TestService horreumTestService,
+            UserService userService
+    ) {
         this.client = client;
         this.alertingService = alertingService;
         this.bannerService = bannerService;
@@ -133,7 +148,11 @@ public class HorreumClient implements Closeable {
                 this.sslContext = SSLContext.getInstance(protocol);
                 this.sslContext.init(null, tmf.getTrustManagers(), null);
                 return this;
-            } catch (CertificateException | KeyStoreException | IOException | NoSuchAlgorithmException | KeyManagementException e) {
+            } catch (CertificateException |
+                     KeyStoreException |
+                     IOException |
+                     NoSuchAlgorithmException |
+                     KeyManagementException e) {
                 throw new RuntimeException("Cannot create SSLContext", e);
             }
         }
@@ -166,13 +185,15 @@ public class HorreumClient implements Closeable {
                 clientBuilder.register(new BasicAuthentication(horreumUser, horreumPassword));
             } else {
                 // register Keycloak Request Filter
-                clientBuilder.register(new KeycloakClientRequestFilter(
-                        keycloakConfig.url,
-                        keycloakConfig.realm,
-                        horreumUser,
-                        horreumPassword,
-                        keycloakConfig.clientId,
-                        sslContext)
+                clientBuilder.register(
+                        new KeycloakClientRequestFilter(
+                                keycloakConfig.url,
+                                keycloakConfig.realm,
+                                horreumUser,
+                                horreumPassword,
+                                keycloakConfig.clientId,
+                                sslContext
+                        )
                 );
             }
 
@@ -183,22 +204,42 @@ public class HorreumClient implements Closeable {
             ResteasyClient client = clientBuilder.build();
             ResteasyWebTarget target = client.target(horreumUrl);
 
-            return new HorreumClient(client,
-                  target.proxyBuilder(ActionService.class).build(),
-                  target.proxyBuilder(AlertingService.class).build(),
-                  target.proxyBuilder(BannerService.class).build(),
-                  target.proxyBuilder(ChangesService.class).build(),
-                  target.proxyBuilder(ConfigService.class).build(),
-                  target.proxyBuilder(DatasetService.class).build(),
-                  target.proxyBuilder(ExperimentService.class).build(),
-                  target.proxyBuilder(NotificationService.class).build(),
-                  target.proxyBuilder(ReportService.class).build(),
-                  new RunServiceExtension(target, target.proxyBuilder(RunService.class).build()),
-                  target.proxyBuilder(SchemaService.class).build(),
-                  target.proxyBuilder(SqlService.class).build(),
-                  target.proxyBuilder(SubscriptionService.class).build(),
-                  target.proxyBuilder(TestService.class).build(),
-                  target.proxyBuilder(UserService.class).build());
+            return new HorreumClient(
+                    client,
+                    target.proxyBuilder(ActionService.class)
+                            .build(),
+                    target.proxyBuilder(AlertingService.class)
+                            .build(),
+                    target.proxyBuilder(BannerService.class)
+                            .build(),
+                    target.proxyBuilder(ChangesService.class)
+                            .build(),
+                    target.proxyBuilder(ConfigService.class)
+                            .build(),
+                    target.proxyBuilder(DatasetService.class)
+                            .build(),
+                    target.proxyBuilder(ExperimentService.class)
+                            .build(),
+                    target.proxyBuilder(NotificationService.class)
+                            .build(),
+                    target.proxyBuilder(ReportService.class)
+                            .build(),
+                    new RunServiceExtension(
+                            target,
+                            target.proxyBuilder(RunService.class)
+                                    .build()
+                    ),
+                    target.proxyBuilder(SchemaService.class)
+                            .build(),
+                    target.proxyBuilder(SqlService.class)
+                            .build(),
+                    target.proxyBuilder(SubscriptionService.class)
+                            .build(),
+                    target.proxyBuilder(TestService.class)
+                            .build(),
+                    target.proxyBuilder(UserService.class)
+                            .build()
+            );
         }
     }
 

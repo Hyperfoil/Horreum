@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 
 public class SchemaMapper {
     public static Schema from(SchemaDAO s) {

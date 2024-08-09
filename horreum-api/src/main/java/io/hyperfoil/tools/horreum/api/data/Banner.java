@@ -1,9 +1,10 @@
 package io.hyperfoil.tools.horreum.api.data;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
+
 import jakarta.validation.constraints.NotNull;
 
-import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Banner {
 
@@ -12,7 +13,7 @@ public class Banner {
     public Instant created;
 
     @NotNull
-    @JsonProperty( required = true )
+    @JsonProperty(required = true)
     public boolean active;
     @NotNull
     @JsonProperty(required = true)

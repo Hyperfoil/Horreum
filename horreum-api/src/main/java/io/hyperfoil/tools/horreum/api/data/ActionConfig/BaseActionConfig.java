@@ -5,7 +5,11 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 public abstract class BaseActionConfig {
 
-    @Schema(type = SchemaType.STRING, required = true, description = "Action type")
+    @Schema(
+            type = SchemaType.STRING,
+            required = true,
+            description = "Action type"
+    )
     public String type;
 
     public BaseActionConfig() {

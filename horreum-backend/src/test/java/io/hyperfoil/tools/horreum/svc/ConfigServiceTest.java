@@ -1,8 +1,16 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.List;
+
+import jakarta.inject.Inject;
+
+import org.junit.jupiter.api.TestInfo;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.hyperfoil.tools.horreum.api.data.datastore.BaseDatastoreConfig;
+
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
 import io.hyperfoil.tools.horreum.api.data.datastore.PostgresDatastoreConfig;
@@ -14,13 +22,6 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.RestAssured;
-import jakarta.inject.Inject;
-import org.junit.Assert;
-import org.junit.jupiter.api.TestInfo;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -33,11 +34,14 @@ public class ConfigServiceTest extends BaseServiceTest {
 
     @org.junit.jupiter.api.Test
     public void getBackends(TestInfo testInfo) {
-        List<?> backends = RestAssured.given().auth().oauth2(getTesterToken())
+        List<?> backends = RestAssured.given()
+                .auth()
+                .oauth2(getTesterToken())
                 .get("/api/config/datastore/".concat(TESTER_ROLES[0]))
                 .then()
                 .statusCode(200)
-                .extract().as(List.class);
+                .extract()
+                .as(List.class);
 
         assertNotNull(backends);
         assertNotEquals(0, backends.size());
@@ -47,11 +51,11 @@ public class ConfigServiceTest extends BaseServiceTest {
     @org.junit.jupiter.api.Test
     public void parseDynamicConfig(TestInfo testInfo) {
         String elasticDatastore = """
-                {   
+                {
                     "name":"Elastic - Default",
-                    "config": { 
-                        "host": "https://localhost:9090", 
-                        "apiKey": "WThBTFJvc0JjSFlETnVzV2MwSE46MjRtem05c2lUX2V3R3dWcXAzT0tIdw==", 
+                    "config": {
+                        "host": "https://localhost:9090",
+                        "apiKey": "WThBTFJvc0JjSFlETnVzV2MwSE46MjRtem05c2lUX2V3R3dWcXAzT0tIdw==",
                         "username": "elastic",
                         "builtIn": false
                     },
@@ -77,11 +81,10 @@ public class ConfigServiceTest extends BaseServiceTest {
         assertTrue(config instanceof ElasticsearchDatastoreConfig);
 
 
-
         String postgresDatastore = """
-                {   
+                {
                     "name":"Postgres - Default",
-                    "config": { 
+                    "config": {
                         "builtIn": true
                     },
                     "type":"POSTGRES",
@@ -109,11 +112,14 @@ public class ConfigServiceTest extends BaseServiceTest {
 
     @org.junit.jupiter.api.Test
     public void checkPrivacyStatement(TestInfo testInfo) {
-        ConfigService.VersionInfo info = RestAssured.given().auth().oauth2(getTesterToken())
+        ConfigService.VersionInfo info = RestAssured.given()
+                .auth()
+                .oauth2(getTesterToken())
                 .get("/api/config/version/")
                 .then()
                 .statusCode(200)
-                .extract().as(ConfigService.VersionInfo.class);
+                .extract()
+                .as(ConfigService.VersionInfo.class);
 
         assertNotNull(info);
         assertEquals("/path/to/privacy/statement/link", info.privacyStatement);

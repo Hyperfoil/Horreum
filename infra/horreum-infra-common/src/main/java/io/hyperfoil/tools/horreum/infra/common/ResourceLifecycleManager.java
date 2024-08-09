@@ -1,10 +1,9 @@
 package io.hyperfoil.tools.horreum.infra.common;
 
-
-import org.testcontainers.containers.Network;
-
 import java.util.Map;
 import java.util.Optional;
+
+import org.testcontainers.containers.Network;
 
 public interface ResourceLifecycleManager {
     Map<String, String> start(Optional<Network> network);
