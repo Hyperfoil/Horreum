@@ -9,6 +9,7 @@ import io.hyperfoil.tools.horreum.entity.user.UserRole;
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.hyperfoil.tools.horreum.svc.user.UserBackEnd;
 import io.quarkus.logging.Log;
+import io.quarkus.runtime.LaunchMode;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -24,8 +25,6 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static io.quarkus.runtime.configuration.ProfileManager.getLaunchMode;
 
 @ApplicationScoped public class SecurityBootstrap {
 
@@ -121,7 +120,7 @@ import static io.quarkus.runtime.configuration.ProfileManager.getLaunchMode;
         if (administrators.isEmpty()) {
             UserService.NewUser user = new UserService.NewUser();
             user.user = new UserService.UserData("", BOOTSTRAP_ACCOUNT, "Bootstrap", "Acount", "horreum@example.com");
-            user.password = providedBootstrapPassword.orElseGet(() -> getLaunchMode().isDevOrTest() ? "secret" : generateRandomPassword(RANDOM_PASSWORD_DEFAULT_LENGTH));
+            user.password = providedBootstrapPassword.orElseGet(() -> LaunchMode.current().isDevOrTest() ? "secret" : generateRandomPassword(RANDOM_PASSWORD_DEFAULT_LENGTH));
 
             // create bootstrap acconut with admin role
             backend.get().createUser(user);
