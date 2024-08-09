@@ -9,6 +9,7 @@ import io.hyperfoil.tools.horreum.entity.user.UserRole;
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.hyperfoil.tools.horreum.svc.user.UserBackEnd;
 import io.quarkus.logging.Log;
+import io.quarkus.runtime.LaunchMode;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -25,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.quarkus.runtime.configuration.ProfileManager.getLaunchMode;
-
 @ApplicationScoped public class SecurityBootstrap {
 
     @ConfigProperty(name = "quarkus.keycloak.admin-client.server-url") Optional<String> keycloakURL;
@@ -39,7 +38,7 @@ import static io.quarkus.runtime.configuration.ProfileManager.getLaunchMode;
     private static final String MIGRATION_PROVIDER = "database";
     private static final String BOOTSTRAP_ACCOUNT = "horreum.bootstrap";
 
-    private static final char[] RANDOM_PASSWRORD_CHARS = ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789").toCharArray();
+    private static final char[] RANDOM_PASSWORD_CHARS = ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789").toCharArray();
     private static final int RANDOM_PASSWORD_DEFAULT_LENGTH = 16;
 
     @Inject RoleManager roleManager;
@@ -115,15 +114,16 @@ import static io.quarkus.runtime.configuration.ProfileManager.getLaunchMode;
      * Create an admin account if there are no accounts in the system.
      * The account should be removed once other accounts are created.
      */
-    public void checkBootstrapAccount() {
+    @WithRoles(extras = BOOTSTRAP_ACCOUNT)
+    @Transactional public void checkBootstrapAccount() {
         // checks the list of administrators. a user cannot remove himself nor create the bootstrap account (restricted namespace)
         List<String> administrators = backend.get().administrators().stream().map(userData -> userData.username).toList();
         if (administrators.isEmpty()) {
             UserService.NewUser user = new UserService.NewUser();
-            user.user = new UserService.UserData("", BOOTSTRAP_ACCOUNT, "Bootstrap", "Acount", "horreum@example.com");
-            user.password = providedBootstrapPassword.orElseGet(() -> getLaunchMode().isDevOrTest() ? "secret" : generateRandomPassword(RANDOM_PASSWORD_DEFAULT_LENGTH));
+            user.user = new UserService.UserData("", BOOTSTRAP_ACCOUNT, "Bootstrap", "Account", "horreum@example.com");
+            user.password = providedBootstrapPassword.orElseGet(() -> LaunchMode.current().isDevOrTest() ? "secret" : generateRandomPassword(RANDOM_PASSWORD_DEFAULT_LENGTH));
 
-            // create bootstrap acconut with admin role
+            // create bootstrap account with admin role
             backend.get().createUser(user);
             backend.get().setPassword(BOOTSTRAP_ACCOUNT, user.password); // KeycloakUserBackend.createUser() creates a temp password, with this call the password is usable
             backend.get().updateAdministrators(List.of(BOOTSTRAP_ACCOUNT));
@@ -131,6 +131,10 @@ import static io.quarkus.runtime.configuration.ProfileManager.getLaunchMode;
             // create dev-team managed by bootstrap
             backend.get().addTeam("dev-team");
             backend.get().updateTeamMembers("dev-team", Map.of(BOOTSTRAP_ACCOUNT, List.of(Roles.MANAGER, Roles.TESTER, Roles.UPLOADER, Roles.VIEWER)));
+
+            // create db entry, if not existent, like in UserService.createLocalUser()
+            UserInfo userInfo = UserInfo.<UserInfo>findByIdOptional(BOOTSTRAP_ACCOUNT).orElse(new UserInfo(BOOTSTRAP_ACCOUNT));
+            userInfo.defaultTeam = "dev-team";
 
             Log.infov("\n>>>\n>>> Created temporary account {0} with password {1}\n>>>", BOOTSTRAP_ACCOUNT, user.password);
         } else if (administrators.size() > 1 && administrators.contains(BOOTSTRAP_ACCOUNT)) {
@@ -140,7 +144,7 @@ import static io.quarkus.runtime.configuration.ProfileManager.getLaunchMode;
 
     public static String generateRandomPassword(int lenght) {
         StringBuilder builder = new StringBuilder(lenght);
-        new SecureRandom().ints(lenght, 0, RANDOM_PASSWRORD_CHARS.length).mapToObj(i -> RANDOM_PASSWRORD_CHARS[i]).forEach(builder::append);
+        new SecureRandom().ints(lenght, 0, RANDOM_PASSWORD_CHARS.length).mapToObj(i -> RANDOM_PASSWORD_CHARS[i]).forEach(builder::append);
         return builder.toString();
     }
 
