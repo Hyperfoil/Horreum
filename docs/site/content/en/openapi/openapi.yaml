@@ -36,7 +36,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Datastore'
+              $ref: "#/components/schemas/Datastore"
       responses:
         "200":
           description: The ID of the updated Datastore
@@ -54,7 +54,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Datastore'
+              $ref: "#/components/schemas/Datastore"
       responses:
         "200":
           description: The ID for the new Datastore
@@ -96,7 +96,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DatastoreTestResponse'
+                $ref: "#/components/schemas/DatastoreTestResponse"
   /api/config/datastore/{team}:
     get:
       tags:
@@ -119,7 +119,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Datastore'
+                  $ref: "#/components/schemas/Datastore"
   /api/config/keycloak:
     get:
       tags:
@@ -133,7 +133,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KeycloakConfig'
+                $ref: "#/components/schemas/KeycloakConfig"
   /api/config/version:
     get:
       tags:
@@ -146,7 +146,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VersionInfo'
+                $ref: "#/components/schemas/VersionInfo"
   /api/dataset/bySchema:
     get:
       tags:
@@ -186,7 +186,7 @@ paths:
         in: query
         description: Sort direction
         schema:
-          $ref: '#/components/schemas/SortDirection'
+          $ref: "#/components/schemas/SortDirection"
         example: Ascending
       responses:
         "200":
@@ -194,7 +194,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DatasetList'
+                $ref: "#/components/schemas/DatasetList"
   /api/dataset/list/{testId}:
     get:
       tags:
@@ -241,7 +241,7 @@ paths:
         in: query
         description: Sort direction
         schema:
-          $ref: '#/components/schemas/SortDirection'
+          $ref: "#/components/schemas/SortDirection"
         example: Ascending
       - name: viewId
         in: query
@@ -256,7 +256,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DatasetList'
+                $ref: "#/components/schemas/DatasetList"
   /api/dataset/{datasetId}/labelValues:
     get:
       tags:
@@ -277,7 +277,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LabelValue'
+                  $ref: "#/components/schemas/LabelValue"
   /api/dataset/{datasetId}/previewLabel:
     post:
       tags:
@@ -294,7 +294,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Label'
+              $ref: "#/components/schemas/Label"
         required: true
       responses:
         "200":
@@ -302,7 +302,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LabelPreview'
+                $ref: "#/components/schemas/LabelPreview"
   /api/dataset/{datasetId}/summary:
     get:
       tags:
@@ -326,7 +326,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DatasetSummary'
+                $ref: "#/components/schemas/DatasetSummary"
   /api/dataset/{id}:
     get:
       tags:
@@ -352,7 +352,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Dataset'
+                $ref: "#/components/schemas/Dataset"
   /api/experiment/models:
     get:
       tags:
@@ -367,7 +367,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ConditionConfig'
+                  $ref: "#/components/schemas/ConditionConfig"
   /api/experiment/run:
     get:
       tags:
@@ -390,7 +390,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ExperimentResult'
+                  $ref: "#/components/schemas/ExperimentResult"
   /api/experiment/{testId}/profiles:
     get:
       tags:
@@ -414,7 +414,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ExperimentProfile'
+                  $ref: "#/components/schemas/ExperimentProfile"
     post:
       tags:
       - Experiment
@@ -433,7 +433,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExperimentProfile'
+              $ref: "#/components/schemas/ExperimentProfile"
         required: true
       responses:
         "200":
@@ -530,7 +530,7 @@ paths:
         in: query
         description: Sort direction
         schema:
-          $ref: '#/components/schemas/SortDirection'
+          $ref: "#/components/schemas/SortDirection"
         example: Ascending
       responses:
         "200":
@@ -538,7 +538,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RunsSummary'
+                $ref: "#/components/schemas/RunsSummary"
   /api/run/count:
     get:
       tags:
@@ -560,7 +560,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RunCount'
+                $ref: "#/components/schemas/RunCount"
   /api/run/data:
     post:
       tags:
@@ -607,7 +607,7 @@ paths:
         in: query
         description: New Access level
         schema:
-          $ref: '#/components/schemas/Access'
+          $ref: "#/components/schemas/Access"
         example: 0
       - name: token
         in: query
@@ -649,7 +649,7 @@ paths:
               jobFullName: TESTING/RHBA/_upstream/decisions/8.x/performance/nightly/upstream-perf-bre-datastructures
               scheduleTime: 1698020160756
               jobDisplayName: upstream-perf-bre-datastructures
-              buildDisplayName: '#125'
+              buildDisplayName: "#125"
       responses:
         "200":
           description: id of the newly generated run
@@ -718,7 +718,7 @@ paths:
         in: query
         description: Sort direction
         schema:
-          $ref: '#/components/schemas/SortDirection'
+          $ref: "#/components/schemas/SortDirection"
         example: Ascending
       responses:
         "200":
@@ -726,7 +726,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RunsSummary'
+                $ref: "#/components/schemas/RunsSummary"
   /api/run/list/{testId}:
     get:
       tags:
@@ -773,7 +773,7 @@ paths:
         in: query
         description: Sort direction
         schema:
-          $ref: '#/components/schemas/SortDirection'
+          $ref: "#/components/schemas/SortDirection"
         example: Ascending
       responses:
         "200":
@@ -781,7 +781,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RunsSummary'
+                $ref: "#/components/schemas/RunsSummary"
   /api/run/recalculateAll:
     post:
       tags:
@@ -827,7 +827,7 @@ paths:
         in: query
         description: New Access level
         schema:
-          $ref: '#/components/schemas/Access'
+          $ref: "#/components/schemas/Access"
         example: 0
       - name: token
         in: query
@@ -839,7 +839,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Run'
+              $ref: "#/components/schemas/Run"
         required: true
       responses:
         "200":
@@ -875,7 +875,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RunExtended'
+                $ref: "#/components/schemas/RunExtended"
   /api/run/{id}/data:
     get:
       tags:
@@ -1058,7 +1058,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ExportedLabelValues'
+                  $ref: "#/components/schemas/ExportedLabelValues"
               example: "[ { \"datasetId\" : 101, \"runId\": 201, \"values\" : { [labelName]\
                 \ : labelValue } },...]"
   /api/run/{id}/metadata:
@@ -1214,7 +1214,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RunSummary'
+                $ref: "#/components/schemas/RunSummary"
   /api/run/{id}/trash:
     post:
       tags:
@@ -1266,7 +1266,7 @@ paths:
         description: New Access level
         required: true
         schema:
-          $ref: '#/components/schemas/Access'
+          $ref: "#/components/schemas/Access"
         example: 0
       responses:
         "201":
@@ -1302,7 +1302,7 @@ paths:
         in: query
         description: Sort direction
         schema:
-          $ref: '#/components/schemas/SortDirection'
+          $ref: "#/components/schemas/SortDirection"
         example: Ascending
       - name: roles
         in: query
@@ -1316,7 +1316,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SchemaQueryResult'
+                $ref: "#/components/schemas/SchemaQueryResult"
     post:
       tags:
       - Schema
@@ -1326,7 +1326,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Schema'
+              $ref: "#/components/schemas/Schema"
       responses:
         "200":
           description: Import a new Schema
@@ -1358,7 +1358,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LabelInfo'
+                  $ref: "#/components/schemas/LabelInfo"
   /api/schema/allTransformers:
     get:
       tags:
@@ -1373,7 +1373,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TransformerInfo'
+                  $ref: "#/components/schemas/TransformerInfo"
   /api/schema/descriptors:
     get:
       tags:
@@ -1398,7 +1398,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/SchemaDescriptor'
+                  $ref: "#/components/schemas/SchemaDescriptor"
   /api/schema/findUsages:
     get:
       tags:
@@ -1421,7 +1421,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LabelLocation'
+                  $ref: "#/components/schemas/LabelLocation"
   /api/schema/idByUri/{uri}:
     get:
       tags:
@@ -1456,7 +1456,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SchemaExport'
+              $ref: "#/components/schemas/SchemaExport"
         required: true
       responses:
         "201":
@@ -1492,7 +1492,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Schema'
+                $ref: "#/components/schemas/Schema"
     delete:
       tags:
       - Schema
@@ -1549,7 +1549,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SchemaExport'
+                $ref: "#/components/schemas/SchemaExport"
   /api/schema/{id}/resetToken:
     post:
       tags:
@@ -1600,7 +1600,7 @@ paths:
         description: New Access level
         required: true
         schema:
-          $ref: '#/components/schemas/Access'
+          $ref: "#/components/schemas/Access"
         example: 0
       responses:
         "201":
@@ -1628,7 +1628,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Label'
+                  $ref: "#/components/schemas/Label"
     post:
       tags:
       - Schema
@@ -1647,7 +1647,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Label'
+              $ref: "#/components/schemas/Label"
         required: true
       responses:
         "200":
@@ -1706,7 +1706,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Transformer'
+                  $ref: "#/components/schemas/Transformer"
     post:
       tags:
       - Schema
@@ -1725,7 +1725,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Transformer'
+              $ref: "#/components/schemas/Transformer"
         required: true
       responses:
         "200":
@@ -1800,7 +1800,7 @@ paths:
         description: Sort direction
         schema:
           allOf:
-          - $ref: '#/components/schemas/SortDirection'
+          - $ref: "#/components/schemas/SortDirection"
           - default: Ascending
         example: Ascending
       responses:
@@ -1809,7 +1809,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TestQueryResult'
+                $ref: "#/components/schemas/TestQueryResult"
     post:
       tags:
       - Test
@@ -1819,7 +1819,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Test'
+              $ref: "#/components/schemas/Test"
         required: true
       responses:
         "200":
@@ -1827,7 +1827,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Test'
+                $ref: "#/components/schemas/Test"
   /api/test/byName/{name}:
     get:
       tags:
@@ -1848,7 +1848,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Test'
+                $ref: "#/components/schemas/Test"
   /api/test/folders:
     get:
       tags:
@@ -1885,7 +1885,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TestExport'
+              $ref: "#/components/schemas/TestExport"
         required: true
       responses:
         "201":
@@ -1929,7 +1929,7 @@ paths:
         description: Sort direction
         schema:
           allOf:
-          - $ref: '#/components/schemas/SortDirection'
+          - $ref: "#/components/schemas/SortDirection"
           - default: Ascending
         example: Ascending
       - name: name
@@ -1944,7 +1944,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TestListing'
+                $ref: "#/components/schemas/TestListing"
   /api/test/{id}:
     get:
       tags:
@@ -1968,7 +1968,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Test'
+                $ref: "#/components/schemas/Test"
     delete:
       tags:
       - Test
@@ -2004,7 +2004,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TestToken'
+              $ref: "#/components/schemas/TestToken"
       responses:
         "200":
           description: OK
@@ -2031,7 +2031,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TestExport'
+                $ref: "#/components/schemas/TestExport"
   /api/test/{id}/filteringLabelValues:
     get:
       tags:
@@ -2078,7 +2078,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Fingerprints'
+                  $ref: "#/components/schemas/Fingerprints"
   /api/test/{id}/labelValues:
     get:
       tags:
@@ -2208,7 +2208,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ExportedLabelValues'
+                  $ref: "#/components/schemas/ExportedLabelValues"
   /api/test/{id}/move:
     post:
       tags:
@@ -2280,7 +2280,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RecalculationStatus'
+                $ref: "#/components/schemas/RecalculationStatus"
     post:
       tags:
       - Test
@@ -2347,7 +2347,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TestToken'
+                  $ref: "#/components/schemas/TestToken"
   /api/test/{id}/transformers:
     post:
       tags:
@@ -2402,7 +2402,7 @@ paths:
         description: New Access level for the Test
         required: true
         schema:
-          $ref: '#/components/schemas/Access'
+          $ref: "#/components/schemas/Access"
         example: 0
       responses:
         "201":
@@ -2440,21 +2440,21 @@ components:
         config:
           type: object
           oneOf:
-          - $ref: '#/components/schemas/GithubIssueCommentActionConfig'
-          - $ref: '#/components/schemas/GithubIssueCreateActionConfig'
-          - $ref: '#/components/schemas/HttpActionConfig'
-          - $ref: '#/components/schemas/SlackChannelMessageActionConfig'
+          - $ref: "#/components/schemas/GithubIssueCommentActionConfig"
+          - $ref: "#/components/schemas/GithubIssueCreateActionConfig"
+          - $ref: "#/components/schemas/HttpActionConfig"
+          - $ref: "#/components/schemas/SlackChannelMessageActionConfig"
           discriminator:
             propertyName: type
             mapping:
-              github-issue-comment: '#/components/schemas/GithubIssueCommentActionConfig'
-              github-issue-create: '#/components/schemas/GithubIssueCreateActionConfig'
-              http: '#/components/schemas/HttpActionConfig'
-              slack-channel-message: '#/components/schemas/SlackChannelMessageActionConfig'
+              github-issue-comment: "#/components/schemas/GithubIssueCommentActionConfig"
+              github-issue-create: "#/components/schemas/GithubIssueCreateActionConfig"
+              http: "#/components/schemas/HttpActionConfig"
+              slack-channel-message: "#/components/schemas/SlackChannelMessageActionConfig"
         secrets:
           type: object
           allOf:
-          - $ref: '#/components/schemas/Secret'
+          - $ref: "#/components/schemas/Secret"
         testId:
           format: int32
           type: integer
@@ -2469,7 +2469,7 @@ components:
       - event
       type: object
       allOf:
-      - $ref: '#/components/schemas/PersistentLog'
+      - $ref: "#/components/schemas/PersistentLog"
       properties:
         testId:
           format: int32
@@ -2508,15 +2508,15 @@ components:
         config:
           type: object
           oneOf:
-          - $ref: '#/components/schemas/RelativeDifferenceDetectionConfig'
-          - $ref: '#/components/schemas/FixedThresholdDetectionConfig'
-          - $ref: '#/components/schemas/EDivisiveDetectionConfig'
+          - $ref: "#/components/schemas/RelativeDifferenceDetectionConfig"
+          - $ref: "#/components/schemas/FixedThresholdDetectionConfig"
+          - $ref: "#/components/schemas/EDivisiveDetectionConfig"
           discriminator:
             propertyName: model
             mapping:
-              relativeDifference: '#/components/schemas/RelativeDifferenceDetectionConfig'
-              fixedThreshold: '#/components/schemas/FixedThresholdDetectionConfig'
-              eDivisive: '#/components/schemas/EDivisiveDetectionConfig'
+              relativeDifference: "#/components/schemas/RelativeDifferenceDetectionConfig"
+              fixedThreshold: "#/components/schemas/FixedThresholdDetectionConfig"
+              eDivisive: "#/components/schemas/EDivisiveDetectionConfig"
     ChangeDetectionModelType:
       description: Type of Change Detection Model
       enum:
@@ -2537,7 +2537,7 @@ components:
           - WORSE
           type: string
           allOf:
-          - $ref: '#/components/schemas/BetterOrWorse'
+          - $ref: "#/components/schemas/BetterOrWorse"
         experimentValue:
           format: double
           description: Experiment value
@@ -2610,7 +2610,7 @@ components:
           description: A list of UI components for dynamically building the UI components
           type: array
           items:
-            $ref: '#/components/schemas/ConditionComponent'
+            $ref: "#/components/schemas/ConditionComponent"
         defaults:
           description: A dictionary of UI default configuration items for dynamically
             building the UI components
@@ -2625,8 +2625,8 @@ components:
       - ordinal
       type: object
       allOf:
-      - $ref: '#/components/schemas/ProtectedType'
-      - $ref: '#/components/schemas/ProtectedTimeType'
+      - $ref: "#/components/schemas/ProtectedType"
+      - $ref: "#/components/schemas/ProtectedTimeType"
       properties:
         id:
           format: int32
@@ -2655,7 +2655,7 @@ components:
           description: List of Validation Errors
           type: array
           items:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: "#/components/schemas/ValidationError"
         runId:
           format: int32
           description: Run ID that Dataset relates to
@@ -2707,7 +2707,7 @@ components:
             available.
           type: array
           items:
-            $ref: '#/components/schemas/DatasetSummary'
+            $ref: "#/components/schemas/DatasetSummary"
     DatasetLog:
       description: Dataset Log
       required:
@@ -2718,7 +2718,7 @@ components:
       - datasetOrdinal
       type: object
       allOf:
-      - $ref: '#/components/schemas/PersistentLog'
+      - $ref: "#/components/schemas/PersistentLog"
       properties:
         source:
           type: string
@@ -2744,7 +2744,7 @@ components:
       - schemas
       type: object
       allOf:
-      - $ref: '#/components/schemas/ProtectedTimeType'
+      - $ref: "#/components/schemas/ProtectedTimeType"
       properties:
         id:
           format: int32
@@ -2779,18 +2779,18 @@ components:
             component for this dataset
           type: object
           allOf:
-          - $ref: '#/components/schemas/IndexedLabelValueMap'
+          - $ref: "#/components/schemas/IndexedLabelValueMap"
           example: "{ \"[view_component_id]\": { \"[labelName]\": labelValue} }"
         schemas:
           description: List of Schema usages
           type: array
           items:
-            $ref: '#/components/schemas/SchemaUsage'
+            $ref: "#/components/schemas/SchemaUsage"
         validationErrors:
           description: List of Validation Errors
           type: array
           items:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: "#/components/schemas/ValidationError"
     Datastore:
       description: Type of backend datastore
       required:
@@ -2812,7 +2812,7 @@ components:
           - PRIVATE
           type: string
           allOf:
-          - $ref: '#/components/schemas/Access'
+          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -2837,8 +2837,8 @@ components:
         config:
           type: object
           oneOf:
-          - $ref: '#/components/schemas/ElasticsearchDatastoreConfig'
-          - $ref: '#/components/schemas/PostgresDatastoreConfig'
+          - $ref: "#/components/schemas/ElasticsearchDatastoreConfig"
+          - $ref: "#/components/schemas/PostgresDatastoreConfig"
         type:
           description: Type of backend datastore
           enum:
@@ -3006,7 +3006,7 @@ components:
             evaluation
           type: array
           items:
-            $ref: '#/components/schemas/ExperimentComparison'
+            $ref: "#/components/schemas/ExperimentComparison"
         extraLabels:
           description: These labels are not used by Horreum but are added to the result
             event and therefore can be used e.g. when firing an Action.
@@ -3021,27 +3021,27 @@ components:
           description: Experiment profile that results relates to
           type: object
           allOf:
-          - $ref: '#/components/schemas/ExperimentProfile'
+          - $ref: "#/components/schemas/ExperimentProfile"
         logs:
           description: A list of log statements recorded while Experiment was evaluated
           type: array
           items:
-            $ref: '#/components/schemas/DatasetLog'
+            $ref: "#/components/schemas/DatasetLog"
         datasetInfo:
           description: Dataset Info about dataset used for experiment
           type: object
           allOf:
-          - $ref: '#/components/schemas/DatasetInfo'
+          - $ref: "#/components/schemas/DatasetInfo"
         baseline:
           description: A list of Dataset Info for experiment baseline(s)
           type: array
           items:
-            $ref: '#/components/schemas/DatasetInfo'
+            $ref: "#/components/schemas/DatasetInfo"
         results:
           description: A Map of all comparisons and results evaluated during an Experiment
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/ComparisonResult'
+            $ref: "#/components/schemas/ComparisonResult"
         extraLabels:
           type: string
         notify:
@@ -3055,7 +3055,7 @@ components:
       type: object
       properties:
         values:
-          $ref: '#/components/schemas/LabelValueMap'
+          $ref: "#/components/schemas/LabelValueMap"
         runId:
           format: int32
           description: the run id that created the dataset
@@ -3123,7 +3123,7 @@ components:
         values:
           type: array
           items:
-            $ref: '#/components/schemas/FingerprintValue'
+            $ref: "#/components/schemas/FingerprintValue"
     FixThresholdConfig:
       required:
       - value
@@ -3162,12 +3162,12 @@ components:
           description: Lower bound for acceptable datapoint values
           type: object
           allOf:
-          - $ref: '#/components/schemas/FixThresholdConfig'
+          - $ref: "#/components/schemas/FixThresholdConfig"
         max:
           description: Upper bound for acceptable datapoint values
           type: object
           allOf:
-          - $ref: '#/components/schemas/FixThresholdConfig'
+          - $ref: "#/components/schemas/FixThresholdConfig"
     GithubIssueCommentActionConfig:
       required:
       - type
@@ -3235,7 +3235,7 @@ components:
     IndexedLabelValueMap:
       type: object
       additionalProperties:
-        $ref: '#/components/schemas/LabelValueMap'
+        $ref: "#/components/schemas/LabelValueMap"
     KeycloakConfig:
       type: object
       properties:
@@ -3263,7 +3263,7 @@ components:
       - schemaId
       type: object
       allOf:
-      - $ref: '#/components/schemas/ProtectedType'
+      - $ref: "#/components/schemas/ProtectedType"
       properties:
         id:
           format: int32
@@ -3280,7 +3280,7 @@ components:
             \ Function"
           type: array
           items:
-            $ref: '#/components/schemas/Extractor'
+            $ref: "#/components/schemas/Extractor"
         function:
           description: A Combination Function that defines how values from Extractors
             are combined to produce a Label Value
@@ -3305,11 +3305,11 @@ components:
     LabelInFingerprint:
       type: object
       allOf:
-      - $ref: '#/components/schemas/LabelLocation'
+      - $ref: "#/components/schemas/LabelLocation"
     LabelInReport:
       type: object
       allOf:
-      - $ref: '#/components/schemas/LabelLocation'
+      - $ref: "#/components/schemas/LabelLocation"
       properties:
         configId:
           format: int32
@@ -3323,7 +3323,7 @@ components:
     LabelInRule:
       type: object
       allOf:
-      - $ref: '#/components/schemas/LabelLocation'
+      - $ref: "#/components/schemas/LabelLocation"
       properties:
         ruleId:
           format: int32
@@ -3333,7 +3333,7 @@ components:
     LabelInVariable:
       type: object
       allOf:
-      - $ref: '#/components/schemas/LabelLocation'
+      - $ref: "#/components/schemas/LabelLocation"
       properties:
         variableId:
           format: int32
@@ -3343,7 +3343,7 @@ components:
     LabelInView:
       type: object
       allOf:
-      - $ref: '#/components/schemas/LabelLocation'
+      - $ref: "#/components/schemas/LabelLocation"
       properties:
         viewId:
           format: int32
@@ -3379,7 +3379,7 @@ components:
           description: List of schemas where label is referenced
           type: array
           items:
-            $ref: '#/components/schemas/SchemaDescriptor'
+            $ref: "#/components/schemas/SchemaDescriptor"
     LabelLocation:
       type: object
       properties:
@@ -3431,7 +3431,7 @@ components:
           description: Summary description of Schema
           type: object
           allOf:
-          - $ref: '#/components/schemas/SchemaDescriptor'
+          - $ref: "#/components/schemas/SchemaDescriptor"
         value:
           description: "Value value extracted from Dataset. This can be a scalar,\
             \ array or JSON object"
@@ -3516,7 +3516,7 @@ components:
           - PRIVATE
           type: string
           allOf:
-          - $ref: '#/components/schemas/Access'
+          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -3548,7 +3548,7 @@ components:
           - PRIVATE
           type: string
           allOf:
-          - $ref: '#/components/schemas/Access'
+          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -3657,7 +3657,7 @@ components:
       - reportId
       type: object
       allOf:
-      - $ref: '#/components/schemas/PersistentLog'
+      - $ref: "#/components/schemas/PersistentLog"
       properties:
         reportId:
           format: int32
@@ -3683,7 +3683,7 @@ components:
           - PRIVATE
           type: string
           allOf:
-          - $ref: '#/components/schemas/Access'
+          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -3728,12 +3728,12 @@ components:
           description: Collection of Datasets derived from Run payload
           type: array
           items:
-            $ref: '#/components/schemas/Dataset'
+            $ref: "#/components/schemas/Dataset"
         validationErrors:
           description: Collection of Validation Errors in Run payload
           type: array
           items:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: "#/components/schemas/ValidationError"
     RunCount:
       required:
       - total
@@ -3780,7 +3780,7 @@ components:
           - PRIVATE
           type: string
           allOf:
-          - $ref: '#/components/schemas/Access'
+          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -3825,12 +3825,12 @@ components:
           description: Collection of Validation Errors in Run payload
           type: array
           items:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: "#/components/schemas/ValidationError"
         schemas:
           description: List of Schema Usages
           type: array
           items:
-            $ref: '#/components/schemas/SchemaUsage'
+            $ref: "#/components/schemas/SchemaUsage"
         testname:
           description: Test name run references
           type: string
@@ -3856,7 +3856,7 @@ components:
       - datasets
       type: object
       allOf:
-      - $ref: '#/components/schemas/ProtectedTimeType'
+      - $ref: "#/components/schemas/ProtectedTimeType"
       properties:
         id:
           format: int32
@@ -3890,7 +3890,7 @@ components:
           description: List of all Schema Usages for Run
           type: array
           items:
-            $ref: '#/components/schemas/SchemaUsage'
+            $ref: "#/components/schemas/SchemaUsage"
         datasets:
           description: Array of datasets ids
           type: array
@@ -3905,7 +3905,7 @@ components:
           description: Array of validation errors
           type: array
           items:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: "#/components/schemas/ValidationError"
     RunsSummary:
       required:
       - total
@@ -3921,7 +3921,7 @@ components:
           description: List of Run Summaries
           type: array
           items:
-            $ref: '#/components/schemas/RunSummary'
+            $ref: "#/components/schemas/RunSummary"
     Schema:
       description: Data object that describes the schema definition for a test
       required:
@@ -3930,7 +3930,7 @@ components:
       - name
       type: object
       allOf:
-      - $ref: '#/components/schemas/ProtectedType'
+      - $ref: "#/components/schemas/ProtectedType"
       properties:
         id:
           format: int32
@@ -3985,18 +3985,18 @@ components:
         operations.
       type: object
       allOf:
-      - $ref: '#/components/schemas/Schema'
+      - $ref: "#/components/schemas/Schema"
       properties:
         labels:
           description: Array of Labels associated with schema
           type: array
           items:
-            $ref: '#/components/schemas/Label'
+            $ref: "#/components/schemas/Label"
         transformers:
           description: Array of Transformers associated with schema
           type: array
           items:
-            $ref: '#/components/schemas/Transformer'
+            $ref: "#/components/schemas/Transformer"
     SchemaQueryResult:
       required:
       - schemas
@@ -4007,7 +4007,7 @@ components:
           description: Array of Schemas
           type: array
           items:
-            $ref: '#/components/schemas/Schema'
+            $ref: "#/components/schemas/Schema"
         count:
           format: int64
           description: Count of available Schemas. This is a count of Schemas that
@@ -4107,7 +4107,7 @@ components:
           - components
           type: object
           allOf:
-          - $ref: '#/components/schemas/TableReportConfig'
+          - $ref: "#/components/schemas/TableReportConfig"
           properties:
             id:
               format: int32
@@ -4115,7 +4115,7 @@ components:
             title:
               type: string
             test:
-              $ref: '#/components/schemas/Test'
+              $ref: "#/components/schemas/Test"
             filterLabels:
               description: ArrayNode of filter labels
               type: array
@@ -4256,7 +4256,7 @@ components:
             - reportId
             type: object
             allOf:
-            - $ref: '#/components/schemas/PersistentLog'
+            - $ref: "#/components/schemas/PersistentLog"
             properties:
               reportId:
                 format: int32
@@ -4276,7 +4276,7 @@ components:
         title:
           type: string
         test:
-          $ref: '#/components/schemas/Test'
+          $ref: "#/components/schemas/Test"
         filterLabels:
           description: ArrayNode of filter labels
           type: array
@@ -4388,7 +4388,7 @@ components:
       - notificationsEnabled
       type: object
       allOf:
-      - $ref: '#/components/schemas/ProtectedType'
+      - $ref: "#/components/schemas/ProtectedType"
       properties:
         id:
           format: int32
@@ -4417,7 +4417,7 @@ components:
           description: Array of API tokens associated with test
           type: array
           items:
-            $ref: '#/components/schemas/TestToken'
+            $ref: "#/components/schemas/TestToken"
         timelineLabels:
           description: List of label names that are used for determining metric to
             use as the time series
@@ -4453,7 +4453,7 @@ components:
           description: Array for transformers defined for the Test
           type: array
           items:
-            $ref: '#/components/schemas/Transformer'
+            $ref: "#/components/schemas/Transformer"
         notificationsEnabled:
           description: Are notifications enabled for the test
           type: boolean
@@ -4463,38 +4463,38 @@ components:
         operations.
       type: object
       allOf:
-      - $ref: '#/components/schemas/Test'
+      - $ref: "#/components/schemas/Test"
       properties:
         variables:
           description: Array of Variables associated with test
           type: array
           items:
-            $ref: '#/components/schemas/Variable'
+            $ref: "#/components/schemas/Variable"
         missingDataRules:
           description: Array of MissingDataRules associated with test
           type: array
           items:
-            $ref: '#/components/schemas/MissingDataRule'
+            $ref: "#/components/schemas/MissingDataRule"
         experiments:
           description: Array of ExperimentProfiles associated with test
           type: array
           items:
-            $ref: '#/components/schemas/ExperimentProfile'
+            $ref: "#/components/schemas/ExperimentProfile"
         actions:
           description: Array of Actions associated with test
           type: array
           items:
-            $ref: '#/components/schemas/Action'
+            $ref: "#/components/schemas/Action"
         subscriptions:
           description: Watcher object associated with test
           type: object
           allOf:
-          - $ref: '#/components/schemas/Watch'
+          - $ref: "#/components/schemas/Watch"
         datastore:
           description: Datastore associated with test
           type: object
           allOf:
-          - $ref: '#/components/schemas/Datastore'
+          - $ref: "#/components/schemas/Datastore"
     TestListing:
       required:
       - tests
@@ -4505,7 +4505,7 @@ components:
           description: Array of Test Summaries
           type: array
           items:
-            $ref: '#/components/schemas/TestSummary'
+            $ref: "#/components/schemas/TestSummary"
         count:
           format: int64
           description: Number of tests when pagination is ignored
@@ -4520,7 +4520,7 @@ components:
           description: Array of Tests
           type: array
           items:
-            $ref: '#/components/schemas/Test'
+            $ref: "#/components/schemas/Test"
         count:
           format: int64
           description: Count of available tests. This is a count of tests that the
@@ -4534,7 +4534,7 @@ components:
       - datastoreId
       type: object
       allOf:
-      - $ref: '#/components/schemas/ProtectedType'
+      - $ref: "#/components/schemas/ProtectedType"
       properties:
         id:
           format: int32
@@ -4643,7 +4643,7 @@ components:
       - schemaName
       type: object
       allOf:
-      - $ref: '#/components/schemas/ProtectedType'
+      - $ref: "#/components/schemas/ProtectedType"
       properties:
         id:
           format: int32
@@ -4670,7 +4670,7 @@ components:
             new Dataset JSON document
           type: array
           items:
-            $ref: '#/components/schemas/Extractor'
+            $ref: "#/components/schemas/Extractor"
         function:
           type: string
         schemaId:
@@ -4732,7 +4732,7 @@ components:
           description: Validation Error Details
           type: object
           allOf:
-          - $ref: '#/components/schemas/ErrorDetails'
+          - $ref: "#/components/schemas/ErrorDetails"
     Variable:
       required:
       - id
@@ -4765,7 +4765,7 @@ components:
         changeDetection:
           type: array
           items:
-            $ref: '#/components/schemas/ChangeDetection'
+            $ref: "#/components/schemas/ChangeDetection"
     VersionInfo:
       required:
       - version
