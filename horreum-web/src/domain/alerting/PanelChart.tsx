@@ -163,7 +163,7 @@ export default function PanelChart({
                         value = dp[0]
                     }
                 }
-                if (value) {
+                if (value != undefined) {
                     return (
                         <ReferenceDot
                             key={a.changeId}
