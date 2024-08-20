@@ -131,9 +131,11 @@ public class KeycloakResource implements ResourceLifecycleManager {
         boolean https = keycloakContainer.getExposedPorts().contains(8443);
         String mappedPort = keycloakContainer.getMappedPort(https ? 8443 : 8080).toString();
         String keycloakHost = String.format(https ? "https://%s:%s" : "http://%s:%s", keycloakContainer.getHost(), mappedPort);
+        System.setProperty("keycloak.container.port", mappedPort);
 
         return Map.of(
                 "keycloak.host", keycloakHost,
+                "keycloak.container.port", mappedPort,
                 "keycloak.admin.url", keycloakHost.concat("/realms/master/protocol/openid-connect/token"),
                 "quarkus.oidc.auth-server-url", keycloakHost.concat("/auth/realms/horreum")
         );

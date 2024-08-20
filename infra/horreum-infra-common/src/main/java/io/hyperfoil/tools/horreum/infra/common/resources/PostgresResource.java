@@ -124,14 +124,15 @@ public class PostgresResource implements ResourceLifecycleManager {
             }
         }
         String postgresContainerName = postgresContainer.getContainerName().replaceAll("/", "");
-        Integer port = postgresContainer.getMappedPort(5432);
+        String mappedPort = postgresContainer.getMappedPort(5432).toString();
         String jdbcUrl = inContainer ? postgresContainer.getJdbcUrl()
                 .replaceAll("localhost", networkAlias)
-                .replaceAll(port.toString(), "5432") : postgresContainer.getJdbcUrl();
+                .replaceAll(mappedPort, "5432") : postgresContainer.getJdbcUrl();
+        System.setProperty("postgres.container.port", mappedPort);
 
         return Map.of(
                 "postgres.container.name", postgresContainerName,
-                "postgres.container.port", port.toString(),
+                "postgres.container.port", mappedPort,
                 "quarkus.datasource.jdbc.url", postgresContainer.getJdbcUrl(),
                 "quarkus.datasource.migration.jdbc.url", postgresContainer.getJdbcUrl(),
                 "quarkus.datasource.jdbc.url.internal", jdbcUrl
