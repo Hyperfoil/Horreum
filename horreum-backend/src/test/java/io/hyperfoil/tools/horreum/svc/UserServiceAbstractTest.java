@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static io.hyperfoil.tools.horreum.api.internal.services.UserService.KeyType.USER;
+import static io.hyperfoil.tools.horreum.svc.UserServiceImpl.DEFAULT_API_KEY_ACTIVE_DAYS;
 import static io.restassured.RestAssured.given;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
@@ -9,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,8 +26,10 @@ import jakarta.ws.rs.core.Response;
 
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.entity.user.UserApiKey;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.server.SecurityBootstrap;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -34,6 +39,7 @@ import io.quarkus.security.UnauthorizedException;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.runtime.QuarkusPrincipal;
 import io.quarkus.security.runtime.QuarkusSecurityIdentity;
+import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.security.TestIdentityAssociation;
 import io.quarkus.test.security.TestSecurity;
 
@@ -55,6 +61,9 @@ public abstract class UserServiceAbstractTest {
 
     @Inject
     SecurityBootstrap securitiyBootstrap;
+
+    @Inject
+    TimeService timeService;
 
     /**
      * Runs a section of a test under a different user
@@ -553,5 +562,86 @@ public abstract class UserServiceAbstractTest {
         assertTrue(
                 userService.administrators().stream().map(userData -> userData.username).anyMatch("horreum.bootstrap"::equals),
                 "Bootstrap account missing");
+    }
+
+    @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
+    @Test
+    void apiKeys() {
+        String testTeam = "apikeys-team", apiUser = "api-user";
+        userService.addTeam(testTeam);
+
+        // add a user to the team
+        UserService.NewUser user = new UserService.NewUser();
+        user.user = new UserService.UserData("", apiUser, "API", "User", "api@horreum.io");
+        user.password = "whatever";
+        user.team = testTeam;
+        user.roles = List.of(Roles.MANAGER);
+        userService.createUser(user);
+
+        overrideTestSecurity(apiUser, Set.of(Roles.MANAGER, testTeam.substring(0, testTeam.length() - 4) + Roles.MANAGER),
+                () -> {
+                    // notification mock
+                    NotificationServiceImpl notificationService = Mockito.mock(NotificationServiceImpl.class);
+                    List<UserApiKey> notifications = Collections.synchronizedList(new ArrayList<>());
+                    Mockito.doAnswer(invocation -> {
+                        notifications.add(invocation.getArgument(0));
+                        return null;
+                    }).when(notificationService).notifyApiKeyExpiration(Mockito.any(), Mockito.anyLong());
+                    QuarkusMock.installMockForType(notificationService, NotificationServiceImpl.class);
+
+                    // empty state
+                    assertTrue(userService.apiKeys().isEmpty());
+
+                    // create key
+                    String key = userService.newApiKey(new UserService.ApiKeyRequest("Test key", USER));
+                    assertFalse(key.length() < 32); // key should be big enough
+                    assertTrue(UserApiKey.findOptional(key).isPresent()); // is persisted
+
+                    // one key
+                    List<UserService.ApiKeyResponse> keys = userService.apiKeys();
+                    assertEquals(1, keys.size());
+                    assertEquals(DEFAULT_API_KEY_ACTIVE_DAYS, keys.get(0).toExpiration);
+                    assertFalse(keys.get(0).isRevoked);
+
+                    // rename key
+                    assertThrows(ServiceException.class, () -> userService.renameApiKey(keys.get(0).id, "horreum.key"));
+                    userService.renameApiKey(keys.get(0).id, "Key with new name");
+                    assertEquals("Key with new name", userService.apiKeys().get(0).name);
+
+                    // the system can find the key by its expiration day
+                    assertTrue(
+                            UserApiKey
+                                    .<UserApiKey> stream("#UserApiKey.expire",
+                                            timeService.today().plusDays(DEFAULT_API_KEY_ACTIVE_DAYS))
+                                    .anyMatch(k -> k.id == keys.get(0).id));
+
+                    // about to expire
+                    assertTrue(notifications.isEmpty());
+                    setApiKeyCreation(keys.get(0).id, timeService.today().minusDays(DEFAULT_API_KEY_ACTIVE_DAYS));
+                    assertFalse(notifications.isEmpty(), "Expected a notification of key about to expire");
+                    assertEquals(keys.get(0).id, notifications.get(0).id, "Got notification for the wrong key");
+
+                    // should not be revoked yet
+                    assertFalse(userService.apiKeys().get(0).isRevoked);
+                    assertTrue(UserApiKey.<UserApiKey> stream("#UserApiKey.expire", timeService.today())
+                            .anyMatch(k -> k.id == keys.get(0).id));
+
+                    // expire it
+                    setApiKeyCreation(keys.get(0).id, timeService.today().minusDays(DEFAULT_API_KEY_ACTIVE_DAYS + 1));
+                    assertEquals(2, notifications.toArray().length, "Expected a second notification after key expiration");
+
+                    // should be revoked now
+                    assertTrue(userService.apiKeys().get(0).isRevoked);
+                    assertThrows(ServiceException.class,
+                            () -> userService.renameApiKey(keys.get(0).id, "Rename revoked key should throw"));
+                });
+    }
+
+    @Transactional
+    void setApiKeyCreation(long keyId, LocalDate creation) {
+        UserApiKey apiKey = UserApiKey.findById(keyId);
+        apiKey.access = null;
+        apiKey.creation = creation;
+        userService.apiKeyDailyTask();
     }
 }

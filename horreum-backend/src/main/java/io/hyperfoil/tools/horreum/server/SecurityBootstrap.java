@@ -152,6 +152,7 @@ public class SecurityBootstrap {
             // create db entry, if not existent, like in UserService.createLocalUser()
             UserInfo userInfo = UserInfo.<UserInfo> findByIdOptional(BOOTSTRAP_ACCOUNT).orElse(new UserInfo(BOOTSTRAP_ACCOUNT));
             userInfo.defaultTeam = "dev-team";
+            userInfo.persist();
 
             Log.infov("\n>>>\n>>> Created temporary account {0} with password {1}\n>>>", BOOTSTRAP_ACCOUNT, user.password);
         } else if (administrators.size() > 1 && administrators.contains(BOOTSTRAP_ACCOUNT)) {

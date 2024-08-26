@@ -1,6 +1,10 @@
 package io.hyperfoil.tools.horreum.it;
 
+import static io.hyperfoil.tools.horreum.api.internal.services.UserService.KeyType.USER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -9,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,6 +23,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.NotAuthorizedException;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -62,6 +68,33 @@ import io.quarkus.test.junit.callback.QuarkusTestMethodContext;
 @TestProfile(InContainerProfile.class)
 public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, QuarkusTestBeforeClassCallback,
         QuarkusTestBeforeEachCallback, QuarkusTestAfterEachCallback, QuarkusTestAfterAllCallback {
+
+    @org.junit.jupiter.api.Test
+    public void testApiKeys() {
+        String keyName = "Test key";
+        String theKey = horreumClient.userService.newApiKey(new UserService.ApiKeyRequest(keyName, USER));
+
+        try (HorreumClient apiClient = new HorreumClient.Builder()
+                .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
+                .horreumApiKey(theKey)
+                .build()) {
+
+            List<String> roles = apiClient.userService.getRoles();
+            assertFalse(roles.isEmpty());
+            assertTrue(roles.contains(TEST_TEAM.replace("team", Roles.TESTER)));
+
+            UserService.ApiKeyResponse apiKey = horreumClient.userService.apiKeys().get(0);
+            assertFalse(apiKey.isRevoked);
+            assertFalse(apiKey.toExpiration < 0);
+            assertEquals(LocalDate.now(), apiKey.creation);
+            assertEquals(LocalDate.now(), apiKey.access);
+            assertEquals(USER, apiKey.type);
+
+            horreumClient.userService.revokeApiKey(apiKey.id);
+
+            assertThrows(NotAuthorizedException.class, apiClient.userService::getRoles);
+        }
+    }
 
     @org.junit.jupiter.api.Test
     public void testAddRunFromData() throws JsonProcessingException {

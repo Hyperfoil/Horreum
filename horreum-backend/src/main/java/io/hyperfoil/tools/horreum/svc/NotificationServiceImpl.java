@@ -28,6 +28,7 @@ import io.hyperfoil.tools.horreum.api.internal.services.NotificationService;
 import io.hyperfoil.tools.horreum.entity.alerting.NotificationSettingsDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
+import io.hyperfoil.tools.horreum.entity.user.UserApiKey;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.mapper.NotificationSettingsMapper;
 import io.hyperfoil.tools.horreum.notification.Notification;
@@ -189,5 +190,19 @@ public class NotificationServiceImpl implements NotificationService {
         TestDAO test = TestDAO.findById(testId);
         String name = test != null ? test.name : "<unknown test>";
         notifyAll(testId, n -> n.notifyExpectedRun(name, testId, expectedBefore, expectedBy, backlink));
+    }
+
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    public void notifyApiKeyExpiration(UserApiKey key, long toExpiration) {
+        NotificationSettingsDAO.<NotificationSettingsDAO> stream("name", key.user.username).forEach(notification -> {
+            NotificationPlugin plugin = plugins.get(notification.method);
+            if (plugin == null) {
+                log.errorf("Cannot notify %s of API key \"%s\" expiration: no plugin for method %s",
+                        notification.name, key.name, notification.method);
+            } else {
+                plugin.create(notification.name, notification.data)
+                        .notifyApiKeyExpiration(key.name, key.creation, key.access, toExpiration, key.active);
+            }
+        });
     }
 }

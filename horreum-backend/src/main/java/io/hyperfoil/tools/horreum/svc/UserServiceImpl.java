@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import io.hyperfoil.tools.horreum.mapper.UserApiKeyMapper;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
@@ -16,16 +18,23 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.entity.user.UserApiKey;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.svc.user.UserBackEnd;
 import io.quarkus.logging.Log;
+import io.quarkus.scheduler.Scheduled;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @Authenticated
 @ApplicationScoped
 public class UserServiceImpl implements UserService {
+
+    /**
+     * Default number of days API keys remain active after it's used to access the system
+     */
+    public static final long DEFAULT_API_KEY_ACTIVE_DAYS = 30;
 
     private static final int RANDOM_PASSWORD_LENGTH = 15;
 
@@ -34,6 +43,21 @@ public class UserServiceImpl implements UserService {
 
     @Inject
     Instance<UserBackEnd> backend;
+
+    @Inject
+    NotificationServiceImpl notificationServiceimpl;
+
+    @Inject
+    TimeService timeService;
+
+    private UserInfo currentUser() {
+        return UserInfo.<UserInfo> findByIdOptional(getUsername())
+                .orElseThrow(() -> ServiceException.notFound(format("Username {0} not found", getUsername())));
+    }
+
+    private String getUsername() {
+        return identity.getPrincipal().getName();
+    }
 
     @Override
     public List<String> getRoles() {
@@ -52,7 +76,7 @@ public class UserServiceImpl implements UserService {
         return backend.get().info(usernames);
     }
 
-    // ideally we want to enforce these roles in some of the endpoints, but for now this has to be done in the code
+    // ideally we want to enforce these roles in some endpoints, but for now this has to be done in the code
     // @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
     @Override
     public void createUser(NewUser user) {
@@ -61,19 +85,19 @@ public class UserServiceImpl implements UserService {
         backend.get().createUser(user);
         createLocalUser(user.user.username, user.team,
                 user.roles != null && user.roles.contains(Roles.MACHINE) ? user.password : null);
-        Log.infov("{0} created user {1} {2} with username {3} on team {4}", identity.getPrincipal().getName(),
+        Log.infov("{0} created user {1} {2} with username {3} on team {4}", getUsername(),
                 user.user.firstName, user.user.lastName, user.user.username, user.team);
     }
 
     @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
     @Override
     public void removeUser(String username) {
-        if (identity.getPrincipal().getName().equals(username)) {
+        if (getUsername().equals(username)) {
             throw ServiceException.badRequest("Cannot remove yourself");
         }
         backend.get().removeUser(username);
         removeLocalUser(username);
-        Log.infov("{0} removed user {1}", identity.getPrincipal().getName(), username);
+        Log.infov("{0} removed user {1}", getUsername(), username);
     }
 
     @Override
@@ -85,9 +109,9 @@ public class UserServiceImpl implements UserService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override
     public String defaultTeam() {
-        UserInfo userInfo = UserInfo.findById(identity.getPrincipal().getName());
+        UserInfo userInfo = currentUser();
         if (userInfo == null) {
-            throw ServiceException.notFound(format("User with username {0} not found", identity.getPrincipal().getName()));
+            throw ServiceException.notFound(format("User with username {0} not found", getUsername()));
         }
         return userInfo.defaultTeam != null ? userInfo.defaultTeam : "";
     }
@@ -96,9 +120,9 @@ public class UserServiceImpl implements UserService {
     @WithRoles(addUsername = true)
     @Override
     public void setDefaultTeam(String unsafeTeam) {
-        UserInfo userInfo = UserInfo.findById(identity.getPrincipal().getName());
+        UserInfo userInfo = currentUser();
         if (userInfo == null) {
-            throw ServiceException.notFound(format("User with username {0} not found", identity.getPrincipal().getName()));
+            throw ServiceException.notFound(format("User with username {0} not found", getUsername()));
         }
         userInfo.defaultTeam = validateTeamName(unsafeTeam);
         userInfo.persistAndFlush();
@@ -140,7 +164,7 @@ public class UserServiceImpl implements UserService {
     public void addTeam(String unsafeTeam) {
         String team = validateTeamName(unsafeTeam);
         backend.get().addTeam(team);
-        Log.infov("{0} created team {1}", identity.getPrincipal().getName(), team);
+        Log.infov("{0} created team {1}", getUsername(), team);
     }
 
     @RolesAllowed(Roles.ADMIN)
@@ -148,7 +172,7 @@ public class UserServiceImpl implements UserService {
     public void deleteTeam(String unsafeTeam) {
         String team = validateTeamName(unsafeTeam);
         backend.get().deleteTeam(team);
-        Log.infov("{0} deleted team {1}", identity.getPrincipal().getName(), team);
+        Log.infov("{0} deleted team {1}", getUsername(), team);
     }
 
     @RolesAllowed(Roles.ADMIN)
@@ -160,7 +184,7 @@ public class UserServiceImpl implements UserService {
     @RolesAllowed(Roles.ADMIN)
     @Override
     public void updateAdministrators(List<String> newAdmins) {
-        if (!newAdmins.contains(identity.getPrincipal().getName())) {
+        if (!newAdmins.contains(getUsername())) {
             throw ServiceException.badRequest("Cannot remove yourself from administrator list");
         }
         backend.get().updateAdministrators(newAdmins);
@@ -187,14 +211,12 @@ public class UserServiceImpl implements UserService {
         if (backend.get().machineAccounts(team).stream().noneMatch(data -> data.username.equals(username))) {
             throw ServiceException.badRequest(format("User {0} is not machine account of team {1}", username, team));
         }
-        UserInfo userInfo = UserInfo.findById(username);
-        if (userInfo == null) {
-            throw ServiceException.notFound(format("User with username {0} not found", username));
-        }
         String newPassword = new SecureRandom().ints(RANDOM_PASSWORD_LENGTH, '0', 'z' + 1)
                 .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
-        userInfo.setPassword(newPassword);
-        Log.infov("{0} reset password of user {1}", identity.getPrincipal().getName(), username);
+        UserInfo.<UserInfo> findByIdOptional(username)
+                .orElseThrow(() -> ServiceException.notFound(format("Username {0} not found", username)))
+                .setPassword(newPassword);
+        Log.infov("{0} reset password of user {1}", getUsername(), username);
         return newPassword;
     }
 
@@ -266,6 +288,84 @@ public class UserServiceImpl implements UserService {
             UserInfo.deleteById(username);
         } catch (Exception e) {
             // ignore
+        }
+    }
+
+    // --- //
+
+    @Transactional
+    @WithRoles(addUsername = true)
+    @Override
+    public String newApiKey(ApiKeyRequest request) {
+        validateApiKeyName(request.name == null ? "" : request.name);
+        UserInfo userInfo = currentUser();
+
+        UserApiKey newKey = UserApiKeyMapper.from(request, timeService.today(), DEFAULT_API_KEY_ACTIVE_DAYS);
+        newKey.user = userInfo;
+        userInfo.apiKeys.add(newKey);
+        newKey.persist();
+        userInfo.persist();
+
+        Log.debugv("{0} created API key \"{1}\"", getUsername(), request.name == null ? "" : request.name);
+        return newKey.keyString();
+    }
+
+    @Transactional
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    @Override
+    public List<ApiKeyResponse> apiKeys() {
+        return currentUser().apiKeys.stream()
+                .filter(t -> !t.isArchived(timeService.today()))
+                .sorted()
+                .map(UserApiKeyMapper::to)
+                .toList();
+    }
+
+    @Transactional
+    @WithRoles(addUsername = true)
+    @Override
+    public void renameApiKey(long keyId, String newName) {
+        validateApiKeyName(newName == null ? "" : newName);
+        UserApiKey key = UserApiKey.<UserApiKey> findByIdOptional(keyId)
+                .orElseThrow(() -> ServiceException.notFound(format("Key with id {0} not found", keyId)));
+        if (key.revoked) {
+            throw ServiceException.badRequest("Can't rename revoked key");
+        }
+        String oldName = key.name;
+        key.name = newName == null ? "" : newName;
+        Log.debugv("{0} renamed API key \"{1}\" to \"{2}\"", getUsername(), oldName, newName == null ? "" : newName);
+    }
+
+    @Transactional
+    @WithRoles(addUsername = true)
+    @Override
+    public void revokeApiKey(long keyId) {
+        UserApiKey key = UserApiKey.<UserApiKey> findByIdOptional(keyId)
+                .orElseThrow(() -> ServiceException.notFound(format("Key with id {0} not found", keyId)));
+        key.revoked = true;
+        Log.debugv("{0} revoked API key \"{1}\"", getUsername(), key.name);
+    }
+
+    @PermitAll
+    @Transactional
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    @Scheduled(every = "P1d") // daily -- it may lag up tp 24h compared to the actual date, but keys are revoked 24h after notification
+    public void apiKeyDailyTask() {
+        // notifications of keys expired and about to expire -- hardcoded to send multiple notices in the week prior to expiration
+        for (long toExpiration : List.of(7, 2, 1, 0, -1)) {
+            UserApiKey.<UserApiKey> stream("#UserApiKey.expire", timeService.today().plusDays(toExpiration))
+                    .forEach(key -> notificationServiceimpl.notifyApiKeyExpiration(key, toExpiration));
+        }
+        // revoke expired keys -- could be done directly in the DB but iterate instead to be able to log
+        UserApiKey.<UserApiKey> stream("#UserApiKey.pastExpiration", timeService.today()).forEach(key -> {
+            Log.debugv("Idle API key \"{0}\" revoked", key.name);
+            key.revoked = true;
+        });
+    }
+
+    private void validateApiKeyName(String keyName) {
+        if (keyName.startsWith("horreum.")) {
+            throw ServiceException.badRequest("key names starting with 'horreum.' are reserved for internal use");
         }
     }
 

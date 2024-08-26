@@ -10,6 +10,8 @@ import io.hyperfoil.tools.horreum.api.internal.services.UserService;
  */
 public interface UserBackEnd {
 
+    List<String> getRoles(String username);
+
     List<UserService.UserData> searchUsers(String query);
 
     List<UserService.UserData> info(List<String> usernames);
