@@ -27,6 +27,7 @@ import org.jboss.resteasy.plugins.providers.StringTextStar;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.hyperfoil.tools.auth.HorreumApiKeyAuthentication;
 import io.hyperfoil.tools.auth.KeycloakClientRequestFilter;
 import io.hyperfoil.tools.horreum.api.client.RunService;
 import io.hyperfoil.tools.horreum.api.internal.services.ActionService;
@@ -96,6 +97,7 @@ public class HorreumClient implements Closeable {
         private String horreumUrl;
         private String horreumUser;
         private String horreumPassword;
+        private String horreumApiKey;
         private SSLContext sslContext;
 
         public Builder() {
@@ -113,6 +115,11 @@ public class HorreumClient implements Closeable {
 
         public Builder horreumPassword(String horreumPassword) {
             this.horreumPassword = horreumPassword;
+            return this;
+        }
+
+        public Builder horreumApiKey(String key) {
+            this.horreumApiKey = key;
             return this;
         }
 
@@ -167,7 +174,9 @@ public class HorreumClient implements Closeable {
             clientBuilder.register(new CustomResteasyJackson2Provider(), 100);
             clientBuilder.sslContext(sslContext);
 
-            if (keycloakConfig.url == null || keycloakConfig.url.isEmpty()) {
+            if (horreumApiKey != null) {
+                clientBuilder.register(new HorreumApiKeyAuthentication(horreumApiKey));
+            } else if (keycloakConfig.url == null || keycloakConfig.url.isEmpty()) {
                 clientBuilder.register(new BasicAuthentication(horreumUser, horreumPassword));
             } else {
                 // register Keycloak Request Filter

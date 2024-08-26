@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.api.internal.services;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -8,6 +9,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -118,6 +120,28 @@ public interface UserService {
     @Blocking
     String resetPassword(@PathParam("team") String team, @RequestBody(required = true) String username);
 
+    @POST
+    @Path("/apikey")
+    @Produces("text/plain")
+    @Blocking
+    String newApiKey(@RequestBody ApiKeyRequest request);
+
+    @GET
+    @Path("/apikey")
+    @Blocking
+    List<ApiKeyResponse> apiKeys();
+
+    @PUT
+    @Path("/apikey/{id}/rename")
+    @Consumes("text/plain")
+    @Blocking
+    void renameApiKey(@PathParam("id") long keyId, @RequestBody String newName);
+
+    @PUT
+    @Path("/apikey/{id}/revoke")
+    @Blocking
+    void revokeApiKey(@PathParam("id") long keyId);
+
     // this is a simplified copy of org.keycloak.representations.idm.UserRepresentation
     class UserData {
         @NotNull
@@ -146,4 +170,35 @@ public interface UserService {
         public String team;
         public List<String> roles;
     }
+
+    /**
+     * Key type allows to scope what the key gives access to
+     */
+    enum KeyType {
+        USER
+    }
+
+    class ApiKeyRequest {
+        public String name;
+        public KeyType type;
+
+        public ApiKeyRequest() {
+        }
+
+        public ApiKeyRequest(String name, KeyType type) {
+            this.name = name;
+            this.type = type;
+        }
+    }
+
+    class ApiKeyResponse {
+        public long id;
+        public String name;
+        public KeyType type;
+        public LocalDate creation;
+        public LocalDate access;
+        public boolean isRevoked;
+        public long toExpiration;
+    }
+
 }

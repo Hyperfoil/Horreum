@@ -4566,4 +4566,36 @@
             CREATE INDEX idx_label_metrics_partial ON label (id) WHERE metrics = TRUE;
         </sql>
     </changeSet>
+    <changeSet id="123" author="barreiro">
+        <validCheckSum>ANY</validCheckSum>
+        <createSequence sequenceName="userinfo_apikey_id_seq" startValue="1" incrementBy="1" cacheSize="1" />
+        <createTable tableName="userinfo_apikey">
+            <column name="id" type="bigint"/>
+            <column name="hash" type="text">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="username" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="text"/>
+            <column name="type" type="smallint"/>
+            <column name="revoked" type="bool"/>
+            <column name="creation" type="date"/>
+            <column name="access" type="date"/>
+            <column name="active" type="bigint"/>
+        </createTable>
+        <createIndex tableName="userinfo_apikey" indexName="userinfo_apikey_hash">
+            <column name="hash" />
+        </createIndex>
+        <addForeignKeyConstraint constraintName="fk_userinfo_apikey"
+                                 baseTableName="userinfo_apikey" baseColumnNames="username"
+                                 referencedTableName="userinfo" referencedColumnNames="username"/>
+        <sql>
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE userinfo_apikey TO "${quarkus.datasource.username}";
+            GRANT ALL ON SEQUENCE userinfo_apikey_id_seq TO "${quarkus.datasource.username}";
+            ALTER TABLE userinfo_apikey ENABLE ROW LEVEL SECURITY;
+            CREATE POLICY userinfo_apikey_read ON userinfo_apikey USING (has_role('horreum.system'));
+            CREATE POLICY userinfo_apikey_rw ON userinfo_apikey FOR ALL USING (has_role(username));
+        </sql>
+    </changeSet>
 </databaseChangeLog>
