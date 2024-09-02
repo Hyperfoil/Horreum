@@ -1,11 +1,11 @@
 package io.hyperfoil.tools.horreum.mapper;
 
+import java.util.stream.Collectors;
+
 import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
+import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import io.hyperfoil.tools.horreum.entity.ExperimentComparisonDAO;
 import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
-import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
-
-import java.util.stream.Collectors;
 
 public class ExperimentProfileMapper {
 
@@ -20,14 +20,15 @@ public class ExperimentProfileMapper {
         dto.baselineFilter = ep.baselineFilter;
         dto.selectorFilter = ep.selectorFilter;
 
-        dto.comparisons = ep.comparisons.stream().map(ExperimentProfileMapper::fromExperimentComparison).collect(Collectors.toList());
+        dto.comparisons = ep.comparisons.stream().map(ExperimentProfileMapper::fromExperimentComparison)
+                .collect(Collectors.toList());
 
         return dto;
     }
 
     public static ExperimentComparison fromExperimentComparison(ExperimentComparisonDAO ec) {
         ExperimentComparison dto = new ExperimentComparison();
-        if(ec.variable != null) {
+        if (ec.variable != null) {
             dto.variableId = ec.variable.id;
             dto.variableName = ec.variable.name;
         }
@@ -47,7 +48,8 @@ public class ExperimentProfileMapper {
         ep.baselineFilter = dto.baselineFilter;
         ep.selectorFilter = dto.selectorFilter;
 
-        ep.comparisons = dto.comparisons.stream().map(ExperimentProfileMapper::toExperimentComparison).collect(Collectors.toList());
+        ep.comparisons = dto.comparisons.stream().map(ExperimentProfileMapper::toExperimentComparison)
+                .collect(Collectors.toList());
 
         return ep;
     }
@@ -56,7 +58,7 @@ public class ExperimentProfileMapper {
         ExperimentComparisonDAO ec = new ExperimentComparisonDAO();
         ec.config = dto.config;
         ec.model = dto.model;
-        if(dto.variableId != null && dto.variableId > 0)
+        if (dto.variableId != null && dto.variableId > 0)
             ec.setVariableId(dto.variableId);
         return ec;
     }

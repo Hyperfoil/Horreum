@@ -9,7 +9,7 @@ import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 
 public interface ExperimentConditionModel {
-   ConditionConfig config();
+    ConditionConfig config();
 
-   ExperimentService.ComparisonResult compare(JsonNode config, List<DataPointDAO> baseline, DataPointDAO newDatapoint);
+    ExperimentService.ComparisonResult compare(JsonNode config, List<DataPointDAO> baseline, DataPointDAO newDatapoint);
 }

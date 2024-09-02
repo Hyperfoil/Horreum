@@ -1,10 +1,10 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.entity.data.RunDAO;
-
 import java.util.stream.Collectors;
+
+import io.hyperfoil.tools.horreum.api.data.Dataset;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
+import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 
 public class DatasetMapper {
 
@@ -22,18 +22,18 @@ public class DatasetMapper {
         dto.description = ds.description;
         dto.data = ds.data;
 
-        if(ds.validationErrors != null)
-            dto.validationErrors = ds.validationErrors.stream().map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList());
+        if (ds.validationErrors != null)
+            dto.validationErrors = ds.validationErrors.stream().map(ValidationErrorMapper::fromValidationError)
+                    .collect(Collectors.toList());
 
         return dto;
     }
 
     public static DatasetDAO to(Dataset dto, RunDAO run) {
         DatasetDAO ds;
-        if(run != null) {
+        if (run != null) {
             ds = new DatasetDAO(run, dto.ordinal, dto.description, dto.data);
-        }
-        else {
+        } else {
             ds = new DatasetDAO();
         }
         ds.id = dto.id;

@@ -1,26 +1,28 @@
 package io.hyperfoil.tools.horreum.api.alerting;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import jakarta.validation.constraints.NotNull;
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
-
 import java.time.Instant;
 import java.util.Objects;
 
+import jakarta.validation.constraints.NotNull;
+
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
 public class MissingDataRule {
-    @JsonProperty( required = true )
+    @JsonProperty(required = true)
     public Integer id;
     public String name;
     @Schema(implementation = String[].class)
     public ArrayNode labels;
     public String condition;
     @NotNull
-    @JsonProperty( required = true )
+    @JsonProperty(required = true)
     public long maxStaleness;
     public Instant lastNotification;
 
-    @JsonProperty( value = "testId", required = true )
+    @JsonProperty(value = "testId", required = true)
     public Integer testId;
 
     public MissingDataRule() {
@@ -30,14 +32,15 @@ public class MissingDataRule {
         if (this == o) {
             return true;
         } else if (o != null && this.getClass() == o.getClass()) {
-            MissingDataRule that = (MissingDataRule)o;
-            return this.maxStaleness == that.maxStaleness && Objects.equals(this.labels, that.labels) && Objects.equals(this.condition, that.condition);
+            MissingDataRule that = (MissingDataRule) o;
+            return this.maxStaleness == that.maxStaleness && Objects.equals(this.labels, that.labels)
+                    && Objects.equals(this.condition, that.condition);
         } else {
             return false;
         }
     }
 
     public int hashCode() {
-        return Objects.hash(new Object[]{this.labels, this.condition, this.maxStaleness});
+        return Objects.hash(new Object[] { this.labels, this.condition, this.maxStaleness });
     }
 }

@@ -1,13 +1,16 @@
 package io.hyperfoil.tools.horreum.api.report;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.hyperfoil.tools.horreum.api.data.Test;
+import java.util.List;
+
 import jakarta.validation.constraints.NotNull;
+
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
+import io.hyperfoil.tools.horreum.api.data.Test;
 
 @Schema(type = SchemaType.OBJECT, description = "Table Report Config", name = "TableReportConfig")
 public class TableReportConfig {
@@ -42,13 +45,14 @@ public class TableReportConfig {
 
     public TableReportConfig() {
     }
-   public void ensureLinked() {
-      if (components != null) {
-         for (ReportComponent c : components) {
-            c.reportId = id;
-         }
-      }
-   }
+
+    public void ensureLinked() {
+        if (components != null) {
+            for (ReportComponent c : components) {
+                c.reportId = id;
+            }
+        }
+    }
 
     @Override
     public String toString() {

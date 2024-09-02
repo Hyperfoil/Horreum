@@ -1,5 +1,12 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.time.Instant;
+
+import org.junit.jupiter.api.TestInfo;
+
 import io.hyperfoil.tools.horreum.api.data.Banner;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
@@ -7,12 +14,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-import org.junit.jupiter.api.TestInfo;
-
-import java.time.Instant;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -45,7 +46,6 @@ public class BannerServiceTest extends BaseServiceTest {
 
         assertTrue(b2.active);
         assertEquals(b1.message, b2.message);
-
 
     }
 

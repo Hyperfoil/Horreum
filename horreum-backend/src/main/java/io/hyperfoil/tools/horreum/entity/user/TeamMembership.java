@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.entity.user;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,6 +8,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity(name = "userinfo_teams")
 public class TeamMembership extends PanacheEntityBase {
@@ -28,7 +29,8 @@ public class TeamMembership extends PanacheEntityBase {
     @Enumerated(EnumType.STRING)
     public TeamRole role;
 
-    public TeamMembership(){}
+    public TeamMembership() {
+    }
 
     public TeamMembership(UserInfo user, Team team, TeamRole role) {
         this.user = user;
@@ -48,7 +50,8 @@ public class TeamMembership extends PanacheEntityBase {
         };
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         } else if (o == null || getClass() != o.getClass()) {
@@ -58,7 +61,8 @@ public class TeamMembership extends PanacheEntityBase {
         return user.username.equals(that.user.username) && team.equals(that.team) && role == that.role;
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         int result = user.username.hashCode();
         result = 31 * result + team.hashCode();
         result = 31 * result + role.hashCode();
@@ -77,7 +81,7 @@ public class TeamMembership extends PanacheEntityBase {
     public String asTeam() {
         return team.teamName + "-team";
     }
-    
+
     public String asRole() {
         return team.teamName + "-" + switch (role) {
             case TEAM_VIEWER -> "viewer";

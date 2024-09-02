@@ -1,28 +1,30 @@
 package io.hyperfoil.tools.horreum.api.alerting;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+
 import jakarta.validation.constraints.NotNull;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Watch {
     public Integer id;
     @NotNull
-    @JsonProperty( required = true )
+    @JsonProperty(required = true)
     public List<String> users;
     @NotNull
-    @JsonProperty( required = true )
+    @JsonProperty(required = true)
     public List<String> optout;
     @NotNull
-    @JsonProperty( required = true )
+    @JsonProperty(required = true)
     public List<String> teams;
-    @JsonProperty( value = "testId", required = true )
+    @JsonProperty(value = "testId", required = true)
     public Integer testId;
 
     public Watch() {
     }
 
     public String toString() {
-        return "Watch{id=" + this.id + ", test=" + this.testId + ", users=" + this.users + ", optout=" + this.optout + ", teams=" + this.teams + '}';
+        return "Watch{id=" + this.id + ", test=" + this.testId + ", users=" + this.users + ", optout=" + this.optout
+                + ", teams=" + this.teams + '}';
     }
 }

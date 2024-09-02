@@ -1,8 +1,8 @@
 package io.hyperfoil.tools.horreum.dev.services.deployment;
 
-import io.quarkus.builder.item.SimpleBuildItem;
-
 import java.util.Map;
+
+import io.quarkus.builder.item.SimpleBuildItem;
 
 public class HorreumDevServicesConfigBuildItem extends SimpleBuildItem {
 
@@ -11,7 +11,7 @@ public class HorreumDevServicesConfigBuildItem extends SimpleBuildItem {
     private final boolean containerRestarted;
 
     public HorreumDevServicesConfigBuildItem(Map<String, String> config, Map<String, Object> configProperties,
-                                             boolean containerRestarted) {
+            boolean containerRestarted) {
         this.config = config;
         this.properties = configProperties;
         this.containerRestarted = containerRestarted;

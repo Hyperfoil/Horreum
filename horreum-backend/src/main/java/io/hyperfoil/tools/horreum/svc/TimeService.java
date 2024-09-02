@@ -9,7 +9,7 @@ import jakarta.enterprise.context.ApplicationScoped;
  */
 @ApplicationScoped
 public class TimeService {
-   public Instant now() {
-      return Instant.now();
-   }
+    public Instant now() {
+        return Instant.now();
+    }
 }

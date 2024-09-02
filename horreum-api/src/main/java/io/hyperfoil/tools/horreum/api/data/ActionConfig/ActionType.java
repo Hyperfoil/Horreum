@@ -1,11 +1,12 @@
 package io.hyperfoil.tools.horreum.api.data.ActionConfig;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.Arrays;
+
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-import java.util.Arrays;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @Schema(type = SchemaType.STRING, required = true, description = "Type of Action")
 public enum ActionType {

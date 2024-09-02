@@ -1,10 +1,11 @@
 package io.hyperfoil.tools.horreum.hibernate;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.hyperfoil.tools.horreum.svc.Util;
+import static java.lang.String.format;
+
+import java.io.Serializable;
+import java.sql.*;
+import java.util.*;
+
 import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.type.CustomType;
@@ -12,14 +13,14 @@ import org.hibernate.type.SqlTypes;
 import org.hibernate.type.spi.TypeConfiguration;
 import org.hibernate.usertype.UserType;
 
-import java.io.Serializable;
-import java.sql.*;
-import java.util.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
-import static java.lang.String.format;
+import io.hyperfoil.tools.horreum.svc.Util;
 
 public class JsonbSetType implements UserType<ArrayNode> {
-
 
     public static final CustomType INSTANCE = new CustomType<>(new JsonbSetType(), new TypeConfiguration());
 
@@ -46,7 +47,7 @@ public class JsonbSetType implements UserType<ArrayNode> {
     @Override
     public ArrayNode nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner)
             throws SQLException {
-        if(rs.wasNull())
+        if (rs.wasNull())
             return null;
         Array array = rs.getArray(position);
         if (array == null) {
@@ -55,10 +56,10 @@ public class JsonbSetType implements UserType<ArrayNode> {
         try {
             String[] raw = (String[]) array.getArray();
             ArrayNode rtrn = JsonNodeFactory.instance.arrayNode();
-            for(int i=0; i<raw.length; i++){
+            for (int i = 0; i < raw.length; i++) {
                 rtrn.add(Util.toJsonNode(raw[i]));
             }
-            return  rtrn;
+            return rtrn;
         } catch (final Exception ex) {
             throw new RuntimeException("Failed to convert ResultSet to json array: " + ex.getMessage(), ex);
         }
@@ -73,7 +74,7 @@ public class JsonbSetType implements UserType<ArrayNode> {
         }
         try {
             Set<String> str = new HashSet<>();
-            value.forEach(v->str.add(v.toString()));
+            value.forEach(v -> str.add(v.toString()));
             Array array = ps.getConnection().createArrayOf("jsonb", str.toArray());
             ps.setObject(index, array);
         } catch (final Exception ex) {
@@ -87,7 +88,7 @@ public class JsonbSetType implements UserType<ArrayNode> {
             return null;
         }
         try {
-            return (ArrayNode)new ObjectMapper().readTree(value.toString());
+            return (ArrayNode) new ObjectMapper().readTree(value.toString());
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -106,11 +107,13 @@ public class JsonbSetType implements UserType<ArrayNode> {
     @Override
     public ArrayNode assemble(Serializable cached, Object owner) throws HibernateException {
         try {
-            return (ArrayNode)new ObjectMapper().readTree(cached.toString());
+            return (ArrayNode) new ObjectMapper().readTree(cached.toString());
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public String getName(){ return "jsonb-any";}
+    public String getName() {
+        return "jsonb-any";
+    }
 }

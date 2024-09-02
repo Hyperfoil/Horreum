@@ -1,5 +1,23 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.control.ActivateRequestContext;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.eclipse.microprofile.reactive.messaging.OnOverflow;
+import org.jboss.logging.Logger;
+
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.Action;
@@ -13,22 +31,6 @@ import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.smallrye.reactive.messaging.annotations.Blocking;
 import io.vertx.core.Vertx;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.context.control.ActivateRequestContext;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
-import org.eclipse.microprofile.reactive.messaging.Incoming;
-import org.eclipse.microprofile.reactive.messaging.OnOverflow;
-import org.jboss.logging.Logger;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 
 @ApplicationScoped
 public class ServiceMediator {
@@ -88,7 +90,7 @@ public class ServiceMediator {
     @Channel("schema-sync-out")
     Emitter<Integer> schemaEmitter;
 
-    private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events =  new ConcurrentHashMap<>();
+    private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events = new ConcurrentHashMap<>();
 
     public ServiceMediator() {
     }
@@ -100,6 +102,7 @@ public class ServiceMediator {
     boolean testMode() {
         return testMode;
     }
+
     @Transactional
     void newTest(Test test) {
         actionService.onNewTest(test);
@@ -159,6 +162,7 @@ public class ServiceMediator {
     void queueDatasetEvents(Dataset.EventNew event) {
         dataSetEmitter.send(event);
     }
+
     @Incoming("run-recalc-in")
     @Blocking(ordered = false, value = "horreum.run.pool")
     @ActivateRequestContext
@@ -190,18 +194,23 @@ public class ServiceMediator {
     void missingValuesDataset(MissingValuesEvent event) {
         notificationService.onMissingValues(event);
     }
+
     void newDatasetChanges(DatasetChanges changes) {
         notificationService.onNewChanges(changes);
     }
+
     int transform(int runId, boolean isRecalculation) {
         return runService.transform(runId, isRecalculation);
     }
+
     void withRecalculationLock(Runnable run) {
         datasetService.withRecalculationLock(run);
     }
+
     void newExperimentResult(ExperimentService.ExperimentResult result) {
         actionService.onNewExperimentResult(result);
     }
+
     void validate(Action dto) {
         actionService.validate(dto);
     }
@@ -219,15 +228,15 @@ public class ServiceMediator {
 
     @Transactional
     void importTestToAll(TestExport test) {
-        if(test.variables != null)
+        if (test.variables != null)
             alertingService.importVariables(test);
-        if(test.missingDataRules != null)
+        if (test.missingDataRules != null)
             alertingService.importMissingDataRules(test);
-        if(test.actions != null)
+        if (test.actions != null)
             actionService.importTest(test);
-        if(test.experiments != null && !test.experiments.isEmpty())
+        if (test.experiments != null && !test.experiments.isEmpty())
             experimentService.importTest(test);
-        if(test.subscriptions != null)
+        if (test.subscriptions != null)
             subscriptionService.importSubscriptions(test);
     }
 
@@ -238,17 +247,19 @@ public class ServiceMediator {
     public void validateRun(Integer runId) {
         schemaService.validateRunData(runId, null);
     }
+
     public void validateDataset(Integer datasetId) {
         schemaService.validateDatasetData(datasetId, null);
     }
+
     public void validateSchema(int schemaId) {
         schemaService.revalidateAll(schemaId);
     }
 
     public <T> void publishEvent(AsyncEventChannels channel, int testId, T payload) {
-        if (testMode ) {
+        if (testMode) {
             log.debugf("Publishing test %d on %s: %s", testId, channel, payload);
-//        eventBus.publish(channel.name(), new MessageBus.Message(BigInteger.ZERO.longValue(), testId, 0, payload));
+            //        eventBus.publish(channel.name(), new MessageBus.Message(BigInteger.ZERO.longValue(), testId, 0, payload));
             events.putIfAbsent(channel, new HashMap<>());
             BlockingQueue<Object> queue = events.get(channel).computeIfAbsent(testId, k -> new LinkedBlockingQueue<>());
             queue.add(payload);

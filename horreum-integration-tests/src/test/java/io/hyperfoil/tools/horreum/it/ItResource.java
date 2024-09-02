@@ -1,11 +1,5 @@
 package io.hyperfoil.tools.horreum.it;
 
-import io.hyperfoil.tools.horreum.infra.common.SelfSignedCert;
-import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
-import org.jboss.logging.Logger;
-
-import java.util.Map;
-
 import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_ADMIN_PASSWORD;
 import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_ADMIN_USERNAME;
 import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_DB_PASSWORD;
@@ -28,12 +22,19 @@ import static io.hyperfoil.tools.horreum.infra.common.HorreumResources.startCont
 import static io.hyperfoil.tools.horreum.infra.common.HorreumResources.stopContainers;
 import static java.lang.System.getProperty;
 
+import java.util.Map;
+
+import org.jboss.logging.Logger;
+
+import io.hyperfoil.tools.horreum.infra.common.SelfSignedCert;
+import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
+
 public class ItResource implements QuarkusTestResourceLifecycleManager {
 
     private static final Logger log = Logger.getLogger(ItResource.class);
     private static boolean started = false;
 
-    public static String  HORREUM_BOOTSTRAP_PASSWORD = "horreum.secret";
+    public static String HORREUM_BOOTSTRAP_PASSWORD = "horreum.secret";
 
     @Override
     public Map<String, String> start() {
@@ -46,7 +47,7 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
                     String keycloakImage = getProperty(HORREUM_DEV_KEYCLOAK_IMAGE);
                     String postgresImage = getProperty(HORREUM_DEV_POSTGRES_IMAGE);
 
-                    if ( keycloakImage == null || postgresImage == null ){
+                    if (keycloakImage == null || postgresImage == null) {
                         throw new RuntimeException("Test container images are not defined");
                     }
 
@@ -69,7 +70,7 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
                             Map.entry("horreum.bootstrap.password", HORREUM_BOOTSTRAP_PASSWORD) // well known bootstrap password instead of a random one
                     );
                     return startContainers(containerArgs);
-                } catch (Exception e){
+                } catch (Exception e) {
                     log.fatal("Could not start Horreum services", e);
                     stopContainers();
                     throw new RuntimeException("Could not start Horreum services", e);
@@ -92,7 +93,5 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
         }
 
     }
-
-
 
 }

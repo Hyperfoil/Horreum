@@ -1,9 +1,10 @@
 package io.hyperfoil.tools.horreum.api.data;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+
 import jakarta.validation.constraints.NotNull;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class View {
     @JsonProperty(required = true)
@@ -39,7 +40,9 @@ public class View {
 
     public void clearId() {
         id = null;
-        if(components != null)
-            components.stream().forEach( c -> {c.id = null;});
+        if (components != null)
+            components.stream().forEach(c -> {
+                c.id = null;
+            });
     }
 }

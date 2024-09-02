@@ -1,11 +1,12 @@
 package io.hyperfoil.tools.horreum.datastore;
 
-import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
-import io.quarkus.arc.All;
+import java.util.List;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.util.List;
+import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
+import io.quarkus.arc.All;
 
 @ApplicationScoped
 public class BackendResolver {
@@ -13,12 +14,11 @@ public class BackendResolver {
     @All
     List<Datastore> backendStores;
 
-    public Datastore getBackend(DatastoreType type){
+    public Datastore getBackend(DatastoreType type) {
         return backendStores.stream()
-                .filter( store -> store.type().equals(type))
+                .filter(store -> store.type().equals(type))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Unknown datastore type: " + type));
     }
-
 
 }

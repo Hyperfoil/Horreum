@@ -1,17 +1,17 @@
 package io.hyperfoil.tools.horreum.infra.common.utils;
 
-import org.keycloak.representations.idm.CredentialRepresentation;
-import org.keycloak.representations.idm.FederatedIdentityRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.FederatedIdentityRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
+
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
- * copied from org.keycloak.testsuite.util.UserManager
+ *         copied from org.keycloak.testsuite.util.UserManager
  */
 public class UserBuilder {
 
@@ -141,19 +141,19 @@ public class UserBuilder {
         return this;
     }
 
-/*
-    public UserBuilder totpSecret(String totpSecret) {
-        CredentialRepresentation credential = ModelToRepresentation.toRepresentation(
-                OTPCredentialModel.createTOTP(totpSecret, 6, 30, HmacOTP.HMAC_SHA1));
-        return secret(credential);
-    }
-
-    public UserBuilder hotpSecret(String hotpSecret) {
-        CredentialRepresentation credential = ModelToRepresentation.toRepresentation(
-                OTPCredentialModel.createHOTP(hotpSecret, 6, 0, HmacOTP.HMAC_SHA1));
-        return secret(credential);
-    }
-*/
+    /*
+     * public UserBuilder totpSecret(String totpSecret) {
+     * CredentialRepresentation credential = ModelToRepresentation.toRepresentation(
+     * OTPCredentialModel.createTOTP(totpSecret, 6, 30, HmacOTP.HMAC_SHA1));
+     * return secret(credential);
+     * }
+     *
+     * public UserBuilder hotpSecret(String hotpSecret) {
+     * CredentialRepresentation credential = ModelToRepresentation.toRepresentation(
+     * OTPCredentialModel.createHOTP(hotpSecret, 6, 0, HmacOTP.HMAC_SHA1));
+     * return secret(credential);
+     * }
+     */
 
     public UserBuilder otpEnabled() {
         rep.setTotp(Boolean.TRUE);

@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.entity.BannerDAO;
 import io.hyperfoil.tools.horreum.api.data.Banner;
+import io.hyperfoil.tools.horreum.entity.BannerDAO;
 
 public class BannerMapper {
 
@@ -18,7 +18,7 @@ public class BannerMapper {
     }
 
     public static BannerDAO to(Banner dto) {
-       BannerDAO b = new BannerDAO();
+        BannerDAO b = new BannerDAO();
         b.id = dto.id;
         b.active = dto.active;
         b.created = dto.created;

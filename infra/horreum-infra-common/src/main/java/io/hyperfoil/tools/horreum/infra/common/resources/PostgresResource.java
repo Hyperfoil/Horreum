@@ -1,14 +1,6 @@
 package io.hyperfoil.tools.horreum.infra.common.resources;
 
-import io.hyperfoil.tools.horreum.infra.common.ResourceLifecycleManager;
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.jboss.logging.Logger;
-import org.testcontainers.containers.BindMode;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.containers.SelinuxContext;
-import org.testcontainers.images.builder.Transferable;
+import static io.hyperfoil.tools.horreum.infra.common.Const.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +15,16 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.zip.Checksum;
 
-import static io.hyperfoil.tools.horreum.infra.common.Const.*;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.jboss.logging.Logger;
+import org.testcontainers.containers.BindMode;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.SelinuxContext;
+import org.testcontainers.images.builder.Transferable;
+
+import io.hyperfoil.tools.horreum.infra.common.ResourceLifecycleManager;
 
 public class PostgresResource implements ResourceLifecycleManager {
     private static final Logger log = Logger.getLogger(PostgresResource.class);
@@ -36,9 +37,11 @@ public class PostgresResource implements ResourceLifecycleManager {
 
     @Override
     public void init(Map<String, String> initArgs) {
-        boolean startDevService = !initArgs.containsKey(HORREUM_DEV_POSTGRES_ENABLED) || (initArgs.containsKey(HORREUM_DEV_POSTGRES_ENABLED) && Boolean.parseBoolean(initArgs.get(HORREUM_DEV_POSTGRES_ENABLED)));
-        if ( startDevService ) {
-            if ( !initArgs.containsKey(HORREUM_DEV_POSTGRES_IMAGE) ) {
+        boolean startDevService = !initArgs.containsKey(HORREUM_DEV_POSTGRES_ENABLED)
+                || (initArgs.containsKey(HORREUM_DEV_POSTGRES_ENABLED)
+                        && Boolean.parseBoolean(initArgs.get(HORREUM_DEV_POSTGRES_ENABLED)));
+        if (startDevService) {
+            if (!initArgs.containsKey(HORREUM_DEV_POSTGRES_IMAGE)) {
                 throw new RuntimeException("Arguments did not contain Postgres image");
             }
 
@@ -46,21 +49,23 @@ public class PostgresResource implements ResourceLifecycleManager {
 
             networkAlias = initArgs.get(HORREUM_DEV_POSTGRES_NETWORK_ALIAS);
 
-            postgresContainer = new HorreumPostgreSQLContainer<>(POSTGRES_IMAGE, initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ? 1 : 2)
+            postgresContainer = new HorreumPostgreSQLContainer<>(POSTGRES_IMAGE,
+                    initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ? 1 : 2)
                     .withDatabaseName(initArgs.get(HORREUM_DEV_DB_DATABASE))
                     .withUsername(initArgs.get(HORREUM_DEV_DB_USERNAME))
-                    .withPassword(initArgs.get(HORREUM_DEV_DB_PASSWORD))
-            ;
+                    .withPassword(initArgs.get(HORREUM_DEV_DB_PASSWORD));
 
             if (initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP)) {
                 checkIfDirectoryIsEmtpy(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP));
 
-                postgresContainer.addFileSystemBind(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP), "/var/lib/postgresql/data", BindMode.READ_WRITE, SelinuxContext.SHARED);
+                postgresContainer.addFileSystemBind(initArgs.get(HORREUM_DEV_POSTGRES_BACKUP), "/var/lib/postgresql/data",
+                        BindMode.READ_WRITE, SelinuxContext.SHARED);
                 prodBackup = true;
             }
 
             Properties props = new Properties();
-            try(InputStream resourceStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(POSTGRES_CONFIG_PROPERTIES)) {
+            try (InputStream resourceStream = Thread.currentThread().getContextClassLoader()
+                    .getResourceAsStream(POSTGRES_CONFIG_PROPERTIES)) {
                 props.load(resourceStream);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -69,17 +74,20 @@ public class PostgresResource implements ResourceLifecycleManager {
             props.forEach((key, val) -> postgresContainer.withParameter(key.toString().concat("=").concat(val.toString())));
 
             // SSL configuration from https://www.postgresql.org/docs/current/ssl-tcp.html
-            if (initArgs.containsKey(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE) && initArgs.containsKey(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY)) {
+            if (initArgs.containsKey(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE)
+                    && initArgs.containsKey(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY)) {
                 String certFile = "/var/lib/postgresql/server.crt", keyFile = "/var/lib/postgresql/server.key";
                 postgresContainer.withParameter("ssl=on");
                 postgresContainer.withParameter("ssl_cert_file=" + certFile);
                 postgresContainer.withParameter("ssl_key_file=" + keyFile);
-                postgresContainer.withCopyToContainer(postgresTransferable(initArgs.get(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE)), certFile);
-                postgresContainer.withCopyToContainer(postgresTransferable(initArgs.get(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY), 0_600), keyFile);
+                postgresContainer.withCopyToContainer(postgresTransferable(initArgs.get(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE)),
+                        certFile);
+                postgresContainer.withCopyToContainer(
+                        postgresTransferable(initArgs.get(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY), 0_600), keyFile);
             }
         }
 
-        if (initArgs.containsKey("inContainer") ) {
+        if (initArgs.containsKey("inContainer")) {
             inContainer = Boolean.parseBoolean(initArgs.get("inContainer"));
         }
     }
@@ -89,14 +97,14 @@ public class PostgresResource implements ResourceLifecycleManager {
         if (!dir.exists()) {
             throw new RuntimeException("Directory " + directoryPath + " does not exist!");
         }
-        if(!dir.isDirectory()) {
+        if (!dir.isDirectory()) {
             throw new RuntimeException("Directory " + directoryPath + " is not a directory!");
         }
         try {
             if (dir.canRead() && dir.list() == null) {
                 throw new RuntimeException("Directory " + directoryPath + " does not contain any files!");
             }
-        } catch (SecurityException se){
+        } catch (SecurityException se) {
             log.warnf("Directory %s does not have correct permissions to verify!", directoryPath);
         }
     }
@@ -107,13 +115,13 @@ public class PostgresResource implements ResourceLifecycleManager {
             return Collections.emptyMap();
         }
 
-        if ( network.isPresent() ){
+        if (network.isPresent()) {
             postgresContainer.withNetwork(network.get());
             postgresContainer.withNetworkAliases(networkAlias);
         }
 
         postgresContainer.start();
-        if ( !prodBackup ) {
+        if (!prodBackup) {
             try (Connection conn = DriverManager.getConnection(postgresContainer.getJdbcUrl(), "dbadmin", "secret")) {
                 conn.createStatement().executeUpdate("CREATE ROLE appuser noinherit login password 'secret';");
                 conn.createStatement().executeUpdate("CREATE ROLE keycloak noinherit login password 'secret';");
@@ -134,8 +142,7 @@ public class PostgresResource implements ResourceLifecycleManager {
                 "postgres.container.port", port.toString(),
                 "quarkus.datasource.jdbc.url", postgresContainer.getJdbcUrl(),
                 "quarkus.datasource.migration.jdbc.url", postgresContainer.getJdbcUrl(),
-                "quarkus.datasource.jdbc.url.internal", jdbcUrl
-        );
+                "quarkus.datasource.jdbc.url.internal", jdbcUrl);
     }
 
     @Override
@@ -145,12 +152,12 @@ public class PostgresResource implements ResourceLifecycleManager {
         }
     }
 
-    public String getJdbcUrl(){
+    public String getJdbcUrl() {
         return postgresContainer.getJdbcUrl();
     }
 
-    public PostgreSQLContainer getContainer(){
-        return  this.postgresContainer;
+    public PostgreSQLContainer getContainer() {
+        return this.postgresContainer;
     }
 
     // --- //
@@ -164,15 +171,18 @@ public class PostgresResource implements ResourceLifecycleManager {
     private static Transferable postgresTransferable(String string, int fileMode) {
         byte[] content = string.getBytes(StandardCharsets.UTF_8);
         return new Transferable() {
-            @Override public long getSize() {
+            @Override
+            public long getSize() {
                 return content.length;
             }
 
-            @Override public byte[] getBytes() {
+            @Override
+            public byte[] getBytes() {
                 return content;
             }
 
-            @Override public int getFileMode() {
+            @Override
+            public int getFileMode() {
                 return fileMode;
             }
 
@@ -181,7 +191,8 @@ public class PostgresResource implements ResourceLifecycleManager {
                 checksum.update(content, 0, content.length);
             }
 
-            @Override public void transferTo(TarArchiveOutputStream tarArchiveOutputStream, String destination) {
+            @Override
+            public void transferTo(TarArchiveOutputStream tarArchiveOutputStream, String destination) {
                 try {
                     tarArchiveOutputStream.putArchiveEntry(createTarArchiveEntry(destination));
                     tarArchiveOutputStream.write(getBytes());

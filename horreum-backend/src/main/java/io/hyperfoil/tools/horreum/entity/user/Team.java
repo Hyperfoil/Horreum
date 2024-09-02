@@ -1,6 +1,10 @@
 package io.hyperfoil.tools.horreum.entity.user;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import static jakarta.persistence.GenerationType.SEQUENCE;
+
+import java.util.Objects;
+import java.util.Set;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,22 +14,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.SequenceGenerator;
 
-import java.util.Objects;
-import java.util.Set;
-
-import static jakarta.persistence.GenerationType.SEQUENCE;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity(name = "team")
 public class Team extends PanacheEntityBase {
 
     @Id
-    @SequenceGenerator(
-          name = "teamIdGenerator",
-          sequenceName = "team_id_seq",
-          allocationSize = 1
-    )
+    @SequenceGenerator(name = "teamIdGenerator", sequenceName = "team_id_seq", allocationSize = 1)
     @GeneratedValue(strategy = SEQUENCE, generator = "teamIdGenerator")
-    @Column(name="id")
+    @Column(name = "id")
     public Integer id;
 
     @Column(name = "team_name")
@@ -34,13 +31,15 @@ public class Team extends PanacheEntityBase {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     public Set<TeamMembership> teams;
 
-    public Team(){}
+    public Team() {
+    }
 
     public Team(String teamName) {
         this.teamName = teamName;
     }
 
-    @Override public boolean equals(Object o) {
+    @Override
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         } else if (o == null || getClass() != o.getClass()) {
@@ -49,7 +48,8 @@ public class Team extends PanacheEntityBase {
         return Objects.equals(id, ((Team) o).id) && Objects.equals(teamName, ((Team) o).teamName);
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         int result = Objects.hashCode(id);
         result = 31 * result + Objects.hashCode(teamName);
         return result;

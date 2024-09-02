@@ -19,4 +19,5 @@ public class GithubIssueCreateActionConfig extends BaseActionConfig {
 
     public GithubIssueCreateActionConfig() {
         this.type = ActionType.GITHUB_ISSUE_CREATE.toString();
-    }}
+    }
+}

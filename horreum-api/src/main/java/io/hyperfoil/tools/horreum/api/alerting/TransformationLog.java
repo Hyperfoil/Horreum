@@ -1,11 +1,13 @@
 package io.hyperfoil.tools.horreum.api.alerting;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.hyperfoil.tools.horreum.api.data.PersistentLog;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-@Schema( type = SchemaType.OBJECT, description = "Transformation Log", name = "TransformationLog")
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.hyperfoil.tools.horreum.api.data.PersistentLog;
+
+@Schema(type = SchemaType.OBJECT, description = "Transformation Log", name = "TransformationLog")
 public class TransformationLog extends PersistentLog {
     @JsonProperty("testId")
     private Integer testId;
@@ -14,7 +16,7 @@ public class TransformationLog extends PersistentLog {
     private Integer runId;
 
     public TransformationLog() {
-        super(0, (String)null);
+        super(0, (String) null);
     }
 
     public TransformationLog(Integer testId, Integer runId, int level, String message) {

@@ -1,8 +1,28 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import jakarta.inject.Inject;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.elasticsearch.client.Request;
+import org.elasticsearch.client.Response;
+import org.elasticsearch.client.RestClient;
+import org.junit.Assert;
+import org.junit.jupiter.api.*;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
@@ -14,28 +34,11 @@ import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.test.ElasticsearchTestProfile;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
-import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.elasticsearch.client.Request;
-import org.elasticsearch.client.Response;
-import org.elasticsearch.client.RestClient;
-import org.junit.Assert;
-import org.junit.jupiter.api.*;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 @TestProfile(ElasticsearchTestProfile.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class DatasourceTest extends BaseServiceTest{
+public class DatasourceTest extends BaseServiceTest {
 
     @ConfigProperty(name = "quarkus.elasticsearch.hosts")
     Optional<List<String>> hosts;
@@ -55,10 +58,11 @@ public class DatasourceTest extends BaseServiceTest{
 
         TestConfig testConfig = createNewTestAndDatastores(info);
 
-        BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW,  testConfig.test.id);
+        BlockingQueue<Dataset.EventNew> dataSetQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATASET_NEW,
+                testConfig.test.id);
 
         String payload = """
-                { 
+                {
                     "index": "tfb",
                     "type": "DOC",
                     "query": "{docID}"
@@ -79,12 +83,13 @@ public class DatasourceTest extends BaseServiceTest{
         assertEquals(1047, ds.data.path(0).path("value").intValue());
 
     }
+
     @org.junit.jupiter.api.Test
     public void multidocPayload(TestInfo info) throws InterruptedException {
         TestConfig testConfig = createNewTestAndDatastores(info);
 
         String payload = """
-                { 
+                {
                     "index": "tfb",
                     "type": "SEARCH",
                     "query": {
@@ -105,13 +110,11 @@ public class DatasourceTest extends BaseServiceTest{
         assertNotNull(runID);
         Assert.assertEquals(4, runID.split(",").length);
 
-
     }
 
     @org.junit.jupiter.api.Test
     public void multiQueryPayload(TestInfo info) throws InterruptedException {
         TestConfig testConfig = createNewTestAndDatastores(info);
-
 
         String payload = """
                 {
@@ -137,7 +140,7 @@ public class DatasourceTest extends BaseServiceTest{
                         }
                       }
                     }
-                }                
+                }
                 """;
         String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
 
@@ -160,7 +163,7 @@ public class DatasourceTest extends BaseServiceTest{
     @org.junit.jupiter.api.Test
     public void testDatastorePermissions(TestInfo info) throws InterruptedException {
 
-        DatastoreConfigDAO.<DatastoreConfigDAO>list("owner = ?1 and type = ?2", TESTER_ROLES[0], DatastoreType.ELASTICSEARCH)
+        DatastoreConfigDAO.<DatastoreConfigDAO> list("owner = ?1 and type = ?2", TESTER_ROLES[0], DatastoreType.ELASTICSEARCH)
                 .stream()
                 .forEach(store -> jsonRequest().delete("/api/config/datastore/".concat(store.id.toString())));
 
@@ -182,7 +185,7 @@ public class DatasourceTest extends BaseServiceTest{
 
     }
 
-    private TestConfig createNewTestAndDatastores(TestInfo info){
+    private TestConfig createNewTestAndDatastores(TestInfo info) {
         Datastore newDatastore = new Datastore();
         newDatastore.name = info.getDisplayName();
         newDatastore.type = DatastoreType.ELASTICSEARCH;
@@ -213,7 +216,7 @@ public class DatasourceTest extends BaseServiceTest{
         return new TestConfig(test, schema, newDatastore);
     }
 
-    class TestConfig{
+    class TestConfig {
         public final Test test;
         public final Schema schema;
         public final Datastore datastore;
@@ -226,7 +229,7 @@ public class DatasourceTest extends BaseServiceTest{
     }
 
     @BeforeAll
-    public void configureElasticDatasets(){
+    public void configureElasticDatasets() {
 
         uploadDoc("meta", "uid", "data/experiment-meta-data-d1.json");
         uploadDoc("meta", "uid", "data/experiment-meta-data-d2.json");
@@ -246,7 +249,7 @@ public class DatasourceTest extends BaseServiceTest{
 
     }
 
-    private void uploadDoc(String index, String idField,  String resourcepath){
+    private void uploadDoc(String index, String idField, String resourcepath) {
         try {
             JsonNode payload = new ObjectMapper().readTree(resourceToString(resourcepath));
             Request request = new Request(

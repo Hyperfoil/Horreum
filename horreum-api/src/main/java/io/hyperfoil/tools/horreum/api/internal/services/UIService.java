@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.api.internal.services;
 
-import io.hyperfoil.tools.horreum.api.data.View;
+import java.util.List;
+
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -9,13 +10,14 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-import java.util.List;
+import io.hyperfoil.tools.horreum.api.data.View;
 
 @Path("/api/ui")
-@Consumes({ MediaType.APPLICATION_JSON})
+@Consumes({ MediaType.APPLICATION_JSON })
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "ui", description = "Manage schemas")
 public interface UIService {

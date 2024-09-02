@@ -10,7 +10,7 @@ public class DevServicesConfig {
     /**
      * Horreum dev services
      */
-    @ConfigItem( defaultValue = "true")
+    @ConfigItem(defaultValue = "true")
     public boolean enabled;
     /**
      * Configuration for Keycloak dev services

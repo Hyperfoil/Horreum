@@ -1,9 +1,9 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import static jakarta.persistence.GenerationType.SEQUENCE;
+
+import java.util.List;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,11 +17,14 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+
 import org.hibernate.annotations.Type;
 
-import java.util.List;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
-import static jakarta.persistence.GenerationType.SEQUENCE;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 // Hyperfoil will sort runs that match the admittance filter (by default all)
 // to categories and will create a table/chart for each unique value. This is similar to tags in regression series.
@@ -30,59 +33,56 @@ import static jakarta.persistence.GenerationType.SEQUENCE;
 @Entity(name = "TableReportConfig")
 @Table(name = "tablereportconfig")
 public class TableReportConfigDAO extends PanacheEntityBase {
-   @Id
-   @SequenceGenerator(
-         name = "tableReportConfigIdGenerator",
-         sequenceName = "tablereportconfig_seq"
-   )
-   @GeneratedValue(strategy = SEQUENCE, generator = "tableReportConfigIdGenerator")
-   public Integer id;
+    @Id
+    @SequenceGenerator(name = "tableReportConfigIdGenerator", sequenceName = "tablereportconfig_seq")
+    @GeneratedValue(strategy = SEQUENCE, generator = "tableReportConfigIdGenerator")
+    public Integer id;
 
-   @NotNull
-   public String title;
+    @NotNull
+    public String title;
 
-   // This column gets `null` when the test is deleted
-   @ManyToOne(fetch = FetchType.EAGER)
-   @JoinColumn(name = "testid")
-   public TestDAO test;
+    // This column gets `null` when the test is deleted
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "testid")
+    public TestDAO test;
 
-   @Type(JsonBinaryType.class)
-   @Column(columnDefinition = "jsonb")
-   public ArrayNode filterLabels;
-   public String filterFunction;
+    @Type(JsonBinaryType.class)
+    @Column(columnDefinition = "jsonb")
+    public ArrayNode filterLabels;
+    public String filterFunction;
 
-   @Type(JsonBinaryType.class)
-   @Column(columnDefinition = "jsonb")
-   public ArrayNode categoryLabels;
-   public String categoryFunction;
-   public String categoryFormatter;
+    @Type(JsonBinaryType.class)
+    @Column(columnDefinition = "jsonb")
+    public ArrayNode categoryLabels;
+    public String categoryFunction;
+    public String categoryFormatter;
 
-   // this picks the column/series line
-   @NotNull
-   @Type(JsonBinaryType.class)
-   @Column(columnDefinition = "jsonb")
-   public ArrayNode seriesLabels;
-   public String seriesFunction;
-   public String seriesFormatter;
+    // this picks the column/series line
+    @NotNull
+    @Type(JsonBinaryType.class)
+    @Column(columnDefinition = "jsonb")
+    public ArrayNode seriesLabels;
+    public String seriesFunction;
+    public String seriesFormatter;
 
-   // this determines the row/x axis
-   @Type(JsonBinaryType.class)
-   @Column(columnDefinition = "jsonb")
-   public ArrayNode scaleLabels;
-   public String scaleFunction;
-   public String scaleFormatter;
-   public String scaleDescription;
+    // this determines the row/x axis
+    @Type(JsonBinaryType.class)
+    @Column(columnDefinition = "jsonb")
+    public ArrayNode scaleLabels;
+    public String scaleFunction;
+    public String scaleFormatter;
+    public String scaleDescription;
 
-   @NotNull
-   @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
-   @OrderBy("order ASC")
-   public List<ReportComponentDAO> components;
+    @NotNull
+    @OneToMany(mappedBy = "report", orphanRemoval = true, cascade = CascadeType.ALL)
+    @OrderBy("order ASC")
+    public List<ReportComponentDAO> components;
 
-   public void ensureLinked() {
-      if (components != null) {
-         for (ReportComponentDAO c : components) {
-            c.report = this;
-         }
-      }
-   }
+    public void ensureLinked() {
+        if (components != null) {
+            for (ReportComponentDAO c : components) {
+                c.report = this;
+            }
+        }
+    }
 }

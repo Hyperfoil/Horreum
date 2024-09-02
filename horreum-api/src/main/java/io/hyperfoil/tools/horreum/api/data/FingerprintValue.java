@@ -1,15 +1,15 @@
 package io.hyperfoil.tools.horreum.api.data;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
-import org.eclipse.microprofile.openapi.annotations.media.Schema;
-
 import java.util.ArrayList;
 import java.util.List;
 
-@Schema(type = SchemaType.OBJECT,
-        description = "Representation of Fingerprint. If the Fingerprint has children the value will be null.")
-public class FingerprintValue <T> {
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+@Schema(type = SchemaType.OBJECT, description = "Representation of Fingerprint. If the Fingerprint has children the value will be null.")
+public class FingerprintValue<T> {
     @Schema(description = "Fingerprint name", example = "Mode")
     public String name;
     @Schema(description = "Fingerprint name", example = "Library")
@@ -22,11 +22,11 @@ public class FingerprintValue <T> {
 
     public static List<FingerprintValue> parse(JsonNode base) {
         List<FingerprintValue> fpvs = new ArrayList<>();
-        base.fieldNames().forEachRemaining( name -> {
+        base.fieldNames().forEachRemaining(name -> {
             FingerprintValue v;
             JsonNode node = base.path(name);
-            if(node.isValueNode()) {
-                switch (base.path(name).getNodeType()){
+            if (node.isValueNode()) {
+                switch (base.path(name).getNodeType()) {
                     case BINARY:
                         v = new FingerprintValue<byte[]>();
                         break;
