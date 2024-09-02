@@ -1,5 +1,29 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import static io.restassured.RestAssured.given;
+import static org.apache.http.HttpStatus.SC_OK;
+import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.spi.CDI;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.core.Response;
+
+import org.jboss.logging.Logger;
+import org.junit.jupiter.api.Test;
+
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.server.SecurityBootstrap;
@@ -12,28 +36,6 @@ import io.quarkus.security.runtime.QuarkusPrincipal;
 import io.quarkus.security.runtime.QuarkusSecurityIdentity;
 import io.quarkus.test.security.TestIdentityAssociation;
 import io.quarkus.test.security.TestSecurity;
-import jakarta.enterprise.inject.Instance;
-import jakarta.enterprise.inject.spi.CDI;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import jakarta.ws.rs.core.Response;
-import org.jboss.logging.Logger;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static io.restassured.RestAssured.given;
-import static org.apache.http.HttpStatus.SC_OK;
-import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test for {@link UserServiceImpl} that is executed for every back-end
@@ -45,17 +47,21 @@ public abstract class UserServiceAbstractTest {
     //  the name of the default keycloak user with "admin" role (see io.quarkus.test.keycloak.server.KeycloakTestResourceLifecycleManager#createUsers)
     private static final String KEYCLOAK_ADMIN = "admin";
 
-    @Inject UserServiceImpl userService;
+    @Inject
+    UserServiceImpl userService;
 
-    @Inject Instance<UserBackEnd> backend;
+    @Inject
+    Instance<UserBackEnd> backend;
 
-    @Inject SecurityBootstrap securitiyBootstrap;
+    @Inject
+    SecurityBootstrap securitiyBootstrap;
 
     /**
      * Runs a section of a test under a different user
      */
     private void overrideTestSecurity(String name, Set<String> roles, Runnable runnable) {
-        SecurityIdentity identity = QuarkusSecurityIdentity.builder().setPrincipal(new QuarkusPrincipal(name)).addRoles(roles).build();
+        SecurityIdentity identity = QuarkusSecurityIdentity.builder().setPrincipal(new QuarkusPrincipal(name)).addRoles(roles)
+                .build();
         TestIdentityAssociation identityAssociation = CDI.current().select(TestIdentityAssociation.class).get();
         SecurityIdentity previous = identityAssociation.getTestIdentity();
         try {
@@ -67,7 +73,8 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void administratorsTest() {
+    @Test
+    void administratorsTest() {
         String adminUserName = KEYCLOAK_ADMIN, testUserName = "administrator-test-user".toLowerCase();
 
         UserService.NewUser adminUser = new UserService.NewUser();
@@ -127,7 +134,8 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void teamTest() {
+    @Test
+    void teamTest() {
         String testTeam = "an-unique-test-team";
         List<String> originalTeams = userService.getTeams();
 
@@ -159,7 +167,8 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void teamManagerTest() {
+    @Test
+    void teamManagerTest() {
         String testTeam = "managed-test-team", otherTeam = "some-team-that-does-not-exist-team";
         userService.addTeam(testTeam);
 
@@ -221,47 +230,52 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void machineAccountTest() {
+    @Test
+    void machineAccountTest() {
         String testTeam = "machine-test-team";
         userService.addTeam(testTeam);
 
-        overrideTestSecurity("manager", Set.of(Roles.MANAGER, testTeam.substring(0, testTeam.length() - 4) + Roles.MANAGER), () -> {
-            String machineUser = "machine-account";
+        overrideTestSecurity("manager", Set.of(Roles.MANAGER, testTeam.substring(0, testTeam.length() - 4) + Roles.MANAGER),
+                () -> {
+                    String machineUser = "machine-account";
 
-            // add a user to the team with "machine" role
-            UserService.NewUser user = new UserService.NewUser();
-            user.user = new UserService.UserData("", machineUser, "Machine", "Account", "machine@horreum.io");
-            user.password = "whatever";
-            user.team = testTeam;
-            user.roles = List.of(Roles.UPLOADER, Roles.MACHINE);
-            userService.createUser(user);
+                    // add a user to the team with "machine" role
+                    UserService.NewUser user = new UserService.NewUser();
+                    user.user = new UserService.UserData("", machineUser, "Machine", "Account", "machine@horreum.io");
+                    user.password = "whatever";
+                    user.team = testTeam;
+                    user.roles = List.of(Roles.UPLOADER, Roles.MACHINE);
+                    userService.createUser(user);
 
-            // user should not show up in search or team membership
-            assertFalse(userService.teamMembers(testTeam).containsKey(machineUser));
-            assertTrue(userService.searchUsers(machineUser).isEmpty());
+                    // user should not show up in search or team membership
+                    assertFalse(userService.teamMembers(testTeam).containsKey(machineUser));
+                    assertTrue(userService.searchUsers(machineUser).isEmpty());
 
-            // user should be able to authenticate with the password provided on create
-            given().auth().preemptive().basic(machineUser, "wrong-password").get("api/user/roles").then().statusCode(SC_UNAUTHORIZED);
-            given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then().statusCode(SC_OK);
+                    // user should be able to authenticate with the password provided on create
+                    given().auth().preemptive().basic(machineUser, "wrong-password").get("api/user/roles").then()
+                            .statusCode(SC_UNAUTHORIZED);
+                    given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then().statusCode(SC_OK);
 
-            // reset password
-            String newPassword = userService.resetPassword(testTeam, machineUser);
-            assertFalse(newPassword.isEmpty(), "Expected some generated password");
+                    // reset password
+                    String newPassword = userService.resetPassword(testTeam, machineUser);
+                    assertFalse(newPassword.isEmpty(), "Expected some generated password");
 
-            // user should be able to authenticate now
-            given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then().statusCode(SC_UNAUTHORIZED);
-            given().auth().preemptive().basic(machineUser, newPassword).get("api/user/roles").then().statusCode(SC_OK);
+                    // user should be able to authenticate now
+                    given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then()
+                            .statusCode(SC_UNAUTHORIZED);
+                    given().auth().preemptive().basic(machineUser, newPassword).get("api/user/roles").then().statusCode(SC_OK);
 
-            // manager remove account
-            userService.removeUser(machineUser);
-            assertThrows(ServiceException.class, () -> userService.removeUser(machineUser));
-        });
+                    // manager remove account
+                    userService.removeUser(machineUser);
+                    assertThrows(ServiceException.class, () -> userService.removeUser(machineUser));
+                });
 
         userService.deleteTeam(testTeam);
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void defaultTeamTest() {
+    @Test
+    void defaultTeamTest() {
         String testUserName = "default-team-user";
 
         // create a test user
@@ -317,15 +331,18 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void userInfoTest() {
-        String[] usernames = new String[] { "barreiro-test-user", "barracuda-test-user", "barreto-test-user", "barrabas-test-user" };
+    @Test
+    void userInfoTest() {
+        String[] usernames = new String[] { "barreiro-test-user", "barracuda-test-user", "barreto-test-user",
+                "barrabas-test-user" };
         String lastname = "Info"; // mixed case
         int i = 0; // for uniqueness
 
         // create all test users
         for (String username : usernames) {
             UserService.NewUser testUser = new UserService.NewUser();
-            testUser.user = new UserService.UserData("", username, username.substring(0, username.indexOf("-")), lastname, "info-user-" + i++ + "@horreum.io");
+            testUser.user = new UserService.UserData("", username, username.substring(0, username.indexOf("-")), lastname,
+                    "info-user-" + i++ + "@horreum.io");
             testUser.password = "secret";
             testUser.team = "info-team";
             testUser.roles = Collections.emptyList();
@@ -368,8 +385,10 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void createUserTest() {
-        String firstUser = "create-user-test-user", secondUser = "another-create-test-user", thirdUser = "create-user-admin-user", testTeam = "create-user-test-team";
+    @Test
+    void createUserTest() {
+        String firstUser = "create-user-test-user", secondUser = "another-create-test-user",
+                thirdUser = "create-user-admin-user", testTeam = "create-user-test-team";
 
         // create team
         userService.addTeam(testTeam);
@@ -421,7 +440,8 @@ public abstract class UserServiceAbstractTest {
         assertFalse(userService.info(List.of(secondUser)).isEmpty());
 
         // test all roles
-        assertTrue(userService.teamMembers(testTeam).get(secondUser).containsAll(List.of("viewer", "tester", "uploader", "manager")));
+        assertTrue(userService.teamMembers(testTeam).get(secondUser)
+                .containsAll(List.of("viewer", "tester", "uploader", "manager")));
 
         // test create user without password
         UserService.NewUser impostor = new UserService.NewUser();
@@ -452,7 +472,8 @@ public abstract class UserServiceAbstractTest {
         userService.deleteTeam(testTeam);
     }
 
-    @Test void authorizationTest() {
+    @Test
+    void authorizationTest() {
         // unauthenticated user
         assertThrows(UnauthorizedException.class, userService::getRoles);
         assertThrows(UnauthorizedException.class, () -> userService.searchUsers(null));
@@ -484,7 +505,8 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void userSearchOnlyForAdminManagerTest() {
+    @Test
+    void userSearchOnlyForAdminManagerTest() {
         int beforeCount = userService.searchUsers("").size();
         String testTeam = "foobar-test-team";
         userService.addTeam(testTeam);
@@ -515,9 +537,12 @@ public abstract class UserServiceAbstractTest {
     }
 
     @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test void bootstrapAccount() {
+    @Test
+    void bootstrapAccount() {
         // assert bootstrap account exists
-        assertTrue(userService.administrators().stream().map(userData -> userData.username).anyMatch("horreum.bootstrap"::equals), "Bootstrap account missing");
+        assertTrue(
+                userService.administrators().stream().map(userData -> userData.username).anyMatch("horreum.bootstrap"::equals),
+                "Bootstrap account missing");
 
         // reset bootstrap account
         userService.removeUser("horreum.bootstrap");
@@ -525,6 +550,8 @@ public abstract class UserServiceAbstractTest {
         assertTrue(userService.administrators().isEmpty());
 
         securitiyBootstrap.checkBootstrapAccount();
-        assertTrue(userService.administrators().stream().map(userData -> userData.username).anyMatch("horreum.bootstrap"::equals), "Bootstrap account missing");
+        assertTrue(
+                userService.administrators().stream().map(userData -> userData.username).anyMatch("horreum.bootstrap"::equals),
+                "Bootstrap account missing");
     }
 }

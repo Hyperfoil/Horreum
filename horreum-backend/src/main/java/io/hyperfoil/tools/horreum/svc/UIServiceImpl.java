@@ -1,20 +1,21 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import io.hyperfoil.tools.horreum.api.data.View;
-import io.hyperfoil.tools.horreum.api.internal.services.UIService;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
-import io.hyperfoil.tools.horreum.mapper.ViewMapper;
-import io.hyperfoil.tools.horreum.server.WithRoles;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
+import io.hyperfoil.tools.horreum.api.data.View;
+import io.hyperfoil.tools.horreum.api.internal.services.UIService;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
+import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
+import io.hyperfoil.tools.horreum.mapper.ViewMapper;
+import io.hyperfoil.tools.horreum.server.WithRoles;
 
 public class UIServiceImpl implements UIService {
 
@@ -36,7 +37,7 @@ public class UIServiceImpl implements UIService {
     }
 
     @Override
-    @RolesAllowed({Roles.ADMIN, Roles.TESTER})
+    @RolesAllowed({ Roles.ADMIN, Roles.TESTER })
     @WithRoles
     @Transactional
     public void createViews(List<View> views) {
@@ -44,7 +45,7 @@ public class UIServiceImpl implements UIService {
             throw ServiceException.badRequest("Missing test id on view");
         }
         TestDAO test = testService.getTestForUpdate(views.get(0).testId);
-        for(View view : views) {
+        for (View view : views) {
             doUpdate(test, ViewMapper.to(view));
         }
     }
@@ -95,11 +96,11 @@ public class UIServiceImpl implements UIService {
 
         TestDAO test = TestDAO.findById(testId);
 
-        if (test == null ){
+        if (test == null) {
             throw ServiceException.badRequest("Test not found with id: ".concat(Integer.toString(testId)));
         }
 
-        return ViewDAO.<ViewDAO>find("test.id", testId)
+        return ViewDAO.<ViewDAO> find("test.id", testId)
                 .stream().map(ViewMapper::from).collect(Collectors.toList());
     }
 

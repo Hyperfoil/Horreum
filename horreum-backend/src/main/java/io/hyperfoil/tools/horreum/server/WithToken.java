@@ -11,8 +11,9 @@ import jakarta.interceptor.InterceptorBinding;
 
 @Inherited
 @InterceptorBinding
-@Target({ElementType.METHOD, ElementType.TYPE})
+@Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface WithToken {
-   @Nonbinding String queryParam() default "token";
+    @Nonbinding
+    String queryParam() default "token";
 }

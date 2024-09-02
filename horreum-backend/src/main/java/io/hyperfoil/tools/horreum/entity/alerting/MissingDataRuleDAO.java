@@ -1,10 +1,8 @@
 package io.hyperfoil.tools.horreum.entity.alerting;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import java.time.Instant;
+import java.util.Objects;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
@@ -14,10 +12,15 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+
 import org.hibernate.annotations.Type;
 
-import java.time.Instant;
-import java.util.Objects;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
+import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
+import io.hyperfoil.tools.horreum.entity.data.TestDAO;
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 // If the test has no dataset matching the rule uploaded for more than this duration (in ms)
 // we send a notification about missing regular upload. If the value is non-positive
@@ -25,49 +28,49 @@ import java.util.Objects;
 @Entity(name = "MissingDataRule")
 @Table(name = "missingdata_rule")
 public class MissingDataRuleDAO extends PanacheEntityBase {
-   @Id
-   @CustomSequenceGenerator(
-         name = "mdridgenerator",
-         allocationSize = 1
-   )
-   public Integer id;
+    @Id
+    @CustomSequenceGenerator(name = "mdridgenerator", allocationSize = 1)
+    public Integer id;
 
-   public String name;
+    public String name;
 
-   @ManyToOne(optional = false)
-   @JoinColumn(name = "test_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
-   public TestDAO test;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "test_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    public TestDAO test;
 
-   @Type(JsonBinaryType.class)
-   @Column(columnDefinition = "jsonb")
-   public ArrayNode labels;
+    @Type(JsonBinaryType.class)
+    @Column(columnDefinition = "jsonb")
+    public ArrayNode labels;
 
-   public String condition;
+    public String condition;
 
-   @NotNull
-   public long maxStaleness;
+    @NotNull
+    public long maxStaleness;
 
-   @Column(name = "last_notification", columnDefinition = "timestamp")
-   public Instant lastNotification;
+    @Column(name = "last_notification", columnDefinition = "timestamp")
+    public Instant lastNotification;
 
-   public int testId() {
-      return test.id;
-   }
+    public int testId() {
+        return test.id;
+    }
 
-   public void setTestId(int testId) {
-      this.test = TestDAO.getEntityManager().getReference(TestDAO.class, testId);
-   }
+    public void setTestId(int testId) {
+        this.test = TestDAO.getEntityManager().getReference(TestDAO.class, testId);
+    }
 
-   @Override
-   public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-      MissingDataRuleDAO that = (MissingDataRuleDAO) o;
-      return maxStaleness == that.maxStaleness && Objects.equals(labels, that.labels) && Objects.equals(condition, that.condition);
-   }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        MissingDataRuleDAO that = (MissingDataRuleDAO) o;
+        return maxStaleness == that.maxStaleness && Objects.equals(labels, that.labels)
+                && Objects.equals(condition, that.condition);
+    }
 
-   @Override
-   public int hashCode() {
-      return Objects.hash(labels, condition, maxStaleness);
-   }
+    @Override
+    public int hashCode() {
+        return Objects.hash(labels, condition, maxStaleness);
+    }
 }

@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.entity.report;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import static jakarta.persistence.GenerationType.SEQUENCE;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -12,39 +12,39 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
+
 import org.hibernate.annotations.Type;
 
-import static jakarta.persistence.GenerationType.SEQUENCE;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
+import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 
 @Entity(name = "ReportComponent")
 @Table(name = "reportcomponent")
 public class ReportComponentDAO {
-   @Id
-   @SequenceGenerator(
-         name = "reportComponentIdGenerator",
-         sequenceName = "reportcomponent_seq"
-   )
-   @GeneratedValue(strategy = SEQUENCE, generator = "reportComponentIdGenerator")
-   public Integer id;
+    @Id
+    @SequenceGenerator(name = "reportComponentIdGenerator", sequenceName = "reportcomponent_seq")
+    @GeneratedValue(strategy = SEQUENCE, generator = "reportComponentIdGenerator")
+    public Integer id;
 
-   @ManyToOne(fetch = FetchType.LAZY)
-   @JoinColumn(name = "reportconfig_id")
-   public TableReportConfigDAO report;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reportconfig_id")
+    public TableReportConfigDAO report;
 
-   @NotNull
-   public String name;
+    @NotNull
+    public String name;
 
-   @NotNull
-   @Column(name = "component_order")
-   public int order;
+    @NotNull
+    @Column(name = "component_order")
+    public int order;
 
-   @NotNull
-   @Type(JsonBinaryType.class)
-   @Column(columnDefinition = "jsonb")
-   public ArrayNode labels;
+    @NotNull
+    @Type(JsonBinaryType.class)
+    @Column(columnDefinition = "jsonb")
+    public ArrayNode labels;
 
-   public String function;
+    public String function;
 
-   // displayed on Y axis
-   public String unit;
+    // displayed on Y axis
+    public String unit;
 }

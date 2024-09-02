@@ -1,5 +1,21 @@
 package io.hyperfoil.tools.horreum.server;
 
+import java.security.SecureRandom;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.representations.idm.RoleRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
+
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.Team;
 import io.hyperfoil.tools.horreum.entity.user.TeamMembership;
@@ -11,45 +27,40 @@ import io.hyperfoil.tools.horreum.svc.user.UserBackEnd;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.LaunchMode;
 import io.quarkus.runtime.StartupEvent;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
-import jakarta.enterprise.inject.Instance;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.representations.idm.RoleRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
 
-import java.security.SecureRandom;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+@ApplicationScoped
+public class SecurityBootstrap {
 
-@ApplicationScoped public class SecurityBootstrap {
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.server-url")
+    Optional<String> keycloakURL;
+    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm", defaultValue = "horreum")
+    String realm;
 
-    @ConfigProperty(name = "quarkus.keycloak.admin-client.server-url") Optional<String> keycloakURL;
-    @ConfigProperty(name = "quarkus.keycloak.admin-client.realm", defaultValue = "horreum") String realm;
+    @ConfigProperty(name = "horreum.roles.provider", defaultValue = "keycloak")
+    String provider;
 
-    @ConfigProperty(name = "horreum.roles.provider", defaultValue = "keycloak") String provider;
-
-    @ConfigProperty(name = "horreum.bootstrap.password") Optional<String> providedBootstrapPassword;
+    @ConfigProperty(name = "horreum.bootstrap.password")
+    Optional<String> providedBootstrapPassword;
 
     private static final String MIGRATION_PROVIDER = "database";
     private static final String BOOTSTRAP_ACCOUNT = "horreum.bootstrap";
 
-    private static final char[] RANDOM_PASSWORD_CHARS = ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789").toCharArray();
+    private static final char[] RANDOM_PASSWORD_CHARS = ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+            .toCharArray();
     private static final int RANDOM_PASSWORD_DEFAULT_LENGTH = 16;
 
-    @Inject RoleManager roleManager;
+    @Inject
+    RoleManager roleManager;
 
-    @Inject Instance<UserBackEnd> backend;
+    @Inject
+    Instance<UserBackEnd> backend;
 
     void onStart(@Observes StartupEvent event, Keycloak keycloak) {
         if (keycloakURL.isPresent() && performRolesMigration()) {
             Log.info("Perform roles migration from keycloak...");
             for (UserRepresentation kcUser : keycloak.realm(realm).users().list(0, Integer.MAX_VALUE)) {
-                performUserMigration(kcUser, keycloak.realm(realm).users().get(kcUser.getId()).roles().getAll().getRealmMappings());
+                performUserMigration(kcUser,
+                        keycloak.realm(realm).users().get(kcUser.getId()).roles().getAll().getRealmMappings());
             }
             Log.info("Migration from keycloak complete");
         }
@@ -69,7 +80,8 @@ import java.util.Optional;
 
     @Transactional
     void performUserMigration(UserRepresentation kcUser, List<RoleRepresentation> kcRoles) {
-        Log.infov("Migration of user {0} {1} with username {2}", kcUser.getFirstName(), kcUser.getLastName(), kcUser.getUsername());
+        Log.infov("Migration of user {0} {1} with username {2}", kcUser.getFirstName(), kcUser.getLastName(),
+                kcUser.getUsername());
         String previousRoles = roleManager.setRoles(kcUser.getUsername());
         try {
 
@@ -97,7 +109,8 @@ import java.util.Optional;
             }
             userInfo.persist();
         } catch (Exception e) {
-            Log.warnv("Unable to perform migration for user {0} {1} due to {2}", kcUser.getFirstName(), kcUser.getLastName(), e.getMessage());
+            Log.warnv("Unable to perform migration for user {0} {1} due to {2}", kcUser.getFirstName(), kcUser.getLastName(),
+                    e.getMessage());
         } finally {
             roleManager.setRoles(previousRoles);
         }
@@ -105,7 +118,8 @@ import java.util.Optional;
 
     private void addTeamMembership(UserInfo userInfo, String teamName, TeamRole role) {
         Optional<Team> storedTeam = Team.find("teamName", teamName).firstResultOptional();
-        userInfo.teams.add(new TeamMembership(userInfo, storedTeam.orElseGet(() -> Team.getEntityManager().merge(new Team(teamName))), role));
+        userInfo.teams.add(new TeamMembership(userInfo,
+                storedTeam.orElseGet(() -> Team.getEntityManager().merge(new Team(teamName))), role));
     }
 
     // --- //
@@ -115,13 +129,15 @@ import java.util.Optional;
      * The account should be removed once other accounts are created.
      */
     @WithRoles(extras = BOOTSTRAP_ACCOUNT)
-    @Transactional public void checkBootstrapAccount() {
+    @Transactional
+    public void checkBootstrapAccount() {
         // checks the list of administrators. a user cannot remove himself nor create the bootstrap account (restricted namespace)
         List<String> administrators = backend.get().administrators().stream().map(userData -> userData.username).toList();
         if (administrators.isEmpty()) {
             UserService.NewUser user = new UserService.NewUser();
             user.user = new UserService.UserData("", BOOTSTRAP_ACCOUNT, "Bootstrap", "Account", "horreum@example.com");
-            user.password = providedBootstrapPassword.orElseGet(() -> LaunchMode.current().isDevOrTest() ? "secret" : generateRandomPassword(RANDOM_PASSWORD_DEFAULT_LENGTH));
+            user.password = providedBootstrapPassword.orElseGet(() -> LaunchMode.current().isDevOrTest() ? "secret"
+                    : generateRandomPassword(RANDOM_PASSWORD_DEFAULT_LENGTH));
 
             // create bootstrap account with admin role
             backend.get().createUser(user);
@@ -130,10 +146,11 @@ import java.util.Optional;
 
             // create dev-team managed by bootstrap
             backend.get().addTeam("dev-team");
-            backend.get().updateTeamMembers("dev-team", Map.of(BOOTSTRAP_ACCOUNT, List.of(Roles.MANAGER, Roles.TESTER, Roles.UPLOADER, Roles.VIEWER)));
+            backend.get().updateTeamMembers("dev-team",
+                    Map.of(BOOTSTRAP_ACCOUNT, List.of(Roles.MANAGER, Roles.TESTER, Roles.UPLOADER, Roles.VIEWER)));
 
             // create db entry, if not existent, like in UserService.createLocalUser()
-            UserInfo userInfo = UserInfo.<UserInfo>findByIdOptional(BOOTSTRAP_ACCOUNT).orElse(new UserInfo(BOOTSTRAP_ACCOUNT));
+            UserInfo userInfo = UserInfo.<UserInfo> findByIdOptional(BOOTSTRAP_ACCOUNT).orElse(new UserInfo(BOOTSTRAP_ACCOUNT));
             userInfo.defaultTeam = "dev-team";
 
             Log.infov("\n>>>\n>>> Created temporary account {0} with password {1}\n>>>", BOOTSTRAP_ACCOUNT, user.password);
@@ -144,7 +161,8 @@ import java.util.Optional;
 
     public static String generateRandomPassword(int lenght) {
         StringBuilder builder = new StringBuilder(lenght);
-        new SecureRandom().ints(lenght, 0, RANDOM_PASSWORD_CHARS.length).mapToObj(i -> RANDOM_PASSWORD_CHARS[i]).forEach(builder::append);
+        new SecureRandom().ints(lenght, 0, RANDOM_PASSWORD_CHARS.length).mapToObj(i -> RANDOM_PASSWORD_CHARS[i])
+                .forEach(builder::append);
         return builder.toString();
     }
 

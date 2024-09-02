@@ -13,22 +13,22 @@ import io.vertx.mutiny.ext.web.client.WebClient;
 @ApplicationScoped
 @Startup
 public class SlackClient {
-   @Inject
-   Vertx vertx;
+    @Inject
+    Vertx vertx;
 
-   private WebClient httpClient;
+    private WebClient httpClient;
 
-   @PostConstruct
-   public void postConstruct(){
-      WebClientOptions options = new WebClientOptions()
-            .setFollowRedirects(false)
-            .setMaxPoolSize(1) // we won't use more than 1 connection to prevent server rate limiting
-            .setConnectTimeout(2_000) // only wait 2s
-            .setKeepAlive(false);
-      httpClient = WebClient.create(vertx, new WebClientOptions(options).setProtocolVersion(HttpVersion.HTTP_1_1));
-   }
+    @PostConstruct
+    public void postConstruct() {
+        WebClientOptions options = new WebClientOptions()
+                .setFollowRedirects(false)
+                .setMaxPoolSize(1) // we won't use more than 1 connection to prevent server rate limiting
+                .setConnectTimeout(2_000) // only wait 2s
+                .setKeepAlive(false);
+        httpClient = WebClient.create(vertx, new WebClientOptions(options).setProtocolVersion(HttpVersion.HTTP_1_1));
+    }
 
-   public WebClient httpClient() {
-      return httpClient;
-   }
+    public WebClient httpClient() {
+        return httpClient;
+    }
 }

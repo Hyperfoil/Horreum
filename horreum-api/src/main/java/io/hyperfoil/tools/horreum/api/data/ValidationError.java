@@ -1,12 +1,10 @@
 package io.hyperfoil.tools.horreum.api.data;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.constraints.NotNull;
+
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ValidationError {
     @Schema(description = "Schema ID that Validation Error relates to", example = "101")
@@ -18,17 +16,17 @@ public class ValidationError {
     public ValidationError() {
     }
 
-    @JsonProperty( value = "schemaId", required = true )
+    @JsonProperty(value = "schemaId", required = true)
     public void setSchema(int id) {
         this.schemaId = id;
     }
 
-    @JsonProperty( value = "schemaId", required = true )
+    @JsonProperty(value = "schemaId", required = true)
     public Integer getSchemaId() {
         return schemaId;
     }
 
-    public static class ErrorDetails{
+    public static class ErrorDetails {
         @NotNull
         @JsonProperty(required = true)
         @Schema(description = "Validation Error type")

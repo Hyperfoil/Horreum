@@ -1,13 +1,14 @@
 package io.hyperfoil.tools.horreum.api.data;
 
+import java.util.Objects;
+
+import jakarta.validation.constraints.NotNull;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import jakarta.validation.constraints.NotNull;
-
-import java.util.Objects;
 
 public class ViewComponent {
     @JsonProperty(required = true)
@@ -42,7 +43,7 @@ public class ViewComponent {
         if (this == o) {
             return true;
         } else if (o != null && this.getClass() == o.getClass()) {
-            ViewComponent that = (ViewComponent)o;
+            ViewComponent that = (ViewComponent) o;
             return this.headerOrder == that.headerOrder &&
                     Objects.equals(this.id, that.id) &&
                     Objects.equals(this.headerName, that.headerName) &&

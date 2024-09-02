@@ -1,10 +1,10 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
-import io.hyperfoil.tools.horreum.api.data.Transformer;
-
 import java.util.Collections;
 import java.util.stream.Collectors;
+
+import io.hyperfoil.tools.horreum.api.data.Transformer;
+import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
 
 public class TransformerMapper {
     public static Transformer from(TransformerDAO t) {
@@ -19,7 +19,7 @@ public class TransformerMapper {
         dto.owner = t.owner;
         dto.access = t.access;
         dto.targetSchemaUri = t.targetSchemaUri;
-        if(t.extractors != null)
+        if (t.extractors != null)
             dto.extractors = t.extractors.stream().map(ExtractorMapper::from).collect(Collectors.toList());
         else
             dto.extractors = Collections.emptyList();
@@ -34,11 +34,11 @@ public class TransformerMapper {
         t.description = dto.description;
         t.function = dto.function;
         t.targetSchemaUri = dto.targetSchemaUri;
-        if(dto.schemaId != null && dto.schemaId > 0)
+        if (dto.schemaId != null && dto.schemaId > 0)
             t.setSchemaId(dto.schemaId);
         t.owner = dto.owner;
         t.access = dto.access;
-        if(dto.extractors != null)
+        if (dto.extractors != null)
             t.extractors = dto.extractors.stream().map(ExtractorMapper::to).collect(Collectors.toList());
         else
             t.extractors = Collections.emptyList();

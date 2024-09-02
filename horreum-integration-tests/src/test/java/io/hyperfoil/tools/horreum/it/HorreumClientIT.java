@@ -1,11 +1,33 @@
 package io.hyperfoil.tools.horreum.it;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import jakarta.ws.rs.BadRequestException;
+
+import org.junit.jupiter.api.Assertions;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import io.hyperfoil.tools.HorreumClient;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
@@ -35,38 +57,22 @@ import io.quarkus.test.junit.callback.QuarkusTestBeforeEachCallback;
 import io.quarkus.test.junit.callback.QuarkusTestBeforeTestExecutionCallback;
 import io.quarkus.test.junit.callback.QuarkusTestContext;
 import io.quarkus.test.junit.callback.QuarkusTestMethodContext;
-import org.junit.jupiter.api.Assertions;
-
-import jakarta.ws.rs.BadRequestException;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 @QuarkusIntegrationTest
 @TestProfile(InContainerProfile.class)
-public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, QuarkusTestBeforeClassCallback, QuarkusTestBeforeEachCallback, QuarkusTestAfterEachCallback, QuarkusTestAfterAllCallback {
+public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, QuarkusTestBeforeClassCallback,
+        QuarkusTestBeforeEachCallback, QuarkusTestAfterEachCallback, QuarkusTestAfterAllCallback {
 
     @org.junit.jupiter.api.Test
     public void testAddRunFromData() throws JsonProcessingException {
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
         try {
-            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC, null, null, "test", payload);
+            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC, null,
+                    null, "test", payload);
         } catch (BadRequestException badRequestException) {
-            fail(badRequestException.getMessage() + (badRequestException.getCause() != null ? " : " + badRequestException.getCause().getMessage() : ""));
+            fail(badRequestException.getMessage()
+                    + (badRequestException.getCause() != null ? " : " + badRequestException.getCause().getMessage() : ""));
         }
     }
 
@@ -76,9 +82,11 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         JsonNode metadata = JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("foo", "bar");
 
         try {
-            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC, null, null, "test", payload, metadata);
+            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC, null,
+                    null, "test", payload, metadata);
         } catch (BadRequestException badRequestException) {
-            fail(badRequestException.getMessage() + (badRequestException.getCause() != null ? " : " + badRequestException.getCause().getMessage() : ""));
+            fail(badRequestException.getMessage()
+                    + (badRequestException.getCause() != null ? " : " + badRequestException.getCause().getMessage() : ""));
         }
     }
 
@@ -109,11 +117,13 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         JsonNode data = JsonNodeFactory.instance.objectNode()
                 .put("$schema", schema.uri)
                 .put("value", "foobar");
-        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null, data);
+        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null,
+                data);
 
         int datasetId = -1;
         while (System.currentTimeMillis() < now + 10000) {
-            DatasetService.DatasetList datasets = horreumClient.datasetService.listByTest(dummyTest.id, null, null, null, null, null, null);
+            DatasetService.DatasetList datasets = horreumClient.datasetService.listByTest(dummyTest.id, null, null, null, null,
+                    null, null);
             if (datasets.datasets.isEmpty()) {
                 //noinspection BusyWait
                 Thread.sleep(50);
@@ -155,11 +165,13 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
         data.putIfAbsent("samplesArray", arrayNode);
 
-        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null, data);
+        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null,
+                data);
 
         int datasetId = -1;
         while (System.currentTimeMillis() < now + 10000) {
-            DatasetService.DatasetList datasets = horreumClient.datasetService.listByTest(dummyTest.id, null, null, null, null, null, null);
+            DatasetService.DatasetList datasets = horreumClient.datasetService.listByTest(dummyTest.id, null, null, null, null,
+                    null, null);
             if (datasets.datasets.isEmpty()) {
                 //noinspection BusyWait
                 Thread.sleep(50);
@@ -252,7 +264,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             variable.changeDetection = new HashSet<>();
             variable.changeDetection.add(changeDetection);
 
-            horreumClient.alertingService.updateVariables( dummyTest.id, Collections.singletonList(variable));
+            horreumClient.alertingService.updateVariables(dummyTest.id, Collections.singletonList(variable));
 
             //need this for defining experiment
             List<Variable> variableList = horreumClient.alertingService.variables(dummyTest.id);
@@ -262,10 +274,9 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             update.timelineLabels = Collections.emptyList();
             horreumClient.alertingService.updateChangeDetection(dummyTest.id, update);
 
-
             //4. Define experiments
             ExperimentProfile experimentProfile = new ExperimentProfile();
-            experimentProfile.id = -1;  //TODO: fix profile add/Update
+            experimentProfile.id = -1; //TODO: fix profile add/Update
             experimentProfile.name = "robust-experiment";
             experimentProfile.selectorLabels = mapper.readTree(" [ \"job\" ] ");
             experimentProfile.selectorFilter = "value => !!value";
@@ -281,22 +292,24 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
                     "          \"greaterBetter\": true" +
                     "        }", ObjectNode.class);
 
-
             experimentProfile.comparisons = Collections.singletonList(experimentComparison);
 
             horreumClient.experimentService.addOrUpdateProfile(dummyTest.id, experimentProfile);
 
             //5. upload some data
-            Consumer<JsonNode> uploadData = (payload) -> horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null, payload);
+            Consumer<JsonNode> uploadData = (payload) -> horreumClient.runService.addRunFromData("$.start", "$.stop",
+                    dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null, payload);
 
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds1.json")));
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds2.json")));
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds3.json")));
 
             //6. run experiments
-            RunService.RunsSummary runsSummary = horreumClient.runService.listTestRuns(dummyTest.id, false, null, null, "name", SortDirection.Ascending);
+            RunService.RunsSummary runsSummary = horreumClient.runService.listTestRuns(dummyTest.id, false, null, null, "name",
+                    SortDirection.Ascending);
 
-            Integer lastRunID = runsSummary.runs.stream().map(run -> run.id).max((Comparator.comparingInt(anInt -> anInt))).get();
+            Integer lastRunID = runsSummary.runs.stream().map(run -> run.id).max((Comparator.comparingInt(anInt -> anInt)))
+                    .get();
 
             RunService.RunExtended extendedRun = horreumClient.runService.getRun(lastRunID, null);
 
@@ -304,13 +317,13 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             Integer maxDataset = Arrays.stream(extendedRun.datasets).max(Comparator.comparingInt(anInt -> anInt)).get();
 
-            List<ExperimentService.ExperimentResult> experimentResults = horreumClient.experimentService.runExperiments(maxDataset);
+            List<ExperimentService.ExperimentResult> experimentResults = horreumClient.experimentService
+                    .runExperiments(maxDataset);
 
             assertNotNull(experimentResults);
             assertTrue(experimentResults.size() > 0);
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             fail(e.getMessage());
         }

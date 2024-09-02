@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.api.data.Action;
+import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 
 public class ActionMapper {
 

@@ -1,13 +1,14 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
-import io.hyperfoil.tools.horreum.api.alerting.Variable;
-import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
-
 import java.util.ArrayList;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+
+import io.hyperfoil.tools.horreum.api.alerting.Variable;
+import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
+import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 
 public class VariableMapper {
 
@@ -19,15 +20,14 @@ public class VariableMapper {
         v.group = dao.group;
         v.order = dao.order;
         v.calculation = dao.calculation;
-        v.changeDetection =
-        dao.changeDetection.stream().map(ChangeDetectionMapper::from).collect(Collectors.toSet());
+        v.changeDetection = dao.changeDetection.stream().map(ChangeDetectionMapper::from).collect(Collectors.toSet());
         //label
-        if(dao.labels.isArray()) {
+        if (dao.labels.isArray()) {
             v.labels = new ArrayList<>();
             dao.labels.spliterator().forEachRemaining(n -> {
                 LabelDAO l = LabelDAO.find("name", n.asText()).firstResult();
-                if(l != null)
-                    v.labels.add( LabelMapper.from(l).name);
+                if (l != null)
+                    v.labels.add(LabelMapper.from(l).name);
             });
         }
         return v;
@@ -40,20 +40,18 @@ public class VariableMapper {
         v.name = dto.name;
         v.group = dto.group;
         v.order = dto.order;
-        if(dto.labels != null && !dto.labels.isEmpty()) {
+        if (dto.labels != null && !dto.labels.isEmpty()) {
             ArrayNode n = JsonNodeFactory.instance.arrayNode();
             for (String l : dto.labels)
                 n.add(l);
             v.labels = n;
-        }
-        else {
+        } else {
             v.labels = JsonNodeFactory.instance.arrayNode();
         }
         v.calculation = dto.calculation;
-        if(dto.changeDetection != null)
+        if (dto.changeDetection != null)
             v.changeDetection = dto.changeDetection.stream().map(ChangeDetectionMapper::to).collect(Collectors.toSet());
 
         return v;
     }
 }
-

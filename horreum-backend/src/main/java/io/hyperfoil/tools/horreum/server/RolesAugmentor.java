@@ -1,31 +1,35 @@
 package io.hyperfoil.tools.horreum.server;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 import io.hyperfoil.tools.horreum.entity.user.TeamMembership;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.entity.user.UserRole;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.quarkus.arc.lookup.LookupIfProperty;
 import io.quarkus.arc.profile.UnlessBuildProfile;
-import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.security.identity.AuthenticationRequestContext;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.identity.SecurityIdentityAugmentor;
 import io.quarkus.security.runtime.QuarkusSecurityIdentity;
 import io.smallrye.mutiny.Uni;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 @UnlessBuildProfile("test")
 @LookupIfProperty(name = "horreum.roles.provider", stringValue = "database")
 public class RolesAugmentor implements SecurityIdentityAugmentor {
 
-    @Inject RoleManager roleManager;
+    @Inject
+    RoleManager roleManager;
 
-    @ConfigProperty(name = "horreum.roles.database.override", defaultValue = "true") boolean override;
+    @ConfigProperty(name = "horreum.roles.database.override", defaultValue = "true")
+    boolean override;
 
-    @Override public Uni<SecurityIdentity> augment(SecurityIdentity identity, AuthenticationRequestContext context) {
+    @Override
+    public Uni<SecurityIdentity> augment(SecurityIdentity identity, AuthenticationRequestContext context) {
         return identity.isAnonymous() ? Uni.createFrom().item(identity) : context.runBlocking(() -> addHorreumRoles(identity));
     }
 

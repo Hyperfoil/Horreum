@@ -11,48 +11,49 @@ import com.fasterxml.jackson.annotation.JsonValue;
  *
  * Do not change unless changing constants in SQL policies.
  */
-@Schema(type = SchemaType.STRING, required = true,
-        description = "Resources have different visibility within the UI. 'PUBLIC', 'PROTECTED' and 'PRIVATE'. Restricted resources are not visible to users who do not have the correct permissions")
+@Schema(type = SchemaType.STRING, required = true, description = "Resources have different visibility within the UI. 'PUBLIC', 'PROTECTED' and 'PRIVATE'. Restricted resources are not visible to users who do not have the correct permissions")
 public enum Access {
-   /** Anyone can see */
-   PUBLIC ("PUBLIC"),
-   /** Anyone who is authenticated (logged in) can see */
-   PROTECTED  ("PROTECTED"),
-   /** Only the owner can see */
-   PRIVATE  ("PRIVATE"),
-   ;
-   private static final Access[] VALUES = values();
+    /** Anyone can see */
+    PUBLIC("PUBLIC"),
+    /** Anyone who is authenticated (logged in) can see */
+    PROTECTED("PROTECTED"),
+    /** Only the owner can see */
+    PRIVATE("PRIVATE"),
+    ;
 
-   private final String name;
+    private static final Access[] VALUES = values();
 
-   private Access(String s) {
-      name = s;
-   }
+    private final String name;
 
-   public boolean equalsName(String otherName) {
-      // (otherName == null) check is not needed because name.equals(null) returns false
-      return name.equals(otherName);
-   }
+    private Access(String s) {
+        name = s;
+    }
 
-   @JsonValue
-   public String toString() {
-      return this.name;
-   }
+    public boolean equalsName(String otherName) {
+        // (otherName == null) check is not needed because name.equals(null) returns false
+        return name.equals(otherName);
+    }
 
-//   @JsonValue
-//   public int serialize() {
-//      return ordinal();
-//   }
+    @JsonValue
+    public String toString() {
+        return this.name;
+    }
 
-   @JsonCreator
-   public static Access fromString(String str) {
-      try {
-         return VALUES[Integer.parseInt(str)];
-      } catch (NumberFormatException e) {
-         return Access.valueOf(str);
-      }
-   }
-   public static Access fromInt(int a) {
-      return VALUES[a];
-   }
+    //   @JsonValue
+    //   public int serialize() {
+    //      return ordinal();
+    //   }
+
+    @JsonCreator
+    public static Access fromString(String str) {
+        try {
+            return VALUES[Integer.parseInt(str)];
+        } catch (NumberFormatException e) {
+            return Access.valueOf(str);
+        }
+    }
+
+    public static Access fromInt(int a) {
+        return VALUES[a];
+    }
 }

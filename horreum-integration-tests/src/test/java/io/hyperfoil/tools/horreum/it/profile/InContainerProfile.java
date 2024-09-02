@@ -1,10 +1,10 @@
 package io.hyperfoil.tools.horreum.it.profile;
 
-import io.hyperfoil.tools.horreum.it.ItResource;
-import io.quarkus.test.junit.QuarkusTestProfile;
-
 import java.util.List;
 import java.util.Map;
+
+import io.hyperfoil.tools.horreum.it.ItResource;
+import io.quarkus.test.junit.QuarkusTestProfile;
 
 public class InContainerProfile implements QuarkusTestProfile {
     @Override
@@ -17,8 +17,7 @@ public class InContainerProfile implements QuarkusTestProfile {
                 // "horreum.roles.provider", "database",
 
                 // disable certificate validation (but still require a SSL connection)
-                "quarkus.datasource.jdbc.additional-jdbc-properties.sslmode", "require"
-        );
+                "quarkus.datasource.jdbc.additional-jdbc-properties.sslmode", "require");
     }
 
     @Override
@@ -31,7 +30,6 @@ public class InContainerProfile implements QuarkusTestProfile {
     @Override
     public List<TestResourceEntry> testResources() {
         return List.of(
-                new TestResourceEntry(ItResource.class)
-        );
+                new TestResourceEntry(ItResource.class));
     }
 }

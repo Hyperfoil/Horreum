@@ -1,19 +1,18 @@
 package io.hyperfoil.tools.horreum.infra.common.utils;
 
-import org.keycloak.representations.idm.RoleRepresentation;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.keycloak.representations.idm.RoleRepresentation;
+
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
- * copied from org.keycloak.testsuite.util.RoleBuilder
+ *         copied from org.keycloak.testsuite.util.RoleBuilder
  */
 public class RoleBuilder {
-
 
     private final RoleRepresentation rep = new RoleRepresentation();
 

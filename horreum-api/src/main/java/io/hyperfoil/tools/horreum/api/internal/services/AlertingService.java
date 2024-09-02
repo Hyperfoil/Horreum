@@ -15,183 +15,186 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
-import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
-import io.hyperfoil.tools.horreum.api.alerting.*;
-import io.hyperfoil.tools.horreum.api.data.Dataset;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-@Consumes({ MediaType.APPLICATION_JSON})
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.hyperfoil.tools.horreum.api.alerting.*;
+import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
+
+@Consumes({ MediaType.APPLICATION_JSON })
 @Produces(MediaType.APPLICATION_JSON)
 @Path("/api/alerting")
 @Tag(name = "alerting", description = "Manage alerts")
 public interface AlertingService {
-   @GET
-   @Path("variables")
-   List<Variable> variables(@QueryParam("test") Integer testId);
+    @GET
+    @Path("variables")
+    List<Variable> variables(@QueryParam("test") Integer testId);
 
-   @POST
-   @Path("variables")
-   void updateVariables(@Parameter(required = true) @QueryParam("test") int testId,
-                        @RequestBody(required = true) List<Variable> variables);
+    @POST
+    @Path("variables")
+    void updateVariables(@Parameter(required = true) @QueryParam("test") int testId,
+            @RequestBody(required = true) List<Variable> variables);
 
-   @GET
-   @Path("dashboard")
-   DashboardInfo dashboard(@Parameter(required = true) @QueryParam("test") int testId,
-                           @QueryParam("fingerprint") String fingerprint);
+    @GET
+    @Path("dashboard")
+    DashboardInfo dashboard(@Parameter(required = true) @QueryParam("test") int testId,
+            @QueryParam("fingerprint") String fingerprint);
 
-   @GET
-   @Path("changes")
-   List<Change> changes(@Parameter(required = true) @QueryParam("var") int varId,
-                        @QueryParam("fingerprint") String fingerprint);
+    @GET
+    @Path("changes")
+    List<Change> changes(@Parameter(required = true) @QueryParam("var") int varId,
+            @QueryParam("fingerprint") String fingerprint);
 
-   @POST
-   @Path("change/{id}")
-   void updateChange(@Parameter(required = true) @PathParam("id") int id,
-                     @RequestBody(required = true) Change change);
+    @POST
+    @Path("change/{id}")
+    void updateChange(@Parameter(required = true) @PathParam("id") int id,
+            @RequestBody(required = true) Change change);
 
-   @DELETE
-   @Path("change/{id}")
-   void deleteChange(@PathParam("id") int id);
+    @DELETE
+    @Path("change/{id}")
+    void deleteChange(@PathParam("id") int id);
 
-   @POST
-   @Path("recalculate")
-   void recalculateDatapoints(@Parameter(required = true) @QueryParam("test") int testId,
-                              @QueryParam("notify") boolean notify,
-                              @QueryParam("debug") boolean debug,
-                              @QueryParam("clear") Boolean clearDatapoints,
-                              @QueryParam("from") Long from, @QueryParam("to") Long to);
+    @POST
+    @Path("recalculate")
+    void recalculateDatapoints(@Parameter(required = true) @QueryParam("test") int testId,
+            @QueryParam("notify") boolean notify,
+            @QueryParam("debug") boolean debug,
+            @QueryParam("clear") Boolean clearDatapoints,
+            @QueryParam("from") Long from, @QueryParam("to") Long to);
 
-   @GET
-   @Path("recalculate")
-   DatapointRecalculationStatus getRecalculationStatus(@Parameter(required = true) @QueryParam("test") int testId);
+    @GET
+    @Path("recalculate")
+    DatapointRecalculationStatus getRecalculationStatus(@Parameter(required = true) @QueryParam("test") int testId);
 
-   @POST
-   @Path("/datapoint/last")
-   List<DatapointLastTimestamp> findLastDatapoints(@RequestBody(required = true) LastDatapointsParams params);
+    @POST
+    @Path("/datapoint/last")
+    List<DatapointLastTimestamp> findLastDatapoints(@RequestBody(required = true) LastDatapointsParams params);
 
-   @POST
-   @Path("/expectRun")
-   void expectRun(@Parameter(required = true) @QueryParam("test") String test,
-                  @Parameter(required = true) @QueryParam("timeout") Long timeoutSeconds,
-                  @QueryParam("expectedby") String expectedBy,
-                  @QueryParam("backlink") String backlink);
+    @POST
+    @Path("/expectRun")
+    void expectRun(@Parameter(required = true) @QueryParam("test") String test,
+            @Parameter(required = true) @QueryParam("timeout") Long timeoutSeconds,
+            @QueryParam("expectedby") String expectedBy,
+            @QueryParam("backlink") String backlink);
 
-   // Test mode only
-   @GET
-   @Path("/expectations")
-   List<RunExpectation> expectations();
+    // Test mode only
+    @GET
+    @Path("/expectations")
+    List<RunExpectation> expectations();
 
-   @POST
-   @Path("/changeDetection")
-   void updateChangeDetection(@QueryParam("testId") @Parameter(required = true) int testId, @RequestBody(required = true) AlertingService.ChangeDetectionUpdate update);
+    @POST
+    @Path("/changeDetection")
+    void updateChangeDetection(@QueryParam("testId") @Parameter(required = true) int testId,
+            @RequestBody(required = true) AlertingService.ChangeDetectionUpdate update);
 
-   @GET
-   @Path("/changeDetectionModels")
-   List<ConditionConfig> changeDetectionModels();
+    @GET
+    @Path("/changeDetectionModels")
+    List<ConditionConfig> changeDetectionModels();
 
-   @GET
-   @Path("/defaultChangeDetectionConfigs")
-   List<ChangeDetection> defaultChangeDetectionConfigs();
+    @GET
+    @Path("/defaultChangeDetectionConfigs")
+    List<ChangeDetection> defaultChangeDetectionConfigs();
 
-   @GET
-   @Path("/missingdatarule")
-   List<MissingDataRule> missingDataRules(@Parameter(required = true) @QueryParam("testId") int testId);
+    @GET
+    @Path("/missingdatarule")
+    List<MissingDataRule> missingDataRules(@Parameter(required = true) @QueryParam("testId") int testId);
 
-   @POST
-   @Path("/missingdatarule")
-   int updateMissingDataRule(
-         @Parameter(required = true) @QueryParam("testId") int testId,
-         @RequestBody(required = true) MissingDataRule rule);
+    @POST
+    @Path("/missingdatarule")
+    int updateMissingDataRule(
+            @Parameter(required = true) @QueryParam("testId") int testId,
+            @RequestBody(required = true) MissingDataRule rule);
 
-   @DELETE
-   @Path("/missingdatarule/{id}")
-   void deleteMissingDataRule(@PathParam("id") int id);
+    @DELETE
+    @Path("/missingdatarule/{id}")
+    void deleteMissingDataRule(@PathParam("id") int id);
 
-   class DashboardInfo {
-      @JsonProperty(required = true)
-      public int testId;
-      @NotNull
-      public String uid;
-      @NotNull
-      public String url;
-      @NotNull
-      public List<PanelInfo> panels = new ArrayList<>();
-   }
+    class DashboardInfo {
+        @JsonProperty(required = true)
+        public int testId;
+        @NotNull
+        public String uid;
+        @NotNull
+        public String url;
+        @NotNull
+        public List<PanelInfo> panels = new ArrayList<>();
+    }
 
-   class PanelInfo {
-      @NotNull
-      public String name;
-      @NotNull
-      public List<Variable> variables;
+    class PanelInfo {
+        @NotNull
+        public String name;
+        @NotNull
+        public List<Variable> variables;
 
-      public PanelInfo(String name, List<Variable> variables) {
-         this.name = name;
-         this.variables = variables;
-      }
-   }
+        public PanelInfo(String name, List<Variable> variables) {
+            this.name = name;
+            this.variables = variables;
+        }
+    }
 
-   class AccessorInfo {
-      public final String schema;
-      public final String jsonpath;
+    class AccessorInfo {
+        public final String schema;
+        public final String jsonpath;
 
-      public AccessorInfo(String schema, String jsonpath) {
-         this.schema = schema;
-         this.jsonpath = jsonpath;
-      }
+        public AccessorInfo(String schema, String jsonpath) {
+            this.schema = schema;
+            this.jsonpath = jsonpath;
+        }
 
-      @Override
-      public boolean equals(Object o) {
-         if (this == o) return true;
-         if (o == null || getClass() != o.getClass()) return false;
-         AccessorInfo that = (AccessorInfo) o;
-         return schema.equals(that.schema);
-      }
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
+            AccessorInfo that = (AccessorInfo) o;
+            return schema.equals(that.schema);
+        }
 
-      @Override
-      public int hashCode() {
-         return schema.hashCode();
-      }
-   }
+        @Override
+        public int hashCode() {
+            return schema.hashCode();
+        }
+    }
 
-   class DatapointRecalculationStatus {
-      @JsonProperty(required = true)
-      public int percentage;
-      @JsonProperty(required = true)
-      public boolean done;
-      public Integer totalDatasets;
-      public Integer errors;
-      @NotNull
-      public Collection<Dataset.Info> datasetsWithoutValue;
-   }
+    class DatapointRecalculationStatus {
+        @JsonProperty(required = true)
+        public int percentage;
+        @JsonProperty(required = true)
+        public boolean done;
+        public Integer totalDatasets;
+        public Integer errors;
+        @NotNull
+        public Collection<Dataset.Info> datasetsWithoutValue;
+    }
 
+    class DatapointLastTimestamp {
+        @JsonProperty(required = true)
+        public int variable;
+        @NotNull
+        public Number timestamp;
 
-   class DatapointLastTimestamp {
-      @JsonProperty(required = true)
-      public int variable;
-      @NotNull
-      public Number timestamp;
+        public DatapointLastTimestamp(int variable, Number timestamp) {
+            this.variable = variable;
+            this.timestamp = timestamp;
+        }
+    }
 
-      public DatapointLastTimestamp(int variable, Number timestamp) {
-         this.variable = variable;
-         this.timestamp = timestamp;
-      }
-   }
+    class LastDatapointsParams {
+        @NotNull
+        public int[] variables;
+        @NotNull
+        public String fingerprint;
+    }
 
-   class LastDatapointsParams {
-      @NotNull
-      public int[] variables;
-      @NotNull
-      public String fingerprint;
-   }
-
-   class ChangeDetectionUpdate {
-      public List<String> timelineLabels;
-      public String timelineFunction;
-      public List<String> fingerprintLabels;
-      public String fingerprintFilter;
-   }
+    class ChangeDetectionUpdate {
+        public List<String> timelineLabels;
+        public String timelineFunction;
+        public List<String> fingerprintLabels;
+        public String fingerprintFilter;
+    }
 }

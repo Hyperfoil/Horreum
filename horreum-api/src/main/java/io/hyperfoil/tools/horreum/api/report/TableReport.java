@@ -1,13 +1,15 @@
 package io.hyperfoil.tools.horreum.api.report;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import java.time.Instant;
+import java.util.Collection;
+
 import jakarta.validation.constraints.NotNull;
+
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-import java.time.Instant;
-import java.util.Collection;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 @Schema(type = SchemaType.OBJECT, description = "Table Report", name = "TableReport")
 public class TableReport {
@@ -18,8 +20,7 @@ public class TableReport {
     @Schema(type = SchemaType.OBJECT, implementation = TableReportConfig.class, description = "Table Report Config", allOf = TableReportConfig.class)
     public TableReportConfig config;
     @NotNull
-    @Schema(type = SchemaType.STRING, implementation = Instant.class,
-            description = "Created timestamp", example = "2019-09-26T07:58:30.996+0200")
+    @Schema(type = SchemaType.STRING, implementation = Instant.class, description = "Created timestamp", example = "2019-09-26T07:58:30.996+0200")
     public Instant created;
     @NotNull
     @JsonProperty(required = true)
@@ -78,7 +79,8 @@ public class TableReport {
         }
 
         public String toString() {
-            return "TableReport.Data{datasetId=" + this.datasetId + ", category='" + this.category + '\'' + ", series='" + this.series + '\'' + ", label='" + this.scale + '\'' + ", values=" + this.values + '}';
+            return "TableReport.Data{datasetId=" + this.datasetId + ", category='" + this.category + '\'' + ", series='"
+                    + this.series + '\'' + ", label='" + this.scale + '\'' + ", values=" + this.values + '}';
         }
     }
 }

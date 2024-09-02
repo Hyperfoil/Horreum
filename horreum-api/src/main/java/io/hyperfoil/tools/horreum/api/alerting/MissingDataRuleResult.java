@@ -1,10 +1,10 @@
 package io.hyperfoil.tools.horreum.api.alerting;
 
-import jakarta.validation.constraints.NotNull;
-
-import java.time.Instant;
 import java.io.Serializable;
+import java.time.Instant;
 import java.util.Objects;
+
+import jakarta.validation.constraints.NotNull;
 
 public class MissingDataRuleResult {
     private Pk pk;
@@ -31,7 +31,8 @@ public class MissingDataRuleResult {
     }
 
     public String toString() {
-        return "MissingDataRuleResult{dataset_id=" + this.pk.datasetId + ", rule_id=" + this.pk.ruleId + ", timestamp=" + this.timestamp + '}';
+        return "MissingDataRuleResult{dataset_id=" + this.pk.datasetId + ", rule_id=" + this.pk.ruleId + ", timestamp="
+                + this.timestamp + '}';
     }
 
     public static class Pk implements Serializable {
@@ -45,7 +46,7 @@ public class MissingDataRuleResult {
             if (this == o) {
                 return true;
             } else if (o != null && this.getClass() == o.getClass()) {
-                Pk pk = (Pk)o;
+                Pk pk = (Pk) o;
                 return this.ruleId == pk.ruleId && this.datasetId == pk.datasetId;
             } else {
                 return false;
@@ -53,7 +54,7 @@ public class MissingDataRuleResult {
         }
 
         public int hashCode() {
-            return Objects.hash(new Object[]{this.ruleId, this.datasetId});
+            return Objects.hash(new Object[] { this.ruleId, this.datasetId });
         }
     }
 }

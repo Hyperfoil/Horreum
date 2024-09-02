@@ -9,43 +9,44 @@ import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
 
 public class DatasetChanges {
-   public static final String EVENT_NEW = "datasetChanges/new";
+    public static final String EVENT_NEW = "datasetChanges/new";
 
-   private static final long EMIT_DELAY = 1000;
-   public Dataset.Info dataset;
-   public String fingerprint;
-   public String testName;
-   private boolean notify;
-   private final List<Change> changes = new ArrayList<>();
-   private long emitTimestamp = Long.MIN_VALUE;
+    private static final long EMIT_DELAY = 1000;
+    public Dataset.Info dataset;
+    public String fingerprint;
+    public String testName;
+    private boolean notify;
+    private final List<Change> changes = new ArrayList<>();
+    private long emitTimestamp = Long.MIN_VALUE;
 
-   public DatasetChanges() {}
+    public DatasetChanges() {
+    }
 
-   public DatasetChanges(Dataset.Info dataset, String fingerprint, String testName, boolean notify) {
-      this.dataset = Objects.requireNonNull(dataset);
-      this.fingerprint = fingerprint;
-      this.testName = Objects.requireNonNull(testName);
-      this.notify = notify;
-   }
+    public DatasetChanges(Dataset.Info dataset, String fingerprint, String testName, boolean notify) {
+        this.dataset = Objects.requireNonNull(dataset);
+        this.fingerprint = fingerprint;
+        this.testName = Objects.requireNonNull(testName);
+        this.notify = notify;
+    }
 
-   public synchronized void addChange(Change.Event event) {
-      if (!event.dataset.equals(dataset) || !event.testName.equals(testName)) {
-         throw new IllegalStateException();
-      }
-      notify = notify || event.notify;
-      emitTimestamp = System.currentTimeMillis() + EMIT_DELAY;
-      changes.add(event.change);
-   }
+    public synchronized void addChange(Change.Event event) {
+        if (!event.dataset.equals(dataset) || !event.testName.equals(testName)) {
+            throw new IllegalStateException();
+        }
+        notify = notify || event.notify;
+        emitTimestamp = System.currentTimeMillis() + EMIT_DELAY;
+        changes.add(event.change);
+    }
 
-   public boolean isNotify() {
-      return notify;
-   }
+    public boolean isNotify() {
+        return notify;
+    }
 
-   public List<Change> changes() {
-      return Collections.unmodifiableList(changes);
-   }
+    public List<Change> changes() {
+        return Collections.unmodifiableList(changes);
+    }
 
-   public long emitTimestamp() {
-      return emitTimestamp;
-   }
+    public long emitTimestamp() {
+        return emitTimestamp;
+    }
 }

@@ -1,14 +1,6 @@
 package io.hyperfoil.tools.horreum.hibernate;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.hibernate.HibernateException;
-import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.type.CustomType;
-import org.hibernate.type.SqlTypes;
-import org.hibernate.type.spi.TypeConfiguration;
-import org.hibernate.usertype.UserType;
+import static java.lang.String.format;
 
 import java.io.Serializable;
 import java.sql.PreparedStatement;
@@ -17,7 +9,16 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Objects;
 
-import static java.lang.String.format;
+import org.hibernate.HibernateException;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.type.CustomType;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.type.spi.TypeConfiguration;
+import org.hibernate.usertype.UserType;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JsonBinaryType implements UserType<JsonNode> {
 
@@ -47,7 +48,7 @@ public class JsonBinaryType implements UserType<JsonNode> {
     @Override
     public JsonNode nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner)
             throws SQLException {
-        final byte[] colBytes =  rs.getBytes(position);
+        final byte[] colBytes = rs.getBytes(position);
         if (colBytes == null) {
             return null;
         }

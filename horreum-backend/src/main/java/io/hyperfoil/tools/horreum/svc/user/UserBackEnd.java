@@ -1,9 +1,9 @@
 package io.hyperfoil.tools.horreum.svc.user;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
-
 import java.util.List;
 import java.util.Map;
+
+import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 
 /**
  * Interface for back-end implementations for {@link io.hyperfoil.tools.horreum.svc.UserServiceImpl}
@@ -31,7 +31,7 @@ public interface UserBackEnd {
     void deleteTeam(String team);
 
     List<UserService.UserData> administrators();
-    
+
     void updateAdministrators(List<String> newAdmins);
 
     List<UserService.UserData> machineAccounts(String team);

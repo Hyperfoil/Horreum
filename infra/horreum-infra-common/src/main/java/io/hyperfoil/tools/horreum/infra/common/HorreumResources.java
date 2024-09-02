@@ -1,8 +1,20 @@
 package io.hyperfoil.tools.horreum.infra.common;
 
-import io.hyperfoil.tools.horreum.infra.common.resources.KeycloakResource;
-import io.hyperfoil.tools.horreum.infra.common.resources.PostgresResource;
+import static io.hyperfoil.tools.horreum.infra.common.Const.*;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import jakarta.ws.rs.client.ClientBuilder;
+
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -22,19 +34,8 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.WaitingConsumer;
 import org.testcontainers.utility.LogUtils;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import static io.hyperfoil.tools.horreum.infra.common.Const.*;
-
+import io.hyperfoil.tools.horreum.infra.common.resources.KeycloakResource;
+import io.hyperfoil.tools.horreum.infra.common.resources.PostgresResource;
 
 public class HorreumResources {
 
@@ -58,8 +59,7 @@ public class HorreumResources {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 
         try (InputStream propertyStream = classLoader.getResourceAsStream("env.properties");
-             InputStream applicationStream = classLoader.getResourceAsStream("application.properties")
-        ) {
+                InputStream applicationStream = classLoader.getResourceAsStream("application.properties")) {
             if (propertyStream != null) {
                 configProperties.load(propertyStream);
             } else {
@@ -104,7 +104,7 @@ public class HorreumResources {
         Map<String, String> envVariables = new HashMap<>(initArgs);
         envVariables.put("inContainer", "true");
         envVariables.put("STOP_SIGNAL", "SIGKILL");
-        
+
         Optional<Network> optionalNetwork = Optional.of(network);
 
         if (Boolean.parseBoolean(initArgs.get(HORREUM_DEV_POSTGRES_ENABLED))) {
@@ -134,17 +134,18 @@ public class HorreumResources {
 
             envVariables.put("keycloak.host", keycloakEnv.get("keycloak.host"));
             envVariables.put("horreum.keycloak.url", keycloakEnv.get("keycloak.host"));
-            envVariables.put("quarkus.oidc.auth-server-url", keycloakEnv.get("keycloak.host").concat("/realms/").concat(HORREUM_REALM));
+            envVariables.put("quarkus.oidc.auth-server-url",
+                    keycloakEnv.get("keycloak.host").concat("/realms/").concat(HORREUM_REALM));
             envVariables.putAll(oidcTruststoreProperties(initArgs));
 
             keycloak = KeycloakBuilder.builder()
-                                      .serverUrl(keycloakEnv.get("keycloak.host"))
-                                      .realm(KEYCLOAK_REALM)
-                                      .username(initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME))
-                                      .password(initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD))
-                                      .clientId("admin-cli")
-                                      .resteasyClient(((ResteasyClientBuilder) ClientBuilder.newBuilder()).disableTrustManager().build())
-                                      .build();
+                    .serverUrl(keycloakEnv.get("keycloak.host"))
+                    .realm(KEYCLOAK_REALM)
+                    .username(initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME))
+                    .password(initArgs.get(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD))
+                    .clientId("admin-cli")
+                    .resteasyClient(((ResteasyClientBuilder) ClientBuilder.newBuilder()).disableTrustManager().build())
+                    .build();
 
             //update running keycloak realm with dev services configuration
             try {
@@ -158,7 +159,8 @@ public class HorreumResources {
                 keycloak.realm(HORREUM_REALM).clients().get(uiClient.getId()).update(uiClient);
 
                 ClientRepresentation mainClient = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum").get(0);
-                envVariables.put("quarkus.oidc.credentials.secret", keycloak.realm(HORREUM_REALM).clients().get(mainClient.getId()).getSecret().getValue());
+                envVariables.put("quarkus.oidc.credentials.secret",
+                        keycloak.realm(HORREUM_REALM).clients().get(mainClient.getId()).getSecret().getValue());
             } catch (Exception e) {
                 log.error("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
             }
@@ -176,11 +178,8 @@ public class HorreumResources {
             LogUtils.followOutput(DockerClientFactory.instance().client(), container.getContainerId(), waitingConsumer);
             try {
                 waitingConsumer.waitUntil(
-                        outputFrame -> outputFrame.getUtf8String().contains(pattern)
-                        , ContainerStartTimeout
-                        , ContainerStartTimeoutUnit
-                        , ContainerStartRetries
-                );
+                        outputFrame -> outputFrame.getUtf8String().contains(pattern), ContainerStartTimeout,
+                        ContainerStartTimeoutUnit, ContainerStartRetries);
             } catch (TimeoutException e) {
                 throw new RuntimeException("Timed out waiting for " + container.getContainerName() + " container to start");
             }
@@ -209,25 +208,29 @@ public class HorreumResources {
     }
 
     private static Map<String, String> oidcTruststoreProperties(Map<String, String> initArgs) {
-        if (initArgs.containsKey(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE) && initArgs.containsKey(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY)) {
+        if (initArgs.containsKey(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE)
+                && initArgs.containsKey(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY)) {
             return Map.of("quarkus.oidc.tls.trust-store-file", createOidcPKCS12Store(initArgs));
         } else {
             return Collections.emptyMap();
         }
     }
-    
+
     // create a pkcs12 trust store file (for OIDC and Keycloak admin client) from the certificate and private key
     private static String createOidcPKCS12Store(Map<String, String> initArgs) {
         try {
             File keycloakTrustStore = File.createTempFile("horreum-dev-keycloak-", ".pkcs12");
             keycloakTrustStore.deleteOnExit();
 
-            X509CertificateHolder cert = (X509CertificateHolder) new PEMParser(new StringReader(initArgs.get(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE))).readObject();
-            PEMKeyPair keyPair = (PEMKeyPair) new PEMParser(new StringReader(initArgs.get(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY))).readObject();
+            X509CertificateHolder cert = (X509CertificateHolder) new PEMParser(
+                    new StringReader(initArgs.get(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE))).readObject();
+            PEMKeyPair keyPair = (PEMKeyPair) new PEMParser(
+                    new StringReader(initArgs.get(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY))).readObject();
 
             KeyStore pkcsStore = KeyStore.getInstance("PKCS12", new BouncyCastleProvider());
             pkcsStore.load(null);
-            pkcsStore.setKeyEntry("", new JcaPEMKeyConverter().getPrivateKey(keyPair.getPrivateKeyInfo()), null, new X509Certificate[] { new JcaX509CertificateConverter().getCertificate(cert) });
+            pkcsStore.setKeyEntry("", new JcaPEMKeyConverter().getPrivateKey(keyPair.getPrivateKeyInfo()), null,
+                    new X509Certificate[] { new JcaX509CertificateConverter().getCertificate(cert) });
 
             try (OutputStream outputStream = new FileOutputStream(keycloakTrustStore)) {
                 pkcsStore.store(outputStream, "password".toCharArray()); // "password" is the default in quarkus OIDC (OidcCommonUtils#setHttpClientOptions)

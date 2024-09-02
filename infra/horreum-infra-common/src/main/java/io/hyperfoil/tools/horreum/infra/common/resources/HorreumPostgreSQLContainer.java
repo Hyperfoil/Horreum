@@ -1,15 +1,13 @@
 package io.hyperfoil.tools.horreum.infra.common.resources;
 
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.containers.wait.strategy.AbstractWaitStrategy;
-import org.testcontainers.containers.wait.strategy.DockerHealthcheckWaitStrategy;
-import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
-import org.testcontainers.utility.DockerImageName;
-
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
+import org.testcontainers.utility.DockerImageName;
 
 public class HorreumPostgreSQLContainer<SELF extends HorreumPostgreSQLContainer<SELF>> extends PostgreSQLContainer<SELF> {
 
@@ -20,6 +18,7 @@ public class HorreumPostgreSQLContainer<SELF extends HorreumPostgreSQLContainer<
         super(dockerImageName);
         this.startMsgTimes = startMsgTimes;
     }
+
     public HorreumPostgreSQLContainer(DockerImageName dockerImageName, Integer startMsgTimes) {
         super(dockerImageName);
         this.startMsgTimes = startMsgTimes;
@@ -28,18 +27,18 @@ public class HorreumPostgreSQLContainer<SELF extends HorreumPostgreSQLContainer<
     public void withParameter(String param) {
         params.add(param);
     }
+
     protected void configure() {
         super.configure();
-        if ( params.size() > 0 ) {
+        if (params.size() > 0) {
             StringBuilder sb = new StringBuilder();
             sb.append("postgres -c fsync=off");
             params.forEach(param -> sb.append(" -c ").append(param));
             this.setCommand(sb.toString());
         }
-        super.waitStrategy =
-                new LogMessageWaitStrategy()
-                        .withRegEx(".*database system is ready to accept connections.*\\s")
-                        .withTimes(startMsgTimes)
-                        .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS));
+        super.waitStrategy = new LogMessageWaitStrategy()
+                .withRegEx(".*database system is ready to accept connections.*\\s")
+                .withTimes(startMsgTimes)
+                .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS));
     }
 }

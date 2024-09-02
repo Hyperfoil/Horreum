@@ -12,17 +12,22 @@ import jakarta.interceptor.InterceptorBinding;
 
 @Inherited
 @InterceptorBinding
-@Target({ElementType.METHOD, ElementType.TYPE})
+@Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface WithRoles {
-   @Nonbinding String[] extras() default {};
-   @Nonbinding boolean addUsername() default false;
-   @Nonbinding Class<? extends Function<Object[], String[]>> fromParams() default IgnoreParams.class;
+    @Nonbinding
+    String[] extras() default {};
 
-   final class IgnoreParams implements Function<Object[], String[]> {
-      @Override
-      public String[] apply(Object[] objects) {
-         return new String[0];
-      }
-   }
+    @Nonbinding
+    boolean addUsername() default false;
+
+    @Nonbinding
+    Class<? extends Function<Object[], String[]>> fromParams() default IgnoreParams.class;
+
+    final class IgnoreParams implements Function<Object[], String[]> {
+        @Override
+        public String[] apply(Object[] objects) {
+            return new String[0];
+        }
+    }
 }

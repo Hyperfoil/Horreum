@@ -1,5 +1,27 @@
 package io.hyperfoil.tools.horreum.changedetection;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import jakarta.inject.Inject;
+
+import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
@@ -19,26 +41,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-import jakarta.inject.Inject;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -100,9 +102,9 @@ public class EdivisiveTests extends BaseServiceTest {
         assertTrue(tmpFiles.confFile.exists());
 
         try (InputStream validCsvStream = EdivisiveTests.class.getClassLoader().getResourceAsStream(resource)) {
-            try( OutputStream confOut = new FileOutputStream(tmpFiles.inputFile)){
+            try (OutputStream confOut = new FileOutputStream(tmpFiles.inputFile)) {
                 confOut.write(validCsvStream.readAllBytes());
-            } catch (IOException e){
+            } catch (IOException e) {
                 fail("Could not extract Hunter configuration from archive");
             }
         } catch (IOException e) {
@@ -112,7 +114,7 @@ public class EdivisiveTests extends BaseServiceTest {
     }
 
     @Test
-    public void testDetectedChangePoints(){
+    public void testDetectedChangePoints() {
 
         HunterEDivisiveModel model = (HunterEDivisiveModel) resolver.getModel(ChangeDetectionModelType.EDIVISIVE);
         assertNotNull(model);
@@ -141,8 +143,7 @@ public class EdivisiveTests extends BaseServiceTest {
                     },
                     (changePoints::add),
                     tmpFiles,
-                    sinceInstant
-                    );
+                    sinceInstant);
 
             assertNotEquals(0, changePoints.size());
 
@@ -164,7 +165,8 @@ public class EdivisiveTests extends BaseServiceTest {
         cd.model = ChangeDetectionModelType.names.EDIVISIVE;
         setTestVariables(test, "Value", new Label("value", schema.id), cd);
 
-        BlockingQueue<DataPoint.Event> datapointQueue =  serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW, test.id);
+        BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW,
+                test.id);
         BlockingQueue<Change.Event> changeQueue = serviceMediator.getEventQueue(AsyncEventChannels.CHANGE_NEW, test.id);
 
         long ts = System.currentTimeMillis();
