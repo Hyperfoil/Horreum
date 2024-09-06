@@ -1,7 +1,9 @@
 package io.hyperfoil.tools.horreum.notification;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -11,11 +13,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.svc.MissingValuesEvent;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
+import io.quarkus.logging.Log;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.reactive.ReactiveMailer;
 import io.quarkus.qute.Location;
@@ -47,7 +49,7 @@ public class EmailPlugin implements NotificationPlugin {
     @Inject
     ReactiveMailer mailer;
 
-    private final Logger log = Logger.getLogger(getClass());
+    private final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     @Override
     public String method() {
@@ -77,26 +79,26 @@ public class EmailPlugin implements NotificationPlugin {
         @Override
         public void notifyChanges(DatasetChanges event) {
             String subject = subjectPrefix + " Change in " + event.testName;
-            String content = changeNotificationEmail
+            changeNotificationEmail
                     .data("username", username)
                     .data("testName", event.testName)
-                    .data("fingerprint",
-                            URLEncoder.encode(event.fingerprint != null ? event.fingerprint : "", StandardCharsets.UTF_8))
+                    .data("fingerprint", URLEncoder.encode(event.fingerprint != null ? event.fingerprint : "", UTF_8))
                     .data("baseUrl", baseUrl)
                     .data("testId", String.valueOf(event.dataset.testId))
                     .data("runId", event.dataset.runId)
                     .data("datasetOrdinal", event.dataset.ordinal)
                     .data("changes", event.changes())
-                    .render();
-            mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-            log.debug("Sending mail: " + content);
+                    .createUni().subscribe().with(content -> {
+                        mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+                        Log.debug("Sending mail: " + content);
+                    });
         }
 
         @Override
         public void notifyMissingDataset(String testName, int testId, String ruleName, long maxStaleness,
                 Instant lastTimestamp) {
             String subject = String.format("%s Missing expected data for %s/%s", subjectPrefix, testName, ruleName);
-            String content = missingDatasetNotificationEmail
+            missingDatasetNotificationEmail
                     .data("username", username)
                     .data("testName", testName)
                     .data("testId", String.valueOf(testId))
@@ -106,19 +108,18 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("currentStaleness",
                             lastTimestamp == null ? "yet"
                                     : "in " + prettyPrintTime(System.currentTimeMillis() - lastTimestamp.toEpochMilli()))
-                    .data("lastTimestamp",
-                            lastTimestamp == null ? null
-                                    : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date.from(lastTimestamp)))
-                    .render();
-            mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-            log.debug("Sending mail: " + content);
+                    .data("lastTimestamp", lastTimestamp == null ? null : dateFormat.format(Date.from(lastTimestamp)))
+                    .createUni().subscribe().with(content -> {
+                        mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+                        Log.debug("Sending mail: " + content);
+                    });
         }
 
         @Override
         public void notifyMissingValues(String testName, String fingerprint, MissingValuesEvent event) {
             String subject = String.format("%s Missing change detection values in test %s, dataset %d#%d",
                     subjectPrefix, testName, event.dataset.runId, event.dataset.ordinal + 1);
-            String content = missingValuesNotificationEmail
+            missingValuesNotificationEmail
                     .data("username", username)
                     .data("testName", testName)
                     .data("testId", String.valueOf(event.dataset.testId))
@@ -127,25 +128,27 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("runId", event.dataset.runId)
                     .data("datasetOrdinal", event.dataset.ordinal)
                     .data("variables", event.variables)
-                    .render();
-            mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-            log.debug("Sending mail: " + content);
+                    .createUni().subscribe().with(content -> {
+                        mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+                        Log.debug("Sending mail: " + content);
+                    });
         }
 
         @Override
         public void notifyExpectedRun(String testName, int testId, long before, String expectedBy, String backlink) {
             String subject = subjectPrefix + " Missing expected run for " + testName;
-            String content = expectedRunNotificationEmail
+            expectedRunNotificationEmail
                     .data("username", username)
                     .data("testName", testName)
                     .data("testId", String.valueOf(testId))
                     .data("baseUrl", baseUrl)
-                    .data("before", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(before)))
+                    .data("before", dateFormat.format(new Date(before)))
                     .data("expectedBy", expectedBy)
                     .data("backlink", backlink)
-                    .render();
-            mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-            log.debug("Sending mail: " + content);
+                    .createUni().subscribe().with(content -> {
+                        mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+                        Log.debug("Sending mail: " + content);
+                    });
         }
     }
 
