@@ -86,7 +86,7 @@
         <quarkus.version>3.12.3</quarkus.version>
         <quinoa.version>2.4.7</quinoa.version>
         <surefire-plugin.version>3.5.0</surefire-plugin.version>
-        <failsafe-plugin.version>3.4.0</failsafe-plugin.version>
+        <failsafe-plugin.version>3.5.0</failsafe-plugin.version>
         <keycloak-admin-client.version>23.0.3</keycloak-admin-client.version>
         <validator.version>1.5.1</validator.version>
         <jayway.jsonpath.version>2.9.0</jayway.jsonpath.version>
