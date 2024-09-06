@@ -9,65 +9,66 @@ import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KEYCLOAK_NET
 import java.util.Optional;
 
 import io.quarkus.runtime.annotations.ConfigGroup;
-import io.quarkus.runtime.annotations.ConfigItem;
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
 
 /**
  * Configuration for Horreum dev services.
  */
 @ConfigGroup
-public class HorreumDevServicesKeycloakConfig {
+@ConfigMapping(prefix = "keycloak")
+public interface HorreumDevServicesKeycloakConfig {
 
     /**
      * Are Horreum dev Keycloak services enabled.
      */
-    @ConfigItem(defaultValue = "true")
-    public boolean enabled;
+    @WithDefault("true")
+    boolean enabled();
 
     /**
      * Setup and use the HTTPS listener.
      */
-    @ConfigItem(defaultValue = "false")
-    public boolean httpsEnabled;
+    @WithDefault("false")
+    boolean httpsEnabled();
 
     /**
      * Container image name for keycloak service
      */
-    @ConfigItem
-    public String image;
+    String image();
 
     /**
      * Container name for keycloak container
      */
-    @ConfigItem(defaultValue = DEFAULT_KEYCLOAK_NETWORK_ALIAS)
-    public String networkAlias;
+    @WithDefault(DEFAULT_KEYCLOAK_NETWORK_ALIAS)
+    String networkAlias();
 
     /**
      * Databse username for keycloak instance
      */
-    @ConfigItem(defaultValue = DEFAULT_KC_DB_USERNAME)
-    public String dbUsername;
+    @WithDefault(DEFAULT_KC_DB_USERNAME)
+    String dbUsername();
 
     /**
      * Databse password for keycloak instance
      */
-    @ConfigItem(defaultValue = DEFAULT_KC_DB_PASSWORD)
-    public String dbPassword;
+    @WithDefault(DEFAULT_KC_DB_PASSWORD)
+    String dbPassword();
 
     /**
      * Admin Username password for keycloak
      */
-    @ConfigItem(defaultValue = DEFAULT_KC_ADMIN_USERNAME)
-    public String adminUsername;
+    @WithDefault(DEFAULT_KC_ADMIN_USERNAME)
+    public String adminUsername();
+
     /**
      * Admin Username password for keycloak
      */
-    @ConfigItem(defaultValue = DEFAULT_KC_ADMIN_PASSWORD)
-    public String adminPassword;
+    @WithDefault(DEFAULT_KC_ADMIN_PASSWORD)
+    public String adminPassword();
 
     /**
      * Define host port to expose Keycloak service.
      * Usage of this property is discouraged and should only be enabled in scenarios where the keycloak port can not be dynamic
      */
-    @ConfigItem()
-    public Optional<String> containerPort;
+    Optional<String> containerPort();
 }
