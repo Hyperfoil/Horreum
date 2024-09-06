@@ -6,42 +6,42 @@ import java.io.File;
 import java.util.Optional;
 
 import io.quarkus.runtime.annotations.ConfigGroup;
-import io.quarkus.runtime.annotations.ConfigItem;
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
 
 /**
  * Configuration for Horreum dev services.
  */
 @ConfigGroup
-public class HorreumDevServicesPostgresConfig {
+@ConfigMapping(prefix = "postgres")
+public interface HorreumDevServicesPostgresConfig {
 
     /**
      * Are Horreum dev Postgres services enabled.
      */
-    @ConfigItem(defaultValue = "true")
-    public boolean enabled;
+    @WithDefault("true")
+    boolean enabled();
 
     /**
      * Container image name for postgres service
      */
-    @ConfigItem
-    public String image;
+    String image();
 
     /**
      * Setup SSL on the postgres service
      */
-    @ConfigItem(defaultValue = "false")
-    public boolean sslEnabled;
+    @WithDefault("false")
+    boolean sslEnabled();
 
     /**
      * Container name for postgres container
      */
-    @ConfigItem(defaultValue = DEFAULT_POSTGRES_NETWORK_ALIAS)
-    public String networkAlias;
+    @WithDefault(DEFAULT_POSTGRES_NETWORK_ALIAS)
+    String networkAlias();
 
     /**
      * File path to production backup of database
      */
-    @ConfigItem
-    public Optional<File> databaseBackup;
+    Optional<File> databaseBackup();
 
 }

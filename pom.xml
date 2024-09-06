@@ -83,7 +83,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <commons.math3.version>3.6.1</commons.math3.version>
         <graalvm.version>23.1.2</graalvm.version>
-        <quarkus.version>3.12.3</quarkus.version>
+        <quarkus.version>3.14.2</quarkus.version>
         <quinoa.version>2.4.7</quinoa.version>
         <surefire-plugin.version>3.5.0</surefire-plugin.version>
         <failsafe-plugin.version>3.5.0</failsafe-plugin.version>
@@ -94,7 +94,7 @@
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
 
         <dev.images.postgres>postgres:16</dev.images.postgres>
-        <dev.images.keycloak>quay.io/keycloak/keycloak:23.0.3</dev.images.keycloak>
+        <dev.images.keycloak>quay.io/keycloak/keycloak:25.0.2</dev.images.keycloak>
 
         <horreum.version>${project.version}</horreum.version>
         <major-version>0.15</major-version>

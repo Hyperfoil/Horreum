@@ -54,12 +54,12 @@ public class HorreumDevServicesProcessor {
 
         boolean errors = false;
 
-        LOG.infof("Horreum dev services (enabled: ".concat(Boolean.toString(horreumBuildTimeConfig.enabled)).concat(")"));
+        LOG.infof("Horreum dev services (enabled: ".concat(Boolean.toString(horreumBuildTimeConfig.enabled())).concat(")"));
 
-        if (horreumBuildTimeConfig.enabled) {
+        if (horreumBuildTimeConfig.enabled()) {
             try {
 
-                if (errors = !dockerStatusBuildItem.isDockerAvailable()) {
+                if (errors = !dockerStatusBuildItem.isContainerRuntimeAvailable()) {
                     LOG.warn("Docker dev service instance not found");
                 }
 
@@ -72,32 +72,34 @@ public class HorreumDevServicesProcessor {
 
                         final Map<String, String> containerArgs = new HashMap<>();
                         containerArgs.put(HORREUM_DEV_KEYCLOAK_ENABLED,
-                                Boolean.toString(horreumBuildTimeConfig.keycloak.enabled));
-                        containerArgs.put(HORREUM_DEV_KEYCLOAK_IMAGE, horreumBuildTimeConfig.keycloak.image);
-                        containerArgs.put(HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS, horreumBuildTimeConfig.keycloak.networkAlias);
+                                Boolean.toString(horreumBuildTimeConfig.keycloak().enabled()));
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_IMAGE, horreumBuildTimeConfig.keycloak().image());
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS, horreumBuildTimeConfig.keycloak().networkAlias());
                         containerArgs.put(HORREUM_DEV_POSTGRES_ENABLED,
-                                Boolean.toString(horreumBuildTimeConfig.postgres.enabled));
-                        containerArgs.put(HORREUM_DEV_POSTGRES_IMAGE, horreumBuildTimeConfig.postgres.image);
-                        containerArgs.put(HORREUM_DEV_POSTGRES_NETWORK_ALIAS, horreumBuildTimeConfig.postgres.networkAlias);
-                        containerArgs.put(HORREUM_DEV_KEYCLOAK_DB_USERNAME, horreumBuildTimeConfig.keycloak.dbUsername);
-                        containerArgs.put(HORREUM_DEV_KEYCLOAK_DB_PASSWORD, horreumBuildTimeConfig.keycloak.dbPassword);
-                        containerArgs.put(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME, horreumBuildTimeConfig.keycloak.adminUsername);
-                        containerArgs.put(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD, horreumBuildTimeConfig.keycloak.adminPassword);
+                                Boolean.toString(horreumBuildTimeConfig.postgres().enabled()));
+                        containerArgs.put(HORREUM_DEV_POSTGRES_IMAGE, horreumBuildTimeConfig.postgres().image());
+                        containerArgs.put(HORREUM_DEV_POSTGRES_NETWORK_ALIAS, horreumBuildTimeConfig.postgres().networkAlias());
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_DB_USERNAME, horreumBuildTimeConfig.keycloak().dbUsername());
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_DB_PASSWORD, horreumBuildTimeConfig.keycloak().dbPassword());
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME,
+                                horreumBuildTimeConfig.keycloak().adminUsername());
+                        containerArgs.put(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD,
+                                horreumBuildTimeConfig.keycloak().adminPassword());
 
-                        horreumBuildTimeConfig.keycloak.containerPort.ifPresent(
+                        horreumBuildTimeConfig.keycloak().containerPort().ifPresent(
                                 keycloakPort -> containerArgs.put(HORREUM_DEV_KEYCLOAK_CONTAINER_PORT, keycloakPort));
-                        horreumBuildTimeConfig.postgres.databaseBackup.map(File::getAbsolutePath)
+                        horreumBuildTimeConfig.postgres().databaseBackup().map(File::getAbsolutePath)
                                 .ifPresent(backupFilename -> containerArgs.put(HORREUM_DEV_POSTGRES_BACKUP, backupFilename));
 
                         // generate self-signed certificate(s) and return it as args to be processed by KeycloakResource / PostgresResource
-                        if (horreumBuildTimeConfig.keycloak.httpsEnabled) {
+                        if (horreumBuildTimeConfig.keycloak().httpsEnabled()) {
                             SelfSignedCert keycloakSelfSignedCert = new SelfSignedCert("RSA", "SHA256withRSA", "localhost",
                                     123);
                             containerArgs.put(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE, keycloakSelfSignedCert.getCertString());
                             containerArgs.put(HORREUM_DEV_KEYCLOAK_HTTPS_CERTIFICATE_KEY,
                                     keycloakSelfSignedCert.getKeyString());
                         }
-                        if (horreumBuildTimeConfig.postgres.sslEnabled) {
+                        if (horreumBuildTimeConfig.postgres().sslEnabled()) {
                             SelfSignedCert postgresSelfSignedCert = new SelfSignedCert("RSA", "SHA256withRSA", "localhost",
                                     123);
                             containerArgs.put(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE, postgresSelfSignedCert.getCertString());
@@ -107,13 +109,13 @@ public class HorreumDevServicesProcessor {
                         Map<String, String> envvars = HorreumResources
                                 .startContainers(Collections.unmodifiableMap(containerArgs));
 
-                        if (horreumBuildTimeConfig.postgres.enabled) {
+                        if (horreumBuildTimeConfig.postgres().enabled()) {
                             Map<String, String> postgresConfig = new HashMap<>();
                             String jdbcUrl = HorreumResources.postgreSQLResource.getJdbcUrl();
 
                             postgresConfig.put("quarkus.datasource.jdbc.url", jdbcUrl);
                             postgresConfig.put("quarkus.datasource.migration.jdbc.url", jdbcUrl);
-                            if (horreumBuildTimeConfig.postgres.sslEnabled) {
+                            if (horreumBuildTimeConfig.postgres().sslEnabled()) {
                                 // see https://jdbc.postgresql.org/documentation/ssl/ for details
                                 postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.ssl", "true");
                                 postgresConfig.put("quarkus.datasource.jdbc.additional-jdbc-properties.sslmode", "verify-full");
@@ -127,11 +129,11 @@ public class HorreumDevServicesProcessor {
                                     HorreumResources.postgreSQLResource.getContainer()::close,
                                     postgresConfig);
                         }
-                        if (horreumBuildTimeConfig.keycloak.enabled) {
+                        if (horreumBuildTimeConfig.keycloak().enabled()) {
                             Map<String, String> keycloakConfig = new HashMap<>();
                             Integer keycloakPort = HorreumResources.keycloakResource.getContainer()
-                                    .getMappedPort(horreumBuildTimeConfig.keycloak.httpsEnabled ? 8443 : 8080);
-                            String keycloakURL = (horreumBuildTimeConfig.keycloak.httpsEnabled ? "https" : "http")
+                                    .getMappedPort(horreumBuildTimeConfig.keycloak().httpsEnabled() ? 8443 : 8080);
+                            String keycloakURL = (horreumBuildTimeConfig.keycloak().httpsEnabled() ? "https" : "http")
                                     + "://localhost:" + keycloakPort;
 
                             keycloakConfig.put("horreum.keycloak.url", keycloakURL);
@@ -139,9 +141,9 @@ public class HorreumDevServicesProcessor {
                             keycloakConfig.put("quarkus.oidc.credentials.secret",
                                     envvars.get("quarkus.oidc.credentials.secret"));
                             keycloakConfig.put("quarkus.keycloak.admin-client.username",
-                                    horreumBuildTimeConfig.keycloak.adminUsername);
+                                    horreumBuildTimeConfig.keycloak().adminUsername());
                             keycloakConfig.put("quarkus.keycloak.admin-client.password",
-                                    horreumBuildTimeConfig.keycloak.adminPassword);
+                                    horreumBuildTimeConfig.keycloak().adminPassword());
                             if (envvars.containsKey("quarkus.oidc.tls.trust-store-file")) {
                                 keycloakConfig.put("quarkus.oidc.tls.trust-store-file",
                                         envvars.get("quarkus.oidc.tls.trust-store-file"));
@@ -200,7 +202,7 @@ public class HorreumDevServicesProcessor {
         DevServicesConfig config;
 
         public boolean getAsBoolean() {
-            return config.enabled;
+            return config.enabled();
         }
     }
 }

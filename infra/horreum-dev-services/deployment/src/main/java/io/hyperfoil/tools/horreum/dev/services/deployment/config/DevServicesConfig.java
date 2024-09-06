@@ -1,24 +1,28 @@
 package io.hyperfoil.tools.horreum.dev.services.deployment.config;
 
-import io.quarkus.runtime.annotations.ConfigItem;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
 
-@ConfigRoot(prefix = "horreum", phase = ConfigPhase.BUILD_TIME)
-public class DevServicesConfig {
+@ConfigRoot(phase = ConfigPhase.BUILD_TIME)
+@ConfigMapping(prefix = "horreum.dev-services")
+public interface DevServicesConfig {
 
     /**
      * Horreum dev services
      */
-    @ConfigItem(defaultValue = "true")
-    public boolean enabled;
+    @WithDefault("true")
+    boolean enabled();
+
     /**
      * Configuration for Keycloak dev services
      */
-    public HorreumDevServicesKeycloakConfig keycloak;
+    HorreumDevServicesKeycloakConfig keycloak();
+
     /**
      * Configuration for Postrges dev services
      */
-    public HorreumDevServicesPostgresConfig postgres;
+    HorreumDevServicesPostgresConfig postgres();
 
 }
