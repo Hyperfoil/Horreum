@@ -28,7 +28,6 @@ import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -262,26 +261,21 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public JsonNode exportTableReportConfig(int id) {
+    public TableReportConfig exportTableReportConfig(int id) {
         // In case of TableReports we don't need to accumulate
         // data from other sources not remap data so this is the same
-        return Util.OBJECT_MAPPER.valueToTree(getTableReportConfig(id));
+        return getTableReportConfig(id);
     }
 
     @RolesAllowed({ Roles.ADMIN, Roles.TESTER })
     @WithRoles
     @Transactional
     @Override
-    public void importTableReportConfig(JsonNode json) {
-        TableReportConfig config;
-        try {
-            config = Util.OBJECT_MAPPER.treeToValue(json, TableReportConfig.class);
-        } catch (JsonProcessingException e) {
-            throw ServiceException.badRequest("Cannot deserialize table report configuration: " + e.getMessage());
-        }
+    public void importTableReportConfig(TableReportConfig config) {
         validateTableConfig(config);
         config.ensureLinked();
-        em.merge(config);
+        TableReportConfigDAO trc = TableReportMapper.toTableReportConfig(config);
+        em.merge(trc);
     }
 
     @PermitAll

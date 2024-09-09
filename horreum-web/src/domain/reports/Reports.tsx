@@ -17,7 +17,7 @@ import { Team } from "../../components/TeamSelect"
 import { SelectedTest } from "../../components/TestSelect"
 import { formatDateTime } from "../../utils"
 
-import {AllTableReports, reportApi, SortDirection, TableReportSummary} from "../../api"
+import {AllTableReports, reportApi, SortDirection, TableReportConfig, TableReportSummary} from "../../api"
 import ButtonLink from "../../components/ButtonLink"
 import { useTester, teamsSelector } from "../../auth"
 
@@ -175,7 +175,7 @@ export default function Reports(props: ReportGroup) {
                                         _ => null /* errors because the config does not exist => OK */
                                     )
                                 }}
-                                onImport={config => reportApi.importTableReportConfig(config)}
+                                onImport={config => reportApi.importTableReportConfig(config as TableReportConfig)}
                                 onImported={() => setTableReportsReloadCounter(tableReportsReloadCounter + 1)}
                             />
                         </ToolbarItem>
