@@ -417,6 +417,9 @@ public class KeycloakUserBackend implements UserBackEnd {
             String prefix = getTeamPrefix(team);
             return keycloak.realm(realm).roles().get(prefix + Roles.MACHINE).getUserMembers(0, Integer.MAX_VALUE).stream()
                     .map(KeycloakUserBackend::toUserInfo).toList();
+        } catch (NotFoundException ex) {
+            LOG.debugv("Unable to list machine accounts for team {0}", team);
+            return List.of();
         } catch (Throwable t) {
             LOG.warnv(t, "Unable to list machine accounts for team {0}", team);
             throw ServiceException
