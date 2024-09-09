@@ -34,7 +34,7 @@
   "react-router": "6.24.1",
   "react-router-dom": "6.24.1",
   "react-table": "7.8.0",
-  "react-to-print": "2.14.15",
+  "react-to-print": "2.15.1",
   "recharts": "2.12.7",
   "redux": "4.2.1",
   "redux-thunk": "2.4.2",
