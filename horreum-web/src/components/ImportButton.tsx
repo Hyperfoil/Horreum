@@ -3,12 +3,12 @@ import {useContext, useState} from "react"
 import { Bullseye, Button, FileUpload, Modal, Spinner } from "@patternfly/react-core"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
-import { SchemaExport, TestExport } from "../generated";
+import {SchemaExport, TableReportConfig, TestExport} from "../generated";
 
 type ImportProps = {
     label?: string
     onLoad(config: Record<string, unknown>): Promise<any> | any
-    onImport(config: SchemaExport | TestExport): Promise<unknown>
+    onImport(config: SchemaExport | TestExport | TableReportConfig): Promise<unknown>
     onImported(): void
 }
 

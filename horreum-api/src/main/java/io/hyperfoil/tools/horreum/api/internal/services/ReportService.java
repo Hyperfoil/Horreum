@@ -17,7 +17,6 @@ import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.report.ReportComment;
@@ -66,11 +65,11 @@ public interface ReportService {
 
     @GET
     @Path("table/config/{id}/export")
-    JsonNode exportTableReportConfig(@PathParam("id") int id);
+    TableReportConfig exportTableReportConfig(@PathParam("id") int id);
 
     @POST
     @Path("table/config/import")
-    void importTableReportConfig(JsonNode config);
+    void importTableReportConfig(TableReportConfig config);
 
     class AllTableReports {
         @NotNull
