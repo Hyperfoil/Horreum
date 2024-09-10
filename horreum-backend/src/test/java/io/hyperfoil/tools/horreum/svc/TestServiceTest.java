@@ -37,7 +37,20 @@ import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
-import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Action;
+import io.hyperfoil.tools.horreum.api.data.ActionLog;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
+import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
+import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
+import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.api.data.FingerprintValue;
+import io.hyperfoil.tools.horreum.api.data.Fingerprints;
+import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
+import io.hyperfoil.tools.horreum.api.data.Transformer;
+import io.hyperfoil.tools.horreum.api.data.View;
+import io.hyperfoil.tools.horreum.api.data.ViewComponent;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
@@ -474,7 +487,7 @@ class TestServiceTest extends BaseServiceTest {
         assertEquals("RulesWithJoinsProvides", ((FingerprintValue<String>) values.get(1).values.get(1).children.get(2)).value);
     }
 
-    private String labelValuesSetup(Test t, boolean load) throws JsonProcessingException {
+    private String labelValuesSetup(Test t, boolean load) {
         Schema fooSchema = createSchema("foo", "urn:foo");
         Extractor fooExtractor = new Extractor();
         fooExtractor.name = "foo";
@@ -511,6 +524,131 @@ class TestServiceTest extends BaseServiceTest {
         ObjectNode objectNode = (ObjectNode) arrayResponse.get(0).get("values");
         assertFalse(objectNode.has("labelFoo"), objectNode.toString());
         assertTrue(objectNode.has("labelBar"), objectNode.toString());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesFilterWithJsonpath() throws JsonProcessingException {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                .queryParam("filter", "$.labelFoo ? (@ < 2)")
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(1, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelBar"), values.toString());
+        assertEquals(JsonNodeType.STRING, values.get("labelBar").getNodeType());
+        assertEquals("uno", values.get("labelBar").asText());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesFilterWithInvalidJsonpath() throws JsonProcessingException {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        jsonRequest()
+                .urlEncodingEnabled(true)
+                .queryParam("filter", "$..name")
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(400);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesFilterWithObject() throws JsonProcessingException {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                .queryParam("filter", Maps.of("labelBar", "uno", "labelFoo", 1))
+                .queryParam("multiFilter", false)
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(1, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelBar"), values.toString());
+        assertEquals(JsonNodeType.STRING, values.get("labelBar").getNodeType());
+        assertEquals("uno", values.get("labelBar").asText());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesFilterWithObjectNoMatch() throws JsonProcessingException {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                // no runs match both conditions
+                .queryParam("filter", Maps.of("labelBar", "uno", "labelFoo", "3"))
+                .queryParam("multiFilter", false)
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(0, arrayResponse.size(), "unexpected number of responses " + response);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesFilterMultiSelectMultipleValues() throws JsonProcessingException {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
+        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                .queryParam("filter", Maps.of("labelBar", Arrays.asList("uno", "tres")))
+                .queryParam("multiFilter", true)
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(2, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelBar"), values.toString());
+        assertEquals(JsonNodeType.STRING, values.get("labelBar").getNodeType());
+        JsonNode second = arrayResponse.get(0);
+        assertTrue(first.has("values"), second.toString());
+        JsonNode secondValues = second.get("values");
+        assertTrue(values.has("labelBar"), secondValues.toString());
+        assertEquals(JsonNodeType.STRING, secondValues.get("labelBar").getNodeType());
     }
 
     @org.junit.jupiter.api.Test
@@ -682,35 +820,32 @@ class TestServiceTest extends BaseServiceTest {
     @org.junit.jupiter.api.Test
     public void testLabelValues() throws JsonProcessingException {
         List<Object[]> toParse = new ArrayList<>();
-        toParse.add(new Object[] { mapper.readTree("""
-                {
-                    "job": "quarkus-release-startup",
-                    "Max RSS": [],
-                    "build-id": null,
-                    "Throughput 1 CPU": null,
-                    "Throughput 2 CPU": null,
-                    "Throughput 4 CPU": null,
-                    "Throughput 8 CPU": null,
-                    "Throughput 32 CPU": null,
-                    "Quarkus - Kafka_tags": "quarkus-release-startup"}
-                """), 10, 10, Instant.now(), Instant.now() });
-        List<ExportedLabelValues> values = ExportedLabelValues.parse(toParse);
+        toParse.add(
+                new Object[] { "job", mapper.readTree("\"quarkus-release-startup\""), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Max RSS", mapper.readTree("[]"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "build-id", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 1 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 2 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 4 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 8 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 32 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Quarkus - Kafka_tags", mapper.readTree("\"quarkus-release-startup\""), 10, 10,
+                Instant.now(), Instant.now() });
+        List<ExportedLabelValues> values = LabelValuesService.parse(toParse);
         assertEquals(1, values.size());
         assertEquals(9, values.get(0).values.size());
         assertEquals("quarkus-release-startup", values.get(0).values.get("job").asText());
+        assertEquals("null", values.get(0).values.get("Throughput 32 CPU").asText());
 
-        toParse.add(new Object[] { mapper.readTree("""
-                {
-                    "job": "quarkus-release-startup",
-                    "Max RSS": [],
-                    "build-id": null,
-                    "Throughput 1 CPU": 17570.30,
-                    "Throughput 2 CPU": 43105.62,
-                    "Throughput 4 CPU": 84895.13,
-                    "Throughput 8 CPU": 141086.29
-                }
-                """), 10, 10, Instant.now(), Instant.now() });
-        values = ExportedLabelValues.parse(toParse);
+        toParse.add(
+                new Object[] { "job", mapper.readTree("\"quarkus-release-startup\""), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Max RSS", mapper.readTree("[]"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "build-id", mapper.readTree("null"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 1 CPU", mapper.readTree("17570.30"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 2 CPU", mapper.readTree("43105.62"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 4 CPU", mapper.readTree("84895.13"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 8 CPU", mapper.readTree("141086.29"), 10, 11, Instant.now(), Instant.now() });
+        values = LabelValuesService.parse(toParse);
         assertEquals(2, values.size());
         assertEquals(9, values.get(0).values.size());
         assertEquals(7, values.get(1).values.size());

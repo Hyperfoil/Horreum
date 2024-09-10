@@ -259,4 +259,34 @@ public class UtilTest {
             Assertions.fail(e.getMessage());
         }
     }
+
+    @org.junit.jupiter.api.Test
+    void testDecomposeJsonPathInvalid() {
+        assertNull(Util.decomposeJsonPath(""));
+        assertNull(Util.decomposeJsonPath("$xyz."));
+    }
+
+    @org.junit.jupiter.api.Test
+    void testDecomposeJsonPath() {
+        Util.DecomposedJsonPath decomposedJsonPath = Util.decomposeJsonPath("$.MyKey.whatever");
+        assertNotNull(decomposedJsonPath);
+        assertEquals("MyKey", decomposedJsonPath.root());
+        assertEquals("$.whatever", decomposedJsonPath.jsonpath());
+    }
+
+    @org.junit.jupiter.api.Test
+    void testDecomposeJsonPathWithoutNestedKey() {
+        Util.DecomposedJsonPath decomposedJsonPath = Util.decomposeJsonPath("$.MyKey ? (@ > 2)");
+        assertNotNull(decomposedJsonPath);
+        assertEquals("MyKey", decomposedJsonPath.root());
+        assertEquals("$ ? (@ > 2)", decomposedJsonPath.jsonpath());
+    }
+
+    @org.junit.jupiter.api.Test
+    void testDecomposeJsonPathWithDoubleQuotes() {
+        Util.DecomposedJsonPath decomposedJsonPath = Util.decomposeJsonPath("$.\"My Key\".whatever");
+        assertNotNull(decomposedJsonPath);
+        assertEquals("My Key", decomposedJsonPath.root());
+        assertEquals("$.whatever", decomposedJsonPath.jsonpath());
+    }
 }
