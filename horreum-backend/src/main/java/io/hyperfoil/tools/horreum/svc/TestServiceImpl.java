@@ -1,10 +1,18 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.security.PermitAll;
@@ -28,11 +36,8 @@ import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
 import org.jboss.logging.Logger;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
@@ -54,11 +59,9 @@ import io.hyperfoil.tools.horreum.entity.data.TestTokenDAO;
 import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
 import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
-import io.hyperfoil.tools.horreum.hibernate.JsonbSetType;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
 import io.hyperfoil.tools.horreum.mapper.TestTokenMapper;
-import io.hyperfoil.tools.horreum.server.EncryptionManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
@@ -75,38 +78,8 @@ public class TestServiceImpl implements TestService {
     protected static final String WILDCARD = "*";
     //using find and replace because  ASC or DESC cannot be set with a parameter
     //@formatter:off
-   protected static final String FILTER_PREFIX = "WHERE ";
-   protected static final String FILTER_SEPARATOR = " AND ";
-   protected static final String FILTER_BEFORE = " combined.stop < :before";
-   protected static final String FILTER_AFTER = " combined.start > :after";
-   protected static final String LABEL_VALUES_FILTER_CONTAINS_JSON = "combined.values @> :filter";
-   //a solution does exist! https://github.com/spring-projects/spring-data-jpa/issues/2551
-   //use @\\?\\? to turn into a @? in the query
-   protected static final String LABEL_VALUES_FILTER_MATCHES_NOT_NULL = "combined.values @\\?\\? CAST( :filter as jsonpath)"; //"jsonb_path_match(combined.values,CAST( :filter as jsonpath))";
-   //unused atm because we need to either try both PREDICATE and matching jsonpath or differentiate before sending to the DB
-   protected static final String LABEL_VALUES_FILTER_MATCHES_PREDICATE = "combined.values @@ CAST( :filter as jsonpath)";
-   protected static final String LABEL_VALUES_SORT = "";//""jsonb_path_query(combined.values,CAST( :orderBy as jsonpath))";
-
-   protected static final String LABEL_ORDER_PREFIX = "order by ";
-   protected static final String LABEL_ORDER_START= "combined.start";
-   protected static final String LABEL_ORDER_STOP= "combined.stop";
-   protected static final String LABEL_ORDER_JSONPATH = "jsonb_path_query(combined.values,CAST( :orderBy as jsonpath))";
-
-   private static final String CHECK_TEST_EXISTS_BY_ID_QUERY = "SELECT EXISTS(SELECT 1 FROM test WHERE id = ?1)";
-   protected static final String LABEL_VALUES_QUERY = """
-         WITH
-         combined as (
-         SELECT COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL INCLUDE_EXCLUDE_PLACEHOLDER), '{}'::jsonb) AS values, runId, dataset.id AS datasetId, dataset.start AS start, dataset.stop AS stop
-                  FROM dataset
-                  LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
-                  LEFT JOIN label ON label.id = lv.label_id
-                  WHERE dataset.testid = :testId
-                     AND (label.id IS NULL OR (:filteringLabels AND label.filtering) OR (:metricLabels AND label.metrics))
-                  GROUP BY dataset.id, runId
-         ) select * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER LIMIT_PLACEHOLDER
-         """;
-
-   protected static final String LABEL_VALUES_SUMMARY_QUERY = """
+    private static final String CHECK_TEST_EXISTS_BY_ID_QUERY = "SELECT EXISTS(SELECT 1 FROM test WHERE id = ?1)";
+    protected static final String LABEL_VALUES_SUMMARY_QUERY = """
          SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value), '{}'::jsonb) AS values
                   FROM dataset
                   INNER JOIN label_values lv ON dataset.id = lv.dataset_id
@@ -114,7 +87,7 @@ public class TestServiceImpl implements TestService {
                   WHERE dataset.testid = :testId AND label.filtering
                   GROUP BY dataset.id, runId
          """;
-   //@formatter:on
+    //@formatter:on
 
     @Inject
     @Util.FailUnknownProperties
@@ -127,10 +100,10 @@ public class TestServiceImpl implements TestService {
     SecurityIdentity identity;
 
     @Inject
-    EncryptionManager encryptionManager;
+    ServiceMediator mediator;
 
     @Inject
-    ServiceMediator mediator;
+    LabelValuesService labelValuesService;
 
     @Inject
     TransactionManager tm;
@@ -655,95 +628,6 @@ public class TestServiceImpl implements TestService {
         return rtrn;
     }
 
-    protected record FilterDef(String sql, ObjectNode filterObject, Set<String> names, List<String> multis) {
-    }
-
-    protected static FilterDef getFilterDef(String filter, Instant before, Instant after, boolean multiFilter,
-            Function<String, List<ExportedLabelValues>> checkFilter, EntityManager em) {
-        Object filterObject = Util.getFilterObject(filter);
-        ObjectNode objectNode = null;
-        // this does not contain the WHERE clause
-        StringBuilder filterSqlBuilder = new StringBuilder();
-        Set<String> names = new HashSet<>();
-        List<String> assumeMulti = new ArrayList<>();
-
-        if (filterObject instanceof JsonNode && ((JsonNode) filterObject).getNodeType() == JsonNodeType.OBJECT) {
-            //check for arrays
-            objectNode = (ObjectNode) filterObject;
-            if (multiFilter) { //TODO create custom query rather than N queries
-                objectNode.fields().forEachRemaining(e -> {
-                    String key = e.getKey();
-                    JsonNode value = e.getValue();
-                    if (value.getNodeType() == JsonNodeType.ARRAY) {//check if there are any matches
-                        ObjectNode arrayFilter = (ObjectNode) new JsonNodeFactory(false).objectNode().set(key, value);
-                        //this is returning a non-zero count when it should be zero
-                        //                  List<ExportedLabelValues> found = labelValues(testId, arrayFilter.toString(), before, after, filtering, metrics, sort, direction, limit, page, include, exclude, false);
-                        List<ExportedLabelValues> found = checkFilter.apply(arrayFilter.toString());
-                        if (found.isEmpty()) {
-                            assumeMulti.add(key);
-                        }
-                    }
-                });
-                if (!assumeMulti.isEmpty()) {
-                    assumeMulti.forEach(objectNode::remove);
-                }
-            }
-            if (!objectNode.isEmpty()) {
-                filterSqlBuilder.append(LABEL_VALUES_FILTER_CONTAINS_JSON);
-                names.add("filter");
-            }
-            if (!assumeMulti.isEmpty()) {
-                for (int i = 0; i < assumeMulti.size(); i++) {
-                    if (!filterSqlBuilder.isEmpty()) {
-                        filterSqlBuilder.append(FILTER_SEPARATOR);
-                    }
-                    filterSqlBuilder.append(" jsonb_path_query_first(combined.values,CAST( :key")
-                            .append(i).append(" as jsonpath)) = ANY(:value").append(i).append(") ");
-                    names.add("key" + i);
-                    names.add("value" + i);
-                }
-            }
-        } else if (filterObject instanceof String) {
-            Util.CheckResult jsonpathResult = Util.castCheck(filter, "jsonpath", em);
-            if (jsonpathResult.ok()) {
-                filterSqlBuilder.append(LABEL_VALUES_FILTER_MATCHES_NOT_NULL);
-                names.add("filter");
-            } else {
-                //an attempt to see if the user was trying to provide json
-                if (filter.startsWith("{") && filter.endsWith("}")) {
-                    Util.CheckResult jsonbResult = Util.castCheck(filter, "jsonb", em);
-                    if (!jsonbResult.ok()) {
-                        //we expect this error (because filterObject was not a JsonNode), what do we do with it?
-                    } else {
-                        //this would be a surprise and quite a problem :)
-                    }
-                } else {
-                    //what do we do about the invalid jsonpath?
-                }
-            }
-        }
-        if (before != null) {
-            if (!filterSqlBuilder.isEmpty()) {
-                filterSqlBuilder.append(FILTER_SEPARATOR);
-            }
-            filterSqlBuilder.append(FILTER_BEFORE);
-            names.add("before");
-        }
-        if (after != null) {
-            if (!filterSqlBuilder.isEmpty()) {
-                filterSqlBuilder.append(FILTER_SEPARATOR);
-            }
-            filterSqlBuilder.append(FILTER_AFTER);
-            names.add("after");
-        }
-
-        String filterSql = "";
-        if (!filterSqlBuilder.isEmpty()) {
-            filterSql = FILTER_PREFIX + filterSqlBuilder;
-        }
-        return new FilterDef(filterSql, objectNode, names, assumeMulti);
-    }
-
     @Transactional
     @WithRoles
     @Override
@@ -751,110 +635,16 @@ public class TestServiceImpl implements TestService {
             boolean metrics, String sort, String direction, Integer limit, int page, List<String> include, List<String> exclude,
             boolean multiFilter) {
         if (!checkTestExists(testId)) {
-            throw ServiceException.serverError("Cannot find test " + testId);
-        }
-        Object filterObject = Util.getFilterObject(filter);
-
-        Instant beforeInstant = Util.toInstant(before);
-        Instant afterInstant = Util.toInstant(after);
-
-        FilterDef filterDef = getFilterDef(filter, beforeInstant, afterInstant, multiFilter, (str) -> labelValues(testId, str,
-                before, after, filtering, metrics, sort, direction, limit, page, include, exclude, false), em);
-
-        String filterSql = filterDef.sql();
-        if (filterDef.filterObject() != null) {
-            filterObject = filterDef.filterObject();
+            throw ServiceException.notFound("Cannot find test " + testId);
         }
 
-        String includeExcludeSql = "";
-        List<String> mutableInclude = new ArrayList<>(include);
-
-        if (include != null && !include.isEmpty()) {
-            if (exclude != null && !exclude.isEmpty()) {
-                mutableInclude.removeAll(exclude);
-            }
-            if (!mutableInclude.isEmpty()) {
-                includeExcludeSql = "AND label.name in :include";
-            }
+        try {
+            return labelValuesService.labelValuesByTest(testId, filter, before, after, filtering, metrics, sort, direction,
+                    limit,
+                    page, include, exclude, multiFilter);
+        } catch (IllegalArgumentException e) {
+            throw ServiceException.badRequest(e.getMessage());
         }
-        //includeExcludeSql is empty if include did not contain entries after exclude removal
-        if (includeExcludeSql.isEmpty() && exclude != null && !exclude.isEmpty()) {
-            includeExcludeSql = "AND label.name NOT in :exclude";
-        }
-
-        if (filterSql.isBlank() && filter != null && !filter.isBlank()) {
-            //TODO there was an error with the filter, do we return that info to the user?
-        }
-
-        // by default order by runId
-        String orderSql = LABEL_ORDER_PREFIX + "combined.runId DESC";
-        ;
-        String orderDirection = direction.equalsIgnoreCase("ascending") ? "ASC" : "DESC";
-        if ("start".equalsIgnoreCase(sort)) {
-            orderSql = LABEL_ORDER_PREFIX + LABEL_ORDER_START + " " + orderDirection + ", combined.runId DESC";
-        } else if ("stop".equalsIgnoreCase(sort)) {
-            orderSql = LABEL_ORDER_PREFIX + LABEL_ORDER_STOP + " " + orderDirection + ", combined.runId DESC";
-        } else {
-            if (!sort.isBlank()) {
-                Util.CheckResult jsonpathResult = Util.castCheck(sort, "jsonpath", em);
-                if (jsonpathResult.ok()) {
-                    orderSql = LABEL_ORDER_PREFIX + LABEL_ORDER_JSONPATH + " " + orderDirection + ", combined.runId DESC";
-                }
-            }
-
-        }
-        String limitSql = "";
-        if (limit != null) {
-            limitSql = "limit " + limit + " offset " + limit * Math.max(0, page);
-        }
-        String sql = LABEL_VALUES_QUERY
-                .replace("FILTER_PLACEHOLDER", filterSql)
-                .replace("INCLUDE_EXCLUDE_PLACEHOLDER", includeExcludeSql)
-                .replace("ORDER_PLACEHOLDER", orderSql)
-                .replace("LIMIT_PLACEHOLDER", limitSql);
-
-        NativeQuery query = ((NativeQuery) em.createNativeQuery(sql))
-                .setParameter("testId", testId)
-                .setParameter("filteringLabels", filtering)
-                .setParameter("metricLabels", metrics);
-        if (!filterSql.isEmpty()) {
-            if (filterSql.contains(LABEL_VALUES_FILTER_CONTAINS_JSON)) {
-                query.setParameter("filter", filterObject, JsonBinaryType.INSTANCE);
-            } else if (filterSql.contains(LABEL_VALUES_FILTER_MATCHES_NOT_NULL)) {
-                query.setParameter("filter", filter);
-            }
-            if (beforeInstant != null) {
-                query.setParameter("before", beforeInstant, StandardBasicTypes.INSTANT);
-            }
-            if (afterInstant != null) {
-                query.setParameter("after", afterInstant, StandardBasicTypes.INSTANT);
-            }
-        }
-        if (!filterDef.multis().isEmpty() && filterDef.filterObject() != null) {
-            ObjectNode fullFilterObject = (ObjectNode) Util.getFilterObject(filter);
-            for (int i = 0; i < filterDef.multis().size(); i++) {
-                String key = filterDef.multis().get(i);
-                ArrayNode value = (ArrayNode) fullFilterObject.get(key);
-                query.setParameter("key" + i, "$." + key);
-                query.setParameter("value" + i, value, JsonbSetType.INSTANCE);
-            }
-        }
-        if (includeExcludeSql.contains(":include")) {
-            query.setParameter("include", mutableInclude);
-        } else if (includeExcludeSql.contains(":exclude")) {
-            query.setParameter("exclude", exclude);
-        }
-        if (orderSql.contains(LABEL_ORDER_JSONPATH)) {
-            query.setParameter("orderBy", sort);
-        }
-        query
-                .unwrap(NativeQuery.class)
-                .addScalar("values", JsonBinaryType.INSTANCE)
-                .addScalar("runId", Integer.class)
-                .addScalar("datasetId", Integer.class)
-                .addScalar("start", StandardBasicTypes.INSTANT)
-                .addScalar("stop", StandardBasicTypes.INSTANT);
-        return ExportedLabelValues.parse(query.getResultList());
     }
 
     @Transactional
@@ -874,7 +664,6 @@ public class TestServiceImpl implements TestService {
         List<ObjectNode> filters = query.getResultList();
 
         return filters != null ? filters : new ArrayList<>();
-
     }
 
     @WithRoles

@@ -18,6 +18,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -71,6 +73,8 @@ public class Util {
 
     public static final int MAX_TRANSACTION_RETRIES = 10;
     private static final String RETRY_HINT = "The transaction might succeed if retried";
+
+    private static final Pattern JSONPATH_ROOT_PATTERN = Pattern.compile("^\\$\\.(\"[^\"]+\"|[^\\.\\s]+)");
 
     static {
         OBJECT_MAPPER.registerModule(new JavaTimeModule());
@@ -849,13 +853,24 @@ public class Util {
                         results.get(0)[2] == null ? "" : results.get(0)[2].toString());
     }
 
+    public static DecomposedJsonPath decomposeJsonPath(String jsonpath) {
+        Matcher matcher = JSONPATH_ROOT_PATTERN.matcher(jsonpath);
+        if (matcher.find()) {
+            String root = matcher.group(1).replaceAll("^\"|\"$", "");
+            // Remove root key from the original JSONPath
+            String modifiedJsonPath = jsonpath.replaceFirst(Pattern.quote(matcher.group(0)), "\\$");
+            return new DecomposedJsonPath(root, modifiedJsonPath);
+        }
+        return null;
+    }
+
     /**
      * returns null if no filtering, otherwise returns an object for filtering
      *
      * @param input filter string
      * @return JsonNode, original string or null
      */
-    public static Object getFilterObject(String input) {
+    public static JsonNode getFilterObject(String input) {
         if (input == null || input.isBlank()) {
             // not a valid filter
             return null;
@@ -869,8 +884,9 @@ public class Util {
         if (filterJson != null && filterJson.getNodeType() == JsonNodeType.OBJECT) {
             return filterJson;
         } else {
+            // do we need this?? the ObjectMapper().readTree(input) should already parse the object properly
             // TODO validate the jsonpath?
-            return input;
+            return JsonNodeFactory.instance.textNode(input);
         }
     }
 
@@ -911,4 +927,6 @@ public class Util {
 
     }
 
+    public record DecomposedJsonPath(String root, String jsonpath) {
+    }
 }
