@@ -18,6 +18,7 @@ jobs:
     if: >
       github.event.pull_request.merged && (
 
+
         github.event.action == 'closed'
           && (contains(github.event.pull_request.labels.*.name, 'backport')
             || contains(github.event.pull_request.labels.*.name, 'backport-squash'))
@@ -39,7 +40,7 @@ jobs:
       - name: Backporting
         uses: kiegroup/git-backporting@v4
         with:
-          target-branch: 0.14
+          target-branch: 0.15
           pull-request: ${{ github.event.pull_request.url }}
           auth: ${{ secrets.RH_PERF_BOT_TOKEN }}
           no-squash: ${{ env.NO_SQUASH_OPTION }}

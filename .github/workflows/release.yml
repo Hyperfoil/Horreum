@@ -1,31 +1,25 @@
 # This workflow will build and release Horreum to maven central and quay.io.
 name: Perform Release
-
 on:
   workflow_dispatch:
-
 env:
-  RELEASE_BRANCH: 0.14
-
+  RELEASE_BRANCH: 0.15
 jobs:
   build:
     name: Perform release
     env:
       ENVIRONMENT: CI
-    runs-on:  ubuntu-latest
-
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_BRANCH }}
           ssh-key: ${{ secrets.SSH_RELEASE_KEY }}
-      -
-        name: Import GPG key
+      - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-      -
-        name: List keys
+      - name: List keys
         run: gpg -K
       - name: Set up JDK 17
         uses: actions/setup-java@v4
