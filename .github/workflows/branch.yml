@@ -29,7 +29,7 @@ jobs:
           PROJECT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.4.0:evaluate -Dexpression=project.version -q -DforceStdout)
           echo PROJECT_VERSION=${PROJECT_VERSION} >> $GITHUB_ENV
           echo CUR_VERSION=$(echo ${PROJECT_VERSION} |  awk -F'.' '{print $1"."$2+0"."$3}' |  sed s/[.]$//) >> $GITHUB_ENV
-          echo NEXT_VERSION=$(echo ${PROJECT_VERSION} |  awk -F'.' '{print $1"."$2+1".0-SNAPSHOT"}' |  sed s/[.]$//) >> $GITHUB_ENV
+          echo NEXT_VERSION=$(echo ${PROJECT_VERSION} |  awk -F'.' '{print $1"."$2+1}' |  sed s/[.]$//) >> $GITHUB_ENV
       - name: Create branch ${{ env.CUR_VERSION }}
         run: git branch ${{ env.CUR_VERSION }} master
       - name: Bump next version ${{ env.NEXT_VERSION }}-SNAPSHOT
@@ -39,19 +39,28 @@ jobs:
       - name: Update main workflow
         run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/main.yml
       - name: Update release branch
-        run: ~/yq -i e '.env.RELEASE_BRANCH |= ${{ env.NEXT_VERSION }} .github/workflows/release.yml
+        run: ~/yq -i e '.env.RELEASE_BRANCH |= '${{ env.CUR_VERSION }} .github/workflows/release.yml
       - name: Update Notify clients workflow
         run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/notify-clients.yaml
       - name: Update backport workflow
-        run: ~/yq -i e '.jobs.backporting.steps[1].with.target-branch |= ${{ env.CUR_VERSION }}'  .github/workflows/backport.yml
+        run: ~/yq -i e '.jobs.backporting.steps[1].with.target-branch |= '${{ env.CUR_VERSION }}  .github/workflows/backport.yml
       - name: build new openapi.yaml
         run: mvn clean package -DskipTests -DskipITs -pl horreum-api
-      - name: Commit main branch changes
+      - name: Configure git
         run: |
           git config --global user.name "rh-appservices-perf"
           git config --global user.email "rh-appservices-perf@users.noreply.github.com"
+      - name: Commit main branch changes
+        run: |
           git commit -a -m "Next is ${{ env.NEXT_VERSION }}"
+      - name: Update cur branch
+        run: |
+          git checkout ${{ env.CUR_VERSION }}
+          mvn versions:set -DnewVersion=${{ env.CUR_VERSION }}.0-SNAPSHOT
+      - name: Commit current release branch
+        run: |
+          git commit -a -m "Branching ${{ env.CUR_VERSION }}"
       - name: push branches
         run: |
           git push origin ${{ env.CUR_VERSION }}
-          git push
+          git push origin master
