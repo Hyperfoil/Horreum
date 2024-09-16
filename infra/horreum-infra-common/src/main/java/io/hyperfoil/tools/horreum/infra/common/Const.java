@@ -25,6 +25,16 @@ public class Const {
     public static final String HORREUM_DEV_DB_PASSWORD = "horreum.db.password";
     public static final String HORREUM_DEV_DB_DATABASE = "horreum.db.database";
 
+    public static final String HORREUM_DEV_HORREUM_HORREUM_IMAGE = "horreum.dev-services.horreum.horreum.image";
+    public static final String HORREUM_DEV_HORREUM_NETWORK_ALIAS = "horreum.dev-services.horreum.network-alias";
+    public static final String HORREUM_DEV_HORREUM_CONTAINER_PORT = "horreum.dev-services.horreum.container-port";
+
+    public static final String HORREUM_DEV_AMQP_ENABLED = "horreum.dev-services.amqp.enabled";
+    public static final String HORREUM_DEV_AMQP_IMAGE = "horreum.dev-services.amqp.image";
+    public static final String HORREUM_DEV_AMQP_NETWORK_ALIAS = "horreum.dev-services.amqp.network-alias";
+    public static final String HORREUM_DEV_AMQP_MAPPED_PORT = "horreum.dev-services.amqp.mapped.port";
+    public static final String HORREUM_DEV_AMQP_MAPPED_HOST = "horreum.dev-services.amqp.mapped.host";
+
     public static final String DEFAULT_DB_USERNAME = "dbadmin";
     public static final String DEFAULT_DB_PASSWORD = "secret";
     public static final String DEFAULT_DBDATABASE = "horreum";
@@ -38,5 +48,8 @@ public class Const {
     public static final String DEFAULT_POSTGRES_NETWORK_ALIAS = "horreum-dev-postgres";
 
     public static final String DEFAULT_KEYCLOAK_NETWORK_ALIAS = "horreum-dev-keycloak";
-
+    public static final String DEFAULT_AMQP_NETWORK_ALIAS = "horreum-dev-amqp";
+    public static final String DEFAULT_HORREUM_NETWORK_ALIAS = "horreum-dev-horreum";
+    public static final String DEFAULT_AMQP_USERNAME = "horreum";
+    public static final String DEFAULT_AMQP_PASSWORD = "secret";
 }
