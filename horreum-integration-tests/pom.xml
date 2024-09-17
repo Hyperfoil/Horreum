@@ -3,7 +3,7 @@
     <parent>
         <artifactId>horreum</artifactId>
         <groupId>io.hyperfoil.tools</groupId>
-        <version>0.15.0-SNAPSHOT</version>
+        <version>0.15.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -186,8 +186,7 @@
                         </goals>
                         <configuration>
                             <target>
-                                <copy file="${project.basedir}/../horreum-backend/src/main/resources/application.properties"
-                                      todir="${project.build.testOutputDirectory}"/>
+                                <copy file="${project.basedir}/../horreum-backend/src/main/resources/application.properties" todir="${project.build.testOutputDirectory}" />
                             </target>
                         </configuration>
                     </execution>

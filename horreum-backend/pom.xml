@@ -3,7 +3,7 @@
     <parent>
         <artifactId>horreum</artifactId>
         <groupId>io.hyperfoil.tools</groupId>
-        <version>0.15.0-SNAPSHOT</version>
+        <version>0.15.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -309,7 +309,7 @@
        <profile>
             <id>ci</id>
             <properties>
-                <excludeTags></excludeTags>
+                <excludeTags />
             </properties>
         </profile>
 
