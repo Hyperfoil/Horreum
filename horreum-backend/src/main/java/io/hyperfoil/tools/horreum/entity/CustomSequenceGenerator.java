@@ -23,13 +23,13 @@ import org.hibernate.annotations.IdGeneratorType;
  * </p>
  *
  * <pre>
- * {
- *     &#64;code
- *     &#64;Entity
+ * {@code
+ *
+ *     @Entity
  *     public class YourEntity {
  *
- *         &#64;Id
- *         &#64;GeneratedValue(generator = "schemaIdGenerator")
+ *         @Id
+ *         @GeneratedValue(generator = "schemaIdGenerator")
  *         @CustomSequenceGenerator(name = "schema_id_seq", initialValue = 1, allocationSize = 1)
  *         private Long id;
  *
