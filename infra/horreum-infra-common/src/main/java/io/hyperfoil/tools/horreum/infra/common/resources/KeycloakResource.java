@@ -142,6 +142,7 @@ public class KeycloakResource implements ResourceLifecycleManager {
 
         boolean https = keycloakContainer.getExposedPorts().contains(8443);
         String mappedPort = keycloakContainer.getMappedPort(https ? 8443 : 8080).toString();
+
         String keycloakHost = String.format(https ? "https://%s:%s" : "http://%s:%s", keycloakContainer.getHost(), mappedPort);
 
         return Map.of(
