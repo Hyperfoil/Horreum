@@ -32,8 +32,6 @@ public class Const {
     public static final String HORREUM_DEV_AMQP_ENABLED = "horreum.dev-services.amqp.enabled";
     public static final String HORREUM_DEV_AMQP_IMAGE = "horreum.dev-services.amqp.image";
     public static final String HORREUM_DEV_AMQP_NETWORK_ALIAS = "horreum.dev-services.amqp.network-alias";
-    public static final String HORREUM_DEV_AMQP_MAPPED_PORT = "horreum.dev-services.amqp.mapped.port";
-    public static final String HORREUM_DEV_AMQP_MAPPED_HOST = "horreum.dev-services.amqp.mapped.host";
 
     public static final String DEFAULT_DB_USERNAME = "dbadmin";
     public static final String DEFAULT_DB_PASSWORD = "secret";
