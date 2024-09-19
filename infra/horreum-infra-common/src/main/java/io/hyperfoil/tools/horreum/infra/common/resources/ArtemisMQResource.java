@@ -53,8 +53,8 @@ public class ArtemisMQResource implements ResourceLifecycleManager {
         String mappedPort = amqpContainer.getMappedPort(5672).toString();
         String host = inContainer ? networkAlias : "localhost";
 
-        return Map.of(HORREUM_DEV_AMQP_MAPPED_PORT, mappedPort,
-                HORREUM_DEV_AMQP_MAPPED_HOST, host);
+        return Map.of("artemis.container.name", host,
+                "artemis.container.port", mappedPort);
     }
 
     @Override
