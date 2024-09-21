@@ -93,8 +93,9 @@
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
 
+        <keycloak.version>25.0.2</keycloak.version>
         <dev.images.postgres>postgres:16</dev.images.postgres>
-        <dev.images.keycloak>quay.io/keycloak/keycloak:25.0.2</dev.images.keycloak>
+        <dev.images.keycloak>quay.io/keycloak/keycloak:${keycloak.version}</dev.images.keycloak>
 
         <horreum.version>${project.version}</horreum.version>
         <major-version>0.16</major-version>
