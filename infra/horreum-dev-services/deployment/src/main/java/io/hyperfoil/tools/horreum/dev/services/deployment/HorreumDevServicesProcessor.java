@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.dev.services.deployment.config.DevServicesConfig;
@@ -105,6 +107,12 @@ public class HorreumDevServicesProcessor {
                             containerArgs.put(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE, postgresSelfSignedCert.getCertString());
                             containerArgs.put(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY, postgresSelfSignedCert.getKeyString());
                         }
+
+                        Config config = ConfigProvider.getConfig();
+                        containerArgs.put("quarkus.http.port",
+                                config.getOptionalValue("quarkus.http.port", String.class).orElse("8080"));
+                        containerArgs.put("quarkus.http.host",
+                                config.getOptionalValue("quarkus.http.host", String.class).orElse("localhost"));
 
                         Map<String, String> envvars = HorreumResources
                                 .startContainers(Collections.unmodifiableMap(containerArgs));
