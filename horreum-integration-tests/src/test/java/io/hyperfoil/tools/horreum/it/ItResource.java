@@ -24,6 +24,8 @@ import static java.lang.System.getProperty;
 
 import java.util.Map;
 
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.infra.common.SelfSignedCert;
@@ -53,6 +55,8 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
 
                     SelfSignedCert postgresSelfSignedCert = new SelfSignedCert("RSA", "SHA256withRSA", "localhost", 123);
 
+                    Config config = ConfigProvider.getConfig();
+
                     //todo: pick up from configuration
                     Map<String, String> containerArgs = Map.ofEntries(
                             Map.entry(HORREUM_DEV_KEYCLOAK_ENABLED, "true"),
@@ -67,8 +71,11 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
                             Map.entry(HORREUM_DEV_KEYCLOAK_DB_PASSWORD, DEFAULT_KC_DB_PASSWORD),
                             Map.entry(HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME, DEFAULT_KC_ADMIN_USERNAME),
                             Map.entry(HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD, DEFAULT_KC_ADMIN_PASSWORD),
-                            Map.entry("horreum.bootstrap.password", HORREUM_BOOTSTRAP_PASSWORD) // well known bootstrap password instead of a random one
-                    );
+                            Map.entry("horreum.bootstrap.password", HORREUM_BOOTSTRAP_PASSWORD), // well known bootstrap password instead of a random one
+                            Map.entry("quarkus.http.port",
+                                    config.getOptionalValue("quarkus.http.port", String.class).orElse("8080")),
+                            Map.entry("quarkus.http.host",
+                                    config.getOptionalValue("quarkus.http.host", String.class).orElse("localhost")));
                     return startContainers(containerArgs);
                 } catch (Exception e) {
                     log.fatal("Could not start Horreum services", e);

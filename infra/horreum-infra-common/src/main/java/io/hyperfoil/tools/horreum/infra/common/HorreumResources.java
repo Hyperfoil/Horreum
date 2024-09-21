@@ -21,8 +21,6 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.keycloak.admin.client.Keycloak;
@@ -149,9 +147,8 @@ public class HorreumResources {
 
             //update running keycloak realm with dev services configuration
             try {
-                Config config = ConfigProvider.getConfig();
-                String httpPort = config.getOptionalValue("quarkus.http.port", String.class).orElse("8080");
-                String httpHost = config.getOptionalValue("quarkus.http.host", String.class).orElse("localhost");
+                String httpPort = initArgs.get("quarkus.http.port");
+                String httpHost = initArgs.get("quarkus.http.host");
 
                 ClientRepresentation uiClient = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum-ui").get(0);
                 uiClient.getWebOrigins().add("http://".concat(httpHost).concat(":").concat(httpPort));
