@@ -160,6 +160,7 @@ public class HorreumResources {
                         keycloak.realm(HORREUM_REALM).clients().get(mainClient.getId()).getSecret().getValue());
             } catch (Exception e) {
                 log.error("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
+                throw new RuntimeException("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
             }
         }
 

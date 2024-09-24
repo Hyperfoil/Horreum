@@ -94,7 +94,7 @@
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
 
         <!--  dev services configuration -->
-        <keycloak.version>25.0.2</keycloak.version>
+        <keycloak.version>23.0.7</keycloak.version>
         <dev.images.postgres>postgres:16</dev.images.postgres>
         <dev.images.keycloak>quay.io/keycloak/keycloak:${keycloak.version}</dev.images.keycloak>
         <dev.images.horreum>quay.io/hyperfoil/horreum:${project.version}</dev.images.horreum>
@@ -198,6 +198,43 @@
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
                 <version>${jayway.jsonpath.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-keycloak-admin-resteasy-client</artifactId>
+                <version>${quarkus.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.keycloak</groupId>
+                        <artifactId>keycloak-admin-client</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.keycloak</groupId>
+                        <artifactId>keycloak-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.keycloak</groupId>
+                        <artifactId>keycloak-common</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <!-- Force keycloak admin client version -->
+            <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-admin-client</artifactId>
+                <version>${keycloak.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-core</artifactId>
+                <version>${keycloak.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-common</artifactId>
+                <version>${keycloak.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
