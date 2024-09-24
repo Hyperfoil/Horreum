@@ -16,7 +16,7 @@
 
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-keycloak-admin-client</artifactId>
+      <artifactId>quarkus-keycloak-admin-resteasy-client</artifactId>
     </dependency>
   </dependencies>
   <build>
