@@ -1,7 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -12,9 +11,5 @@ import jakarta.enterprise.context.ApplicationScoped;
 public class TimeService {
     public Instant now() {
         return Instant.now();
-    }
-
-    public LocalDate today() {
-        return LocalDate.now();
     }
 }

@@ -4580,8 +4580,8 @@
             <column name="name" type="text"/>
             <column name="type" type="smallint"/>
             <column name="revoked" type="bool"/>
-            <column name="creation" type="date"/>
-            <column name="access" type="date"/>
+            <column name="creation" type="timestamptz"/>
+            <column name="access" type="timestamptz"/>
             <column name="active" type="bigint"/>
         </createTable>
         <createIndex tableName="userinfo_apikey" indexName="userinfo_apikey_hash">

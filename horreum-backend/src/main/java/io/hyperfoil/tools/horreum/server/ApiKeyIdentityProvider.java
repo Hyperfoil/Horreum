@@ -1,13 +1,12 @@
 package io.hyperfoil.tools.horreum.server;
 
-import io.quarkus.logging.Log;
-import io.quarkus.security.AuthenticationFailedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.hyperfoil.tools.horreum.entity.user.UserApiKey;
 import io.hyperfoil.tools.horreum.svc.TimeService;
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.AuthenticationRequestContext;
 import io.quarkus.security.identity.IdentityProvider;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -43,7 +42,7 @@ public class ApiKeyIdentityProvider implements IdentityProvider<ApiKeyAuthentica
                     Log.debugv("Authentication of user {0} with key \"{1}\" {2}", userKey.user.username, userKey.name, key);
 
                     // update last access
-                    userKey.access = timeService.today();
+                    userKey.access = timeService.now();
 
                     // create identity with just the principal, roles will be populated in RolesAugmentor
                     return QuarkusSecurityIdentity.builder().setPrincipal(new QuarkusPrincipal(userKey.user.username)).build();
