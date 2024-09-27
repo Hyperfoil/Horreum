@@ -11,7 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import java.time.LocalDate;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,7 +25,6 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
 
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -47,8 +47,6 @@ import io.quarkus.test.security.TestSecurity;
  * Test for {@link UserServiceImpl} that is executed for every back-end
  */
 public abstract class UserServiceAbstractTest {
-
-    private static final Logger LOG = Logger.getLogger(UserServiceAbstractTest.class);
 
     //  the name of the default keycloak user with "admin" role (see io.quarkus.test.keycloak.server.KeycloakTestResourceLifecycleManager#createUsers)
     private static final String KEYCLOAK_ADMIN = "admin";
@@ -95,7 +93,6 @@ public abstract class UserServiceAbstractTest {
         // create the admin user and give it the admin role
         try {
             userService.createUser(adminUser);
-            LOG.infov("Created user {0}", adminUserName);
         } catch (ServiceException se) {
             // in the keycloak implementation this admin user already exists, and therefore the exception is expected
             assertEquals(se.getMessage(), "User exists with same username");
@@ -581,13 +578,12 @@ public abstract class UserServiceAbstractTest {
         overrideTestSecurity(apiUser, Set.of(Roles.MANAGER, testTeam.substring(0, testTeam.length() - 4) + Roles.MANAGER),
                 () -> {
                     // notification mock
-                    NotificationServiceImpl notificationService = Mockito.mock(NotificationServiceImpl.class);
+                    NotificationServiceImpl notificationServiceMock = Mockito.mock(NotificationServiceImpl.class);
                     List<UserApiKey> notifications = Collections.synchronizedList(new ArrayList<>());
-                    Mockito.doAnswer(invocation -> {
-                        notifications.add(invocation.getArgument(0));
-                        return null;
-                    }).when(notificationService).notifyApiKeyExpiration(Mockito.any(), Mockito.anyLong());
-                    QuarkusMock.installMockForType(notificationService, NotificationServiceImpl.class);
+                    Mockito.doAnswer(invocation -> notifications.add(invocation.getArgument(0)))
+                            .when(notificationServiceMock)
+                            .notifyApiKeyExpiration(Mockito.any(), Mockito.anyLong());
+                    QuarkusMock.installMockForType(notificationServiceMock, NotificationServiceImpl.class);
 
                     // empty state
                     assertTrue(userService.apiKeys().isEmpty());
@@ -612,22 +608,23 @@ public abstract class UserServiceAbstractTest {
                     assertTrue(
                             UserApiKey
                                     .<UserApiKey> stream("#UserApiKey.expire",
-                                            timeService.today().plusDays(DEFAULT_API_KEY_ACTIVE_DAYS))
+                                            timeService.now().plus(DEFAULT_API_KEY_ACTIVE_DAYS, ChronoUnit.DAYS))
                                     .anyMatch(k -> k.id == keys.get(0).id));
 
                     // about to expire
                     assertTrue(notifications.isEmpty());
-                    setApiKeyCreation(keys.get(0).id, timeService.today().minusDays(DEFAULT_API_KEY_ACTIVE_DAYS));
+                    setApiKeyCreation(keys.get(0).id, timeService.now().minus(DEFAULT_API_KEY_ACTIVE_DAYS, ChronoUnit.DAYS));
                     assertFalse(notifications.isEmpty(), "Expected a notification of key about to expire");
                     assertEquals(keys.get(0).id, notifications.get(0).id, "Got notification for the wrong key");
 
                     // should not be revoked yet
                     assertFalse(userService.apiKeys().get(0).isRevoked);
-                    assertTrue(UserApiKey.<UserApiKey> stream("#UserApiKey.expire", timeService.today())
+                    assertTrue(UserApiKey.<UserApiKey> stream("#UserApiKey.expire", timeService.now())
                             .anyMatch(k -> k.id == keys.get(0).id));
 
                     // expire it
-                    setApiKeyCreation(keys.get(0).id, timeService.today().minusDays(DEFAULT_API_KEY_ACTIVE_DAYS + 1));
+                    setApiKeyCreation(keys.get(0).id,
+                            timeService.now().minus(DEFAULT_API_KEY_ACTIVE_DAYS + 1, ChronoUnit.DAYS));
                     assertEquals(2, notifications.toArray().length, "Expected a second notification after key expiration");
 
                     // should be revoked now
@@ -638,7 +635,7 @@ public abstract class UserServiceAbstractTest {
     }
 
     @Transactional
-    void setApiKeyCreation(long keyId, LocalDate creation) {
+    void setApiKeyCreation(long keyId, Instant creation) {
         UserApiKey apiKey = UserApiKey.findById(keyId);
         apiKey.access = null;
         apiKey.creation = creation;

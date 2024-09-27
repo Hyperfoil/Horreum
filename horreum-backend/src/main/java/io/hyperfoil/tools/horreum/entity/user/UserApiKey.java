@@ -4,7 +4,7 @@ import static jakarta.persistence.GenerationType.SEQUENCE;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDate;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Comparator;
@@ -33,9 +33,15 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Table(name = "userinfo_apikey")
 @NamedQueries({
         // fetch all keys that expire on a given day
-        @NamedQuery(name = "UserApiKey.expire", query = "from UserApiKey where not revoked AND (access is null and (creation + active day) = ?1 or (access + active day) = ?1)"),
+        @NamedQuery(name = "UserApiKey.expire", query = """
+                from UserApiKey where not revoked and (access is null and trunc(creation + (active day), day) = trunc(cast(?1 as localdatetime), day)
+                                                                       or trunc(access + (active day), day) = trunc(cast(?1 as localdatetime), day))
+                """),
         // fetch all keys that have gone past their expiration date
-        @NamedQuery(name = "UserApiKey.pastExpiration", query = "from UserApiKey where not revoked AND (access is null and (creation + active day) < ?1 or (access + active day) < ?1)"),
+        @NamedQuery(name = "UserApiKey.pastExpiration", query = """
+                from UserApiKey where not revoked and (access is null and trunc(creation + (active day), day) < trunc(cast(?1 as localdatetime), day)
+                                                                       or trunc(access + (active day), day) < trunc(cast(?1 as localdatetime), day))
+                """),
 })
 public class UserApiKey extends PanacheEntityBase implements Comparable<UserApiKey> {
 
@@ -61,7 +67,7 @@ public class UserApiKey extends PanacheEntityBase implements Comparable<UserApiK
     @Enumerated
     public final UserService.KeyType type;
 
-    public LocalDate creation, access;
+    public Instant creation, access;
 
     public long active; // number of days after last access that the key remains active
 
@@ -74,7 +80,7 @@ public class UserApiKey extends PanacheEntityBase implements Comparable<UserApiK
         type = UserService.KeyType.USER;
     }
 
-    public UserApiKey(String name, UserService.KeyType type, LocalDate creationDate, long valid) {
+    public UserApiKey(String name, UserService.KeyType type, Instant creationDate, long valid) {
         randomnessSource = UUID.randomUUID();
         this.name = name;
         this.type = type;
@@ -84,12 +90,12 @@ public class UserApiKey extends PanacheEntityBase implements Comparable<UserApiK
         revoked = false;
     }
 
-    public boolean isArchived(LocalDate givenDay) {
-        return givenDay.isAfter((access == null ? creation : access).plusDays(active + ARCHIVE_AFTER_DAYS));
+    public boolean isArchived(Instant givenDay) {
+        return givenDay.isAfter((access == null ? creation : access).plus(active + ARCHIVE_AFTER_DAYS, ChronoUnit.DAYS));
     }
 
     // calculate the number of days left until expiration (if negative it's the number of days after expiration)
-    public long toExpiration(LocalDate givenDay) {
+    public long toExpiration(Instant givenDay) {
         return active - ChronoUnit.DAYS.between(access == null ? creation : access, givenDay);
     }
 
@@ -134,6 +140,6 @@ public class UserApiKey extends PanacheEntityBase implements Comparable<UserApiK
 
     @Override
     public int compareTo(UserApiKey other) {
-        return Comparator.<UserApiKey, LocalDate> comparing(a -> a.creation).thenComparing(a -> a.id).compare(this, other);
+        return Comparator.<UserApiKey, Instant> comparing(a -> a.creation).thenComparing(a -> a.id).compare(this, other);
     }
 }

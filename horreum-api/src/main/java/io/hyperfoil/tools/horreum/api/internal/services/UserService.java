@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.api.internal.services;
 
-import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -195,8 +195,8 @@ public interface UserService {
         public long id;
         public String name;
         public KeyType type;
-        public LocalDate creation;
-        public LocalDate access;
+        public Instant creation;
+        public Instant access;
         public boolean isRevoked;
         public long toExpiration;
     }

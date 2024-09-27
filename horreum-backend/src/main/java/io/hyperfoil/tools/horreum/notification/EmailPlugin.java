@@ -7,7 +7,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -156,7 +156,7 @@ public class EmailPlugin implements NotificationPlugin {
         }
 
         @Override
-        public void notifyApiKeyExpiration(String keyName, LocalDate creation, LocalDate lastAccess, long toExpiration,
+        public void notifyApiKeyExpiration(String keyName, Instant creation, Instant lastAccess, long toExpiration,
                 long active) {
             String subject = String.format("%s API key \"%s\" %s", subjectPrefix, keyName,
                     toExpiration == -1 ? "EXPIRED" : "about to expire");
@@ -164,8 +164,8 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("baseUrl", baseUrl)
                     .data("username", username)
                     .data("keyName", keyName)
-                    .data("creation", creation)
-                    .data("lastAccess", lastAccess)
+                    .data("creation", creation.truncatedTo(ChronoUnit.DAYS))
+                    .data("lastAccess", lastAccess.truncatedTo(ChronoUnit.DAYS))
                     .data("expiration", toExpiration)
                     .data("active", active)
                     .render();

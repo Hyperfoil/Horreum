@@ -1,13 +1,13 @@
 package io.hyperfoil.tools.horreum.mapper;
 
-import java.time.LocalDate;
+import java.time.Instant;
 
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.UserApiKey;
 
 public class UserApiKeyMapper {
 
-    public static UserApiKey from(UserService.ApiKeyRequest request, LocalDate creation, long valid) {
+    public static UserApiKey from(UserService.ApiKeyRequest request, Instant creation, long valid) {
         return new UserApiKey(request.name == null ? "" : request.name, request.type, creation, valid);
     }
 
@@ -19,7 +19,7 @@ public class UserApiKeyMapper {
         response.creation = key.creation;
         response.access = key.access;
         response.isRevoked = key.revoked;
-        response.toExpiration = key.toExpiration(LocalDate.now());
+        response.toExpiration = key.toExpiration(Instant.now());
         return response;
     }
 }

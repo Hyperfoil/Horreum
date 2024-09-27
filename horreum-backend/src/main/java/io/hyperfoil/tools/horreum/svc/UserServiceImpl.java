@@ -4,12 +4,12 @@ import static java.text.MessageFormat.format;
 import static java.util.Collections.emptyList;
 
 import java.security.SecureRandom;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import io.hyperfoil.tools.horreum.mapper.UserApiKeyMapper;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -20,6 +20,7 @@ import jakarta.transaction.Transactional;
 import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.UserApiKey;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
+import io.hyperfoil.tools.horreum.mapper.UserApiKeyMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.svc.user.UserBackEnd;
 import io.quarkus.logging.Log;
@@ -300,7 +301,7 @@ public class UserServiceImpl implements UserService {
         validateApiKeyName(request.name == null ? "" : request.name);
         UserInfo userInfo = currentUser();
 
-        UserApiKey newKey = UserApiKeyMapper.from(request, timeService.today(), DEFAULT_API_KEY_ACTIVE_DAYS);
+        UserApiKey newKey = UserApiKeyMapper.from(request, timeService.now(), DEFAULT_API_KEY_ACTIVE_DAYS);
         newKey.user = userInfo;
         userInfo.apiKeys.add(newKey);
         newKey.persist();
@@ -315,7 +316,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<ApiKeyResponse> apiKeys() {
         return currentUser().apiKeys.stream()
-                .filter(t -> !t.isArchived(timeService.today()))
+                .filter(t -> !t.isArchived(timeService.now()))
                 .sorted()
                 .map(UserApiKeyMapper::to)
                 .toList();
@@ -353,11 +354,11 @@ public class UserServiceImpl implements UserService {
     public void apiKeyDailyTask() {
         // notifications of keys expired and about to expire -- hardcoded to send multiple notices in the week prior to expiration
         for (long toExpiration : List.of(7, 2, 1, 0, -1)) {
-            UserApiKey.<UserApiKey> stream("#UserApiKey.expire", timeService.today().plusDays(toExpiration))
+            UserApiKey.<UserApiKey> stream("#UserApiKey.expire", timeService.now().plus(toExpiration, ChronoUnit.DAYS))
                     .forEach(key -> notificationServiceimpl.notifyApiKeyExpiration(key, toExpiration));
         }
         // revoke expired keys -- could be done directly in the DB but iterate instead to be able to log
-        UserApiKey.<UserApiKey> stream("#UserApiKey.pastExpiration", timeService.today()).forEach(key -> {
+        UserApiKey.<UserApiKey> stream("#UserApiKey.pastExpiration", timeService.now()).forEach(key -> {
             Log.debugv("Idle API key \"{0}\" revoked", key.name);
             key.revoked = true;
         });

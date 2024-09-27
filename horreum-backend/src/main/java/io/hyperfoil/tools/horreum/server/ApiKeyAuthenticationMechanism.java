@@ -30,7 +30,7 @@ public class ApiKeyAuthenticationMechanism implements HttpAuthenticationMechanis
     public Uni<SecurityIdentity> authenticate(RoutingContext context, IdentityProviderManager identityProviderManager) {
         String headerValue = context.request().headers().get(HORREUM_API_KEY_HEADER);
         return headerValue == null ? Uni.createFrom().nullItem()
-                : identityProviderManager.authenticate(new Request(headerValue));
+                : identityProviderManager.authenticate(new ApiKeyAuthenticationMechanism.Request(headerValue));
     }
 
     @Override
@@ -40,7 +40,7 @@ public class ApiKeyAuthenticationMechanism implements HttpAuthenticationMechanis
 
     @Override
     public Set<Class<? extends AuthenticationRequest>> getCredentialTypes() {
-        return Collections.singleton(Request.class);
+        return Collections.singleton(ApiKeyAuthenticationMechanism.Request.class);
     }
 
     @Override

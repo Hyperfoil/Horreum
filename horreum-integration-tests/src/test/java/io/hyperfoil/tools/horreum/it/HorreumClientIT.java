@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -86,8 +86,8 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             UserService.ApiKeyResponse apiKey = horreumClient.userService.apiKeys().get(0);
             assertFalse(apiKey.isRevoked);
             assertFalse(apiKey.toExpiration < 0);
-            assertEquals(LocalDate.now(), apiKey.creation);
-            assertEquals(LocalDate.now(), apiKey.access);
+            assertEquals(Instant.now().truncatedTo(ChronoUnit.DAYS), apiKey.creation.truncatedTo(ChronoUnit.DAYS));
+            assertEquals(Instant.now().truncatedTo(ChronoUnit.DAYS), apiKey.access.truncatedTo(ChronoUnit.DAYS));
             assertEquals(USER, apiKey.type);
 
             horreumClient.userService.revokeApiKey(apiKey.id);

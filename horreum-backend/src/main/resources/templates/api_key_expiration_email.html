@@ -1,5 +1,5 @@
 <p>Hello {username},</p>
-<p>The API key "{keyName}" created on {creation}
+<p>The API key "{keyName}" created on {creation.format('d MMM uuuu')}
     {#when expiration}
         {#is < 0} HAS EXPIRED.
         {#is < 1} expires today.
@@ -7,6 +7,6 @@
     {#else} expires in {expiration} days.
     {/when}
 </p>
-<p>The key was {#if lastAccess == null}never used{#else}last used on {lastAccess}{/if}.</p>
+<p>The key was {#if lastAccess == null}never used{#else}last used on {lastAccess.format('d MMM uuuu')}{/if}.</p>
 <p>Remember that this key is automatically revoked if not used for {active} days.</p>
 <a href="{baseUrl}">Horreum Alerting</a>
