@@ -21,7 +21,10 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.LongNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -116,6 +119,40 @@ public class UtilTest {
                 httpServer.stop(0);
             }
         }
+    }
+
+    @Test
+    public void findJsonPath() throws UnsupportedEncodingException {
+        ObjectNode root = JsonNodeFactory.instance.objectNode();
+        ObjectNode metrics = root.putObject("metrics");
+        ArrayNode jobSummary = metrics.putArray("jobSummary");
+        ArrayNode values = JsonNodeFactory.instance.arrayNode();
+        ObjectNode valuesWrapper = JsonNodeFactory.instance.objectNode();
+        valuesWrapper.put("values", values);
+        jobSummary.add(valuesWrapper);
+
+        ObjectNode gcSummary = JsonNodeFactory.instance.objectNode();
+        String gcEnd = "2024-09-05T18:16:36.803661713Z";
+        gcSummary.put("endTimestamp", gcEnd);
+        String gcStart = "2024-09-05T18:14:42.798970958Z";
+        gcSummary.put("timestamp", gcStart);
+        values.add(gcSummary);
+        ObjectNode gcJobConfig = gcSummary.putObject("jobConfig");
+        gcJobConfig.put("name", "garbage-collection");
+
+        ObjectNode cdv2Summary = JsonNodeFactory.instance.objectNode();
+        String cdv2End = "2024-09-05T18:14:42.797624736Z";
+        cdv2Summary.put("endTimestamp", cdv2End);
+        String cdv2Start = "2024-09-05T17:49:02.915410546Z";
+        cdv2Summary.put("timestamp", cdv2Start);
+        values.add(cdv2Summary);
+        ObjectNode cdv2JobConfig = cdv2Summary.putObject("jobConfig");
+        cdv2JobConfig.put("name", "cluster-density-v2");
+
+        assertEquals(Util.findJsonPath(root,
+                "$.metrics.jobSummary[0].values[?(@.jobConfig.name != 'garbage-collection')].timestamp"), cdv2Start);
+        assertEquals(Util.findJsonPath(root,
+                "$.metrics.jobSummary[0].values[?(@.jobConfig.name != 'garbage-collection')].endTimestamp"), cdv2End);
     }
 
     @Test
