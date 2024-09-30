@@ -585,7 +585,7 @@ public class RunServiceImpl implements RunService {
             } else { //process synchronously
                 response.payload.forEach(jsonNode -> {
                     runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, metadata,
-                            response.payload, testEntity));
+                            jsonNode, testEntity));
                 });
             }
         } else {
