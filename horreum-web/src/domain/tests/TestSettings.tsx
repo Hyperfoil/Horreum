@@ -66,7 +66,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
     useEffect( () => {
         apiCall(configApi.datastores(owner), alerting, "DATASTORE", "Error occurred fetching datastores")
             .then(ds => setDatastores(ds))
-    }, [test])
+    }, [test, owner])
 
     const updateState = (t?: Test) => {
         setName(t?.name || "")
@@ -148,6 +148,20 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
                         </HelperText>
                     </FormHelperText>
                 </FormGroup>
+                <FormGroup label="Team" fieldId="testOwner">
+                    {isTester ? (
+                        <TeamSelect
+                            includeGeneral={false}
+                            selection={teamToName(owner) || ""}
+                            onSelect={selection => {
+                                setOwner(selection.key)
+                                onModified(true)
+                            }}
+                        />
+                    ) : (
+                        <TextInput value={teamToName(owner) || ""} id="testOwner"  readOnlyVariant="default" />
+                    )}
+                </FormGroup>
                 <FormGroup label="Datastore" fieldId="datastoreId">
                     <FormSelect
                         value={datastoreId?.toString()}
@@ -222,20 +236,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
                 <Divider/>
 
                 <Title headingLevel="h2">Permissions</Title>
-                <FormGroup label="Owner" fieldId="testOwner">
-                    {isTester ? (
-                        <TeamSelect
-                            includeGeneral={false}
-                            selection={teamToName(owner) || ""}
-                            onSelect={selection => {
-                                setOwner(selection.key)
-                                onModified(true)
-                            }}
-                        />
-                    ) : (
-                        <TextInput value={teamToName(owner) || ""} id="testOwner"  readOnlyVariant="default" />
-                    )}
-                </FormGroup>
+
                 <FormGroup label="Access rights" fieldId="testAccess">
                     {isTester ? (
                         <AccessChoice
