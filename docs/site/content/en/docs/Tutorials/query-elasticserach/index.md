@@ -16,7 +16,7 @@ weight: 3
 
 ## Create a Test and query data from an Elasticsearch instance
 
-This tutorial will present guide you through how to connect to a remote Elasticsearch instance, and perform change detection on existing data in an index.
+This tutorial will guide you through how to connect to a remote Elasticsearch instance, and perform change detection on existing data in an index.
 
 ## Configure Elasticsearch Datastore
 
