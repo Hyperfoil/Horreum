@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.api.data.datastore;
 
+import static java.util.Objects.requireNonNullElse;
+
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
@@ -42,11 +44,16 @@ public class ElasticsearchDatastoreConfig extends BaseDatastoreConfig {
 
     @Override
     public String validateConfig() {
-        if ("".equals(apiKey) && ("".equals(username) || "".equals(password))) {
+
+        String _apiKey = requireNonNullElse(apiKey, "");
+        String _username = requireNonNullElse(username, "");
+        String _password = requireNonNullElse(password, "");
+
+        if ("".equals(_apiKey) && ("".equals(_username) || "".equals(_password))) {
             return "Either apiKey or username and password must be set";
         }
 
-        if (!"".equals(apiKey) && !("".equals(username) || "".equals(password))) {
+        if (!"".equals(_apiKey) && !("".equals(_username) || "".equals(_password))) {
             return "Only apiKey or username and password can be set";
         }
 
