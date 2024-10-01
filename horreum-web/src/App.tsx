@@ -22,7 +22,7 @@ import {
 } from "react-router-dom"
 
 import {Provider, useSelector} from "react-redux"
-import {isAdminSelector, LoginLogout} from "./auth"
+import {isAdminSelector, isManagerSelector, LoginLogout} from "./auth"
 import {initKeycloak} from "./keycloak"
 import {UserProfileLink, UserSettings} from "./domain/user/UserSettings"
 
@@ -83,6 +83,7 @@ export default function App() {
 
 function Main() {
     const isAdmin = useSelector(isAdminSelector)
+    const isManager = useSelector(isManagerSelector)
     /*
         const isManager = useSelector(isManagerSelector)
         const isAuthenticated = useSelector(isAuthenticatedSelector)
@@ -200,7 +201,7 @@ function Main() {
                         Schemas
                     </NavLink>
                 </NavItem>
-                {isAdmin && (
+                {(isAdmin || isManager ) && (
                     <NavItem itemId={4}>
                         <NavLink
                             to="/admin"
