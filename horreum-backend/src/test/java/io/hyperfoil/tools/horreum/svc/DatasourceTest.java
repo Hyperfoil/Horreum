@@ -219,7 +219,7 @@ public class DatasourceTest extends BaseServiceTest {
 
         ElasticsearchDatastoreConfig elasticConfig = new ElasticsearchDatastoreConfig();
         elasticConfig.url = hosts.get().get(0);
-        elasticConfig.apiKey = apiKey.orElse("");
+        elasticConfig.apiKey = apiKey.orElse("123");
 
         newDatastore.config = mapper.valueToTree(elasticConfig);
 
