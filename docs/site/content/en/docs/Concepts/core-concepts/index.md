@@ -93,7 +93,7 @@ A `Function` is a JavaScript function that is executed on the server side. Funct
 
 ## Datasource
 
-A `Datasource` is a **required** top-level organizational construct that defines the source of the data to be stored or retrieved by Horreum. Currently, Horreum supports 2 types of `Datasource`: Postgres and Elasticsearch
+A `Datasource` is a **required** top-level organizational construct that defines the source of the data to be stored or retrieved by Horreum. Currently, Horreum supports 3 types of `Datasource`: Postgres, Elasticsearch, and [Collector](https://github.com/Karm/collector)
 
 ## Baseline
 
