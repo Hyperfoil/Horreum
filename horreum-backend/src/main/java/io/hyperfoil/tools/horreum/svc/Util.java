@@ -431,6 +431,11 @@ public class Util {
         try {
             JsonPath path = JsonPath.compile(jsonPath);
             Object obj = ctx.read(path);
+            if (obj instanceof ArrayNode arr) {
+                if (arr.size() == 1) {
+                    obj = arr.get(0);
+                }
+            }
             if (obj instanceof ValueNode) {
                 ValueNode node = (ValueNode) obj;
                 switch (node.getNodeType()) {
