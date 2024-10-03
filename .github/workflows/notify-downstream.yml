@@ -1,0 +1,16 @@
+name: Release notification
+on:
+  release:
+    types: [released]
+
+jobs:
+  dispatch-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.horreum_plugin_PAT }}
+          repository: jenkinsci/horreum-plugin
+          event-type: upstream-release
+          client_payload: '{"version": "${{ github.ref_name }}"}'
