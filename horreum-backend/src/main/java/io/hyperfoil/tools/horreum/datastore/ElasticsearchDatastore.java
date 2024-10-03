@@ -47,8 +47,7 @@ public class ElasticsearchDatastore implements Datastore {
     public DatastoreResponse handleRun(JsonNode payload,
             JsonNode metaData,
             DatastoreConfigDAO configuration,
-            Optional<String> schemaUriOptional,
-            ObjectMapper mapper)
+            Optional<String> schemaUriOptional)
             throws BadRequestException {
 
         RestClient restClient = null;
