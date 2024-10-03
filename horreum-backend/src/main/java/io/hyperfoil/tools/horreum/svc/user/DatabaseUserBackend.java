@@ -14,7 +14,6 @@ import java.util.function.Function;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 
 import org.jboss.logging.Logger;
@@ -64,10 +63,10 @@ public class DatabaseUserBackend implements UserBackEnd {
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override
-    public List<UserService.UserData> searchUsers(String query) {
-        List<UserInfo> users = UserInfo.list("lower(firstName) like ?1 or lower(lastName) like ?1 or lower(username) like ?1",
-                "%" + query.toLowerCase() + "%");
-        return users.stream().filter(user -> !user.roles.contains(UserRole.MACHINE)).map(DatabaseUserBackend::toUserInfo)
+    public List<UserService.UserData> searchUsers(String param) {
+        String query = "lower(firstName) like ?1 or lower(lastName) like ?1 or lower(username) like ?1";
+        return UserInfo.<UserInfo> stream(query, "%" + param.toLowerCase() + "%")
+                .map(DatabaseUserBackend::toUserInfo)
                 .toList();
     }
 
@@ -75,8 +74,7 @@ public class DatabaseUserBackend implements UserBackEnd {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Override
     public List<UserService.UserData> info(List<String> usernames) {
-        List<UserInfo> users = UserInfo.list("username in ?1", usernames);
-        return users.stream().map(DatabaseUserBackend::toUserInfo).toList();
+        return UserInfo.<UserInfo> stream("username in ?1", usernames).map(DatabaseUserBackend::toUserInfo).toList();
     }
 
     @Transactional
@@ -107,13 +105,10 @@ public class DatabaseUserBackend implements UserBackEnd {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_UPLOADER);
                 } else if (Roles.MANAGER.equals(role)) {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_MANAGER);
-                } else if (!Roles.MACHINE.equals(role)) {
+                } else {
                     LOG.infov("Dropping role {0} for user {1} {2}", role, userInfo.firstName, userInfo.lastName);
                 }
             }
-        }
-        if (user.roles != null && user.roles.contains(Roles.MACHINE)) {
-            userInfo.roles.add(UserRole.MACHINE);
         }
         userInfo.persist();
     }
@@ -255,17 +250,6 @@ public class DatabaseUserBackend implements UserBackEnd {
         CriteriaQuery<UserInfo> query = cb.createQuery(UserInfo.class);
         query.where(cb.isMember(UserRole.ADMIN, query.from(UserInfo.class).get("roles")));
         return UserInfo.getEntityManager().createQuery(query).getResultList();
-    }
-
-    @Transactional
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Override
-    public List<UserService.UserData> machineAccounts(String team) {
-        CriteriaBuilder cb = UserInfo.getEntityManager().getCriteriaBuilder();
-        CriteriaQuery<UserInfo> query = cb.createQuery(UserInfo.class);
-        Root<UserInfo> userInfoRoot = query.from(UserInfo.class);
-        query.where(cb.equal(userInfoRoot.get("defaultTeam"), team), cb.isMember(UserRole.MACHINE, userInfoRoot.get("roles")));
-        return UserInfo.getEntityManager().createQuery(query).getResultStream().map(DatabaseUserBackend::toUserInfo).toList();
     }
 
     @Transactional

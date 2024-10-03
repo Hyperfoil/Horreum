@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -68,21 +67,10 @@ public class KeycloakUserBackend implements UserBackEnd {
     @Override
     public List<UserService.UserData> searchUsers(String query) {
         try {
-            Set<String> machineIds = safeMachineIds();
-            return keycloak.realm(realm).users().search(query, null, null).stream()
-                    .filter(rep -> !machineIds.contains(rep.getId())).map(KeycloakUserBackend::toUserInfo).toList();
+            return keycloak.realm(realm).users().search(query, null, null).stream().map(KeycloakUserBackend::toUserInfo)
+                    .toList();
         } catch (Throwable t) {
             throw ServiceException.serverError("Unable to search for users");
-        }
-    }
-
-    private Set<String> safeMachineIds() {
-        try {
-            return keycloak.realm(realm).roles().get(Roles.MACHINE).getUserMembers(0, Integer.MAX_VALUE).stream()
-                    .map(UserRepresentation::getId).collect(Collectors.toSet());
-        } catch (Exception e) {
-            // ignore exception
-            return Set.of();
         }
     }
 
@@ -137,14 +125,6 @@ public class KeycloakUserBackend implements UserBackEnd {
                 String prefix = getTeamPrefix(user.team);
                 usersResource.get(userId).roles().realmLevel()
                         .add(user.roles.stream().map(r -> ensureRole(prefix + r)).toList());
-                if (user.roles.contains(Roles.MACHINE)) {
-                    // add the base 'machine' role as well to be able to get all machine accounts
-                    // keycloak does not return the users of role inherited by composition
-                    usersResource.get(userId).roles().realmLevel().add(List.of(ensureRole(Roles.MACHINE)));
-
-                    // reset the password, so that it does not have to be changed
-                    setPassword(user.user.username, user.password);
-                }
             }
 
             // also add the "view-profile" role
@@ -319,7 +299,7 @@ public class KeycloakUserBackend implements UserBackEnd {
     public void addTeam(String team) { // create the "team roles"
         String prefix = getTeamPrefix(team); // perform validation of the team name
         createRole(team, null);
-        for (String role : List.of(Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER, Roles.MACHINE)) {
+        for (String role : List.of(Roles.MANAGER, Roles.TESTER, Roles.VIEWER, Roles.UPLOADER)) {
             createRole(prefix + role, Set.of(role, team));
         }
     }
@@ -408,22 +388,6 @@ public class KeycloakUserBackend implements UserBackEnd {
         } catch (Throwable t) {
             LOG.warnv(t, "Cannot fetch representation for admin role");
             throw ServiceException.serverError("Cannot find admin role");
-        }
-    }
-
-    @Override
-    public List<UserService.UserData> machineAccounts(String team) {
-        try {
-            String prefix = getTeamPrefix(team);
-            return keycloak.realm(realm).roles().get(prefix + Roles.MACHINE).getUserMembers(0, Integer.MAX_VALUE).stream()
-                    .map(KeycloakUserBackend::toUserInfo).toList();
-        } catch (NotFoundException ex) {
-            LOG.debugv("Unable to list machine accounts for team {0}", team);
-            return List.of();
-        } catch (Throwable t) {
-            LOG.warnv(t, "Unable to list machine accounts for team {0}", team);
-            throw ServiceException
-                    .serverError("Please verify with the System Administrators that you have the correct permissions");
         }
     }
 

@@ -108,18 +108,6 @@ public interface UserService {
     @Blocking
     void updateAdministrators(@RequestBody(required = true) List<String> administrators);
 
-    @GET
-    @Path("team/{team}/machine")
-    @Blocking
-    List<UserData> machineAccounts(@PathParam("team") String team);
-
-    @POST
-    @Path("/team/{team}/reset")
-    @Consumes("text/plain")
-    @Produces("text/plain")
-    @Blocking
-    String resetPassword(@PathParam("team") String team, @RequestBody(required = true) String username);
-
     @POST
     @Path("/apikey")
     @Produces("text/plain")

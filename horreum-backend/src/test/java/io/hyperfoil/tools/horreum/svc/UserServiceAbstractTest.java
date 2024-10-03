@@ -2,9 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static io.hyperfoil.tools.horreum.api.internal.services.UserService.KeyType.USER;
 import static io.hyperfoil.tools.horreum.svc.UserServiceImpl.DEFAULT_API_KEY_ACTIVE_DAYS;
-import static io.restassured.RestAssured.given;
-import static org.apache.http.HttpStatus.SC_OK;
-import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -58,7 +55,7 @@ public abstract class UserServiceAbstractTest {
     Instance<UserBackEnd> backend;
 
     @Inject
-    SecurityBootstrap securitiyBootstrap;
+    SecurityBootstrap securityBootstrap;
 
     @Inject
     TimeService timeService;
@@ -231,50 +228,6 @@ public abstract class UserServiceAbstractTest {
             // check that a manager cannot manager non-existing team
             assertThrows(ServiceException.class, () -> userService.updateTeamMembers(otherTeam, Map.of()));
         });
-
-        userService.deleteTeam(testTeam);
-    }
-
-    @TestSecurity(user = KEYCLOAK_ADMIN, roles = { Roles.ADMIN })
-    @Test
-    void machineAccountTest() {
-        String testTeam = "machine-test-team";
-        userService.addTeam(testTeam);
-
-        overrideTestSecurity("manager", Set.of(Roles.MANAGER, testTeam.substring(0, testTeam.length() - 4) + Roles.MANAGER),
-                () -> {
-                    String machineUser = "machine-account";
-
-                    // add a user to the team with "machine" role
-                    UserService.NewUser user = new UserService.NewUser();
-                    user.user = new UserService.UserData("", machineUser, "Machine", "Account", "machine@horreum.io");
-                    user.password = "whatever";
-                    user.team = testTeam;
-                    user.roles = List.of(Roles.UPLOADER, Roles.MACHINE);
-                    userService.createUser(user);
-
-                    // user should not show up in search or team membership
-                    assertFalse(userService.teamMembers(testTeam).containsKey(machineUser));
-                    assertTrue(userService.searchUsers(machineUser).isEmpty());
-
-                    // user should be able to authenticate with the password provided on create
-                    given().auth().preemptive().basic(machineUser, "wrong-password").get("api/user/roles").then()
-                            .statusCode(SC_UNAUTHORIZED);
-                    given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then().statusCode(SC_OK);
-
-                    // reset password
-                    String newPassword = userService.resetPassword(testTeam, machineUser);
-                    assertFalse(newPassword.isEmpty(), "Expected some generated password");
-
-                    // user should be able to authenticate now
-                    given().auth().preemptive().basic(machineUser, "whatever").get("api/user/roles").then()
-                            .statusCode(SC_UNAUTHORIZED);
-                    given().auth().preemptive().basic(machineUser, newPassword).get("api/user/roles").then().statusCode(SC_OK);
-
-                    // manager remove account
-                    userService.removeUser(machineUser);
-                    assertThrows(ServiceException.class, () -> userService.removeUser(machineUser));
-                });
 
         userService.deleteTeam(testTeam);
     }
@@ -496,7 +449,6 @@ public abstract class UserServiceAbstractTest {
         assertThrows(UnauthorizedException.class, () -> userService.deleteTeam(null));
         assertThrows(UnauthorizedException.class, userService::administrators);
         assertThrows(UnauthorizedException.class, () -> userService.updateAdministrators(List.of()));
-        assertThrows(UnauthorizedException.class, () -> userService.resetPassword(null, null));
 
         // user authenticated but without the necessary privileges
         overrideTestSecurity("unprivileged-user", Set.of(), () -> {
@@ -555,7 +507,7 @@ public abstract class UserServiceAbstractTest {
         backend.get().updateAdministrators(List.of()); // call the backend directly to be able to remove *ALL* administrators
         assertTrue(userService.administrators().isEmpty());
 
-        securitiyBootstrap.checkBootstrapAccount();
+        securityBootstrap.checkBootstrapAccount();
         assertTrue(
                 userService.administrators().stream().map(userData -> userData.username).anyMatch("horreum.bootstrap"::equals),
                 "Bootstrap account missing");

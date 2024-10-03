@@ -99,14 +99,6 @@
         "clientRole": false,
         "containerId": "horreum",
         "attributes": {}
-      },
-      {
-        "id": "86af6a80-474f-47a8-a48f-8818ce1b8846",
-        "name": "machine",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "horreum",
-        "attributes": {}
       }
     ],
     "client": {

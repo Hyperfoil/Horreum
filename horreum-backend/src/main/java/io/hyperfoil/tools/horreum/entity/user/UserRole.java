@@ -5,8 +5,7 @@ import io.quarkus.security.jpa.RolesValue;
 public enum UserRole {
 
     ADMIN,
-    HORREUM_SYSTEM,
-    MACHINE;
+    HORREUM_SYSTEM;
 
     @Override
     @RolesValue

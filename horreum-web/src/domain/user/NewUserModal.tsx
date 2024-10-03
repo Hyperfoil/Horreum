@@ -12,7 +12,6 @@ import {
     Modal,
     Spinner,
     TextInput,
-    Switch
 } from "@patternfly/react-core"
 import {userApi, UserData} from "../../api"
 import { getRoles } from "./TeamMembers"
@@ -22,7 +21,6 @@ import {AppContextType} from "../../context/@types/appContextTypes";
 
 type NewUserModalProps = {
     team: string
-    machineAccount: boolean
     isOpen: boolean
     onClose(): void
     onCreate(user: UserData, roles: string[]): void
@@ -63,7 +61,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                     onClick={() => {
                         setCreating(true)
                         const user = { id: "", username: username || "", email, firstName, lastName }
-                        const roles = getRoles(viewer, tester, uploader, manager).concat(props.machineAccount ? ["machine"] : [])
+                        const roles = getRoles(viewer, tester, uploader, manager)
                         userApi.createUser({ user, password, team: props.team, roles })
                             .then(() => {
                                 props.onCreate(user, roles)
@@ -104,7 +102,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                     </FormGroup>
                     <FormGroup
                         isRequired
-                        label={props.machineAccount ? "Account password" : "Temporary password"}
+                        label="Temporary password"
                         fieldId="password"
                     >
                         <TextInput
@@ -115,7 +113,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                         />
                         <FormHelperText>
                             <HelperText>
-                                <HelperTextItem>{props.machineAccount ? "The password can be used with HTTP Basic Authentication" : "This password is only temporary and the user will change it during first login." }</HelperTextItem>
+                                <HelperTextItem>This password is only temporary and the user will change it during first login.</HelperTextItem>
                             </HelperText>
                         </FormHelperText>                        
                     </FormGroup>
