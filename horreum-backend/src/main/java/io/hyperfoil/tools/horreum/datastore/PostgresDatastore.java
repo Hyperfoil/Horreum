@@ -6,7 +6,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.BadRequestException;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
@@ -18,8 +17,7 @@ public class PostgresDatastore implements Datastore {
     public DatastoreResponse handleRun(JsonNode payload,
             JsonNode metadata,
             DatastoreConfigDAO configuration,
-            Optional<String> schemaUriOptional,
-            ObjectMapper mapper)
+            Optional<String> schemaUriOptional)
             throws BadRequestException {
         return new DatastoreResponse(payload, metadata);
     }

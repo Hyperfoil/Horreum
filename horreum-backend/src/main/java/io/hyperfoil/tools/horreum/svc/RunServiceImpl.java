@@ -569,7 +569,7 @@ public class RunServiceImpl implements RunService {
 
         Datastore datastore = backendResolver.getBackend(testEntity.backendConfig.type);
         DatastoreResponse response = datastore.handleRun(data, metadata, testEntity.backendConfig,
-                Optional.ofNullable(schemaUri), mapper);
+                Optional.ofNullable(schemaUri));
 
         List<Integer> runIds = new ArrayList<>();
         if (datastore.uploadType() == Datastore.UploadType.MUILTI
