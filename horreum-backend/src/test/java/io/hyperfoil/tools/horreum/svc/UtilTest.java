@@ -30,17 +30,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
-import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
-import io.hyperfoil.tools.horreum.test.PostgresResource;
-import io.quarkus.test.common.QuarkusTestResource;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
-import io.quarkus.test.oidc.server.OidcWiremockTestResource;
-
-@QuarkusTest
-@QuarkusTestResource(PostgresResource.class)
-@QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(HorreumTestProfile.class)
 public class UtilTest {
 
     public static class StringHandler extends OutputStreamHandler {
