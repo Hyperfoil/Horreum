@@ -205,7 +205,6 @@ export default function Teams(props: TeamsProps) {
                             <Button onClick={() => setNewUserModalOpen(true)}>Create new user</Button>
                             <NewUserModal
                                 team={selected.name}
-                                machineAccount={false}
                                 isOpen={newUserModalOpen}
                                 onClose={() => setNewUserModalOpen(false)}
                                 onCreate={(user, roles) => {

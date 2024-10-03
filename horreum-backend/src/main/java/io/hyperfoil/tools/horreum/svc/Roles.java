@@ -16,7 +16,6 @@ public final class Roles {
     public static final String TESTER = "tester";
     public static final String UPLOADER = "uploader";
     public static final String MANAGER = "manager";
-    public static final String MACHINE = "machine";
     public static final String ADMIN = "admin";
     public static final String HORREUM_SYSTEM = "horreum.system";
     public static final String HORREUM_MESSAGEBUS = "horreum.messagebus";

@@ -36,7 +36,5 @@ public interface UserBackEnd {
 
     void updateAdministrators(List<String> newAdmins);
 
-    List<UserService.UserData> machineAccounts(String team);
-
     void setPassword(String username, String password);
 }

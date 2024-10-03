@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.svc;
 import static java.text.MessageFormat.format;
 import static java.util.Collections.emptyList;
 
-import java.security.SecureRandom;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
@@ -84,8 +83,7 @@ public class UserServiceImpl implements UserService {
         validateNewUser(user);
         userIsManagerForTeam(user.team);
         backend.get().createUser(user);
-        createLocalUser(user.user.username, user.team,
-                user.roles != null && user.roles.contains(Roles.MACHINE) ? user.password : null);
+        createLocalUser(user.user.username, user.team);
         Log.infov("{0} created user {1} {2} with username {3} on team {4}", getUsername(),
                 user.user.firstName, user.user.lastName, user.user.username, user.team);
     }
@@ -134,10 +132,7 @@ public class UserServiceImpl implements UserService {
     public Map<String, List<String>> teamMembers(String unsafeTeam) {
         String team = validateTeamName(unsafeTeam);
         userIsManagerForTeam(team);
-
-        Map<String, List<String>> teamMembers = backend.get().teamMembers(team);
-        safeMachineAccounts(team).forEach(teamMembers::remove); // exclude machine accounts
-        return teamMembers;
+        return backend.get().teamMembers(team);
     }
 
     // @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
@@ -149,8 +144,6 @@ public class UserServiceImpl implements UserService {
         // add existing users missing from the new roles map to get their roles removed
         Map<String, List<String>> roles = new HashMap<>(newRoles);
         backend.get().teamMembers(team).forEach((username, old) -> roles.putIfAbsent(username, emptyList()));
-        safeMachineAccounts(team).forEach(roles::remove); // exclude machine accounts
-
         backend.get().updateTeamMembers(team, roles);
     }
 
@@ -191,36 +184,6 @@ public class UserServiceImpl implements UserService {
         backend.get().updateAdministrators(newAdmins);
     }
 
-    // @RolesAllowed({Roles.ADMIN, Roles.MANAGER})
-    @Override
-    public List<UserData> machineAccounts(String unsafeTeam) {
-        String team = validateTeamName(unsafeTeam);
-        userIsManagerForTeam(team);
-        return backend.get().machineAccounts(team);
-    }
-
-    // @RolesAllowed({ Roles.ADMIN, Roles.MANAGER })
-    @Transactional
-    @WithRoles(fromParams = SecondParameter.class)
-    @Override
-    public String resetPassword(String unsafeTeam, String username) {
-        // reset the password for machine accounts of a specified team
-        // those passwords are always stored in the database, whatever is the backend
-
-        String team = validateTeamName(unsafeTeam);
-        userIsManagerForTeam(team);
-        if (backend.get().machineAccounts(team).stream().noneMatch(data -> data.username.equals(username))) {
-            throw ServiceException.badRequest(format("User {0} is not machine account of team {1}", username, team));
-        }
-        String newPassword = new SecureRandom().ints(RANDOM_PASSWORD_LENGTH, '0', 'z' + 1)
-                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
-        UserInfo.<UserInfo> findByIdOptional(username)
-                .orElseThrow(() -> ServiceException.notFound(format("Username {0} not found", username)))
-                .setPassword(newPassword);
-        Log.infov("{0} reset password of user {1}", getUsername(), username);
-        return newPassword;
-    }
-
     private void userIsManagerForTeam(String team) {
         if (!identity.getRoles().contains(Roles.ADMIN)
                 && !identity.hasRole(team.substring(0, team.length() - 4) + Roles.MANAGER)) {
@@ -238,8 +201,6 @@ public class UserServiceImpl implements UserService {
         }
         if (user.team != null) {
             user.team = validateTeamName(user.team);
-        } else if (user.roles != null && user.roles.contains(Roles.MACHINE)) {
-            throw ServiceException.badRequest("Machine account must have a team");
         }
     }
 
@@ -257,27 +218,15 @@ public class UserServiceImpl implements UserService {
         return team;
     }
 
-    private List<String> safeMachineAccounts(String team) {
-        try {
-            return backend.get().machineAccounts(team).stream().map(data -> data.username).toList();
-        } catch (Exception e) {
-            // ignore exception as the team may not exist
-            return List.of();
-        }
-    }
-
     /**
      * The user info that is always local, no matter what is the backend
      */
     @Transactional
     @WithRoles(fromParams = FirstParameter.class)
-    void createLocalUser(String username, String defaultTeam, String password) {
+    void createLocalUser(String username, String defaultTeam) {
         UserInfo userInfo = UserInfo.<UserInfo> findByIdOptional(username).orElse(new UserInfo(username));
         if (defaultTeam != null) {
             userInfo.defaultTeam = defaultTeam;
-            if (password != null) {
-                userInfo.setPassword(password);
-            }
             userInfo.persist();
         }
     }
