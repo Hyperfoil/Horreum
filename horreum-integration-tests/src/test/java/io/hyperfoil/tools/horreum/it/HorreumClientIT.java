@@ -81,7 +81,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             List<String> roles = apiClient.userService.getRoles();
             assertFalse(roles.isEmpty());
-            assertTrue(roles.contains(TEST_TEAM.replace("team", Roles.TESTER)));
+            assertTrue(roles.contains("dev-" + Roles.TESTER));
 
             UserService.ApiKeyResponse apiKey = horreumClient.userService.apiKeys().get(0);
             assertFalse(apiKey.isRevoked);
@@ -376,8 +376,6 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
     private static Test dummyTest;
 
-    private static final String TEST_USERNAME = "it-test-user", TEST_PASSWORD = "super-secret", TEST_TEAM = "it-team";
-
     @Override
     public void beforeEach(QuarkusTestMethodContext context) {
         if (horreumClient == null) {
@@ -390,7 +388,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         Assertions.assertNull(dummyTest);
         Test test = new Test();
         test.name = "test";
-        test.owner = TEST_TEAM;
+        test.owner = "dev-team";
         test.description = "This is a dummy test";
         dummyTest = horreumClient.testService.add(test);
         Assertions.assertNotNull(dummyTest);
@@ -416,8 +414,8 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         if (horreumClient == null) {
             horreumClient = new HorreumClient.Builder()
                     .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
-                    .horreumUser(TEST_USERNAME)
-                    .horreumPassword(TEST_PASSWORD)
+                    .horreumUser("horreum.bootstrap")
+                    .horreumPassword(ItResource.HORREUM_BOOTSTRAP_PASSWORD)
                     .build();
 
             Assertions.assertNotNull(horreumClient);
@@ -426,23 +424,6 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
     @Override
     public void beforeClass(Class<?> testClass) {
-        HorreumClient adminClient = new HorreumClient.Builder()
-                .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port", "8081")))
-                .horreumUser("horreum.bootstrap")
-                .horreumPassword(ItResource.HORREUM_BOOTSTRAP_PASSWORD)
-                .build();
-
-        adminClient.userService.addTeam(TEST_TEAM);
-
-        // create machine account to be used throughout the test
-        UserService.NewUser testUser = new UserService.NewUser();
-        testUser.user = new UserService.UserData("", TEST_USERNAME, "Test", "User", "test@example.com");
-        testUser.team = TEST_TEAM;
-        testUser.password = TEST_PASSWORD;
-        testUser.roles = List.of(Roles.MACHINE, Roles.TESTER, Roles.UPLOADER);
-        adminClient.userService.createUser(testUser);
-
-        adminClient.close();
     }
 
     @Override
