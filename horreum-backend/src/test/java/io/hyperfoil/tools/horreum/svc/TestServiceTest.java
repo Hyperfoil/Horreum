@@ -506,7 +506,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesIncludeExcluded() throws JsonProcessingException {
+    public void labelValuesIncludeExcluded() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, true);
 
@@ -527,7 +527,83 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterWithJsonpath() throws JsonProcessingException {
+    public void labelValuesWithTimestampAfterFilter() {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        long stop = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
+        long delta = 5000; // 5 seconds
+        uploadRun(start, stop, "{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo",
+                jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+        uploadRun(start + delta, stop, "{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo",
+                jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+        uploadRun(start + delta, stop, "{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo",
+                jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                // keep only those runs that started after (start+delta-1)
+                .queryParam("after", Long.toString(start + delta - 1))
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(2, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelBar"), values.toString());
+        assertEquals(JsonNodeType.STRING, values.get("labelBar").getNodeType());
+        JsonNode second = arrayResponse.get(1);
+        assertTrue(first.has("values"), second.toString());
+        JsonNode secondValues = second.get("values");
+        assertTrue(secondValues.has("labelBar"), secondValues.toString());
+        assertEquals(JsonNodeType.STRING, secondValues.get("labelBar").getNodeType());
+
+        List<String> labelBarValues = List.of(values.get("labelBar").asText(), secondValues.get("labelBar").asText());
+        assertTrue(labelBarValues.contains("dos"), labelBarValues.toString());
+        assertTrue(labelBarValues.contains("tres"), labelBarValues.toString());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesWithISOAfterFilter() {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        long stop = System.currentTimeMillis();
+        uploadRun(Util.toInstant("2024-10-06T20:20:32.183Z").toEpochMilli(), stop, "{ \"foo\": 1, \"bar\": \"uno\"}", t.name,
+                "urn:foo", jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+        uploadRun(Util.toInstant("2024-10-06T20:20:32.183Z").toEpochMilli(), stop, "{ \"foo\": 2, \"bar\": \"dos\"}", t.name,
+                "urn:foo", jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+        uploadRun(Util.toInstant("2024-10-09T20:20:32.183Z").toEpochMilli(), stop, "{ \"foo\": 3, \"bar\": \"tres\"}", t.name,
+                "urn:foo", jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                // keep only those runs that started after (start+delta-1)
+                .queryParam("after", "2024-10-07T20:20:32.183Z")
+                .queryParam("filter", Maps.of("labelBar", Arrays.asList("none", "tres")))
+                .queryParam("multiFilter", true)
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(1, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelBar"), values.toString());
+        assertEquals(JsonNodeType.STRING, values.get("labelBar").getNodeType());
+        assertEquals("tres", values.get("labelBar").asText());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesFilterWithJsonpath() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
@@ -554,7 +630,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterWithInvalidJsonpath() throws JsonProcessingException {
+    public void labelValuesFilterWithInvalidJsonpath() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
@@ -569,7 +645,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterWithObject() throws JsonProcessingException {
+    public void labelValuesFilterWithObject() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
@@ -597,7 +673,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterWithObjectNoMatch() throws JsonProcessingException {
+    public void labelValuesFilterWithObjectNoMatch() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
@@ -620,7 +696,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterMultiSelectMultipleValues() throws JsonProcessingException {
+    public void labelValuesFilterMultiSelectMultipleValues() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
@@ -644,15 +720,15 @@ class TestServiceTest extends BaseServiceTest {
         JsonNode values = first.get("values");
         assertTrue(values.has("labelBar"), values.toString());
         assertEquals(JsonNodeType.STRING, values.get("labelBar").getNodeType());
-        JsonNode second = arrayResponse.get(0);
+        JsonNode second = arrayResponse.get(1);
         assertTrue(first.has("values"), second.toString());
         JsonNode secondValues = second.get("values");
-        assertTrue(values.has("labelBar"), secondValues.toString());
+        assertTrue(secondValues.has("labelBar"), secondValues.toString());
         assertEquals(JsonNodeType.STRING, secondValues.get("labelBar").getNodeType());
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterMultiSelectStrings() throws JsonProcessingException {
+    public void labelValuesFilterMultiSelectStrings() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
@@ -679,7 +755,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterMultiSelectNumber() throws JsonProcessingException {
+    public void labelValuesFilterMultiSelectNumber() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         uploadRun("{ \"foo\": 1, \"bar\": 10}", t.name, "urn:foo");
@@ -706,7 +782,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterMultiSelectBoolean() throws JsonProcessingException {
+    public void labelValuesFilterMultiSelectBoolean() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         uploadRun("{ \"foo\": 1, \"bar\": true}", t.name, "urn:foo");
@@ -733,7 +809,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesIncludeTwoParams() throws JsonProcessingException {
+    public void labelValuesIncludeTwoParams() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, true);
 
@@ -754,7 +830,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesIncludeTwoSeparated() throws JsonProcessingException {
+    public void labelValuesIncludeTwoSeparated() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, true);
 
@@ -775,7 +851,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesInclude() throws JsonProcessingException {
+    public void labelValuesInclude() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, true);
 
@@ -796,7 +872,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesExclude() throws JsonProcessingException {
+    public void labelValuesExclude() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, true);
 
