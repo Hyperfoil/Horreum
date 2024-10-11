@@ -268,7 +268,11 @@ public class BaseServiceTest {
 
     protected String uploadRun(Object runJson, String test, String schemaUri, Integer statusCode) {
         long timestamp = System.currentTimeMillis();
-        String runId = uploadRun(Long.toString(timestamp), Long.toString(timestamp), test, UPLOADER_ROLES[0], Access.PUBLIC,
+        return uploadRun(timestamp, timestamp, runJson, test, schemaUri, statusCode);
+    }
+
+    protected String uploadRun(long start, long stop, Object runJson, String test, String schemaUri, Integer statusCode) {
+        String runId = uploadRun(Long.toString(start), Long.toString(stop), test, UPLOADER_ROLES[0], Access.PUBLIC,
                 null, schemaUri, null, statusCode, runJson);
         assertNotEquals("-1", runId);
         return runId;

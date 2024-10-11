@@ -155,7 +155,7 @@ public class UtilTest {
     }
 
     @Test
-    public void toInstant_valid() throws IOException {
+    public void toInstant_valid() {
         //already an instant
         assertNotNull(Util.toInstant(Instant.now()), "failed to handle instant input");
         //number
@@ -167,6 +167,7 @@ public class UtilTest {
         assertNotNull(Util.toInstant("2020-01-01T01:01:01Z"), "failed to parse YYYY-MM-DDThh:mm:ssZ");
         assertNotNull(Util.toInstant("2020-01-01T01:01:01+00:00"), "failed to parse YYYY-MM-DDThh:mm:ss[+-]zz:zz");
         assertNotNull(Util.toInstant("2024-03-11T22:16:24.302655-04:00"), "failed to parse ISO with microseconds and zzzz");
+        assertNotNull(Util.toInstant("2024-10-07T20:20:32.183Z"), "failed to parse YYYY-MM-DDTHH:mm:ss.zzz");
         //json
         assertNotNull(Util.toInstant(new TextNode("2020-01-01")), "failed to parse json text YYYY-MM-DD");
         assertNotNull(Util.toInstant(new LongNode(System.currentTimeMillis())), "failed to parse current millis as json node");
