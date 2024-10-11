@@ -31,8 +31,15 @@ jobs:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
+      # required to install Hunter
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Install Hunter
-        run: pipx install git+https://github.com/datastax-labs/hunter.git
+        run: |
+          pip --version
+          pip install git+https://github.com/datastax-labs/hunter@5c0b480815a281322ebbbf157f70fc785212a892
+          pip freeze | grep hunter
       - name: Maven Version
         run: mvn --version
       - name: Build and Test
