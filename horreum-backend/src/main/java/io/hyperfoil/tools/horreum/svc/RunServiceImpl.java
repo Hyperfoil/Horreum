@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -64,6 +66,7 @@ import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
+import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.datastore.BackendResolver;
 import io.hyperfoil.tools.horreum.datastore.Datastore;
@@ -151,6 +154,8 @@ public class RunServiceImpl implements RunService {
 
     @Inject
     Session session;
+
+    private final ConcurrentHashMap<Integer, TestService.RecalculationStatus> transformations = new ConcurrentHashMap<>();
 
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -1118,6 +1123,15 @@ public class RunServiceImpl implements RunService {
         }
     }
 
+    /**
+     * Transforms the data for a given run by applying applicable schemas and transformers.
+     * It ensures any existing datasets for the run are removed before creating new ones,
+     * handles timeouts for ongoing transformations, and creates datasets with the transformed data.
+     *
+     * @param runId the ID of the run to transform
+     * @param isRecalculation flag indicating if this is a recalculation
+     * @return the number of datasets created, or 0 if the run is invalid or not found or already ongoing
+     */
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     int transform(int runId, boolean isRecalculation) {
@@ -1126,208 +1140,240 @@ public class RunServiceImpl implements RunService {
             return 0;
         }
         log.debugf("Transforming run ID %d, recalculation? %s", runId, Boolean.toString(isRecalculation));
-        // We need to make sure all old datasets are gone before creating new; otherwise we could
-        // break the runid,ordinal uniqueness constraint
-        for (DatasetDAO old : DatasetDAO.<DatasetDAO> list("run.id", runId)) {
-            for (DataPointDAO dp : DataPointDAO.<DataPointDAO> list("dataset.id", old.getInfo().id)) {
-                dp.delete();
-            }
-            mediator.propagatedDatasetDelete(old.id);
-        }
 
-        RunDAO run = RunDAO.findById(runId);
-        if (run == null) {
-            log.errorf("Cannot load run ID %d for transformation", runId);
-            return 0;
-        }
-        int ordinal = 0;
-        Map<Integer, JsonNode> transformerResults = new TreeMap<>();
-        // naked nodes (those produced by implicit identity transformers) are all added to each dataset
-        List<JsonNode> nakedNodes = new ArrayList<>();
-
-        List<Object[]> relevantSchemas = unchecked(em.createNamedQuery(QUERY_TRANSFORMER_TARGETS)
-                .setParameter(1, run.id)
-                .unwrap(NativeQuery.class)
-                .addScalar("type", StandardBasicTypes.INTEGER)
-                .addScalar("key", StandardBasicTypes.TEXT)
-                .addScalar("transformer_id", StandardBasicTypes.INTEGER)
-                .addScalar("uri", StandardBasicTypes.TEXT)
-                .addScalar("source", StandardBasicTypes.INTEGER)
-                .getResultList());
-
-        int schemasAndTransformers = relevantSchemas.size();
-        for (Object[] relevantSchema : relevantSchemas) {
-            int type = (int) relevantSchema[0];
-            String key = (String) relevantSchema[1];
-            Integer transformerId = (Integer) relevantSchema[2];
-            String uri = (String) relevantSchema[3];
-            Integer source = (Integer) relevantSchema[4];
-
-            TransformerDAO t;
-            if (transformerId != null) {
-                t = TransformerDAO.findById(transformerId);
-                if (t == null) {
-                    log.errorf("Missing transformer with ID %d", transformerId);
+        // check whether there is an ongoing transformation on the same runId
+        TestService.RecalculationStatus status = new TestService.RecalculationStatus(1);
+        TestService.RecalculationStatus prev = transformations.putIfAbsent(runId, status);
+        while (prev != null) {
+            log.debugf("Transformation for run %d already in progress", runId);
+            if (prev.timestamp < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(10)) {
+                log.warnf("Transformation for run %d from %s timed out after 10 minutes with %d/%d runs",
+                        runId, Instant.ofEpochMilli(prev.timestamp), prev.finished, prev.totalRuns);
+                if (transformations.replace(runId, prev, status)) {
+                    log.debug("Continuing with run transformation.");
+                    break;
+                } else {
+                    prev = transformations.get(runId);
                 }
             } else {
-                t = null;
+                // there is an ongoing transformation that has recently been initiated
+                log.warnf("There is an ongoing transformation process for run %s", runId);
+                return 0;
             }
-            if (t != null) {
-                JsonNode root = JsonNodeFactory.instance.objectNode();
-                JsonNode result;
-                if (t.extractors != null && !t.extractors.isEmpty()) {
-                    List<Object[]> extractedData;
-                    try {
-                        if (type == SchemaDAO.TYPE_1ST_LEVEL) {
-                            // note: metadata always follow the 2nd level format
-                            extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
-                                    .setParameter(1, run.id).setParameter(2, transformerId)
-                                    .unwrap(NativeQuery.class)
-                                    .addScalar("name", StandardBasicTypes.TEXT)
-                                    .addScalar("value", JsonBinaryType.INSTANCE)
-                                    .getResultList());
-                        } else {
-                            extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
-                                    .setParameter(1, run.id).setParameter(2, transformerId)
-                                    .setParameter(3, type == SchemaDAO.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
-                                    .setParameter(4, source)
-                                    .unwrap(NativeQuery.class)
-                                    .addScalar("name", StandardBasicTypes.TEXT)
-                                    .addScalar("value", JsonBinaryType.INSTANCE)
-                                    .getResultList());
-                        }
-                    } catch (PersistenceException e) {
-                        logMessage(run, PersistentLogDAO.ERROR,
-                                "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
-                        findFailingExtractor(runId);
-                        extractedData = Collections.emptyList();
-                    }
-                    addExtracted((ObjectNode) root, extractedData);
+        }
+
+        int numDatasets = 0;
+        try {
+            // We need to make sure all old datasets are gone before creating new; otherwise we could
+            // break the runid,ordinal uniqueness constraint
+            for (DatasetDAO old : DatasetDAO.<DatasetDAO> list("run.id", runId)) {
+                for (DataPointDAO dp : DataPointDAO.<DataPointDAO> list("dataset.id", old.getInfo().id)) {
+                    dp.delete();
                 }
-                // In Horreum it's customary that when a single extractor is used we pass the result directly to the function
-                // without wrapping it in an extra object.
-                if (t.extractors.size() == 1) {
-                    if (root.size() != 1) {
-                        // missing results should be null nodes
-                        log.errorf("Unexpected result for single extractor: %s", root.toPrettyString());
-                    } else {
-                        root = root.iterator().next();
-                    }
-                }
-                logMessage(run, PersistentLogDAO.DEBUG,
-                        "Run transformer %s/%s with input: <pre>%s</pre>, function: <pre>%s</pre>",
-                        uri, t.name, limitLength(root.toPrettyString()), t.function);
-                if (t.function != null && !t.function.isBlank()) {
-                    result = Util.evaluateOnce(t.function, root, Util::convertToJson,
-                            (code, e) -> logMessage(run, PersistentLogDAO.ERROR,
-                                    "Evaluation of transformer %s/%s failed: '%s' Code: <pre>%s</pre>", uri, t.name,
-                                    e.getMessage(), code),
-                            output -> logMessage(run, PersistentLogDAO.DEBUG,
-                                    "Output while running transformer %s/%s: <pre>%s</pre>", uri, t.name, output));
-                    if (result == null) {
-                        // this happens upon error
-                        result = JsonNodeFactory.instance.nullNode();
+                mediator.propagatedDatasetDelete(old.id);
+            }
+
+            RunDAO run = RunDAO.findById(runId);
+            if (run == null) {
+                log.errorf("Cannot load run ID %d for transformation", runId);
+                return numDatasets; // this is 0
+            }
+            Map<Integer, JsonNode> transformerResults = new TreeMap<>();
+            // naked nodes (those produced by implicit identity transformers) are all added to each dataset
+            List<JsonNode> nakedNodes = new ArrayList<>();
+
+            List<Object[]> relevantSchemas = unchecked(em.createNamedQuery(QUERY_TRANSFORMER_TARGETS)
+                    .setParameter(1, run.id)
+                    .unwrap(NativeQuery.class)
+                    .addScalar("type", StandardBasicTypes.INTEGER)
+                    .addScalar("key", StandardBasicTypes.TEXT)
+                    .addScalar("transformer_id", StandardBasicTypes.INTEGER)
+                    .addScalar("uri", StandardBasicTypes.TEXT)
+                    .addScalar("source", StandardBasicTypes.INTEGER)
+                    .getResultList());
+
+            int schemasAndTransformers = relevantSchemas.size();
+            for (Object[] relevantSchema : relevantSchemas) {
+                int type = (int) relevantSchema[0];
+                String key = (String) relevantSchema[1];
+                Integer transformerId = (Integer) relevantSchema[2];
+                String uri = (String) relevantSchema[3];
+                Integer source = (Integer) relevantSchema[4];
+
+                TransformerDAO t;
+                if (transformerId != null) {
+                    t = TransformerDAO.findById(transformerId);
+                    if (t == null) {
+                        log.errorf("Missing transformer with ID %d", transformerId);
                     }
                 } else {
-                    result = root;
+                    t = null;
                 }
-                if (t.targetSchemaUri != null) {
-                    if (result.isObject()) {
-                        putIfAbsent(run, t.targetSchemaUri, (ObjectNode) result);
-                    } else if (result.isArray()) {
-                        ArrayNode array = (ArrayNode) result;
-                        for (JsonNode node : array) {
-                            if (node.isObject()) {
-                                putIfAbsent(run, t.targetSchemaUri, (ObjectNode) node);
+                if (t != null) {
+                    JsonNode root = JsonNodeFactory.instance.objectNode();
+                    JsonNode result;
+                    if (t.extractors != null && !t.extractors.isEmpty()) {
+                        List<Object[]> extractedData;
+                        try {
+                            if (type == SchemaDAO.TYPE_1ST_LEVEL) {
+                                // note: metadata always follow the 2nd level format
+                                extractedData = unchecked(em.createNamedQuery(QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
+                                        .setParameter(1, run.id).setParameter(2, transformerId)
+                                        .unwrap(NativeQuery.class)
+                                        .addScalar("name", StandardBasicTypes.TEXT)
+                                        .addScalar("value", JsonBinaryType.INSTANCE)
+                                        .getResultList());
+                            } else {
+                                extractedData = unchecked(em.createNamedQuery(QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID)
+                                        .setParameter(1, run.id).setParameter(2, transformerId)
+                                        .setParameter(3, type == SchemaDAO.TYPE_2ND_LEVEL ? key : Integer.parseInt(key))
+                                        .setParameter(4, source)
+                                        .unwrap(NativeQuery.class)
+                                        .addScalar("name", StandardBasicTypes.TEXT)
+                                        .addScalar("value", JsonBinaryType.INSTANCE)
+                                        .getResultList());
                             }
+                        } catch (PersistenceException e) {
+                            logMessage(run, PersistentLogDAO.ERROR,
+                                    "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
+                            findFailingExtractor(runId);
+                            extractedData = Collections.emptyList();
+                        }
+                        addExtracted((ObjectNode) root, extractedData);
+                    }
+                    // In Horreum it's customary that when a single extractor is used we pass the result directly to the function
+                    // without wrapping it in an extra object.
+                    if (t.extractors.size() == 1) {
+                        if (root.size() != 1) {
+                            // missing results should be null nodes
+                            log.errorf("Unexpected result for single extractor: %s", root.toPrettyString());
+                        } else {
+                            root = root.iterator().next();
+                        }
+                    }
+                    logMessage(run, PersistentLogDAO.DEBUG,
+                            "Run transformer %s/%s with input: <pre>%s</pre>, function: <pre>%s</pre>",
+                            uri, t.name, limitLength(root.toPrettyString()), t.function);
+                    if (t.function != null && !t.function.isBlank()) {
+                        result = Util.evaluateOnce(t.function, root, Util::convertToJson,
+                                (code, e) -> logMessage(run, PersistentLogDAO.ERROR,
+                                        "Evaluation of transformer %s/%s failed: '%s' Code: <pre>%s</pre>", uri, t.name,
+                                        e.getMessage(), code),
+                                output -> logMessage(run, PersistentLogDAO.DEBUG,
+                                        "Output while running transformer %s/%s: <pre>%s</pre>", uri, t.name, output));
+                        if (result == null) {
+                            // this happens upon error
+                            result = JsonNodeFactory.instance.nullNode();
                         }
                     } else {
-                        result = instance.objectNode()
-                                .put("$schema", t.targetSchemaUri).set("value", result);
+                        result = root;
                     }
-                } else if (!result.isContainerNode() || (result.isObject() && !result.has("$schema")) ||
-                        (result.isArray()
-                                && StreamSupport.stream(result.spliterator(), false).anyMatch(item -> !item.has("$schema")))) {
-                    logMessage(run, PersistentLogDAO.WARN, "Dataset will contain element without a schema.");
-                }
-                JsonNode existing = transformerResults.get(transformerId);
-                if (existing == null) {
-                    transformerResults.put(transformerId, result);
-                } else if (existing.isArray()) {
-                    if (result.isArray()) {
-                        ((ArrayNode) existing).addAll((ArrayNode) result);
+                    if (t.targetSchemaUri != null) {
+                        if (result.isObject()) {
+                            putIfAbsent(run, t.targetSchemaUri, (ObjectNode) result);
+                        } else if (result.isArray()) {
+                            ArrayNode array = (ArrayNode) result;
+                            for (JsonNode node : array) {
+                                if (node.isObject()) {
+                                    putIfAbsent(run, t.targetSchemaUri, (ObjectNode) node);
+                                }
+                            }
+                        } else {
+                            result = instance.objectNode()
+                                    .put("$schema", t.targetSchemaUri).set("value", result);
+                        }
+                    } else if (!result.isContainerNode() || (result.isObject() && !result.has("$schema")) ||
+                            (result.isArray()
+                                    && StreamSupport.stream(result.spliterator(), false)
+                                            .anyMatch(item -> !item.has("$schema")))) {
+                        logMessage(run, PersistentLogDAO.WARN, "Dataset will contain element without a schema.");
+                    }
+                    JsonNode existing = transformerResults.get(transformerId);
+                    if (existing == null) {
+                        transformerResults.put(transformerId, result);
+                    } else if (existing.isArray()) {
+                        if (result.isArray()) {
+                            ((ArrayNode) existing).addAll((ArrayNode) result);
+                        } else {
+                            ((ArrayNode) existing).add(result);
+                        }
                     } else {
-                        ((ArrayNode) existing).add(result);
+                        if (result.isArray()) {
+                            ((ArrayNode) result).insert(0, existing);
+                            transformerResults.put(transformerId, result);
+                        } else {
+                            transformerResults.put(transformerId, instance.arrayNode().add(existing).add(result));
+                        }
                     }
                 } else {
-                    if (result.isArray()) {
-                        ((ArrayNode) result).insert(0, existing);
-                        transformerResults.put(transformerId, result);
-                    } else {
-                        transformerResults.put(transformerId, instance.arrayNode().add(existing).add(result));
+                    JsonNode node;
+                    JsonNode sourceNode = source == 0 ? run.data : run.metadata;
+                    switch (type) {
+                        case SchemaDAO.TYPE_1ST_LEVEL:
+                            node = sourceNode;
+                            break;
+                        case SchemaDAO.TYPE_2ND_LEVEL:
+                            node = sourceNode.path(key);
+                            break;
+                        case SchemaDAO.TYPE_ARRAY_ELEMENT:
+                            node = sourceNode.path(Integer.parseInt(key));
+                            break;
+                        default:
+                            throw new IllegalStateException("Unknown type " + type);
                     }
+                    nakedNodes.add(node);
+                    logMessage(run, PersistentLogDAO.DEBUG,
+                            "This test (%d) does not use any transformer for schema %s (key %s), passing as-is.", run.testid,
+                            uri,
+                            key);
                 }
-            } else {
-                JsonNode node;
-                JsonNode sourceNode = source == 0 ? run.data : run.metadata;
-                switch (type) {
-                    case SchemaDAO.TYPE_1ST_LEVEL:
-                        node = sourceNode;
-                        break;
-                    case SchemaDAO.TYPE_2ND_LEVEL:
-                        node = sourceNode.path(key);
-                        break;
-                    case SchemaDAO.TYPE_ARRAY_ELEMENT:
-                        node = sourceNode.path(Integer.parseInt(key));
-                        break;
-                    default:
-                        throw new IllegalStateException("Unknown type " + type);
-                }
-                nakedNodes.add(node);
-                logMessage(run, PersistentLogDAO.DEBUG,
-                        "This test (%d) does not use any transformer for schema %s (key %s), passing as-is.", run.testid, uri,
-                        key);
             }
-        }
-        if (schemasAndTransformers > 0) {
-            int max = transformerResults.values().stream().filter(JsonNode::isArray).mapToInt(JsonNode::size).max().orElse(1);
+            if (schemasAndTransformers > 0) {
+                int max = transformerResults.values().stream().filter(JsonNode::isArray).mapToInt(JsonNode::size).max()
+                        .orElse(1);
 
-            for (int position = 0; position < max; position += 1) {
-                ArrayNode all = instance.arrayNode(max + nakedNodes.size());
-                for (var entry : transformerResults.entrySet()) {
-                    JsonNode node = entry.getValue();
-                    if (node.isObject()) {
-                        all.add(node);
-                    } else if (node.isArray()) {
-                        if (position < node.size()) {
-                            all.add(node.get(position));
+                for (int position = 0; position < max; position += 1) {
+                    ArrayNode all = instance.arrayNode(max + nakedNodes.size());
+                    for (var entry : transformerResults.entrySet()) {
+                        JsonNode node = entry.getValue();
+                        if (node.isObject()) {
+                            all.add(node);
+                        } else if (node.isArray()) {
+                            if (position < node.size()) {
+                                all.add(node.get(position));
+                            } else {
+                                String message = String.format(
+                                        "Transformer %d produced an array of %d elements but other transformer " +
+                                                "produced %d elements; dataset %d/%d might be missing some data.",
+                                        entry.getKey(), node.size(), max, run.id, numDatasets);
+                                logMessage(run, PersistentLogDAO.WARN, "%s", message);
+                                log.warnf(message);
+                            }
                         } else {
-                            String message = String.format(
-                                    "Transformer %d produced an array of %d elements but other transformer " +
-                                            "produced %d elements; dataset %d/%d might be missing some data.",
-                                    entry.getKey(), node.size(), max, run.id, ordinal);
-                            logMessage(run, PersistentLogDAO.WARN, "%s", message);
-                            log.warnf(message);
+                            logMessage(run, PersistentLogDAO.WARN, "Unexpected result provided by one of the transformers: %s",
+                                    node);
+                            log.warnf("Unexpected result provided by one of the transformers: %s", node);
                         }
-                    } else {
-                        logMessage(run, PersistentLogDAO.WARN, "Unexpected result provided by one of the transformers: %s",
-                                node);
-                        log.warnf("Unexpected result provided by one of the transformers: %s", node);
                     }
+                    nakedNodes.forEach(all::add);
+                    createDataset(new DatasetDAO(run, numDatasets++, run.description, all), isRecalculation);
                 }
-                nakedNodes.forEach(all::add);
-                createDataset(new DatasetDAO(run, ordinal++, run.description, all), isRecalculation);
+                mediator.validateRun(run.id);
+            } else {
+                numDatasets = 1;
+                logMessage(run, PersistentLogDAO.INFO, "No applicable schema, dataset will be empty.");
+                createDataset(new DatasetDAO(
+                        run, 0, "Empty Dataset for run data without any schema.",
+                        instance.arrayNode()), isRecalculation);
+                mediator.validateRun(run.id);
             }
-            mediator.validateRun(run.id);
-            return ordinal;
-        } else {
-            logMessage(run, PersistentLogDAO.INFO, "No applicable schema, dataset will be empty.");
-            createDataset(new DatasetDAO(
-                    run, 0, "Empty Dataset for run data without any schema.",
-                    instance.arrayNode()), isRecalculation);
-            mediator.validateRun(run.id);
-            return 1;
+            return numDatasets;
+        } finally {
+            status.finished++;
+            status.datasets += numDatasets;
+            transformations.remove(runId, status);
         }
+
     }
 
     private String limitLength(String str) {
