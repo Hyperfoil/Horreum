@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.control.ActivateRequestContext;
@@ -39,49 +40,50 @@ public class ServiceMediator {
     private static final Logger log = Logger.getLogger(ServiceMediator.class);
 
     @Inject
-    private TestServiceImpl testService;
+    TestServiceImpl testService;
 
     @Inject
-    private AlertingServiceImpl alertingService;
+    AlertingServiceImpl alertingService;
 
     @Inject
-    private RunServiceImpl runService;
+    RunServiceImpl runService;
 
     @Inject
-    private ReportServiceImpl reportService;
+    ReportServiceImpl reportService;
 
     @Inject
-    private ExperimentServiceImpl experimentService;
+    ExperimentServiceImpl experimentService;
 
     @Inject
-    private LogServiceImpl logService;
+    LogServiceImpl logService;
 
     @Inject
-    private SubscriptionServiceImpl subscriptionService;
+    SubscriptionServiceImpl subscriptionService;
 
     @Inject
-    private ActionServiceImpl actionService;
+    ActionServiceImpl actionService;
 
     @Inject
-    private NotificationServiceImpl notificationService;
+    NotificationServiceImpl notificationService;
 
     @Inject
-    private DatasetServiceImpl datasetService;
+    DatasetServiceImpl datasetService;
 
     @Inject
-    private EventAggregator aggregator;
+    EventAggregator aggregator;
 
     @Inject
     Vertx vertx;
+
     @Inject
-    private SchemaServiceImpl schemaService;
+    SchemaServiceImpl schemaService;
 
     @Inject
     SecurityIdentity identity;
 
     @Inject
     @ConfigProperty(name = "horreum.test-mode", defaultValue = "false")
-    private Boolean testMode;
+    Boolean testMode;
 
     @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
     @Channel("dataset-event-out")
@@ -100,6 +102,8 @@ public class ServiceMediator {
     Emitter<RunUpload> runUploadEmitter;
 
     private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events = new ConcurrentHashMap<>();
+
+    private final ReentrantLock lock = new ReentrantLock();
 
     public ServiceMediator() {
     }
@@ -150,7 +154,6 @@ public class ServiceMediator {
     }
 
     void newDataset(Dataset.EventNew eventNew) {
-        //Note: should we call onNewDataset which will enable a lock?
         datasetService.onNewDataset(eventNew);
     }
 
@@ -165,7 +168,7 @@ public class ServiceMediator {
     @ActivateRequestContext
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     public void processDatasetEvents(Dataset.EventNew newEvent) {
-        datasetService.onNewDatasetNoLock(newEvent);
+        newDataset(newEvent);
         validateDataset(newEvent.datasetId);
     }
 
@@ -231,8 +234,13 @@ public class ServiceMediator {
         return runService.transform(runId, isRecalculation);
     }
 
-    void withRecalculationLock(Runnable run) {
-        datasetService.withRecalculationLock(run);
+    void withSharedLock(Runnable runnable) {
+        lock.lock();
+        try {
+            runnable.run();
+        } finally {
+            lock.unlock();
+        }
     }
 
     void newExperimentResult(ExperimentService.ExperimentResult result) {
