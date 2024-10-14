@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -64,6 +65,7 @@ import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
+import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.datastore.BackendResolver;
 import io.hyperfoil.tools.horreum.datastore.Datastore;
@@ -151,6 +153,8 @@ public class RunServiceImpl implements RunService {
 
     @Inject
     Session session;
+
+    private final ConcurrentHashMap<Integer, TestService.RecalculationStatus> transformations = new ConcurrentHashMap<>();
 
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -1119,6 +1123,15 @@ public class RunServiceImpl implements RunService {
         }
     }
 
+    /**
+     * Transforms the data for a given run by applying applicable schemas and transformers.
+     * It ensures any existing datasets for the run are removed before creating new ones,
+     * handles timeouts for ongoing transformations, and creates datasets with the transformed data.
+     *
+     * @param runId the ID of the run to transform
+     * @param isRecalculation flag indicating if this is a recalculation
+     * @return the number of datasets created, or 0 if the run is invalid or not found or already ongoing
+     */
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     int transform(int runId, boolean isRecalculation) {
@@ -1126,7 +1139,22 @@ public class RunServiceImpl implements RunService {
             log.errorf("Transformation parameters error: run %s", runId);
             return 0;
         }
+
         log.debugf("Transforming run ID %d, recalculation? %s", runId, Boolean.toString(isRecalculation));
+        int numDatasets = 0;
+
+        // check whether there is an ongoing transformation on the same runId
+        TestService.RecalculationStatus status = new TestService.RecalculationStatus(1);
+        TestService.RecalculationStatus prev = transformations.putIfAbsent(runId, status);
+        // ensure the transformation is removed, with this approach we should be sure
+        // it gets removed even if transaction-level exception occurs, e.g., timeout
+        Util.registerTxSynchronization(tm, txStatus -> transformations.remove(runId, status));
+        if (prev != null) {
+            // there is an ongoing transformation that has recently been initiated
+            log.warnf("Transformation for run %d already in progress", runId);
+            return numDatasets;
+        }
+
         // We need to make sure all old datasets are gone before creating new; otherwise we could
         // break the runid,ordinal uniqueness constraint
         for (DatasetDAO old : DatasetDAO.<DatasetDAO> list("run.id", runId)) {
@@ -1139,9 +1167,8 @@ public class RunServiceImpl implements RunService {
         RunDAO run = RunDAO.findById(runId);
         if (run == null) {
             log.errorf("Cannot load run ID %d for transformation", runId);
-            return 0;
+            return numDatasets; // this is 0
         }
-        int ordinal = 0;
         Map<Integer, JsonNode> transformerResults = new TreeMap<>();
         // naked nodes (those produced by implicit identity transformers) are all added to each dataset
         List<JsonNode> nakedNodes = new ArrayList<>();
@@ -1248,7 +1275,8 @@ public class RunServiceImpl implements RunService {
                     }
                 } else if (!result.isContainerNode() || (result.isObject() && !result.has("$schema")) ||
                         (result.isArray()
-                                && StreamSupport.stream(result.spliterator(), false).anyMatch(item -> !item.has("$schema")))) {
+                                && StreamSupport.stream(result.spliterator(), false)
+                                        .anyMatch(item -> !item.has("$schema")))) {
                     logMessage(run, PersistentLogDAO.WARN, "Dataset will contain element without a schema.");
                 }
                 JsonNode existing = transformerResults.get(transformerId);
@@ -1286,12 +1314,14 @@ public class RunServiceImpl implements RunService {
                 }
                 nakedNodes.add(node);
                 logMessage(run, PersistentLogDAO.DEBUG,
-                        "This test (%d) does not use any transformer for schema %s (key %s), passing as-is.", run.testid, uri,
+                        "This test (%d) does not use any transformer for schema %s (key %s), passing as-is.", run.testid,
+                        uri,
                         key);
             }
         }
         if (schemasAndTransformers > 0) {
-            int max = transformerResults.values().stream().filter(JsonNode::isArray).mapToInt(JsonNode::size).max().orElse(1);
+            int max = transformerResults.values().stream().filter(JsonNode::isArray).mapToInt(JsonNode::size).max()
+                    .orElse(1);
 
             for (int position = 0; position < max; position += 1) {
                 ArrayNode all = instance.arrayNode(max + nakedNodes.size());
@@ -1306,7 +1336,7 @@ public class RunServiceImpl implements RunService {
                             String message = String.format(
                                     "Transformer %d produced an array of %d elements but other transformer " +
                                             "produced %d elements; dataset %d/%d might be missing some data.",
-                                    entry.getKey(), node.size(), max, run.id, ordinal);
+                                    entry.getKey(), node.size(), max, run.id, numDatasets);
                             logMessage(run, PersistentLogDAO.WARN, "%s", message);
                             log.warnf(message);
                         }
@@ -1317,18 +1347,18 @@ public class RunServiceImpl implements RunService {
                     }
                 }
                 nakedNodes.forEach(all::add);
-                createDataset(new DatasetDAO(run, ordinal++, run.description, all), isRecalculation);
+                createDataset(new DatasetDAO(run, numDatasets++, run.description, all), isRecalculation);
             }
             mediator.validateRun(run.id);
-            return ordinal;
         } else {
+            numDatasets = 1;
             logMessage(run, PersistentLogDAO.INFO, "No applicable schema, dataset will be empty.");
             createDataset(new DatasetDAO(
                     run, 0, "Empty Dataset for run data without any schema.",
                     instance.arrayNode()), isRecalculation);
             mediator.validateRun(run.id);
-            return 1;
         }
+        return numDatasets;
     }
 
     private String limitLength(String str) {

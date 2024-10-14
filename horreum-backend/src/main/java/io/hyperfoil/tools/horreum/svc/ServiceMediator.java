@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.control.ActivateRequestContext;
@@ -102,6 +103,8 @@ public class ServiceMediator {
 
     private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events = new ConcurrentHashMap<>();
 
+    private final ReentrantLock lock = new ReentrantLock();
+
     public ServiceMediator() {
     }
 
@@ -151,7 +154,6 @@ public class ServiceMediator {
     }
 
     void newDataset(Dataset.EventNew eventNew) {
-        //Note: should we call onNewDataset which will enable a lock?
         datasetService.onNewDataset(eventNew);
     }
 
@@ -166,7 +168,7 @@ public class ServiceMediator {
     @ActivateRequestContext
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     public void processDatasetEvents(Dataset.EventNew newEvent) {
-        datasetService.onNewDatasetNoLock(newEvent);
+        newDataset(newEvent);
         validateDataset(newEvent.datasetId);
     }
 
@@ -232,8 +234,13 @@ public class ServiceMediator {
         return runService.transform(runId, isRecalculation);
     }
 
-    void withRecalculationLock(Runnable run) {
-        datasetService.withRecalculationLock(run);
+    void withSharedLock(Runnable runnable) {
+        lock.lock();
+        try {
+            runnable.run();
+        } finally {
+            lock.unlock();
+        }
     }
 
     void newExperimentResult(ExperimentService.ExperimentResult result) {
