@@ -18,7 +18,7 @@ import jakarta.transaction.Transactional;
 
 import org.jboss.logging.Logger;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.Team;
 import io.hyperfoil.tools.horreum.entity.user.TeamMembership;
 import io.hyperfoil.tools.horreum.entity.user.TeamRole;

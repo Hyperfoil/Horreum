@@ -16,7 +16,7 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.Team;
 import io.hyperfoil.tools.horreum.entity.user.TeamMembership;
 import io.hyperfoil.tools.horreum.entity.user.TeamRole;

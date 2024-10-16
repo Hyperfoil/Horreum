@@ -3,7 +3,7 @@ package io.hyperfoil.tools.horreum.svc.user;
 import java.util.List;
 import java.util.Map;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 
 /**
  * Interface for back-end implementations for {@link io.hyperfoil.tools.horreum.svc.UserServiceImpl}
