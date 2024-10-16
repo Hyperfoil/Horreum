@@ -25,9 +25,6 @@ import { teamsSelector, teamToName, tokenSelector } from "../../auth"
 
 import {
     CellProps,
-    UseTableOptions,
-    UseRowSelectInstanceProps,
-    UseRowSelectRowProps,
     Column,
     UseSortByColumnOptions,
     SortingRule,
@@ -130,7 +127,11 @@ export default function TestDatasets() {
     useEffect(() => {
         fetchTest(testIdInt, alerting)
             .then(setTest)
-            .then(() => fetchViews(testIdInt, alerting).then(setViews))
+            .then(() => fetchViews(testIdInt, alerting).then(res => {
+                    setViewId(res?.find(v => v.name.toLowerCase() === "default")?.id || -1)
+                    return res
+                }).then(setViews)
+            )
     }, [testIdInt, teams, token])
 
     useEffect(() => {
