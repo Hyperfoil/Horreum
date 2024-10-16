@@ -77,7 +77,7 @@ export default function FilterDropDown(props: FilterDropDownProps) {
         >
             <MenuContent>
                 <MenuList>
-                    {props.options.map((option) => <MenuItem itemId={option}>{option}</MenuItem>)}
+                    {props.options.map((option, idx) => <MenuItem itemId={option} key={option + idx}>{option}</MenuItem>)}
                 </MenuList>
             </MenuContent>
         </Menu>
