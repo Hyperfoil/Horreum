@@ -82,10 +82,10 @@ export default function LabelFilterOption(props: FilterOptionProps) {
     const menu = (
         <Menu ref={menuRef} id="attribute-search-{props.name}-menu" onSelect={onSelect} selected={props.selection}>
             <MenuContent>
-                <MenuList>
+                <MenuList key={props.name}>
                     {
-                        props.options.map((option) => (
-                            <MenuItem isSelected={props.selection === option} itemId={option} key={option}>
+                        props.options.map((option, idx) =>(
+                            <MenuItem isSelected={props.selection === option} itemId={option} key={option + idx}>
                                 {option}
                             </MenuItem>
                         ))
