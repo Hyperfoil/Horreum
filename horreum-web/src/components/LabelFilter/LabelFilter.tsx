@@ -146,6 +146,7 @@ export default function LabelFilter({selection, onSelect, source, emptyPlacehold
             return (
 
                     <ToolbarLabelFilter
+                            key={key}
                             name={key}
                             options={opts}
                             filter={selection}
