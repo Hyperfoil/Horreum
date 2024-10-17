@@ -43,7 +43,6 @@ import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
@@ -395,7 +394,6 @@ public class DatasetServiceImpl implements DatasetService {
         }
     }
 
-    @WithToken
     @WithRoles
     @Override
     public Dataset getDataset(int datasetId) {

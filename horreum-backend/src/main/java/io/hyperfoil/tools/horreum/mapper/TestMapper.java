@@ -3,10 +3,8 @@ package io.hyperfoil.tools.horreum.mapper;
 import java.util.stream.Collectors;
 
 import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.api.data.TestToken;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestTokenDAO;
 import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
 
 public class TestMapper {
@@ -25,23 +23,9 @@ public class TestMapper {
         dto.fingerprintFilter = t.fingerprintFilter;
         dto.compareUrl = t.compareUrl;
         dto.notificationsEnabled = t.notificationsEnabled;
-        if (t.tokens != null)
-            dto.tokens = t.tokens.stream().map(TestMapper::fromTestToken).collect(Collectors.toList());
-        if (t.transformers != null)
+        if (t.transformers != null) {
             dto.transformers = t.transformers.stream().map(TransformerMapper::from).collect(Collectors.toList());
-
-        return dto;
-    }
-
-    public static TestToken fromTestToken(TestTokenDAO tt) {
-        TestToken dto = new TestToken();
-        dto.id = tt.id;
-        dto.description = tt.description;
-        dto.setValue(tt.getValue());
-
-        dto.testId = tt.test.id;
-        dto.permissions = tt.permissions;
-
+        }
         return dto;
     }
 
@@ -66,23 +50,10 @@ public class TestMapper {
             dto.datastoreId = 1; //by default we will push data into postgres
         }
         t.backendConfig = DatastoreConfigDAO.findById(dto.datastoreId);
-        if (dto.tokens != null)
-            t.tokens = dto.tokens.stream().map(token -> TestMapper.toTestToken(token, t)).collect(Collectors.toList());
         t.views = ViewDAO.<ViewDAO> find("test.id", dto.id).list();
-        if (dto.transformers != null)
+        if (dto.transformers != null) {
             t.transformers = dto.transformers.stream().map(TransformerMapper::to).collect(Collectors.toList());
-
+        }
         return t;
-    }
-
-    private static TestTokenDAO toTestToken(TestToken dto, TestDAO t) {
-        TestTokenDAO tt = new TestTokenDAO();
-        tt.id = dto.id;
-        tt.description = dto.description;
-        tt.setValue(dto.getValue());
-        tt.test = t;
-        tt.permissions = dto.permissions;
-
-        return tt;
     }
 }

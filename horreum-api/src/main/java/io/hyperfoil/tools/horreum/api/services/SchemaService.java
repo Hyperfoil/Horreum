@@ -49,10 +49,9 @@ public interface SchemaService {
     @APIResponseSchema(value = Schema.class, responseCode = "200", responseDescription = "Returns Schema if a matching id is found")
     @Operation(description = "Retrieve Schema by ID")
     @Parameters(value = {
-            @Parameter(name = "id", description = "Schema ID to retrieve", example = "101"),
-            @Parameter(name = "token", description = "API token for authorization", example = "101"),
+            @Parameter(name = "id", description = "Schema ID to retrieve", example = "101")
     })
-    Schema getSchema(@PathParam("id") int id, @QueryParam("token") String token);
+    Schema getSchema(@PathParam("id") int id);
 
     @GET
     @Path("idByUri/{uri}")
@@ -97,27 +96,6 @@ public interface SchemaService {
             @Parameter(name = "id", description = "Limit to a single Schema by ID", example = "102"),
     })
     List<SchemaDescriptor> descriptors(@QueryParam("id") List<Integer> ids);
-
-    @POST
-    @Path("{id}/resetToken")
-    @Operation(description = "Regenerate access token for schema")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Token ID", example = "102"),
-    })
-    @APIResponses(value = {
-            @APIResponse(responseCode = "200", content = {
-                    @Content(schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.STRING), example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38")
-            })
-    })
-    String resetToken(@PathParam("id") int id);
-
-    @DELETE
-    @Path("{id}/dropToken")
-    @Operation(description = "Remove access token for schema")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Token ID", example = "102"),
-    })
-    void dropToken(@PathParam("id") int id);
 
     @POST
     @Path("{id}/updateAccess")

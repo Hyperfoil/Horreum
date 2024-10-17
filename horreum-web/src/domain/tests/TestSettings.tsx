@@ -103,7 +103,6 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
                 fingerprintFilter: test?.fingerprintFilter,
                 owner: owner || defaultRole || "__test_created_without_a_role__",
                 access: access,
-                tokens: test?.tokens || [],
                 transformers: test?.transformers || [],
             }
             const response = await sendTest(newTest, alerting)

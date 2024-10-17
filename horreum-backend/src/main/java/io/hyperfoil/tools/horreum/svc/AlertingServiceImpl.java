@@ -1173,7 +1173,7 @@ public class AlertingServiceImpl implements AlertingService {
         } else if (timeoutSeconds <= 0) {
             throw ServiceException.badRequest("Timeout must be positive (unit: seconds)");
         }
-        TestDAO test = testService.ensureTestExists(testNameOrId, null);
+        TestDAO test = testService.ensureTestExists(testNameOrId);
         RunExpectationDAO runExpectation = new RunExpectationDAO();
         runExpectation.testId = test.id;
         runExpectation.expectedBefore = timeService.now().plusSeconds(timeoutSeconds);

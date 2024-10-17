@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -26,10 +25,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.api.data.TestToken;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestTokenDAO;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.quarkus.security.ForbiddenException;
@@ -507,25 +504,8 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         String testName = "MyTest";
         addTest(testName, null, null, null);
 
-        TestDAO test = ((TestServiceImpl) testService).ensureTestExists(testName, null);
+        TestDAO test = ((TestServiceImpl) testService).ensureTestExists(testName);
         assertNotNull(test);
-    }
-
-    @org.junit.jupiter.api.Test
-    void testEnsureTestExistsMissingUploaderRoleButWithToken() {
-        String testName = "MyTest";
-
-        TestToken token = new TestToken();
-        token.setValue("my-token");
-        token.description = "My awesome token";
-        token.permissions = TestTokenDAO.UPLOAD; // uploader
-
-        Test test = createSampleTest(testName, null, null, null);
-        test.tokens.add(token);
-        testService.add(test);
-
-        TestDAO retrieved = ((TestServiceImpl) testService).ensureTestExists(testName, token.getValue());
-        assertNotNull(retrieved);
     }
 
     @org.junit.jupiter.api.Test
@@ -534,7 +514,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         addTest(testName, null, null, null);
 
         ServiceException thrown = assertThrows(ServiceException.class,
-                () -> ((TestServiceImpl) testService).ensureTestExists(testName, null));
+                () -> ((TestServiceImpl) testService).ensureTestExists(testName));
         assertEquals("Cannot upload to test " + testName, thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -542,18 +522,11 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testEnsureTestExistsMissingUploaderRoleAndWrongToken() {
         String testName = "MyTest";
-
-        TestToken token = new TestToken();
-        token.setValue("my-token");
-        token.description = "My awesome token";
-        token.permissions = TestTokenDAO.READ; // only read, missing uploader
-
         Test test = createSampleTest(testName, null, null, null);
-        test.tokens.add(token);
         testService.add(test);
 
         ServiceException thrown = assertThrows(ServiceException.class,
-                () -> ((TestServiceImpl) testService).ensureTestExists(testName, null));
+                () -> ((TestServiceImpl) testService).ensureTestExists(testName));
         assertEquals("Cannot upload to test " + testName, thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -561,7 +534,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testEnsureTestExistsFailure() {
         ServiceException thrown = assertThrows(ServiceException.class,
-                () -> ((TestServiceImpl) testService).ensureTestExists("NotExisting", null));
+                () -> ((TestServiceImpl) testService).ensureTestExists("NotExisting"));
         assertEquals("Cannot upload to test NotExisting", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -593,100 +566,6 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         // only the root folder is returned (represented by null)
         assertEquals(1, folders.size());
         assertNull(folders.get(0));
-    }
-
-    @org.junit.jupiter.api.Test
-    void testAddToken() {
-        String testName = "MyTest";
-
-        Test test = addTest(testName, null, null, null);
-        assertEquals(0, test.tokens.size());
-
-        TestToken token = new TestToken();
-        token.setValue("my-token");
-        token.description = "My awesome token";
-        token.permissions = TestTokenDAO.READ;
-        int tokenId = testService.addToken(test.id, token);
-
-        TestDAO retrieved = TestDAO.findById(test.id);
-        assertNotNull(retrieved);
-        assertEquals(1, retrieved.tokens.size());
-        assertEquals(tokenId, retrieved.tokens.stream().findFirst().orElse(new TestTokenDAO()).id);
-    }
-
-    @org.junit.jupiter.api.Test
-    void testAddTokenWithMissingReadFailure() {
-        String testName = "MyTest";
-
-        Test test = addTest(testName, null, null, null);
-        assertEquals(0, test.tokens.size());
-
-        TestToken token = new TestToken();
-        token.setValue("my-token");
-        token.description = "My awesome token";
-        token.permissions = TestTokenDAO.UPLOAD;
-
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.addToken(test.id, token));
-        assertEquals("Upload permission requires read permission as well.", thrown.getMessage());
-        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
-    }
-
-    @org.junit.jupiter.api.Test
-    void testAddTokenWithMissingTest() {
-        TestToken token = new TestToken();
-        token.setValue("my-token");
-        token.description = "My awesome token";
-        token.permissions = TestTokenDAO.READ + TestTokenDAO.UPLOAD;
-
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.addToken(999, token));
-        assertEquals("Test 999 was not found", thrown.getMessage());
-        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
-    }
-
-    @org.junit.jupiter.api.Test
-    void testListTokens() {
-        String testName = "MyTest";
-
-        Test test = addTest(testName, null, null, null);
-        assertEquals(0, test.tokens.size());
-
-        TestToken token = new TestToken();
-        token.setValue("my-token");
-        token.description = "My awesome token";
-        token.permissions = TestTokenDAO.READ;
-        testService.addToken(test.id, token);
-        token.setValue("my-second-token");
-        token.description = "My second awesome token";
-        token.permissions = TestTokenDAO.UPLOAD + TestTokenDAO.READ;
-        testService.addToken(test.id, token);
-
-        TestDAO retrieved = TestDAO.findById(test.id);
-        assertEquals(2, retrieved.tokens.size());
-
-        Collection<TestToken> tokens = testService.tokens(test.id);
-        assertEquals(retrieved.tokens.size(), tokens.size());
-    }
-
-    @org.junit.jupiter.api.Test
-    void testDropToken() {
-        String testName = "MyTest";
-
-        Test test = addTest(testName, null, null, null);
-        assertEquals(0, test.tokens.size());
-
-        TestToken token = new TestToken();
-        token.setValue("my-token");
-        token.description = "My awesome token";
-        token.permissions = TestTokenDAO.READ;
-        int tokenId = testService.addToken(test.id, token);
-
-        TestDAO retrieved = TestDAO.findById(test.id);
-        assertEquals(1, retrieved.tokens.size());
-
-        testService.dropToken(test.id, tokenId);
-
-        retrieved = TestDAO.findById(test.id);
-        assertEquals(0, retrieved.tokens.size());
     }
 
     @org.junit.jupiter.api.Test
@@ -776,7 +655,6 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
                   "folder": "quarkus",
                   "description": "",
                   "datastoreId": null,
-                  "tokens": null,
                   "timelineLabels": [],
                   "timelineFunction": null,
                   "fingerprintLabels": [
@@ -811,7 +689,6 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
                   "folder": "quarkus",
                   "description": "",
                   "datastoreId": null,
-                  "tokens": null,
                   "timelineLabels": [],
                   "timelineFunction": null,
                   "fingerprintLabels": [
@@ -848,7 +725,6 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
                   "folder": "quarkus",
                   "description": "",
                   "datastoreId": null,
-                  "tokens": null,
                   "timelineLabels": [],
                   "timelineFunction": null,
                   "fingerprintLabels": [

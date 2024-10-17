@@ -62,7 +62,6 @@ import io.hyperfoil.tools.horreum.mapper.SchemaMapper;
 import io.hyperfoil.tools.horreum.mapper.TransformerMapper;
 import io.hyperfoil.tools.horreum.mapper.ValidationErrorMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
@@ -121,11 +120,10 @@ public class SchemaServiceImpl implements SchemaService {
     @Util.FailUnknownProperties
     ObjectMapper mapper;
 
-    @WithToken
     @WithRoles
     @PermitAll
     @Override
-    public Schema getSchema(int id, String token) {
+    public Schema getSchema(int id) {
         SchemaDAO schema = SchemaDAO.find("id", id).firstResult();
         if (schema == null) {
             throw ServiceException.notFound("Schema not found");
@@ -256,39 +254,6 @@ public class SchemaServiceImpl implements SchemaService {
             query.setParameter(1, ids);
         }
         return query.getResultList();
-    }
-
-    @RolesAllowed(Roles.TESTER)
-    @WithRoles
-    @Transactional
-    @Override
-    public String resetToken(int id) {
-        return updateToken(id, Tokens.generateToken());
-    }
-
-    @RolesAllowed(Roles.TESTER)
-    @WithRoles
-    @Transactional
-    @Override
-    public void dropToken(int id) {
-        updateToken(id, null);
-    }
-
-    public String updateToken(int id, String token) {
-        SchemaDAO schema = SchemaDAO.findById(id);
-        if (schema == null) {
-            throw ServiceException.notFound("Schema not found");
-        }
-
-        schema.token = token;
-
-        try {
-            // need persistAndFlush otherwise we won't catch SQLGrammarException
-            schema.persistAndFlush();
-            return token;
-        } catch (Exception e) {
-            throw ServiceException.serverError("Token reset failed (missing permissions?)");
-        }
     }
 
     @RolesAllowed(Roles.TESTER)
