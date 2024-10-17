@@ -5,7 +5,6 @@
   "description": "new CD variable",
   "owner": "foo-team",
   "access": 0,
-  "tokens": [],
   "timelineLabels": [],
   "timelineFunction": null,
   "fingerprintLabels": [],

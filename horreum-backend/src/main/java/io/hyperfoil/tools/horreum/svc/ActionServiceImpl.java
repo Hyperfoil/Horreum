@@ -36,7 +36,6 @@ import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.ActionMapper;
 import io.hyperfoil.tools.horreum.mapper.AllowedSiteMapper;
-import io.hyperfoil.tools.horreum.server.EncryptionManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
@@ -59,9 +58,6 @@ public class ActionServiceImpl implements ActionService {
 
     @Inject
     Vertx vertx;
-
-    @Inject
-    EncryptionManager encryptionManager;
 
     @Inject
     TestServiceImpl testService;

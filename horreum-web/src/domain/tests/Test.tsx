@@ -25,7 +25,6 @@ import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
 import Experiments from "./Experiments"
 import ActionsUI from "./ActionsUI"
-import Tokens from "./Tokens"
 import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
 import MissingDataNotifications from "./MissingDataNotifications"
@@ -46,7 +45,6 @@ export default function TestView() {
     const [views, setViews] = useState<View[]>( [])
     const [modified, setModified] = useState(false)
     const generalFuncsRef = useRef<TabFunctions>()
-    const tokensFuncsRef = useRef<TabFunctions>()
     const viewFuncsRef = useRef<TabFunctions>()
     const variablesFuncsRef = useRef<TabFunctions>()
     const missingDataFuncsRef = useRef<TabFunctions>()
@@ -177,19 +175,6 @@ export default function TestView() {
                                     onModified={setModified}
                                     funcsRef={generalFuncsRef}
                                 />
-                            </SavedTab>
-                            <SavedTab
-                                title="Tokens"
-                                fragment="tokens"
-                                canSave={true}
-                                onSave={() =>
-                                    saveFunc(tokensFuncsRef)()
-                                        .then(refetchTest)
-                                }
-                                onReset={resetFunc(tokensFuncsRef)}
-                                isModified={() => modified}
-                            >
-                                <Tokens test={test || undefined} onModified={setModified} funcsRef={tokensFuncsRef} />
                             </SavedTab>
                             <SavedTab
                                 title="Views"

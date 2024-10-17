@@ -3,9 +3,6 @@ package io.hyperfoil.tools.horreum.svc;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Label;
@@ -13,7 +10,6 @@ import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
 
-// TODO: unable to test methods annotated with @WithToken
 public abstract class BaseServiceNoRestTest {
 
     protected static final String DEFAULT_USER = "user";
@@ -23,16 +19,12 @@ public abstract class BaseServiceNoRestTest {
     protected static final String FOO_UPLOADER = "foo-uploader";
     protected static final String BAR_TEAM = "bar-team";
 
-    @Inject
-    protected EntityManager em;
-
-    protected Schema createSampleSchema(String name, String uri, String owner, String token) {
+    protected Schema createSampleSchema(String name, String uri, String owner) {
         Schema schema = new Schema();
         schema.owner = owner;
         schema.name = name;
         schema.uri = uri;
         schema.schema = null;
-        schema.token = token;
         return schema;
     }
 
@@ -89,7 +81,6 @@ public abstract class BaseServiceNoRestTest {
         test.description = "Bar";
         test.owner = owner == null ? FOO_TEAM : owner;
         test.transformers = new ArrayList<>();
-        test.tokens = new ArrayList<>();
         test.datastoreId = datastoreId;
         test.folder = folder == null ? "" : folder;
         return test;

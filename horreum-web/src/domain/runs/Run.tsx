@@ -45,9 +45,8 @@ export default function Run() {
 
     const getRunSummary = () => {
         const urlParams = new URLSearchParams(window.location.search)
-        const token = urlParams.get("token")
         setLoading(true)
-        fetchRunSummary(idVal, token === null ? undefined : token, alerting).then(
+        fetchRunSummary(idVal, alerting).then(
             response =>setRun({data: "",schemas: [],metadata: response.hasMetadata ? "" : undefined,...response})
         ).finally(() => setLoading(false))
     }

@@ -67,7 +67,6 @@ public class HorreumAuthorizationFilter {
             HttpServerRequest actualServerRequest = ((QuarkusResteasyReactiveRequestContext) containerRequestContext
                     .getServerRequestContext()).vertxServerRequest();
             actualServerRequest.headers().remove(HttpHeaders.AUTHORIZATION);
-            containerRequestContext.getHeaders().addFirst(TokenInterceptor.TOKEN_HEADER, authorization.substring(7));
         }
         return null;
     }

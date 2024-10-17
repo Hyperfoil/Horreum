@@ -101,7 +101,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
         try {
-            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC, null,
+            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC,
                     null, "test", payload);
         } catch (BadRequestException badRequestException) {
             fail(badRequestException.getMessage()
@@ -115,7 +115,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         JsonNode metadata = JsonNodeFactory.instance.objectNode().put("$schema", "urn:foobar").put("foo", "bar");
 
         try {
-            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC, null,
+            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC,
                     null, "test", payload, metadata);
         } catch (BadRequestException badRequestException) {
             fail(badRequestException.getMessage()
@@ -131,7 +131,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         run.testid = -1; // should be ignored
         run.data = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
         run.description = "Test description";
-        horreumClient.runService.add(dummyTest.name, dummyTest.owner, Access.PUBLIC, null, run);
+        horreumClient.runService.add(dummyTest.name, dummyTest.owner, Access.PUBLIC, run);
     }
 
     // Javascript execution gets often broken with new Quarkus releases, this should catch it
@@ -150,8 +150,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         JsonNode data = JsonNodeFactory.instance.objectNode()
                 .put("$schema", schema.uri)
                 .put("value", "foobar");
-        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null,
-                data);
+        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, schema.uri, null, data);
 
         int datasetId = -1;
         while (System.currentTimeMillis() < now + 10000) {
@@ -198,8 +197,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
         data.putIfAbsent("samplesArray", arrayNode);
 
-        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null,
-                data);
+        horreumClient.runService.addRunFromData(ts, ts, dummyTest.name, dummyTest.owner, Access.PUBLIC, schema.uri, null, data);
 
         int datasetId = -1;
         while (System.currentTimeMillis() < now + 10000) {
@@ -331,7 +329,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             //5. upload some data
             Consumer<JsonNode> uploadData = (payload) -> horreumClient.runService.addRunFromData("$.start", "$.stop",
-                    dummyTest.name, dummyTest.owner, Access.PUBLIC, null, schema.uri, null, payload);
+                    dummyTest.name, dummyTest.owner, Access.PUBLIC, schema.uri, null, payload);
 
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds1.json")));
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds2.json")));
@@ -344,7 +342,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             Integer lastRunID = runsSummary.runs.stream().map(run -> run.id).max((Comparator.comparingInt(anInt -> anInt)))
                     .get();
 
-            RunService.RunExtended extendedRun = horreumClient.runService.getRun(lastRunID, null);
+            RunService.RunExtended extendedRun = horreumClient.runService.getRun(lastRunID);
 
             assertNotNull(extendedRun.datasets);
 

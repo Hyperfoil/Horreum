@@ -4598,4 +4598,70 @@
             CREATE POLICY userinfo_apikey_rw ON userinfo_apikey FOR ALL USING (has_role(username));
         </sql>
     </changeSet>
+    <changeSet id="124" author="barreiro">
+        <validCheckSum>ANY</validCheckSum>
+        <!-- remove test token feature -->
+        <sql>
+            ALTER POLICY run_insert ON run WITH CHECK (has_role2(owner, 'uploader'));
+            ALTER POLICY run_select ON run USING (can_view2(access, owner) OR has_role('horreum.system'));
+
+            ALTER POLICY rs_insert ON run_schemas WITH CHECK (is_uploader_for_run(runid) OR has_role2((SELECT owner FROM schema WHERE id = schemaid), 'tester'));
+            ALTER POLICY rs_select ON run_schemas USING (exists(SELECT 1 FROM run WHERE run.id = runid AND can_view2(access, owner)));
+
+            ALTER POLICY rve_select ON run_validationerrors USING (exists(SELECT 1 FROM run WHERE id = run_id AND can_view2(access, owner)));
+
+            ALTER POLICY schema_select ON schema USING (can_view2(access, owner) OR has_role2(owner, 'uploader'));
+
+            ALTER POLICY test_delete ON test USING (has_role2(owner, 'tester'));
+            ALTER POLICY test_select ON test USING (can_view2(access, owner));
+            ALTER POLICY test_update ON test USING (has_role2(owner, 'tester'));
+
+            ALTER POLICY variable_delete ON variable USING (has_role2((SELECT owner FROM test WHERE test.id = testid), 'tester'));
+            ALTER POLICY variable_insert ON variable WITH CHECK (has_role2((SELECT owner FROM test WHERE test.id = testid), 'tester'));
+            ALTER POLICY variable_select ON variable USING (exists(SELECT 1 FROM test WHERE test.id = testid AND can_view2(test.access, test.owner)));
+            ALTER POLICY variable_update ON variable USING (has_role2((SELECT owner FROM test WHERE test.id = testid), 'tester'));
+
+            ALTER POLICY view_delete ON view USING (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester'));
+            ALTER POLICY view_insert ON view WITH CHECK (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester'));
+            ALTER POLICY view_select ON view USING (exists(SELECT 1 FROM test WHERE test.id = test_id AND can_view2(test.access, test.owner)));
+            ALTER POLICY view_update ON view USING (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester'));
+
+            ALTER POLICY vc_delete ON viewcomponent USING (exists(SELECT 1 FROM test JOIN view ON view.test_id = test.id WHERE view.id = view_id AND has_role2(test.owner, 'tester')));
+            ALTER POLICY vc_insert ON viewcomponent WITH CHECK (exists(SELECT 1 FROM test JOIN view ON view.test_id = test.id WHERE view.id = view_id AND has_role2(test.owner, 'tester')));
+            ALTER POLICY vc_select ON viewcomponent USING (exists(SELECT 1 FROM test JOIN view ON view.test_id = test.id WHERE view.id = view_id AND can_view2(test.access, test.owner)));
+            ALTER POLICY vc_update ON viewcomponent USING (exists(SELECT 1 FROM test JOIN view ON view.test_id = test.id WHERE view.id = view_id AND has_role2(test.owner, 'tester')));
+
+            ALTER POLICY ss_delete ON missingdata_rule USING (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester'));
+            ALTER POLICY ss_insert ON missingdata_rule WITH CHECK (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester'));
+            ALTER POLICY ss_select ON missingdata_rule USING (exists(SELECT 1 FROM test WHERE test.id = test_id AND can_view2(test.access, test.owner)));
+            ALTER POLICY ss_update ON missingdata_rule USING (has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester'));
+
+            ALTER POLICY rd_delete ON changedetection USING (exists(SELECT 1 FROM test JOIN variable ON test.id = variable.testid WHERE variable.id = variable_id AND (has_role2(test.owner, 'tester'))));
+            ALTER POLICY rd_insert ON changedetection WITH CHECK (exists(SELECT 1 FROM test JOIN variable ON test.id = variable.testid WHERE variable.id = variable_id AND (has_role2(test.owner, 'tester'))));
+            ALTER POLICY rd_select ON changedetection USING (exists(SELECT 1 FROM test JOIN variable ON test.id = variable.testid WHERE variable.id = variable_id AND (can_view2(test.access, test.owner))));
+            ALTER POLICY rd_update ON changedetection USING (exists(SELECT 1 FROM test JOIN variable ON test.id = variable.testid WHERE variable.id = variable_id AND (has_role2(test.owner, 'tester'))));
+
+            ALTER POLICY ep_delete ON experiment_profile USING (exists(SELECT 1 FROM test WHERE test.id = test_id AND (has_role2(owner, 'tester'))));
+            ALTER POLICY ep_insert ON experiment_profile WITH CHECK (exists(SELECT 1 FROM test WHERE test.id = test_id AND (has_role2(owner, 'tester'))));
+            ALTER POLICY ep_select ON experiment_profile USING(exists(SELECT 1 FROM test WHERE test.id = test_id AND (can_view2(access, owner)) OR has_role('horreum.system')));
+            ALTER POLICY ep_update ON experiment_profile USING (exists(SELECT 1 FROM test WHERE test.id = test_id AND (has_role2(owner, 'tester'))));
+
+            ALTER POLICY ec_delete ON experiment_comparisons USING (exists(SELECT 1 FROM experiment_profile ep JOIN test ON test.id = test_id WHERE profile_id = ep.id AND (has_role2(owner, 'tester'))));
+            ALTER POLICY ec_insert ON experiment_comparisons WITH CHECK (exists(SELECT 1 FROM experiment_profile ep JOIN test ON test.id = test_id WHERE profile_id = ep.id AND (has_role2(owner, 'tester'))));
+            ALTER POLICY ec_select ON experiment_comparisons USING (exists(SELECT 1 FROM experiment_profile ep JOIN test ON test.id = test_id WHERE profile_id = ep.id AND (can_view2(access, owner)) OR has_role('horreum.system')));
+            ALTER POLICY ec_update ON experiment_comparisons USING (exists(SELECT 1 FROM experiment_profile ep JOIN test ON test.id = test_id WHERE profile_id = ep.id AND (has_role2(owner, 'tester'))));
+
+            ALTER POLICY action_policy ON action USING (has_role('horreum.system') OR has_role('admin') OR has_role2((SELECT owner FROM test WHERE test.id = test_id), 'tester'));
+
+            ALTER POLICY dataset_insert ON dataset WITH CHECK (has_role2(owner, 'uploader') OR has_role('horreum.system'));
+
+            DROP FUNCTION can_view; <!-- calls to this function are replaced with existing `can_view2` -->
+            DROP FUNCTION has_read_token;
+            DROP FUNCTION has_modify_token;
+            DROP FUNCTION has_upload_token;
+        </sql>
+        <dropColumn tableName="run" columnName="token" />
+        <dropColumn tableName="schema" columnName="token" />
+        <dropTable tableName="test_token" />
+    </changeSet>
 </databaseChangeLog>
