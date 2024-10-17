@@ -342,14 +342,6 @@ export function updateChangeDetection(
 
 }
 
-export function updateRunsAndDatasetsAction(
-    testId: number,
-    runs: number,
-    datasets: number
-): any {
-    return {type: "Tests/UPDATE_RUNS_AND_DATASETS", testId, runs, datasets}
-}
-
 ///Runs
 export function fetchRunSummary(id: number, token: string | undefined, alerting: AlertContextType): Promise<RunSummary> {
     return apiCall(runApi.getRunSummary(id, token), alerting, "FETCH_RUN_SUMMARY", "Failed to fetch data for run " + id + ", try uploading a Run and use new Run id instead.");

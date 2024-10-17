@@ -720,7 +720,7 @@ public class TestServiceImpl implements TestService {
             // transform will add proper roles anyway
             //         messageBus.executeForTest(testId, () -> datasetService.withRecalculationLock(() -> {
             //         mediator.executeBlocking(() -> mediator.transform(runId, true));
-            mediator.executeBlocking(() -> mediator.withRecalculationLock(() -> {
+            mediator.executeBlocking(() -> mediator.withSharedLock(() -> {
                 int newDatasets = 0;
                 try {
                     newDatasets = mediator.transform(runId, true);

@@ -1,6 +1,6 @@
-import {useCallback, useEffect, useState, useRef, useContext} from "react"
+import { useCallback, useEffect, useState, useRef, useContext } from "react"
 import { Bullseye, Button, Modal, Progress, Spinner } from "@patternfly/react-core"
-import {fetchTest, RecalculationStatus, testApi, TestStorage, updateRunsAndDatasetsAction} from "../../api"
+import { fetchTest, RecalculationStatus, testApi, TestStorage } from "../../api"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
@@ -13,7 +13,7 @@ type RecalculateDatasetsModalProps = {
 
 export default function RecalculateDatasetsModal(props: RecalculateDatasetsModalProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const [test, setTest] = useState<TestStorage | undefined>( undefined)
+    const [test, setTest] = useState<TestStorage | undefined>(undefined)
     const [progress, setProgress] = useState(-1)
     const [status, setStatus] = useState<RecalculationStatus>()
     const timerId = useRef<number>()
@@ -32,19 +32,16 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
         if (!props.isOpen) {
             return
         }
-        fetchTest(props.testId, alerting).then(setTest)
-    }, [props.testId]);
 
-    useEffect(() => {
-        if (!props.isOpen) {
-            return
-        }
+        // fetch the current test
+        fetchTest(props.testId, alerting).then(setTest)
+
+        // fetch the latest recalculation status
         if (test?.runs === undefined) {
-            testApi.getRecalculationStatus(props.testId).then(status => {
-                updateRunsAndDatasetsAction(props.testId, status.totalRuns, status.datasets)
-            })
+            testApi.getRecalculationStatus(props.testId).then(setStatus)
         }
-    }, [test, props.isOpen])
+    }, [props.isOpen]);
+
     return (
         <Modal
             title={`Re-transform datasets for test ${test?.name || "<unknown test>"}`}
@@ -66,11 +63,6 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
                                                   .then(status => {
                                                       setStatus(status)
                                                       setProgress(status.finished)
-                                                      updateRunsAndDatasetsAction(
-                                                          props.testId,
-                                                          status.totalRuns,
-                                                          status.datasets
-                                                      )
                                                       if (status.finished === status.totalRuns) {
                                                           onClose()
                                                       }
@@ -112,7 +104,7 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
             )}
             {progress < 0 && (
                 <div style={{ marginBottom: "16px" }}>
-                    This test has {test?.runs || "<unknown number>"} of runs; do you want to recalculate all datasets?
+                    This test has {status?.totalRuns || "<unknown number>"} of runs; do you want to recalculate all datasets?
                 </div>
             )}
             {progress >= 0 && (

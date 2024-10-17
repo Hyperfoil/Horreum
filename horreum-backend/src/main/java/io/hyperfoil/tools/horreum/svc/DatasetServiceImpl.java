@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.svc;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -53,7 +52,7 @@ public class DatasetServiceImpl implements DatasetService {
     private static final Logger log = Logger.getLogger(DatasetServiceImpl.class);
 
     //@formatter:off
-   private static final String LABEL_QUERY = """
+    private static final String LABEL_QUERY = """
          WITH
          used_labels AS (
             SELECT label.id AS label_id, label.name, ds.schema_id, count(le) AS count
@@ -86,7 +85,7 @@ public class DatasetServiceImpl implements DatasetService {
          JOIN used_labels ul ON label.id = ul.label_id
          GROUP BY lvalues.label_id, ul.name, function, ul.count
          """;
-   protected static final String LABEL_PREVIEW = """
+    protected static final String LABEL_PREVIEW = """
          WITH
          le AS (
             SELECT * FROM jsonb_populate_recordset(NULL::extractor, (?1)::jsonb)
@@ -110,7 +109,7 @@ public class DatasetServiceImpl implements DatasetService {
          FROM lvalues
          """;
 
-   private static final String SCHEMAS_SELECT = """
+    private static final String SCHEMAS_SELECT = """
          SELECT dataset_id,
                jsonb_agg(
                   jsonb_build_object('id', schema.id, 'uri', ds.uri, 'name', schema.name, 'source', 0, 'type', 2, 'key', ds.index::text, 'hasJsonSchema', schema.schema IS NOT NULL)
@@ -119,13 +118,13 @@ public class DatasetServiceImpl implements DatasetService {
          JOIN dataset ON dataset.id = ds.dataset_id
          JOIN schema ON schema.id = ds.schema_id
          """;
-   private static final String VALIDATION_SELECT = """
+    private static final String VALIDATION_SELECT = """
           validation AS (
             SELECT dataset_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors
             FROM dataset_validationerrors GROUP BY dataset_id
           )
          """;
-   private static final String DATASET_SUMMARY_SELECT = """
+    private static final String DATASET_SUMMARY_SELECT = """
          SELECT ds.id, ds.runid AS runId,
             ds.ordinal, ds.testid AS testId,
             test.name AS testname, ds.description,
@@ -140,7 +139,7 @@ public class DatasetServiceImpl implements DatasetService {
          LEFT JOIN validation ON validation.dataset_id = ds.id
          LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id AND dv.view_id =
          """;
-   private static final String LIST_SCHEMA_DATASETS = """
+    private static final String LIST_SCHEMA_DATASETS = """
          WITH ids AS (
             SELECT dataset_id AS id FROM dataset_schemas WHERE uri = ?1
          ),
@@ -162,7 +161,7 @@ public class DatasetServiceImpl implements DatasetService {
          LEFT JOIN dataset_view dv ON dv.dataset_id = ds.id
          WHERE ds.id IN (SELECT id FROM ids)
          """;
-   private static final String ALL_LABELS_SELECT = """
+    private static final String ALL_LABELS_SELECT = """
          SELECT dataset.id as dataset_id,
             COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb) AS values
          FROM dataset
@@ -170,7 +169,7 @@ public class DatasetServiceImpl implements DatasetService {
          LEFT JOIN label ON label.id = label_id
          """;
 
-   //@formatter:on
+    //@formatter:on
     @Inject
     EntityManager em;
 
@@ -182,12 +181,6 @@ public class DatasetServiceImpl implements DatasetService {
 
     @Inject
     TransactionManager tm;
-
-    // This is a nasty hack that will serialize all run -> dataset transformations and label calculations
-    // The problem is that PostgreSQL's SSI will for some (unknown) reason rollback some transactions,
-    // probably due to false sharing of locks. For some reason even using advisory locks in DB does not
-    // solve the issue so we have to serialize this even outside the problematic transactions.
-    private final ReentrantLock recalculationLock = new ReentrantLock();
 
     @PermitAll
     @WithRoles
@@ -562,20 +555,7 @@ public class DatasetServiceImpl implements DatasetService {
         }
     }
 
-    void withRecalculationLock(Runnable runnable) {
-        recalculationLock.lock();
-        try {
-            runnable.run();
-        } finally {
-            recalculationLock.unlock();
-        }
-    }
-
     public void onNewDataset(Dataset.EventNew event) {
-        withRecalculationLock(() -> calculateLabelValues(event.testId, event.datasetId, event.labelId, event.isRecalculation));
-    }
-
-    public void onNewDatasetNoLock(Dataset.EventNew event) {
         calculateLabelValues(event.testId, event.datasetId, event.labelId, event.isRecalculation);
     }
 
