@@ -38,12 +38,12 @@ import io.hyperfoil.tools.horreum.api.internal.services.NotificationService;
 import io.hyperfoil.tools.horreum.api.internal.services.ReportService;
 import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
 import io.hyperfoil.tools.horreum.api.internal.services.SubscriptionService;
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.api.services.ConfigService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 
 public class HorreumClient implements Closeable {
     private final ResteasyClient client;

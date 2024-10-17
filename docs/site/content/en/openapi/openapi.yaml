@@ -25,6 +25,9 @@ tags:
 - name: Test
   description: Endpoint giving access to tests defined in Horreum.
   x-smallrye-profile-external: ""
+- name: User
+  description: Manage user accounts
+  x-smallrye-profile-external: ""
 paths:
   /api/config/datastore:
     put:
@@ -2407,6 +2410,347 @@ paths:
       responses:
         "201":
           description: Created
+  /api/user/administrators:
+    get:
+      tags:
+      - User
+      description: Get the list of administrator users.
+      operationId: administrators
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserData"
+    post:
+      tags:
+      - User
+      description: Set the list of administrator users.
+      operationId: updateAdministrators
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+        required: true
+      responses:
+        "201":
+          description: Created
+  /api/user/allTeams:
+    get:
+      tags:
+      - User
+      description: Get list of all teams.
+      operationId: getAllTeams
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/user/apikey:
+    get:
+      tags:
+      - User
+      description: List API keys.
+      operationId: apiKeys
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKeyResponse"
+    post:
+      tags:
+      - User
+      description: Create a new API key.
+      operationId: newApiKey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                type:
+                  $ref: "#/components/schemas/KeyType"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/user/apikey/{id}/rename:
+    put:
+      tags:
+      - User
+      description: Rename API key.
+      operationId: renameApiKey
+      parameters:
+      - name: id
+        in: path
+        description: id of the key to be renamed
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "204":
+          description: No Content
+  /api/user/apikey/{id}/revoke:
+    put:
+      tags:
+      - User
+      description: Revoke API key.
+      operationId: revokeApiKey
+      parameters:
+      - name: id
+        in: path
+        description: id of the key to be revoked
+        required: true
+        schema:
+          type: integer
+      responses:
+        "204":
+          description: No Content
+  /api/user/createUser:
+    post:
+      tags:
+      - User
+      description: Create new user.
+      operationId: createUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  $ref: "#/components/schemas/UserData"
+                password:
+                  type: string
+                team:
+                  type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+        required: true
+      responses:
+        "201":
+          description: Created
+  /api/user/defaultTeam:
+    get:
+      tags:
+      - User
+      description: Get the default team of the current user.
+      operationId: defaultTeam
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+    post:
+      tags:
+      - User
+      description: Set the default team of the current user.
+      operationId: setDefaultTeam
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+        required: true
+      responses:
+        "201":
+          description: Created
+  /api/user/info:
+    post:
+      tags:
+      - User
+      description: Fetch user data for a group of users.
+      operationId: info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserData"
+  /api/user/roles:
+    get:
+      tags:
+      - User
+      description: Get roles for the authenticated user.
+      operationId: getRoles
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/user/search:
+    get:
+      tags:
+      - User
+      description: Search for user(s) with an optional query condition.
+      operationId: searchUsers
+      parameters:
+      - name: query
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserData"
+  /api/user/team/{team}:
+    post:
+      tags:
+      - User
+      description: Create new team.
+      operationId: addTeam
+      parameters:
+      - name: team
+        in: path
+        description: Name of the team to be created
+        required: true
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Created
+    delete:
+      tags:
+      - User
+      description: Remove existing team.
+      operationId: deleteTeam
+      parameters:
+      - name: team
+        in: path
+        description: Name of the team to be removed
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+  /api/user/team/{team}/members:
+    get:
+      tags:
+      - User
+      description: Get the membership of a given team.
+      operationId: teamMembers
+      parameters:
+      - name: team
+        in: path
+        description: Name of the team
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items: {}
+    post:
+      tags:
+      - User
+      description: Set the membership of a given team.
+      operationId: updateTeamMembers
+      parameters:
+      - name: team
+        in: path
+        description: Name of the team
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: array
+                items: {}
+        required: true
+      responses:
+        "201":
+          description: Created
+  /api/user/teams:
+    get:
+      tags:
+      - User
+      description: Get list of all teams.
+      operationId: getTeams
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /api/user/{username}:
+    delete:
+      tags:
+      - User
+      description: Remove existing user.
+      operationId: removeUser
+      parameters:
+      - name: username
+        in: path
+        description: Username to remove
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
 components:
   schemas:
     Access:
@@ -2486,6 +2830,29 @@ components:
       - GITHUB_ISSUE_CREATE
       - SLACK_MESSAGE
       type: string
+    ApiKeyResponse:
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/KeyType"
+        creation:
+          format: date-time
+          type: string
+          example: 2022-03-10T16:15:50Z
+        access:
+          format: date-time
+          type: string
+          example: 2022-03-10T16:15:50Z
+        isRevoked:
+          type: boolean
+        toExpiration:
+          format: int64
+          type: integer
     BetterOrWorse:
       description: Result of running an Experiment
       enum:
@@ -3255,6 +3622,10 @@ components:
       type: object
       additionalProperties:
         $ref: "#/components/schemas/LabelValueMap"
+    KeyType:
+      enum:
+      - USER
+      type: string
     KeycloakConfig:
       type: object
       properties:
@@ -4736,6 +5107,22 @@ components:
           description: Transformer name
           type: string
           example: my-dataset-transformer
+    UserData:
+      required:
+      - id
+      - username
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
     ValidationError:
       required:
       - schemaId

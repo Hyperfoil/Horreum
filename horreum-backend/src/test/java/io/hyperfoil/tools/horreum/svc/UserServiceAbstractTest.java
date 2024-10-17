@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static io.hyperfoil.tools.horreum.api.internal.services.UserService.KeyType.USER;
+import static io.hyperfoil.tools.horreum.api.services.UserService.KeyType.USER;
 import static io.hyperfoil.tools.horreum.svc.UserServiceImpl.DEFAULT_API_KEY_ACTIVE_DAYS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,7 +25,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.UserApiKey;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.server.SecurityBootstrap;

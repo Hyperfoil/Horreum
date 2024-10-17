@@ -8,7 +8,7 @@ import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.test.DatabaseRolesTestProfile;
 import io.quarkus.logging.Log;
 import io.quarkus.test.junit.QuarkusTest;

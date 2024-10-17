@@ -1,6 +1,6 @@
 package io.hyperfoil.tools.horreum.it;
 
-import static io.hyperfoil.tools.horreum.api.internal.services.UserService.KeyType.USER;
+import static io.hyperfoil.tools.horreum.api.services.UserService.KeyType.USER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -48,10 +48,10 @@ import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.it.profile.InContainerProfile;
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.quarkus.test.junit.QuarkusIntegrationTest;

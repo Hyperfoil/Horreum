@@ -26,7 +26,7 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity

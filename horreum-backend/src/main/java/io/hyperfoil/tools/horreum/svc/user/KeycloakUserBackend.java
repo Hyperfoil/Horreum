@@ -27,7 +27,7 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.quarkus.arc.lookup.LookupIfProperty;

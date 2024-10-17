@@ -2,7 +2,7 @@ package io.hyperfoil.tools.horreum.mapper;
 
 import java.time.Instant;
 
-import io.hyperfoil.tools.horreum.api.internal.services.UserService;
+import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.UserApiKey;
 
 public class UserApiKeyMapper {
