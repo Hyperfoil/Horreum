@@ -1,7 +1,6 @@
 {
   "owner": "foo-team",
   "access": 0,
-  "token": null,
   "id": 64,
   "uri": "urn:quarkus-sb-compare:0.1",
   "name": "quarkus-sb-compare",

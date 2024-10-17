@@ -208,9 +208,9 @@ public class ServiceMediator {
     }
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
-    public void queueRunUpload(String start, String stop, String test, String owner, Access access, String token,
+    public void queueRunUpload(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, JsonNode metadata, JsonNode jsonNode, TestDAO testEntity) {
-        RunUpload upload = new RunUpload(start, stop, test, owner, access, token, schemaUri, description, metadata, jsonNode,
+        RunUpload upload = new RunUpload(start, stop, test, owner, access, schemaUri, description, metadata, jsonNode,
                 testEntity.id, identity.getRoles());
         runUploadEmitter.send(upload);
     }
@@ -308,7 +308,6 @@ public class ServiceMediator {
         public String test;
         public String owner;
         public Access access;
-        public String token;
         public String schemaUri;
         public String description;
         public JsonNode metaData;
@@ -320,7 +319,7 @@ public class ServiceMediator {
         }
 
         public RunUpload(String start, String stop, String test, String owner,
-                Access access, String token, String schemaUri, String description,
+                Access access, String schemaUri, String description,
                 JsonNode metaData, JsonNode payload, Integer testId,
                 Set<String> roles) {
             this.start = start;
@@ -328,7 +327,6 @@ public class ServiceMediator {
             this.test = test;
             this.owner = owner;
             this.access = access;
-            this.token = token;
             this.schemaUri = schemaUri;
             this.description = description;
             this.metaData = metaData;

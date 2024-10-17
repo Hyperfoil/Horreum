@@ -83,7 +83,6 @@ import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -116,7 +115,6 @@ public class RunServiceImpl implements RunService {
          """;
     //@formatter:on
     private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
-    private static final String UPDATE_TOKEN = "UPDATE run SET token = ? WHERE id = ?";
     private static final String CHANGE_ACCESS = "UPDATE run SET owner = ?, access = ? WHERE id = ?";
     private static final String SCHEMA_USAGE = "COALESCE(jsonb_agg(jsonb_build_object(" +
             "'id', schema.id, 'uri', rs.uri, 'name', schema.name, 'source', rs.source, " +
@@ -233,9 +231,8 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
-    public RunExtended getRun(int id, String token) {
+    public RunExtended getRun(int id) {
 
         RunExtended runExtended = null;
 
@@ -258,10 +255,10 @@ public class RunServiceImpl implements RunService {
 
     @WithRoles
     @Override
-    public RunSummary getRunSummary(int id, String token) {
+    public RunSummary getRunSummary(int id) {
         try {
             Query query = em.createNativeQuery("SELECT run.id, run.start, run.stop, run.testid, " +
-                    "run.owner, run.access, run.token, run.trashed, run.description, run.metadata IS NOT NULL as has_metadata, "
+                    "run.owner, run.access, run.trashed, run.description, run.metadata IS NOT NULL as has_metadata, "
                     +
                     "(SELECT name FROM test WHERE test.id = run.testid) as testname, " +
                     "(SELECT " + SCHEMA_USAGE
@@ -279,9 +276,8 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
-    public Object getData(int id, String token, String schemaUri) {
+    public Object getData(int id, String schemaUri) {
         if (schemaUri == null || schemaUri.isEmpty()) {
             return Util.runQuery(em, "SELECT data#>>'{}' from run where id = ?", id);
         } else {
@@ -299,7 +295,7 @@ public class RunServiceImpl implements RunService {
     @Override
     public List<ExportedLabelValues> labelValues(int runId, String filter, String sort, String direction, int limit, int page,
             List<String> include, List<String> exclude, boolean multiFilter) {
-        Run run = getRun(runId, null);
+        Run run = getRun(runId);
         if (run == null) {
             throw ServiceException.notFound("Cannot find run " + runId);
         }
@@ -314,9 +310,8 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
-    public JsonNode getMetadata(int id, String token, String schemaUri) {
+    public JsonNode getMetadata(int id, String schemaUri) {
         String result;
         if (schemaUri == null || schemaUri.isEmpty()) {
             result = (String) Util.runQuery(em, "SELECT coalesce((metadata#>>'{}')::jsonb, '{}'::jsonb) from run where id = ?",
@@ -338,33 +333,6 @@ public class RunServiceImpl implements RunService {
     @WithRoles
     @Transactional
     @Override
-    public String resetToken(int id) {
-        return updateToken(id, Tokens.generateToken());
-    }
-
-    @RolesAllowed(Roles.TESTER)
-    @WithRoles
-    @Transactional
-    @Override
-    public String dropToken(int id) {
-        return updateToken(id, null);
-    }
-
-    private String updateToken(int id, String token) {
-        Query query = em.createNativeQuery(UPDATE_TOKEN);
-        query.setParameter(1, token);
-        query.setParameter(2, id);
-        if (query.executeUpdate() != 1) {
-            throw ServiceException.serverError("Token reset failed (missing permissions?)");
-        } else {
-            return token;
-        }
-    }
-
-    @RolesAllowed(Roles.TESTER)
-    @WithRoles
-    @Transactional
-    @Override
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
     public void updateAccess(int id, String owner, Access access) {
         Query query = em.createNativeQuery(CHANGE_ACCESS);
@@ -378,10 +346,9 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll // all because of possible token-based upload
     @WithRoles
-    @WithToken
     @Transactional
     @Override
-    public Response add(String testNameOrId, String owner, Access access, String token, Run run) {
+    public Response add(String testNameOrId, String owner, Access access, Run run) {
         if (owner != null) {
             run.owner = owner;
         }
@@ -396,7 +363,7 @@ public class RunServiceImpl implements RunService {
                 testNameOrId = run.testid.toString();
         }
 
-        TestDAO test = testService.ensureTestExists(testNameOrId, token);
+        TestDAO test = testService.ensureTestExists(testNameOrId);
         run.testid = test.id;
         Integer runId = addAuthenticated(RunMapper.to(run), test);
         return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId)
@@ -404,16 +371,14 @@ public class RunServiceImpl implements RunService {
     }
 
     @Override
-    public Response addRunFromData(String start, String stop, String test,
-            String owner, Access access, String token,
-            String schemaUri, String description,
-            String data) {
-        return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, data, null);
+    public Response addRunFromData(String start, String stop, String test, String owner, Access access, String schemaUri,
+            String description, String data) {
+        return addRunFromData(start, stop, test, owner, access, schemaUri, description, data, null);
     }
 
     @Override
-    public Response addRunFromData(String start, String stop, String test, String owner, Access access, String token,
-            String schemaUri, String description, FileUpload data, FileUpload metadata) {
+    public Response addRunFromData(String start, String stop, String test, String owner, Access access, String schemaUri,
+            String description, FileUpload data, FileUpload metadata) {
         if (data == null) {
             log.debugf("Failed to upload for test %s with description %s because of missing data.", test, description);
             throw ServiceException.badRequest("No data!");
@@ -462,16 +427,14 @@ public class RunServiceImpl implements RunService {
             log.error("Failed to read data/metadata from upload file", e);
             throw ServiceException.badRequest("Provided data/metadata can't be read (JSON encoding problem?)");
         }
-        return addRunFromData(start, stop, test, owner, access, token, schemaUri, description, dataNode.toString(),
-                metadataNode);
+        return addRunFromData(start, stop, test, owner, access, schemaUri, description, dataNode.toString(), metadataNode);
     }
 
     @PermitAll // all because of possible token-based upload
     @Transactional
     @WithRoles
-    @WithToken
     Response addRunFromData(String start, String stop, String test,
-            String owner, Access access, String token,
+            String owner, Access access,
             String schemaUri, String description,
             String stringData, JsonNode metadata) {
         if (stringData == null) {
@@ -492,7 +455,7 @@ public class RunServiceImpl implements RunService {
             throw ServiceException.badRequest("Cannot identify test name.");
         }
 
-        TestDAO testEntity = testService.ensureTestExists(testNameOrId, token);
+        TestDAO testEntity = testService.ensureTestExists(testNameOrId);
 
         Datastore datastore = backendResolver.getBackend(testEntity.backendConfig.type);
         DatastoreResponse response = datastore.handleRun(data, metadata, testEntity.backendConfig,
@@ -509,18 +472,18 @@ public class RunServiceImpl implements RunService {
             //if we return more than 10 results, offload to async queue to process - this might take a LOOONG time
             if (response.payload.size() > 10) {
                 response.payload.forEach(jsonNode -> {
-                    mediator.queueRunUpload(start, stop, test, owner, access, token, schemaUri, description, null, jsonNode,
+                    mediator.queueRunUpload(start, stop, test, owner, access, schemaUri, description, null, jsonNode,
                             testEntity);
                 });
             } else { //process synchronously
                 response.payload.forEach(jsonNode -> {
-                    runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, metadata,
-                            jsonNode, testEntity));
+                    runIds.add(getPersistRun(start, stop, test, owner, access, schemaUri, description, metadata, jsonNode,
+                            testEntity));
                 });
             }
         } else {
-            runIds.add(getPersistRun(start, stop, test, owner, access, token, schemaUri, description, metadata,
-                    response.payload, testEntity));
+            runIds.add(getPersistRun(start, stop, test, owner, access, schemaUri, description, metadata, response.payload,
+                    testEntity));
         }
         if (runIds.size() > 0) {
             return Response.status(Response.Status.OK)
@@ -543,7 +506,7 @@ public class RunServiceImpl implements RunService {
         }
         try {
             Integer runID = getPersistRun(runUpload.start, runUpload.stop, runUpload.test,
-                    runUpload.owner, runUpload.access, runUpload.token, runUpload.schemaUri,
+                    runUpload.owner, runUpload.access, runUpload.schemaUri,
                     runUpload.description, runUpload.metaData, runUpload.payload, testEntity);
 
             if (runID == null) {
@@ -555,7 +518,7 @@ public class RunServiceImpl implements RunService {
         }
     }
 
-    private Integer getPersistRun(String start, String stop, String test, String owner, Access access, String token,
+    private Integer getPersistRun(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, JsonNode metadata, JsonNode data, TestDAO testEntity) {
         Object foundStart = findIfNotSet(start, data);
         Object foundStop = findIfNotSet(stop, data);
@@ -597,15 +560,8 @@ public class RunServiceImpl implements RunService {
         run.metadata = metadata;
         run.owner = owner;
         run.access = access;
-        // Some triggered functions in the database need to be able to read the just-inserted run
-        // otherwise RLS policies will fail. That's why we reuse the token for the test and later wipe it out.
-        run.token = token;
 
-        Integer runId = addAuthenticated(run, testEntity);
-        if (token != null) {
-            // TODO: remove the token
-        }
-        return runId;
+        return addAuthenticated(run, testEntity);
     }
 
     private Object findIfNotSet(String value, JsonNode data) {
@@ -674,7 +630,6 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
     public List<String> autocomplete(String query) {
         if (query == null || query.isEmpty()) {
@@ -735,12 +690,11 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
     public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed,
             Integer limit, Integer page, String sort, SortDirection direction) {
         StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
-                .append("run.owner, run.access, run.token, run.trashed, run.description, ")
+                .append("run.owner, run.access, run.trashed, run.description, ")
                 .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
                 .append("'[]'::jsonb AS schemas, '[]'::jsonb AS datasets, '[]'::jsonb AS validationErrors ")
                 .append("FROM run JOIN test ON test.id = run.testId WHERE ");
@@ -827,7 +781,6 @@ public class RunServiceImpl implements RunService {
                 .addScalar("testid", StandardBasicTypes.INTEGER)
                 .addScalar("owner", StandardBasicTypes.TEXT)
                 .addScalar("access", StandardBasicTypes.INTEGER)
-                .addScalar("token", StandardBasicTypes.TEXT)
                 .addScalar("trashed", StandardBasicTypes.BOOLEAN)
                 .addScalar("description", StandardBasicTypes.TEXT)
                 .addScalar("has_metadata", StandardBasicTypes.BOOLEAN)
@@ -848,29 +801,28 @@ public class RunServiceImpl implements RunService {
         run.testid = (int) row[3];
         run.owner = (String) row[4];
         run.access = Access.fromInt((int) row[5]);
-        run.token = (String) row[6];
-        run.trashed = (boolean) row[7];
-        run.description = (String) row[8];
-        run.hasMetadata = (boolean) row[9];
-        run.testname = (String) row[10];
+        run.trashed = (boolean) row[6];
+        run.description = (String) row[7];
+        run.hasMetadata = (boolean) row[8];
+        run.testname = (String) row[9];
 
         //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
-        if (row[11] != null && !(row[11] instanceof String)) {
-            run.schemas = Util.OBJECT_MAPPER.convertValue(row[11], new TypeReference<List<SchemaService.SchemaUsage>>() {
+        if (row[10] != null && !(row[10] instanceof String)) {
+            run.schemas = Util.OBJECT_MAPPER.convertValue(row[10], new TypeReference<List<SchemaService.SchemaUsage>>() {
             });
         }
         //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
-        if (row[12] != null && !(row[12] instanceof String)) {
+        if (row[11] != null && !(row[11] instanceof String)) {
             try {
-                run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), Integer[].class);
+                run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[11]), Integer[].class);
             } catch (JsonProcessingException e) {
                 log.warnf("Could not map datasets to array");
             }
         }
         //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
-        if (row[13] != null && !(row[13] instanceof String)) {
+        if (row[12] != null && !(row[12] instanceof String)) {
             try {
-                run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[13]), ValidationError[].class);
+                run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), ValidationError[].class);
             } catch (JsonProcessingException e) {
                 log.warnf("Could not map validation errors to array");
             }
@@ -880,7 +832,6 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
     public RunCount runCount(int testId) {
         RunCount counts = new RunCount();
@@ -892,7 +843,6 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
     public RunsSummary listTestRuns(int testId, boolean trashed,
             Integer limit, Integer page, String sort, SortDirection direction) {
@@ -903,7 +853,7 @@ public class RunServiceImpl implements RunService {
                 .append("    SELECT runid, jsonb_agg(id ORDER BY id) as datasets FROM dataset WHERE testid = ?1 GROUP BY runid")
                 .append("), validation AS (")
                 .append("    SELECT run_id, jsonb_agg(jsonb_build_object('schemaId', schema_id, 'error', error)) AS errors FROM run_validationerrors GROUP BY run_id")
-                .append(") SELECT run.id, run.start, run.stop, run.testid, run.owner, run.access, run.token, run.trashed, run.description, ")
+                .append(") SELECT run.id, run.start, run.stop, run.testid, run.owner, run.access, run.trashed, run.description, ")
                 .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
                 .append("schema_agg.schemas AS schemas, ")
                 .append("COALESCE(dataset_agg.datasets, '[]') AS datasets, ")
@@ -934,14 +884,13 @@ public class RunServiceImpl implements RunService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
     public RunsSummary listBySchema(String uri, Integer limit, Integer page, String sort, SortDirection direction) {
         if (uri == null || uri.isEmpty()) {
             throw ServiceException.badRequest("No `uri` query parameter given.");
         }
         StringBuilder sql = new StringBuilder("SELECT run.id, run.start, run.stop, run.testId, ")
-                .append("run.owner, run.access, run.token, run.trashed, run.description, ")
+                .append("run.owner, run.access, run.trashed, run.description, ")
                 .append("run.metadata IS NOT NULL AS has_metadata, test.name AS testname, ")
                 .append("'[]'::jsonb AS schemas, '[]'::jsonb AS datasets, '[]'::jsonb AS validationErrors ")
                 .append("FROM run_schemas rs JOIN run ON rs.runid = run.id JOIN test ON rs.testid = test.id ")

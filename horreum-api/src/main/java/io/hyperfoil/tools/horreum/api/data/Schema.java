@@ -35,9 +35,6 @@ public class Schema extends ProtectedType {
             "}")
     public JsonNode schema;
 
-    @org.eclipse.microprofile.openapi.annotations.media.Schema(description = "Array of API tokens associated with test", example = "")
-    public String token;
-
     public Schema() {
         access = Access.PUBLIC;
     }
@@ -48,7 +45,6 @@ public class Schema extends ProtectedType {
         this.name = s.name;
         this.description = s.description;
         this.schema = s.schema;
-        this.token = s.token;
         this.access = s.access;
         this.owner = s.owner;
     }

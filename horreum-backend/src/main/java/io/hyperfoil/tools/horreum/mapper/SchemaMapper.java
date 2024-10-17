@@ -13,7 +13,6 @@ public class SchemaMapper {
         dto.uri = s.uri;
         dto.owner = s.owner;
         dto.access = s.access;
-        dto.token = s.token;
 
         return dto;
     }
@@ -27,7 +26,6 @@ public class SchemaMapper {
         s.uri = dto.uri;
         s.owner = dto.owner;
         s.access = dto.access;
-        s.token = dto.token;
 
         return s;
     }

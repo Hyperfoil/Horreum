@@ -42,7 +42,7 @@ import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 @Entity(name = "Schema")
 @Table(name = "schema", uniqueConstraints = @UniqueConstraint(columnNames = { "owner", "uri" }))
 @JsonIgnoreType
-public class SchemaDAO extends ProtectedBaseEntity {
+public class SchemaDAO extends OwnedEntityBase {
 
     public static final String QUERY_1ST_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID = "Schema.getFirstLevelExtractorsByRunIDTransIDSchemaID";
     public static final String QUERY_2ND_LEVEL_BY_RUNID_TRANSFORMERID_SCHEMA_ID = "Schema.getSecondLevelExtractorsByRunIDTransIDSchemaID";

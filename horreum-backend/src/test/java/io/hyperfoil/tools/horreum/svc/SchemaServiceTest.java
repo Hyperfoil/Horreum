@@ -173,65 +173,6 @@ class SchemaServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    void testDropTokenFromSchema() {
-        // create some schemas
-        Schema s = createSchema("dummy", "urn:dummy:schema", null, "my-super-token");
-
-        Util.withTx(tm, () -> {
-            SchemaDAO schema = SchemaDAO.findById(s.id);
-            assertNotNull(schema);
-            assertEquals("my-super-token", schema.token);
-            return null;
-        });
-
-        jsonRequest().delete("/api/schema/" + s.id + "/dropToken")
-                .then()
-                .statusCode(204);
-
-        Util.withTx(tm, () -> {
-            SchemaDAO schema = SchemaDAO.findById(s.id);
-            assertNotNull(schema);
-            assertNull(schema.token);
-            return null;
-        });
-    }
-
-    @org.junit.jupiter.api.Test
-    void testResetSchemaToken() {
-        Schema s = createSchema("dummy", "urn:dummy:schema", null, "my-super-token");
-
-        Util.withTx(tm, () -> {
-            SchemaDAO schema = SchemaDAO.findById(s.id);
-            assertNotNull(schema);
-            assertEquals("my-super-token", schema.token);
-            return null;
-        });
-
-        jsonRequest().post("/api/schema/" + s.id + "/resetToken")
-                .then()
-                .statusCode(200);
-
-        Util.withTx(tm, () -> {
-            SchemaDAO schema = SchemaDAO.findById(s.id);
-            assertNotNull(schema);
-            assertNotNull(schema.token);
-            assertNotEquals("my-super-token", schema.token);
-            return null;
-        });
-    }
-
-    @org.junit.jupiter.api.Test
-    void testUpdateTokenWithInvalidSchemaId() {
-        jsonRequest().post("/api/schema/9999/resetToken")
-                .then()
-                .statusCode(404);
-
-        jsonRequest().delete("/api/schema/9999/dropToken")
-                .then()
-                .statusCode(404);
-    }
-
-    @org.junit.jupiter.api.Test
     void testUpdateSchemaAccess() {
         Schema s = createSchema("dummy", "urn:dummy:schema");
         assertEquals(TESTER_ROLES[0], s.owner);

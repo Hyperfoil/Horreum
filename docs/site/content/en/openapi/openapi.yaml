@@ -612,12 +612,6 @@ paths:
         schema:
           $ref: "#/components/schemas/Access"
         example: 0
-      - name: token
-        in: query
-        description: Horreum internal token. Incompatible with Keycloak
-        schema:
-          type: string
-        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       - name: schema
         in: query
         description: Schema URI
@@ -840,12 +834,6 @@ paths:
         schema:
           $ref: "#/components/schemas/Access"
         example: 0
-      - name: token
-        in: query
-        description: API token
-        schema:
-          type: string
-        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       requestBody:
         content:
           application/json:
@@ -870,12 +858,6 @@ paths:
           format: int32
           type: integer
         example: 202
-      - name: token
-        in: query
-        description: Run API token
-        schema:
-          type: string
-        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       responses:
         "404":
           description: If no Run have been found with the given id
@@ -902,12 +884,6 @@ paths:
           format: int32
           type: integer
         example: 202
-      - name: token
-        in: query
-        description: Run API token
-        schema:
-          type: string
-        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       - name: schemaUri
         in: query
         description: FIlter by Schmea URI
@@ -946,28 +922,6 @@ paths:
       responses:
         "201":
           description: Created
-  /api/run/{id}/dropToken:
-    post:
-      tags:
-      - Run
-      description: Remove access token for Run
-      operationId: dropToken
-      parameters:
-      - name: id
-        in: path
-        description: Token ID
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 102
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: string
   /api/run/{id}/labelValues:
     get:
       tags:
@@ -1087,12 +1041,6 @@ paths:
           format: int32
           type: integer
         example: 202
-      - name: token
-        in: query
-        description: Run API token
-        schema:
-          type: string
-        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       - name: schemaUri
         in: query
         description: Filter by Schmea URI
@@ -1136,29 +1084,6 @@ paths:
               - 101
               - 102
               - 103
-  /api/run/{id}/resetToken:
-    post:
-      tags:
-      - Run
-      description: Regenerate access token for Run
-      operationId: resetToken
-      parameters:
-      - name: id
-        in: path
-        description: Token ID
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 102
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: string
-              example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
   /api/run/{id}/schema:
     post:
       tags:
@@ -1209,12 +1134,6 @@ paths:
           format: int32
           type: integer
         example: 202
-      - name: token
-        in: query
-        description: Run API token
-        schema:
-          type: string
-        example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
       responses:
         "404":
           description: If no Run have been found with the given id
@@ -1487,12 +1406,6 @@ paths:
           format: int32
           type: integer
         example: 101
-      - name: token
-        in: query
-        description: API token for authorization
-        schema:
-          type: string
-        example: 101
       responses:
         "404":
           description: No Schema with the given id was found
@@ -1521,24 +1434,6 @@ paths:
       responses:
         "204":
           description: No Content
-  /api/schema/{id}/dropToken:
-    delete:
-      tags:
-      - Schema
-      description: Remove access token for schema
-      operationId: dropToken
-      parameters:
-      - name: id
-        in: path
-        description: Token ID
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 102
-      responses:
-        "204":
-          description: No Content
   /api/schema/{id}/export:
     get:
       tags:
@@ -1561,29 +1456,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SchemaExport"
-  /api/schema/{id}/resetToken:
-    post:
-      tags:
-      - Schema
-      description: Regenerate access token for schema
-      operationId: resetToken
-      parameters:
-      - name: id
-        in: path
-        description: Token ID
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 102
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: string
-              example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
   /api/schema/{id}/updateAccess:
     post:
       tags:
@@ -1995,35 +1867,6 @@ paths:
       responses:
         "204":
           description: No Content
-  /api/test/{id}/addToken:
-    post:
-      tags:
-      - Test
-      description: "Add a Test API Token for access to provide access to a test data\
-        \ for integrated tooling, e.g. reporting services"
-      operationId: addToken
-      parameters:
-      - name: id
-        in: path
-        description: ID of test to add token to
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 101
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TestToken"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                format: int32
-                type: integer
   /api/test/{id}/export:
     get:
       tags:
@@ -2309,56 +2152,6 @@ paths:
       responses:
         "201":
           description: Created
-  /api/test/{id}/revokeToken/{tokenId}:
-    delete:
-      tags:
-      - Test
-      description: Revoke a Token defined for a Test
-      operationId: dropToken
-      parameters:
-      - name: id
-        in: path
-        description: Test ID to revoke token
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 101
-      - name: tokenId
-        in: path
-        description: ID of token to revoke
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 202
-      responses:
-        "204":
-          description: No Content
-  /api/test/{id}/tokens:
-    get:
-      tags:
-      - Test
-      description: A collection of Test Tokens for a given Test
-      operationId: tokens
-      parameters:
-      - name: id
-        in: path
-        description: ID of test to retrieve list of tokens
-        required: true
-        schema:
-          format: int32
-          type: integer
-        example: 101
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TestToken"
   /api/test/{id}/transformers:
     post:
       tags:
@@ -4266,8 +4059,6 @@ components:
           description: test ID run relates to
           type: integer
           example: 101
-        token:
-          type: string
         testname:
           description: test ID run relates to
           type: string
@@ -4354,10 +4145,6 @@ components:
             ,  \"$id\": \"https://example.com/product.schema.json\",  \"title\": \"\
             Product\",  \"description\": \"A product in the catalog\",  \"type\":\
             \ \"object\"}"
-        token:
-          description: Array of API tokens associated with test
-          type: string
-          example: ""
     SchemaDescriptor:
       required:
       - id
@@ -4811,11 +4598,6 @@ components:
           format: int32
           description: backend ID for backing datastore
           type: integer
-        tokens:
-          description: Array of API tokens associated with test
-          type: array
-          items:
-            $ref: "#/components/schemas/TestToken"
         timelineLabels:
           description: List of label names that are used for determining metric to
             use as the time series
@@ -4973,35 +4755,6 @@ components:
           description: Datastore id
           type: integer
           example: 1
-    TestToken:
-      required:
-      - id
-      - value
-      - permissions
-      - description
-      type: object
-      properties:
-        id:
-          format: int32
-          description: Unique Token id
-          type: integer
-          example: 101
-        testId:
-          format: int32
-          description: Test ID to apply Token
-          type: integer
-          example: 201
-        value:
-          description: Test value
-          type: string
-          example: 094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38
-        permissions:
-          format: int32
-          type: integer
-        description:
-          description: Token description
-          type: string
-          example: my reporting service token
     TransformationLog:
       description: Transformation Log
       required:

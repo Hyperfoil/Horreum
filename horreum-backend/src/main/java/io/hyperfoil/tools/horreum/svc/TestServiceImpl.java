@@ -2,7 +2,6 @@ package io.hyperfoil.tools.horreum.svc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,7 +25,6 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
-import org.hibernate.Hibernate;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
@@ -44,7 +42,6 @@ import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
 import io.hyperfoil.tools.horreum.api.data.Fingerprints;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
-import io.hyperfoil.tools.horreum.api.data.TestToken;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
@@ -53,15 +50,12 @@ import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestTokenDAO;
 import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
 import io.hyperfoil.tools.horreum.entity.data.ViewDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
-import io.hyperfoil.tools.horreum.mapper.TestTokenMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
@@ -129,7 +123,6 @@ public class TestServiceImpl implements TestService {
     }
 
     @Override
-    @WithToken
     @WithRoles
     @PermitAll
     public Test get(int id, String token) {
@@ -172,7 +165,7 @@ public class TestServiceImpl implements TestService {
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    public TestDAO ensureTestExists(String testNameOrId, String token) {
+    public TestDAO ensureTestExists(String testNameOrId) {
         TestDAO test;// = TestMapper.to(getByNameOrId(input)); //why does getByNameOrId not work to create the DAO?
         if (testNameOrId.matches("-?\\d+")) {
             int id = Integer.parseInt(testNameOrId);
@@ -188,11 +181,9 @@ public class TestServiceImpl implements TestService {
             detached.backendConfig = test.backendConfig;
             if (Roles.hasRoleWithSuffix(identity, test.owner, "-uploader")) {
                 return detached;
-            } else if (token != null && test.tokens.stream().anyMatch(tt -> tt.valueEquals(token) && tt.hasUpload())) {
-                return detached;
             }
-            log.debugf("Failed to retrieve test %s as this user (%s = %s) is not uploader for %s and token %s does not match",
-                    testNameOrId, identity.getPrincipal().getName(), identity.getRoles(), test.owner, token);
+            log.debugf("Failed to retrieve test %s as this user (%s = %s) is not uploader for %s",
+                    testNameOrId, identity.getPrincipal().getName(), identity.getRoles(), test.owner);
         } else {
             log.debugf("Failed to retrieve test %s - could not find it in the database", testNameOrId);
         }
@@ -211,9 +202,7 @@ public class TestServiceImpl implements TestService {
         if (dto.name == null || dto.name.isBlank())
             throw ServiceException.badRequest("Test name can not be empty");
         log.debugf("Creating new test: %s", dto.toString());
-        TestDAO test = addAuthenticated(dto);
-        Hibernate.initialize(test.tokens);
-        return TestMapper.from(test);
+        return TestMapper.from(addAuthenticated(dto));
     }
 
     TestDAO addAuthenticated(Test dto) {
@@ -240,7 +229,6 @@ public class TestServiceImpl implements TestService {
                 shouldRecalculateLables = true;
 
             test.views = existing.views;
-            test.tokens = existing.tokens;
             test = em.merge(test);
             if (shouldRecalculateLables)
                 mediator.updateFingerprints(test.id);
@@ -483,42 +471,6 @@ public class TestServiceImpl implements TestService {
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
-    public int addToken(int testId, TestToken dto) {
-        if (dto.hasUpload() && !dto.hasRead()) {
-            throw ServiceException.badRequest("Upload permission requires read permission as well.");
-        }
-        TestDAO test = getTestForUpdate(testId);
-        TestTokenDAO token = TestTokenMapper.to(dto);
-        token.id = null; // this is always a new token, ignore -1 in the request
-        token.test = test;
-        test.tokens.add(token);
-        test.persistAndFlush();
-        return token.id;
-    }
-
-    @Override
-    @RolesAllowed(Roles.TESTER)
-    @WithRoles
-    public Collection<TestToken> tokens(int testId) {
-        TestDAO t = TestDAO.findById(testId);
-        Hibernate.initialize(t.tokens);
-        return t.tokens.stream().map(TestTokenMapper::from).collect(Collectors.toList());
-    }
-
-    @Override
-    @RolesAllowed(Roles.TESTER)
-    @WithRoles
-    @Transactional
-    public void dropToken(int testId, int tokenId) {
-        TestDAO test = getTestForUpdate(testId);
-        test.tokens.removeIf(t -> Objects.equals(t.id, tokenId));
-        test.persist();
-    }
-
-    @Override
-    @RolesAllowed(Roles.TESTER)
-    @WithRoles
-    @Transactional
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
     public void updateAccess(int testId, String owner, Access access) {
         TestDAO test = (TestDAO) TestDAO.findByIdOptional(testId)
@@ -755,8 +707,6 @@ public class TestServiceImpl implements TestService {
             throw ServiceException.notFound("Test " + testId + " was not found");
         }
         Test test = TestMapper.from(t);
-        if (!test.tokens.isEmpty())
-            test.tokens = null;
         TestExport testExport = new TestExport(test);
         //if we have non-postgres backend, we need to add the backendConfig to the export without sensitive data
         if (t.backendConfig != null && t.backendConfig.type != DatastoreType.POSTGRES) {

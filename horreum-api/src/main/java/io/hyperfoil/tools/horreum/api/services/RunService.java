@@ -4,7 +4,14 @@ import java.util.List;
 import java.util.Map;
 
 import jakarta.validation.constraints.NotNull;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -31,7 +38,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.hyperfoil.tools.horreum.api.ApiIgnore;
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
+import io.hyperfoil.tools.horreum.api.data.ProtectedTimeType;
+import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.data.ValidationError;
 
 @Path("/api/run")
 @Consumes({ MediaType.APPLICATION_JSON })
@@ -46,11 +57,9 @@ public interface RunService {
     @Operation(description = "Get extended Run information by Run ID")
     @Parameters(value = {
             @Parameter(name = "id", in = ParameterIn.PATH, description = "Run ID", example = "202"),
-            @Parameter(name = "token", in = ParameterIn.QUERY, description = "Run API token", example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38")
 
     })
-    RunExtended getRun(@PathParam("id") int id,
-            @QueryParam("token") String token);
+    RunExtended getRun(@PathParam("id") int id);
 
     @GET
     @Path("{id}/summary")
@@ -58,18 +67,15 @@ public interface RunService {
     @APIResponseSchema(value = RunSummary.class, responseDescription = "Run summary with the referenced schemas and generated datasets", responseCode = "200")
     @Operation(description = "Get Run Summary information by Run ID")
     @Parameters(value = {
-            @Parameter(name = "id", in = ParameterIn.PATH, description = "Run ID", example = "202"),
-            @Parameter(name = "token", in = ParameterIn.QUERY, description = "Run API token", example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38")
-
+            @Parameter(name = "id", in = ParameterIn.PATH, description = "Run ID", example = "202")
     })
-    RunSummary getRunSummary(@PathParam("id") int id, @QueryParam("token") String token);
+    RunSummary getRunSummary(@PathParam("id") int id);
 
     @GET
     @Path("{id}/data")
     @Operation(description = "Get Run data by Run ID")
     @Parameters(value = {
             @Parameter(name = "id", in = ParameterIn.PATH, description = "Run ID", example = "202"),
-            @Parameter(name = "token", in = ParameterIn.QUERY, description = "Run API token", example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38"),
             @Parameter(name = "schemaUri", in = ParameterIn.QUERY, description = "FIlter by Schmea URI", example = "uri:my-benchmark:0.1")
 
     })
@@ -79,7 +85,6 @@ public interface RunService {
             })
     })
     Object getData(@PathParam("id") int id,
-            @QueryParam("token") String token,
             @QueryParam("schemaUri") String schemaUri);
 
     @GET
@@ -127,7 +132,6 @@ public interface RunService {
     @Operation(description = "Get Run  meta data by Run ID")
     @Parameters(value = {
             @Parameter(name = "id", in = ParameterIn.PATH, description = "Run ID", example = "202"),
-            @Parameter(name = "token", in = ParameterIn.QUERY, description = "Run API token", example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38"),
             @Parameter(name = "schemaUri", in = ParameterIn.QUERY, description = "Filter by Schmea URI", example = "uri:my-benchmark:0.1")
 
     })
@@ -137,29 +141,7 @@ public interface RunService {
             })
     })
     Object getMetadata(@PathParam("id") int id,
-            @QueryParam("token") String token,
             @QueryParam("schemaUri") String schemaUri);
-
-    @POST
-    @Path("{id}/resetToken")
-    @Operation(description = "Regenerate access token for Run")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Token ID", example = "102"),
-    })
-    @APIResponses(value = {
-            @APIResponse(responseCode = "200", content = {
-                    @Content(schema = @Schema(type = SchemaType.STRING), example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38")
-            })
-    })
-    String resetToken(@PathParam("id") int id);
-
-    @POST
-    @Path("{id}/dropToken")
-    @Operation(description = "Remove access token for Run")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Token ID", example = "102"),
-    })
-    String dropToken(@PathParam("id") int id);
 
     @POST
     @Path("{id}/updateAccess")
@@ -182,13 +164,11 @@ public interface RunService {
             @Parameter(name = "test", description = "test name of ID", example = "my-benchmark"),
             @Parameter(name = "owner", description = "Name of the new owner", example = "perf-team"),
             @Parameter(name = "access", description = "New Access level", example = "0"),
-            @Parameter(name = "token", in = ParameterIn.QUERY, description = "API token", example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38"),
     })
     @RequestBody(name = "runBody", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Run.class)), required = true)
     Response add(@QueryParam("test") String testNameOrId,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
-            @QueryParam("token") String token,
             Run run);
 
     @POST
@@ -238,7 +218,6 @@ public interface RunService {
             @Parameter(name = "test", required = true, description = "test name of ID", example = "my-benchmark"),
             @Parameter(name = "owner", description = "Name of the new owner", example = "perf-team"),
             @Parameter(name = "access", description = "New Access level", example = "0"),
-            @Parameter(name = "token", description = "Horreum internal token. Incompatible with Keycloak", example = "094678029a2aaf9a2847502273099bb3a1b2338c2b9c618ed09aef0181666e38"),
             @Parameter(name = "schema", in = ParameterIn.QUERY, description = "Schema URI", example = "uri:my-benchmark:0.2"),
             @Parameter(name = "description", description = "Run description", example = "AWS runs"),
 
@@ -248,7 +227,6 @@ public interface RunService {
             @QueryParam("test") String test,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
-            @QueryParam("token") String token,
             @QueryParam("schema") String schemaUri,
             @QueryParam("description") String description,
             @RequestBody(required = true) String data);
@@ -266,7 +244,6 @@ public interface RunService {
             @Parameter(required = true) @QueryParam("test") String test,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
-            @Parameter(description = "Horreum internal token. Incompatible with Keycloak") @QueryParam("token") String token,
             @QueryParam("schema") String schemaUri,
             @QueryParam("description") String description,
             @RestForm("data") FileUpload data,
@@ -414,7 +391,6 @@ public interface RunService {
         @Schema(description = "test ID run relates to", example = "101")
         public int testid;
 
-        public String token;
         @NotNull
         @Schema(description = "test ID run relates to", example = "My benchmark")
         public String testname;
@@ -434,7 +410,7 @@ public interface RunService {
         public ValidationError[] validationErrors;
     }
 
-    @JsonIgnoreProperties({ "token", "old_start" }) //ignore properties that have not been mapped
+    @JsonIgnoreProperties({ "old_start" }) //ignore properties that have not been mapped
     @Schema(type = SchemaType.OBJECT)
     class RunExtended extends Run {
         @NotNull

@@ -60,6 +60,7 @@ import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
+import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
 import io.hyperfoil.tools.horreum.entity.data.*;
@@ -192,12 +193,13 @@ public class BaseServiceTest {
 
                 em.createNativeQuery("DELETE FROM test_transformers").executeUpdate();
                 em.createNativeQuery("DELETE FROM transformer_extractors").executeUpdate();
+                em.createNativeQuery("DELETE FROM experiment_comparisons").executeUpdate();
                 TransformerDAO.deleteAll();
-                em.createNativeQuery("DELETE FROM test_token").executeUpdate();
                 TestDAO.deleteAll();
                 ChangeDAO.deleteAll();
                 DataPointDAO.deleteAll();
                 ChangeDetectionDAO.deleteAll();
+                ExperimentProfileDAO.deleteAll();
                 VariableDAO.deleteAll();
                 FingerprintDAO.deleteAll();
 
@@ -273,7 +275,7 @@ public class BaseServiceTest {
 
     protected String uploadRun(long start, long stop, Object runJson, String test, String schemaUri, Integer statusCode) {
         String runId = uploadRun(Long.toString(start), Long.toString(stop), test, UPLOADER_ROLES[0], Access.PUBLIC,
-                null, schemaUri, null, statusCode, runJson);
+                schemaUri, null, statusCode, runJson);
         assertNotEquals("-1", runId);
         return runId;
     }
@@ -298,19 +300,19 @@ public class BaseServiceTest {
         return Integer.parseInt(runIdString);
     }
 
-    protected String uploadRun(String start, String stop, String test, String owner, Access access, String token,
+    protected String uploadRun(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, Object runJson) {
-        return uploadRun(start, stop, test, owner, access, token,
+        return uploadRun(start, stop, test, owner, access,
                 schemaUri, description, jakarta.ws.rs.core.Response.Status.OK.getStatusCode(), runJson);
     }
 
-    protected String uploadRun(String start, String stop, String test, String owner, Access access, String token,
+    protected String uploadRun(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, Integer statusCode, Object runJson) {
         return RestAssured.given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
                 .body(runJson)
                 .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner
-                        + "&access=" + access + "&token=" + token + "&schema=" + schemaUri + "&description=" + description)
+                        + "&access=" + access + "&schema=" + schemaUri + "&description=" + description)
                 .then()
                 .statusCode(statusCode)
                 .extract().asString();
@@ -385,11 +387,11 @@ public class BaseServiceTest {
                 .as(RunService.RunsSummary.class);
     }
 
-    protected RunService.RunExtended getRun(int id, String token) {
+    protected RunService.RunExtended getRun(int id) {
         return jsonRequest().auth().oauth2(getTesterToken())
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
                 //.body(org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
-                .get("/api/run/" + id + "?token=" + token)
+                .get("/api/run/" + id)
                 .then()
                 .statusCode(200)
                 .extract().as(RunService.RunExtended.class);
@@ -493,16 +495,11 @@ public class BaseServiceTest {
     }
 
     protected Schema createSchema(String name, String uri, JsonNode jsonSchema) {
-        return createSchema(name, uri, jsonSchema, null);
-    }
-
-    protected Schema createSchema(String name, String uri, JsonNode jsonSchema, String token) {
         Schema schema = new Schema();
         schema.owner = TESTER_ROLES[0];
         schema.name = name;
         schema.uri = uri;
         schema.schema = jsonSchema;
-        schema.token = token;
         return addOrUpdateSchema(schema);
     }
 

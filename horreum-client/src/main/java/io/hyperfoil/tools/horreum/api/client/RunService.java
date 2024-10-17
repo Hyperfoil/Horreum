@@ -36,20 +36,19 @@ import io.hyperfoil.tools.horreum.api.services.RunService.RunsSummary;
 public interface RunService {
     @GET
     @Path("{id}")
-    RunExtended getRun(@PathParam("id") int id,
-            @QueryParam("token") String token);
+    RunExtended getRun(@PathParam("id") int id);
 
     @GET
     @Path("{id}/summary")
-    RunSummary getRunSummary(@PathParam("id") int id, @QueryParam("token") String token);
+    RunSummary getRunSummary(@PathParam("id") int id);
 
     @GET
     @Path("{id}/data")
-    Object getData(@PathParam("id") int id, @QueryParam("token") String token, @QueryParam("schemaUri") String schemaUri);
+    Object getData(@PathParam("id") int id, @QueryParam("schemaUri") String schemaUri);
 
     @GET
     @Path("{id}/metadata")
-    Object getMetadata(@PathParam("id") int id, @QueryParam("token") String token, @QueryParam("schemaUri") String schemaUri);
+    Object getMetadata(@PathParam("id") int id, @QueryParam("schemaUri") String schemaUri);
 
     //   @GET
     //   @Path("{id}/query")
@@ -79,7 +78,6 @@ public interface RunService {
     Response add(@QueryParam("test") String testNameOrId,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
-            @QueryParam("token") String token,
             Run run);
 
     @POST
@@ -90,7 +88,6 @@ public interface RunService {
             @QueryParam("test") String test,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
-            @QueryParam("token") String token,
             @QueryParam("schema") String schemaUri,
             @QueryParam("description") String description,
             JsonNode data);
