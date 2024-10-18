@@ -4,9 +4,7 @@ import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.DEFAULT_USER;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TEAM;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TESTER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -54,7 +52,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testCreateSchema() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
         int id = schemaService.add(schema);
@@ -70,7 +68,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testCreateSchemaForbidden() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         assertThrows(ForbiddenException.class, () -> schemaService.add(schema));
     }
@@ -79,7 +77,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testCreateSchemaUnauthorized() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         assertThrows(UnauthorizedException.class, () -> schemaService.add(schema));
     }
@@ -88,7 +86,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testCreateSchemaWithNotExistingOwner() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         assertThrows(SQLGrammarException.class, () -> schemaService.add(schema));
     }
@@ -96,7 +94,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testCreateSchemaWithInvalidUri() {
         String schemaUri = "dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.add(schema));
         assertEquals("Please use URI starting with one of these schemes: [urn, uri, http, https, ftp, file, jar]",
@@ -107,7 +105,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testUpdateSchema() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
         int id = schemaService.add(schema);
@@ -129,7 +127,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testUpdateNotFoundSchema() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
         // set invalid id > 0
         schema.id = 9999;
 
@@ -142,7 +140,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testCreateSchemaWithExistingName() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
         int id = schemaService.add(schema);
@@ -157,7 +155,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testCreateSchemaWithExistingUri() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
         int id = schemaService.add(schema);
@@ -173,7 +171,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testDeleteSchema() {
         String schemaUri = "urn:dummy:schema";
-        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM, null);
+        Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
         int id = schemaService.add(schema);
@@ -259,39 +257,6 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
 
         List<SchemaService.SchemaDescriptor> descriptors = schemaService.descriptors(ids);
         assertEquals(ids.size(), descriptors.size());
-    }
-
-    @org.junit.jupiter.api.Test
-    void testDropToken() {
-        Schema s = createSchema("dummy", "urn:dummy:schema", "my-super-token");
-        SchemaDAO savedSchema = SchemaDAO.findById(s.id);
-        assertEquals("my-super-token", savedSchema.token);
-
-        schemaService.dropToken(s.id);
-        savedSchema = SchemaDAO.findById(s.id);
-        assertNull(savedSchema.token);
-    }
-
-    @org.junit.jupiter.api.Test
-    void testResetToken() {
-        Schema s = createSchema("dummy", "urn:dummy:schema", "my-super-token");
-        SchemaDAO savedSchema = SchemaDAO.findById(s.id);
-        assertEquals("my-super-token", savedSchema.token);
-
-        schemaService.resetToken(s.id);
-        savedSchema = SchemaDAO.findById(s.id);
-        assertNotNull(savedSchema.token);
-        assertNotEquals("my-super-token", savedSchema.token);
-    }
-
-    @org.junit.jupiter.api.Test
-    void testUpdateTokenToInvalidSchema() {
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.dropToken(9999));
-        assertEquals("Schema not found", thrown.getMessage());
-        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
-        thrown = assertThrows(ServiceException.class, () -> schemaService.resetToken(9999));
-        assertEquals("Schema not found", thrown.getMessage());
-        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
 
     @org.junit.jupiter.api.Test
@@ -733,12 +698,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
 
     // utility to create a schema in the db, tested with testCreateSchema
     private Schema createSchema(String name, String uri) {
-        return createSchema(name, uri, null);
-    }
-
-    // utility to create a schema in the db, tested with testCreateSchema
-    private Schema createSchema(String name, String uri, String token) {
-        Schema schema = createSampleSchema(name, uri, FOO_TEAM, token);
+        Schema schema = createSampleSchema(name, uri, FOO_TEAM);
         schema.id = schemaService.add(schema);
         return schema;
     }

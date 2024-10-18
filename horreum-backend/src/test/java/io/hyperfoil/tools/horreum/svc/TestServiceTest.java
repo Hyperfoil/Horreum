@@ -357,7 +357,6 @@ class TestServiceTest extends BaseServiceTest {
         Transformer transformer = createTransformer("Foobar", schema, null, new Extractor("foo", "$.foo", false));
 
         Test test = createTest(createExampleTest("to-be-exported"));
-        addToken(test, 5, "some-secret-string");
         addTransformer(test, transformer);
         View view = new View();
         view.name = "Another";

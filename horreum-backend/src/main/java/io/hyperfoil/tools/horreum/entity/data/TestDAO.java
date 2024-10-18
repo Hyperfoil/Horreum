@@ -55,9 +55,6 @@ public class TestDAO extends PanacheEntityBase {
     @JdbcTypeCode(SqlTypes.INTEGER)
     public Access access = Access.PUBLIC;
 
-    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
-    public Collection<TestTokenDAO> tokens;
-
     @Column(name = "timeline_labels")
     @Type(JsonBinaryType.class)
     public JsonNode timelineLabels;
@@ -93,11 +90,6 @@ public class TestDAO extends PanacheEntityBase {
             views.forEach(v -> {
                 v.test = this;
                 v.ensureLinked();
-            });
-        }
-        if (tokens != null) {
-            tokens.forEach(t -> {
-                t.test = this;
             });
         }
     }

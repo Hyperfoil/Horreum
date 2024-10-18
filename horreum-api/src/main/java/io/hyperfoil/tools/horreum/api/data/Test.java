@@ -28,8 +28,6 @@ public class Test extends ProtectedType {
     @Schema(description = "backend ID for backing datastore")
     public Integer datastoreId;
 
-    @Schema(description = "Array of API tokens associated with test")
-    public Collection<TestToken> tokens;
     @Schema(type = SchemaType.ARRAY, implementation = String.class, description = "List of label names that are used for determining metric to use as the time series", example = "[ \"timestamp\" ]")
     public JsonNode timelineLabels;
     @Schema(description = "Label function to modify timeline labels to a produce a value used for ordering datapoints", example = "timestamp => timestamp")
@@ -57,7 +55,6 @@ public class Test extends ProtectedType {
         name = t.name;
         folder = t.folder;
         description = t.description;
-        tokens = t.tokens;
         timelineLabels = t.timelineLabels;
         timelineFunction = t.timelineFunction;
         fingerprintLabels = t.fingerprintLabels;
@@ -79,7 +76,6 @@ public class Test extends ProtectedType {
                 ", owner='" + owner + '\'' +
                 ", access=" + access + '\'' +
                 ", datastoreId= " + datastoreId + '\'' +
-                ", tokens=" + tokens + '\'' +
                 ", timelineLabels=" + timelineLabels + '\'' +
                 ", timelineFunction='" + timelineFunction + '\'' +
                 ", fingerprintLabels=" + fingerprintLabels + '\'' +
@@ -92,7 +88,5 @@ public class Test extends ProtectedType {
 
     public void clearIds() {
         id = null;
-        if (tokens != null)
-            tokens.stream().forEach(t -> t.clearId());
     }
 }

@@ -25,7 +25,7 @@ import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 
 @Entity(name = "run")
 @JsonIgnoreType
-public class RunDAO extends ProtectedBaseEntity {
+public class RunDAO extends OwnedEntityBase {
 
     @Id
     @SequenceGenerator(name = "runSequence", sequenceName = "run_id_seq", allocationSize = 1)

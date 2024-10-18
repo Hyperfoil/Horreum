@@ -35,23 +35,23 @@ public class RunServiceExtension implements RunService {
     }
 
     @Override
-    public io.hyperfoil.tools.horreum.api.services.RunService.RunExtended getRun(int id, String token) {
-        return delegate.getRun(id, token);
+    public io.hyperfoil.tools.horreum.api.services.RunService.RunExtended getRun(int id) {
+        return delegate.getRun(id);
     }
 
     @Override
-    public RunSummary getRunSummary(int id, String token) {
-        return delegate.getRunSummary(id, token);
+    public RunSummary getRunSummary(int id) {
+        return delegate.getRunSummary(id);
     }
 
     @Override
-    public Object getData(int id, String token, String schemaUri) {
-        return delegate.getData(id, token, schemaUri);
+    public Object getData(int id, String schemaUri) {
+        return delegate.getData(id, schemaUri);
     }
 
     @Override
-    public Object getMetadata(int id, String token, String schemaUri) {
-        return delegate.getMetadata(id, token, schemaUri);
+    public Object getMetadata(int id, String schemaUri) {
+        return delegate.getMetadata(id, schemaUri);
     }
 
     //   @Override
@@ -75,17 +75,17 @@ public class RunServiceExtension implements RunService {
     }
 
     @Override
-    public Response add(String testNameOrId, String owner, Access access, String token, Run run) {
-        return delegate.add(testNameOrId, owner, access, token, run);
+    public Response add(String testNameOrId, String owner, Access access, Run run) {
+        return delegate.add(testNameOrId, owner, access, run);
     }
 
     @Override
-    public Response addRunFromData(String start, String stop, String test, String owner, Access access, String token,
+    public Response addRunFromData(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, JsonNode data) {
-        return delegate.addRunFromData(start, stop, test, owner, access, token, schemaUri, description, data);
+        return delegate.addRunFromData(start, stop, test, owner, access, schemaUri, description, data);
     }
 
-    public Response addRunFromData(String start, String stop, String test, String owner, Access access, String token,
+    public Response addRunFromData(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, JsonNode data, JsonNode... metadata) {
         MultipartFormDataOutput multipart = new MultipartFormDataOutput();
         multipart.addFormData("data", data, MediaType.APPLICATION_JSON_TYPE, "data.json");
@@ -108,7 +108,7 @@ public class RunServiceExtension implements RunService {
         }
         return target.path("/api/run/data")
                 .queryParam("start", start).queryParam("stop", stop).queryParam("test", test)
-                .queryParam("owner", owner).queryParam("access", access).queryParam("token", token)
+                .queryParam("owner", owner).queryParam("access", access)
                 .queryParam("schema", schemaUri).queryParam("description", description)
                 .request().post(Entity.entity(multipart, MediaType.MULTIPART_FORM_DATA));
     }

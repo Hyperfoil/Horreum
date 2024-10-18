@@ -5,7 +5,6 @@
   "description": "Quarkus vs Spring boot build and runtime stats for IDC labs report application in native  and JVM modes",
   "owner": "foo-team",
   "access": 0,
-  "tokens": [],
   "timelineLabels": ["version"],
   "timelineFunction": null,
   "fingerprintLabels": ["Runtime", "buildType"],
