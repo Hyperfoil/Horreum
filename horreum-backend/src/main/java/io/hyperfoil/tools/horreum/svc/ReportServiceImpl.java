@@ -454,7 +454,7 @@ public class ReportServiceImpl implements ReportService {
                     } catch (PolyglotException e) {
                         log(report, PersistentLogDAO.ERROR,
                                 "Failed to run report %s(%d) category function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
-                                config.title, config.id, data.runId, data.ordinal + 1, data.datasetId, jsCode);
+                                config.title, config.id, data.runId, data.ordinal, data.datasetId, jsCode);
                         log.debug("Caused by exception", e);
                         continue;
                     }
@@ -480,7 +480,7 @@ public class ReportServiceImpl implements ReportService {
                     } catch (PolyglotException e) {
                         log(report, PersistentLogDAO.ERROR,
                                 "Failed to run report %s(%d) series function on run %d/%d (%d). Offending code: <br><pre>%s</pre>",
-                                config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
+                                config.title, config.id, runId, ordinal, datasetId, jsCode);
                         log.debug("Caused by exception", e);
                     }
                 }
@@ -504,7 +504,7 @@ public class ReportServiceImpl implements ReportService {
                     } catch (PolyglotException e) {
                         log(report, PersistentLogDAO.ERROR,
                                 "Failed to run report %s(%d) label function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
-                                config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
+                                config.title, config.id, runId, ordinal, datasetId, jsCode);
                         log.debug("Caused by exception", e);
                     }
                 }
@@ -639,7 +639,7 @@ public class ReportServiceImpl implements ReportService {
                 if (debugList.length() != 0) {
                     debugList.append(", ");
                 }
-                debugList.append(runId).append('/').append(ordinal + 1);
+                debugList.append(runId).append('/').append(ordinal);
                 if (row[3] != null && ((JsonNode) row[3]).asBoolean(false)) {
                     datasetIds.add(datasetId);
                 } else {
@@ -658,7 +658,7 @@ public class ReportServiceImpl implements ReportService {
                     if (debugList.length() != 0) {
                         debugList.append(", ");
                     }
-                    debugList.append(runId).append('/').append(ordinal + 1);
+                    debugList.append(runId).append('/').append(ordinal);
                     try {
                         org.graalvm.polyglot.Value value = context.eval("js", jsCode);
                         if (value.isBoolean()) {
@@ -673,13 +673,13 @@ public class ReportServiceImpl implements ReportService {
                             debugList.append("(filtered: not boolean)");
                             log(report, PersistentLogDAO.ERROR,
                                     "Report %s(%d) filter result for dataset %d/%d (%d) is not a boolean: %s. Offending code: <br><pre>%s</pre>",
-                                    config.title, config.id, runId, ordinal + 1, datasetId, value, jsCode);
+                                    config.title, config.id, runId, ordinal, datasetId, value, jsCode);
                         }
                     } catch (PolyglotException e) {
                         debugList.append("(filtered: JS error)");
                         log(report, PersistentLogDAO.ERROR,
                                 "Failed to run report %s(%d) filter function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
-                                config.title, config.id, runId, ordinal + 1, datasetId, jsCode);
+                                config.title, config.id, runId, ordinal, datasetId, jsCode);
                         log.debug("Caused by exception", e);
                     }
                 }

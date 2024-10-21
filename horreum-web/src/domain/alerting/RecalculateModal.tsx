@@ -41,7 +41,7 @@ function datasetsToLinks(datasets: DatasetInfo[] | undefined | null) {
                     <>
                         {i !== 0 && ", "}
                         <NavLink to={`/run/${ds.runId}#dataset${ds.ordinal}`}>
-                            {ds.runId}/{ds.ordinal + 1}
+                            {ds.runId}/{ds.ordinal}
                         </NavLink>
                     </>
                 ))}

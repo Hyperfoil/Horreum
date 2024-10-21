@@ -219,7 +219,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                                                         props.jsonpath || ""
                                                     )}#dataset${d.ordinal}`}
                                                 >
-                                                    {d.runId}/{d.ordinal + 1}
+                                                    {d.runId}/{d.ordinal}
                                                 </NavLink>
                                             ),
                                         },
@@ -284,7 +284,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                                 props.jsonpath || ""
                             )}#dataset${(target as DatasetSummary).ordinal}`}
                         >
-                            Go to dataset {(target as DatasetSummary).runId} #{(target as DatasetSummary).ordinal + 1}
+                            Go to dataset {(target as DatasetSummary).runId} #{(target as DatasetSummary).ordinal}
                         </NavLink>
                     )}
                 </div>

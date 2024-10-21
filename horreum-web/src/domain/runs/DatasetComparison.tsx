@@ -77,7 +77,7 @@ export default function DatasetComparison() {
             ...datasets.map(item => ({
                 title: (
                     <NavLink to={`/run/${item.runId}#dataset${item.ordinal}`}>
-                        {item.runId}/{item.ordinal + 1}
+                        {item.runId}/{item.ordinal}
                     </NavLink>
                 ),
             })),
@@ -166,7 +166,7 @@ function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) 
                                         title: (
                                             <BarValuesChart
                                                 values={row.slice(1)}
-                                                legend={labels.map(item => `${item.runId}/${item.ordinal + 1}`)}
+                                                legend={labels.map(item => `${item.runId}/${item.ordinal}`)}
                                             />
                                         ),
                                         props: {
@@ -261,7 +261,7 @@ function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps
                                         title: (
                                             <BarValuesChart
                                                 values={rd.slice(1)}
-                                                legend={summaries.map(summary => `${summary.runId}/${summary.ordinal + 1}`)}
+                                                legend={summaries.map(summary => `${summary.runId}/${summary.ordinal}`)}
                                             />
                                         ) ,
                                         props: {
