@@ -113,6 +113,24 @@ public class DatasourceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
+    public void lowercasePayload(TestInfo info) {
+        TestConfig testConfig = createNewTestAndDatastores(info);
+
+        String payload = """
+                {
+                    "index": "tfb",
+                    "type": "search",
+                    "query": {}
+                 }
+                """;
+
+        String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
+
+        assertNotNull(runID);
+        Assert.assertEquals(4, runID.split(",").length);
+    }
+
+    @org.junit.jupiter.api.Test
     public void largeMultidocPayload(TestInfo info) throws InterruptedException {
         TestConfig testConfig = createNewTestAndDatastores(info);
 
