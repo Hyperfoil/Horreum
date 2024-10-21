@@ -23,6 +23,7 @@ import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -271,14 +272,14 @@ public class ElasticsearchDatastore implements Datastore {
     }
 
     private enum RequestType {
-        DOC("doc"),
-        SEARCH("search"),
-        MULTI_INDEX("multi-index");
+        DOC,
+        SEARCH,
+        MULTI_INDEX;
 
-        private final String type;
-
-        RequestType(String s) {
-            type = s;
+        @JsonCreator
+        public static RequestType fromString(String key) {
+            // ignore case when deserializing
+            return key == null ? null : RequestType.valueOf(key.toUpperCase());
         }
     }
 
