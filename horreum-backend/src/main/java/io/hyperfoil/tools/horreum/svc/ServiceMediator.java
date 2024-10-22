@@ -39,49 +39,50 @@ public class ServiceMediator {
     private static final Logger log = Logger.getLogger(ServiceMediator.class);
 
     @Inject
-    private TestServiceImpl testService;
+    TestServiceImpl testService;
 
     @Inject
-    private AlertingServiceImpl alertingService;
+    AlertingServiceImpl alertingService;
 
     @Inject
-    private RunServiceImpl runService;
+    RunServiceImpl runService;
 
     @Inject
-    private ReportServiceImpl reportService;
+    ReportServiceImpl reportService;
 
     @Inject
-    private ExperimentServiceImpl experimentService;
+    ExperimentServiceImpl experimentService;
 
     @Inject
-    private LogServiceImpl logService;
+    LogServiceImpl logService;
 
     @Inject
-    private SubscriptionServiceImpl subscriptionService;
+    SubscriptionServiceImpl subscriptionService;
 
     @Inject
-    private ActionServiceImpl actionService;
+    ActionServiceImpl actionService;
 
     @Inject
-    private NotificationServiceImpl notificationService;
+    NotificationServiceImpl notificationService;
 
     @Inject
-    private DatasetServiceImpl datasetService;
+    DatasetServiceImpl datasetService;
 
     @Inject
-    private EventAggregator aggregator;
+    EventAggregator aggregator;
 
     @Inject
     Vertx vertx;
+
     @Inject
-    private SchemaServiceImpl schemaService;
+    SchemaServiceImpl schemaService;
 
     @Inject
     SecurityIdentity identity;
 
     @Inject
     @ConfigProperty(name = "horreum.test-mode", defaultValue = "false")
-    private Boolean testMode;
+    Boolean testMode;
 
     @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
     @Channel("dataset-event-out")
@@ -306,7 +307,7 @@ public class ServiceMediator {
         }
     }
 
-    static class RunUpload {
+    public static class RunUpload {
         public String start;
         public String stop;
         public String test;
