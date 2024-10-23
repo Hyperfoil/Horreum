@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ElasticsearchDatastoreConfig extends BaseDatastoreConfig {
 
     public ElasticsearchDatastoreConfig() {
-        super(false);
+        super(false, "ELASTICSEARCH");
     }
 
     @Schema(type = SchemaType.STRING, description = "Elasticsearch API KEY")

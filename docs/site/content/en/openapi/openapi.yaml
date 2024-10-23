@@ -2895,6 +2895,7 @@ components:
       description: Type of backend datastore
       required:
       - builtIn
+      - type
       - apiKey
       - url
       type: object
@@ -2902,6 +2903,9 @@ components:
         builtIn:
           description: Built In
           type: boolean
+        type:
+          description: type information
+          type: string
         apiKey:
           description: Collector API KEY
           type: string
@@ -3223,6 +3227,13 @@ components:
           oneOf:
           - $ref: "#/components/schemas/ElasticsearchDatastoreConfig"
           - $ref: "#/components/schemas/PostgresDatastoreConfig"
+          - $ref: "#/components/schemas/CollectorApiDatastoreConfig"
+          discriminator:
+            propertyName: type
+            mapping:
+              ELASTICSEARCH: "#/components/schemas/ElasticsearchDatastoreConfig"
+              POSTGRES: "#/components/schemas/PostgresDatastoreConfig"
+              COLLECTORAPI: "#/components/schemas/CollectorApiDatastoreConfig"
         type:
           description: Type of backend datastore
           enum:
@@ -3263,12 +3274,16 @@ components:
       description: Type of backend datastore
       required:
       - builtIn
+      - type
       - url
       type: object
       properties:
         builtIn:
           description: Built In
           type: boolean
+        type:
+          description: type information
+          type: string
         apiKey:
           description: Elasticsearch API KEY
           type: string
@@ -3884,11 +3899,15 @@ components:
       description: Built in backend datastore
       required:
       - builtIn
+      - type
       type: object
       properties:
         builtIn:
           description: Built In
           type: boolean
+        type:
+          description: type information
+          type: string
     ProtectedTimeType:
       required:
       - access

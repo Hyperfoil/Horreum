@@ -7,7 +7,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 public class CollectorApiDatastoreConfig extends BaseDatastoreConfig {
 
     public CollectorApiDatastoreConfig() {
-        super(false);
+        super(false, "COLLECTORAPI");
     }
 
     @Schema(type = SchemaType.STRING, required = true, description = "Collector API KEY")
