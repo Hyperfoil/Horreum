@@ -89,8 +89,6 @@ QUARKUS_DATASOURCE_MIGRATION_PASSWORD=Curr3ntAdm!nPwd
 QUARKUS_DATASOURCE_JDBC_ADDITIONAL-JDBC-PROPERTIES_SSLROOTCERT=server.crt
 # As an alternative, certificate validation can be disabled with
 # QUARKUS_DATASOURCE_JDBC_ADDITIONAL-JDBC-PROPERTIES_SSLMODE=require
-# Secret generated during database setup: run `SELECT * FROM dbsecret` as DB admin
-HORREUM_DB_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxx
 
 # --- KEYCLOAK ---
 # This URL must be accessible from Horreum, but does not have to be exposed to the world

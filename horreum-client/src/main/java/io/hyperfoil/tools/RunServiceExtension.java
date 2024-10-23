@@ -60,16 +60,6 @@ public class RunServiceExtension implements RunService {
     //   }
 
     @Override
-    public String resetToken(int id) {
-        return delegate.resetToken(id);
-    }
-
-    @Override
-    public String dropToken(int id) {
-        return delegate.dropToken(id);
-    }
-
-    @Override
     public void updateAccess(int id, String owner, Access access) {
         delegate.updateAccess(id, owner, access);
     }

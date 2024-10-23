@@ -4659,6 +4659,7 @@
             DROP FUNCTION has_read_token;
             DROP FUNCTION has_modify_token;
             DROP FUNCTION has_upload_token;
+            DROP FUNCTION auth_suffix;
         </sql>
         <dropColumn tableName="run" columnName="token" />
         <dropColumn tableName="schema" columnName="token" />

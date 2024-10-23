@@ -882,7 +882,6 @@ public class BaseServiceTest {
                 "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';").getResultList();
         tables.remove("databasechangelog");
         tables.remove("databasechangeloglock");
-        tables.remove("dbsecret");
         tables.remove("view_recalc_queue");
         tables.remove("label_recalc_queue");
         tables.remove("fingerprint_recalc_queue");

@@ -58,14 +58,6 @@ public interface RunService {
     //                         @QueryParam("array") @DefaultValue("false") boolean array);
 
     @POST
-    @Path("{id}/resetToken")
-    String resetToken(@PathParam("id") int id);
-
-    @POST
-    @Path("{id}/dropToken")
-    String dropToken(@PathParam("id") int id);
-
-    @POST
     @Path("{id}/updateAccess")
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
     void updateAccess(@PathParam("id") int id,

@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotAuthorizedException;
+import jakarta.ws.rs.core.Response;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -100,6 +101,30 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             horreumClient.userService.revokeApiKey(apiKey.id);
             assertThrows(NotAuthorizedException.class, apiClient.userService::getRoles);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testApiKeysPrivateUpload() throws JsonProcessingException {
+        String theKey = horreumClient.userService.newApiKey(new UserService.ApiKeyRequest("private upload key", USER));
+
+        horreumClient.testService.updateAccess(dummyTest.id, dummyTest.owner, Access.PRIVATE);
+        try (HorreumClient apiClient = new HorreumClient.Builder()
+                .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
+                .horreumApiKey(theKey)
+                .build()) {
+
+            Run run = new Run();
+            run.start = Instant.now();
+            run.stop = Instant.now();
+            run.testid = -1; // should be ignored
+            run.data = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
+            run.description = "Test description";
+            try (Response response = apiClient.runService.add(dummyTest.name, dummyTest.owner, Access.PRIVATE, run)) {
+                assertEquals(200, response.getStatus());
+            }
+        } finally {
+            horreumClient.testService.updateAccess(dummyTest.id, dummyTest.owner, Access.PUBLIC);
         }
     }
 

@@ -125,7 +125,7 @@ public class TestServiceImpl implements TestService {
     @Override
     @WithRoles
     @PermitAll
-    public Test get(int id, String token) {
+    public Test get(int id) {
         TestDAO test = TestDAO.find("id", id).firstResult();
         if (test == null) {
             throw ServiceException.notFound("No test with name " + id);
