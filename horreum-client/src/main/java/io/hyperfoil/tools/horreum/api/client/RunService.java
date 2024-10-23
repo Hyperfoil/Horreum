@@ -74,9 +74,9 @@ public interface RunService {
             @QueryParam("access") Access access);
 
     @POST
-    @Path("test/{test}")
+    @Path("test")
     @Consumes(MediaType.APPLICATION_JSON)
-    Response add(@PathParam("test") String testNameOrId,
+    Response add(@QueryParam("test") String testNameOrId,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
             @QueryParam("token") String token,
