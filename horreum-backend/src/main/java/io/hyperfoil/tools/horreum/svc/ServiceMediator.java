@@ -6,7 +6,6 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.ReentrantLock;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.control.ActivateRequestContext;
@@ -102,8 +101,6 @@ public class ServiceMediator {
     Emitter<RunUpload> runUploadEmitter;
 
     private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events = new ConcurrentHashMap<>();
-
-    private final ReentrantLock lock = new ReentrantLock();
 
     public ServiceMediator() {
     }
@@ -232,15 +229,6 @@ public class ServiceMediator {
 
     int transform(int runId, boolean isRecalculation) {
         return runService.transform(runId, isRecalculation);
-    }
-
-    void withSharedLock(Runnable runnable) {
-        lock.lock();
-        try {
-            runnable.run();
-        } finally {
-            lock.unlock();
-        }
     }
 
     void newExperimentResult(ExperimentService.ExperimentResult result) {
