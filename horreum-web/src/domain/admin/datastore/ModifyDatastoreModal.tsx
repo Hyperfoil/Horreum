@@ -9,7 +9,7 @@ import {
     Modal, TextInput
 } from "@patternfly/react-core"
 import {
-    Datastore,
+    Datastore, DatastoreConfig,
     DatastoreTypeEnum, ElasticsearchDatastoreConfig,
 } from "../../../api";
 import {AppContext} from "../../../context/appContext";
@@ -134,8 +134,10 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     <TextInput
                         value={"url" in dataStore.config ? dataStore.config.url : ""}
                         onChange={(_, value) => {
-                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
-                            config.url = value
+                            const config :DatastoreConfig = {
+                                type: DatastoreTypeEnum.Elasticsearch,
+                                url: value
+                            } as DatastoreConfig;
                             updateDatastore({...dataStore, config: config})
                             }}
                         isDisabled={enabledURL}
@@ -157,8 +159,11 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     <TextInput
                         value={"apiKey" in dataStore.config ? dataStore.config.apiKey : ""}
                         onChange={(_, value) => {
-                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
-                            config.apiKey = value
+                            const config :DatastoreConfig = {
+                                type: DatastoreTypeEnum.Elasticsearch,
+                                apiKey: value
+                            } as DatastoreConfig;
+
                             updateDatastore({...dataStore, config: config})
                         }}isDisabled={enabledToken}
                         type="text"
@@ -180,8 +185,10 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     <TextInput
                         value={"username" in dataStore.config ? dataStore.config.username : ""}
                         onChange={(_, value) => {
-                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
-                            config.username = value
+                            const config :DatastoreConfig = {
+                                type: DatastoreTypeEnum.Elasticsearch,
+                                username: value
+                            } as DatastoreConfig;
                             updateDatastore({...dataStore, config: config})
                         }}isDisabled={enabledToken}
                         type="text"
@@ -202,8 +209,10 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     <TextInput
                         value={"password" in dataStore.config ? dataStore.config.password : ""}
                         onChange={(_, value) => {
-                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
-                            config.password = value
+                            const config :DatastoreConfig = {
+                                type: DatastoreTypeEnum.Elasticsearch,
+                                password: value
+                            } as DatastoreConfig;
                             updateDatastore({...dataStore, config: config})
                         }}isDisabled={enabledToken}
                         type="text"

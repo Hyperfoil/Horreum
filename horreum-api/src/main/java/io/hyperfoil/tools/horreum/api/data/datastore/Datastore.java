@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.api.data.datastore;
 import jakarta.validation.constraints.NotNull;
 
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.DiscriminatorMapping;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,7 +31,12 @@ public class Datastore extends ProtectedType {
     @JsonProperty(required = true)
     @Schema(type = SchemaType.OBJECT, oneOf = {
             ElasticsearchDatastoreConfig.class,
-            PostgresDatastoreConfig.class
+            PostgresDatastoreConfig.class,
+            CollectorApiDatastoreConfig.class
+    }, discriminatorProperty = "type", discriminatorMapping = {
+            @DiscriminatorMapping(value = "ELASTICSEARCH", schema = ElasticsearchDatastoreConfig.class),
+            @DiscriminatorMapping(value = "POSTGRES", schema = PostgresDatastoreConfig.class),
+            @DiscriminatorMapping(value = "COLLECTORAPI", schema = CollectorApiDatastoreConfig.class)
     })
     public ObjectNode config;
 

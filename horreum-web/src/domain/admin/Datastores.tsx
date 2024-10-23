@@ -22,11 +22,9 @@ import VerifyBackendModal from "./datastore/VerifyBackendModal";
 import {
     Access,
     apiCall,
-    CollectorApiDatastoreConfig,
     configApi,
-    Datastore,
+    Datastore, DatastoreConfig,
     DatastoreTypeEnum,
-    ElasticsearchDatastoreConfig
 } from "../../api";
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
@@ -66,10 +64,9 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
         },
 
     ];
-    const newBackendConfig: ElasticsearchDatastoreConfig | CollectorApiDatastoreConfig = {
-        url: "",
-        apiKey: "",
-        builtIn: false
+    const newBackendConfig: DatastoreConfig = {
+        builtIn: false,
+        type: DatastoreTypeEnum.Postgres
     }
 
     const newDataStore: Datastore = {

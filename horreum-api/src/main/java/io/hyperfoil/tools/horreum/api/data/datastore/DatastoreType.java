@@ -8,10 +8,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 
 @Schema(type = SchemaType.STRING, required = true, description = "Type of backend datastore")
 public enum DatastoreType {
+    @com.fasterxml.jackson.annotation.JsonProperty("POSTGRES")
     POSTGRES("POSTGRES", new TypeReference<PostgresDatastoreConfig>() {
     }),
+    @com.fasterxml.jackson.annotation.JsonProperty("ELASTICSEARCH")
     ELASTICSEARCH("ELASTICSEARCH", new TypeReference<ElasticsearchDatastoreConfig>() {
     }),
+    @com.fasterxml.jackson.annotation.JsonProperty("COLLECTORAPI")
     COLLECTORAPI("COLLECTORAPI", new TypeReference<CollectorApiDatastoreConfig>() {
     });
 
@@ -27,6 +30,11 @@ public enum DatastoreType {
 
     public <T extends BaseDatastoreConfig> TypeReference<T> getTypeReference() {
         return (TypeReference<T>) typeReference;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonValue
+    public String toValue() {
+        return name;
     }
 
     @JsonCreator
