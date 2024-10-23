@@ -1,8 +1,10 @@
 package io.hyperfoil.tools.horreum.it;
 
 import static io.hyperfoil.tools.horreum.api.services.UserService.KeyType.USER;
+import static java.time.temporal.ChronoUnit.DAYS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,7 +15,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -73,6 +74,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
     public void testApiKeys() {
         String keyName = "Test key";
         String theKey = horreumClient.userService.newApiKey(new UserService.ApiKeyRequest(keyName, USER));
+        List<String> existingRoles = horreumClient.userService.getRoles();
 
         try (HorreumClient apiClient = new HorreumClient.Builder()
                 .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
@@ -81,17 +83,22 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
             List<String> roles = apiClient.userService.getRoles();
             assertFalse(roles.isEmpty());
-            assertTrue(roles.contains("dev-" + Roles.TESTER));
+            assertTrue(existingRoles.stream().filter(r -> r.startsWith("dev")).allMatch(roles::contains));
+            assertTrue(roles.containsAll(List.of(Roles.ADMIN, Roles.MANAGER, Roles.TESTER, Roles.TESTER, Roles.VIEWER)));
 
             UserService.ApiKeyResponse apiKey = horreumClient.userService.apiKeys().get(0);
+            assertEquals(keyName, apiKey.name);
             assertFalse(apiKey.isRevoked);
             assertFalse(apiKey.toExpiration < 0);
-            assertEquals(Instant.now().truncatedTo(ChronoUnit.DAYS), apiKey.creation.truncatedTo(ChronoUnit.DAYS));
-            assertEquals(Instant.now().truncatedTo(ChronoUnit.DAYS), apiKey.access.truncatedTo(ChronoUnit.DAYS));
+            assertEquals(Instant.now().truncatedTo(DAYS), apiKey.creation.truncatedTo(DAYS));
+            assertEquals(Instant.now().truncatedTo(DAYS), apiKey.access.truncatedTo(DAYS));
             assertEquals(USER, apiKey.type);
 
-            horreumClient.userService.revokeApiKey(apiKey.id);
+            apiClient.userService.renameApiKey(apiKey.id, "Some new name"); // use key to modify key !!
+            apiKey = horreumClient.userService.apiKeys().get(0);
+            assertNotEquals(keyName, apiKey.name);
 
+            horreumClient.userService.revokeApiKey(apiKey.id);
             assertThrows(NotAuthorizedException.class, apiClient.userService::getRoles);
         }
     }
