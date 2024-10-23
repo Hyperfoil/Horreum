@@ -56,7 +56,7 @@ public interface TestService {
     @GET
     @Path("{id}")
     @Operation(description = "Retrieve a test by id")
-    Test get(@PathParam("id") int id, @QueryParam("token") String token);
+    Test get(@PathParam("id") int id);
 
     @GET
     @Path("byName/{name}")
@@ -123,7 +123,7 @@ public interface TestService {
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
     @Operation(description = "Update the Access configuration for a Test")
     @Parameters(value = {
-            @Parameter(name = "id", required = true, description = "Test ID to revoke token", example = "101"),
+            @Parameter(name = "id", required = true, description = "Test ID to update", example = "101"),
             @Parameter(name = "owner", required = true, description = "Name of the new owner", example = "perf-team"),
             @Parameter(name = "access", required = true, description = "New Access level for the Test", example = "0")
     })

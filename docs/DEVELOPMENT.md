@@ -174,7 +174,6 @@ You can use an existing backup of the database (PostgreSQL 13+) by a command lik
 ```bash
 mvn  quarkus:dev -pl '!horreum-integration-tests' \
   -Dhorreum.dev-services.postgres.database-backup=/opt/databases/horreum-prod-db/ \
-  -Dhorreum.db.secret='M3g45ecr5t!' \
   -Dhorreum.dev-services.keycloak.db-password='prod-password' \
   -Dhorreum.dev-services.keycloak.admin-password='ui-prod-password' \
   -Dquarkus.datasource.username=user \
@@ -192,8 +191,6 @@ horreum.dev-services.keycloak.db-password=<keycloak-user-password>
 
 horreum.dev-services.keycloak.admin-username=<keycloak-admin-name>
 horreum.dev-services.keycloak.admin-password=<keycloak-admin-password>
-
-horreum.db.secret=<db-secret>
 
 quarkus.datasource.username=<horreum-user-name>
 quarkus.datasource.password=<horreum-user-password>

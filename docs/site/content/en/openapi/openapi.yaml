@@ -1833,10 +1833,6 @@ paths:
         schema:
           format: int32
           type: integer
-      - name: token
-        in: query
-        schema:
-          type: string
       responses:
         "200":
           description: OK
@@ -2180,7 +2176,7 @@ paths:
       parameters:
       - name: id
         in: path
-        description: Test ID to revoke token
+        description: Test ID to update
         required: true
         schema:
           format: int32

@@ -340,7 +340,7 @@ public class RunServiceImpl implements RunService {
         }
     }
 
-    @PermitAll // all because of possible token-based upload
+    @RolesAllowed(Roles.UPLOADER)
     @WithRoles
     @Transactional
     @Override
@@ -426,7 +426,7 @@ public class RunServiceImpl implements RunService {
         return addRunFromData(start, stop, test, owner, access, schemaUri, description, dataNode.toString(), metadataNode);
     }
 
-    @PermitAll // all because of possible token-based upload
+    @RolesAllowed(Roles.UPLOADER)
     @Transactional
     @WithRoles
     Response addRunFromData(String start, String stop, String test,
