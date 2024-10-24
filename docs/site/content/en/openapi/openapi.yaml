@@ -3722,24 +3722,42 @@ components:
           type: integer
         name:
           type: string
-        parent:
-          $ref: '#/components/schemas/Test1'
-        target_schema:
-          type: string
-        uri:
-          type: string
-        parent_uri:
-          type: string
+        group:
+          $ref: "#/components/schemas/LabelGroup"
+        sourceGroup:
+          $ref: "#/components/schemas/LabelGroup"
+        sourceLabel:
+          $ref: "#/components/schemas/Label1"
+        targetGroup:
+          $ref: "#/components/schemas/LabelGroup"
         extractors:
           type: array
           items:
-            $ref: '#/components/schemas/Extractor1'
+            $ref: "#/components/schemas/Extractor1"
         reducer:
-          $ref: '#/components/schemas/LabelReducer'
+          $ref: "#/components/schemas/LabelReducer"
+        splitting:
+          type: boolean
+        dirty:
+          type: boolean
         multiType:
-          $ref: '#/components/schemas/MultiIterationType'
+          $ref: "#/components/schemas/MultiIterationType"
         scalarMethod:
-          $ref: '#/components/schemas/ScalarVariableMethod'
+          $ref: "#/components/schemas/ScalarVariableMethod"
+    LabelGroup:
+      type: object
+      properties:
+        id:
+          format: int64
+          type: integer
+        owner:
+          type: string
+        name:
+          type: string
+        labels:
+          type: array
+          items:
+            $ref: "#/components/schemas/Label1"
     LabelInFingerprint:
       type: object
       allOf:
@@ -4372,7 +4390,7 @@ components:
           description: List of Run Summaries
           type: array
           items:
-            $ref: '#/components/schemas/RunSummary'
+            $ref: "#/components/schemas/RunSummary"
     ScalarVariableMethod:
       enum:
       - First
@@ -4920,12 +4938,14 @@ components:
         id:
           format: int64
           type: integer
+        owner:
+          type: string
         name:
           type: string
         labels:
           type: array
           items:
-            $ref: '#/components/schemas/Label1'
+            $ref: "#/components/schemas/Label1"
     TestExport:
       description: Represents a Test with all associated data used for export/import
         operations.
@@ -5216,7 +5236,7 @@ components:
           description: Validation Error Details
           type: object
           allOf:
-          - $ref: '#/components/schemas/ErrorDetails'
+          - $ref: "#/components/schemas/ErrorDetails"
     ValueMap:
       type: object
       properties:

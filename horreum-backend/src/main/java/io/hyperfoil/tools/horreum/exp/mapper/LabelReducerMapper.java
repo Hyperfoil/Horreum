@@ -6,8 +6,8 @@ import io.hyperfoil.tools.horreum.exp.data.LabelReducerDao;
 public class LabelReducerMapper {
 
     public static LabelReducer from(LabelReducerDao l) {
-        if(l == null)
-            return  null;
+        if (l == null)
+            return null;
         LabelReducer dto = new LabelReducer();
         dto.id = l.id;
         dto.function = l.function;
@@ -16,7 +16,7 @@ public class LabelReducerMapper {
     }
 
     public static LabelReducerDao to(LabelReducer dto) {
-        if ( dto == null ){
+        if (dto == null) {
             return null;
         }
         LabelReducerDao l = new LabelReducerDao();

@@ -14,6 +14,5 @@ public interface RunService {
     @Path("data")
     Response addRunFromData(
             @QueryParam("test") String test,
-            String content
-    );
+            String content);
 }
