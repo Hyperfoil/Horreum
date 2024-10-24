@@ -25,7 +25,7 @@ import {
     Middleware, RunSummary,
     Schema, type SortDirection,
     Test,
-    TestListing, TestSummary, TestToken, Transformer, View, Watch,
+    TestListing, TestSummary, Transformer, View, Watch,
 } from "./generated"
 import store from "./store"
 import {AlertContextType} from "./context/@types/appContextTypes";
@@ -213,12 +213,6 @@ export function getSchema(schemaId: number, alerting: AlertContextType): Promise
 }
 
 //Tests
-export function addTestToken(testId: number, value: string, description: string, permissions: number, alerting: AlertContextType) : Promise<TestToken[]> {
-    return apiCall(
-        testApi.addToken(testId, {id: -1, value, description, permissions}), alerting, "ADD_TOKEN", "Failed to add token for test " + testId)
-        .then( () => apiCall(testApi.tokens(testId), alerting, "FETCH_TOKENS", "Failed to fetch token list for test " + testId))
-}
-
 export function addUserOrTeam(id: number, userOrTeam: string, alerting: AlertContextType) : Promise<string[]> {
     return apiCall(subscriptionsApi.addUserOrTeam(id, userOrTeam), alerting, "ADD_SUBSCRIPTION", "Failed to add test subscriptions");
 }
@@ -249,10 +243,6 @@ export function fetchTest(id: number, alerting: AlertContextType): Promise<Test>
 }
 export function removeUserOrTeam(id: number, userOrTeam: string, alerting: AlertContextType) {
     return apiCall(subscriptionsApi.removeUserOrTeam(id, userOrTeam), alerting, "REMOVE_SUBSCRIPTION", "Failed to remove test subscriptions");
-}
-
-export function revokeTestToken(testId: number, tokenId: number, alerting: AlertContextType) : Promise<void> {
-    return apiCall(testApi.dropToken(testId, tokenId), alerting, "REVOKE_TOKEN", "Failed to revoke token");
 }
 
 export function sendTest(test: Test, alerting: AlertContextType): Promise<Test> {
@@ -343,8 +333,8 @@ export function updateChangeDetection(
 }
 
 ///Runs
-export function fetchRunSummary(id: number, token: string | undefined, alerting: AlertContextType): Promise<RunSummary> {
-    return apiCall(runApi.getRunSummary(id, token), alerting, "FETCH_RUN_SUMMARY", "Failed to fetch data for run " + id + ", try uploading a Run and use new Run id instead.");
+export function fetchRunSummary(id: number, alerting: AlertContextType): Promise<RunSummary> {
+    return apiCall(runApi.getRunSummary(id), alerting, "FETCH_RUN_SUMMARY", "Failed to fetch data for run " + id + ", try uploading a Run and use new Run id instead.");
 
 }
 
@@ -377,5 +367,3 @@ export function apiCall<T>(apiCall: Promise<T>, alerting: AlertContextType, erro
 export function mapTestSummaryToTest(testSummary: TestSummary): Test {
     return {...testSummary, notificationsEnabled: false }
 }
-
-

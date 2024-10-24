@@ -6,7 +6,6 @@ import java.util.List;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
 import jakarta.transaction.SystemException;
 import jakarta.transaction.TransactionManager;
 
@@ -18,7 +17,6 @@ import io.quarkus.security.identity.SecurityIdentity;
 public class RoleManager {
     // from `set_config`documentation: "If is_local is true, the new value will only apply during the current transaction."
     static final String SET_ROLES = "SELECT current_setting('horreum.userroles', true), set_config('horreum.userroles', ?, true)";
-    static final String SET_TOKEN = "SELECT set_config('horreum.token', ?, false)";
     static final CloseMe NOOP = () -> {
     };
 
@@ -56,16 +54,6 @@ public class RoleManager {
         String previous = setRoles(roles);
         return Roles.HORREUM_SYSTEM.equals(previous) ? NOOP : () -> setRoles(previous);
     }
-
-    // --- //
-
-    void setToken(EntityManager em, String token) {
-        Query setToken = em.createNativeQuery(SET_TOKEN);
-        setToken.setParameter(1, token == null ? "" : token);
-        setToken.getSingleResult();
-    }
-
-    // --- //
 
     public String getDebugQuery(SecurityIdentity identity) {
         List<String> roles = new ArrayList<>(identity.getRoles());

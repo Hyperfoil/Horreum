@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.api.services;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -42,7 +41,6 @@ import io.hyperfoil.tools.horreum.api.data.Fingerprints;
 import io.hyperfoil.tools.horreum.api.data.ProtectedType;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
-import io.hyperfoil.tools.horreum.api.data.TestToken;
 
 @Path("/api/test")
 @Consumes({ MediaType.APPLICATION_JSON })
@@ -58,7 +56,7 @@ public interface TestService {
     @GET
     @Path("{id}")
     @Operation(description = "Retrieve a test by id")
-    Test get(@PathParam("id") int id, @QueryParam("token") String token);
+    Test get(@PathParam("id") int id);
 
     @GET
     @Path("byName/{name}")
@@ -121,36 +119,11 @@ public interface TestService {
     List<String> folders(@QueryParam("roles") String roles);
 
     @POST
-    @Path("{id}/addToken")
-    @Operation(description = "Add a Test API Token for access to provide access to a test data for integrated tooling, e.g. reporting services")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "ID of test to add token to", example = "101")
-    })
-    int addToken(@PathParam("id") int testId, TestToken token);
-
-    @GET
-    @Path("{id}/tokens")
-    @Operation(description = "A collection of Test Tokens for a given Test")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "ID of test to retrieve list of tokens", example = "101")
-    })
-    Collection<TestToken> tokens(@PathParam("id") int testId);
-
-    @DELETE
-    @Path("{id}/revokeToken/{tokenId}")
-    @Operation(description = "Revoke a Token defined for a Test")
-    @Parameters(value = {
-            @Parameter(name = "id", description = "Test ID to revoke token", example = "101"),
-            @Parameter(name = "tokenId", description = "ID of token to revoke", example = "202")
-    })
-    void dropToken(@PathParam("id") int testId, @PathParam("tokenId") int tokenId);
-
-    @POST
     @Path("{id}/updateAccess")
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
     @Operation(description = "Update the Access configuration for a Test")
     @Parameters(value = {
-            @Parameter(name = "id", required = true, description = "Test ID to revoke token", example = "101"),
+            @Parameter(name = "id", required = true, description = "Test ID to update", example = "101"),
             @Parameter(name = "owner", required = true, description = "Name of the new owner", example = "perf-team"),
             @Parameter(name = "access", required = true, description = "New Access level for the Test", example = "0")
     })

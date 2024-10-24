@@ -10,13 +10,13 @@ Horreum accepts any valid **JSON** as the input. To get maximum out of Horreum, 
 There are two principal ways to authorize operations:
 
 - Authentication against OIDC provider (Keycloak): This is the standard way that you use when accessing Horreum UI - you use your credentials to get a JSON Web Token (JWT) and this is stored in the browser session. When accessing Horreum over the REST API you need to use this for [Bearer Authentication](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1). The authorization is based on the teams and roles within those teams that you have.
-- Horreum Tokens: In order to provide access to non-authenticated users via link, or let automated scripts perform tasks Horreum can generate a random token consisting of 80 hexadecimal digits. This token cannot be used in the `Authorization` header; operations that support tokens usually accept `token` parameter.
+- Horreum API Keys: See more in [API keys](/docs/tasks/api-keys). These replace the so called "Horreum Tokens" that were used in the past in operations that accepted a `token` parameter. 
 
 If you're running your tests in Jenkins you can skip a lot of the complexity below using [Horreum Plugin](https://plugins.jenkins.io/horreum/). This plugin supports both Jenkins Pipeline and Freeform jobs.
 
 ## Getting JWT token
 
-New data can be uploaded into Horreum only by authorized users. We recommend setting up a separate user account for the load-driver (e.g. [Hyperfoil](https://hyperfoil.io)) or CI toolchain that will upload the data as part of your benchmark pipeline. This user must have the permission to upload for given team, e.g. if you'll use `dev-team` as the owner this role is called `dev-uploader` and it is a composition of the team role (`dev-team`) and `uploader` role. You can read more about user management [here](/docs/concepts/users).
+New data can be uploaded into Horreum only by authorized users. This user must have the permission to upload for given team, e.g. if you'll use `dev-team` as the owner this role is called `dev-uploader` and it is a composition of the team role (`dev-team`) and `uploader` role. You can read more about user management [here](/docs/concepts/users).
 
 ```bash
 TOKEN=$(curl -s http://localhost:8180/realms/horreum/protocol/openid-connect/token \
@@ -43,12 +43,6 @@ TOKEN=$(curl -s http://localhost:8180/realms/horreum/protocol/openid-connect/tok
 ```
 
 Note that the offline token also expires eventually, by default after 30 days.
-
-## Getting Horreum token
-
-In order to retrieve an upload token you need to navigate to particular Test configuration page, switch to tab 'Access' and push the 'Add new token' button, checking permissions for 'Read' and 'Upload'. The token string will be displayed only once; if you lose it please revoke the token and create a new one.
-
-This token should not be used for Bearer Authentication (do not use it in the `Authorization` HTTP header) as in the examples below; instead you need to append `&token=<horreum-token>` to the query.
 
 ## Uploading the data
 

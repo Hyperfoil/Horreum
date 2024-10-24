@@ -19,7 +19,6 @@ import io.hyperfoil.tools.horreum.api.data.QueryResult;
 import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
-import io.hyperfoil.tools.horreum.server.WithToken;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
@@ -53,7 +52,6 @@ public class SqlServiceImpl implements SqlService {
 
     @PermitAll
     @WithRoles
-    @WithToken
     @Override
     public QueryResult queryRunData(int id, String jsonpath, String schemaUri, boolean array) {
         String func = array ? "jsonb_path_query_array" : "jsonb_path_query_first";

@@ -1,6 +1,13 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,15 +40,25 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.ChangeDetection;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
-import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
+import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
+import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
+import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
+import io.hyperfoil.tools.horreum.api.data.Transformer;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
-import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
+import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
@@ -732,7 +749,7 @@ public class RunServiceTest extends BaseServiceTest {
         JsonNode payload = new ObjectMapper().readTree(
                 "{\"start_time\": \"2024-03-13T21:18:10.878423-04:00\", \"stop_time\": \"2024-03-13T21:18:11.878423-04:00\"}");
         String runId = uploadRun("$.start_time", "$.stop_time", test.name, test.owner, Access.PUBLIC,
-                null, null, "test", payload);
+                null, "test", payload);
     }
 
     @org.junit.jupiter.api.Test
@@ -754,27 +771,6 @@ public class RunServiceTest extends BaseServiceTest {
                 .extract().as(RunService.RunExtended.class);
         assertNotNull(response);
         assertEquals(test.name, response.testname);
-    }
-
-    @org.junit.jupiter.api.Test
-    public void testUploadToPrivateUsingToken() {
-        final String MY_SECRET_TOKEN = "mySecretToken";
-        Test test = createExampleTest("supersecret");
-        test.access = Access.PRIVATE;
-        test = createTest(test);
-
-        // TestToken.value is not readable, therefore we can't pass it in.
-        addToken(test, TestTokenDAO.READ + TestTokenDAO.UPLOAD, MY_SECRET_TOKEN);
-
-        long now = System.currentTimeMillis();
-        RestAssured.given()
-                .header(HttpHeaders.CONTENT_TYPE, "application/json")
-                .body(org.testcontainers.shaded.com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
-                .post("/api/run/data?start=" + now + "&stop=" + now + "&test=" + test.name + "&owner=" + UPLOADER_ROLES[0] +
-                        "&access=" + Access.PRIVATE + "&token=" + MY_SECRET_TOKEN)
-                .then()
-                .statusCode(200)
-                .extract().asString();
     }
 
     @org.junit.jupiter.api.Test
@@ -972,7 +968,7 @@ public class RunServiceTest extends BaseServiceTest {
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
         String runId = uploadRun("$.start", "$.stop", test.name, test.owner, Access.PUBLIC,
-                null, null, "test", payload);
+                null, "test", payload);
         assertTrue(Integer.parseInt(runId) > 0);
     }
 
@@ -1006,7 +1002,7 @@ public class RunServiceTest extends BaseServiceTest {
         JsonNode data = JsonNodeFactory.instance.objectNode()
                 .put("$schema", schema.uri)
                 .put("value", "foobar");
-        uploadRun(ts, ts, test.name, test.owner, Access.PUBLIC, null, schema.uri, null, data);
+        uploadRun(ts, ts, test.name, test.owner, Access.PUBLIC, schema.uri, null, data);
 
         int datasetId = -1;
         while (System.currentTimeMillis() < now + 10000) {
@@ -1145,7 +1141,7 @@ public class RunServiceTest extends BaseServiceTest {
             Test finalTest = test;
             Schema finalSchema = schema;
             Consumer<JsonNode> uploadData = (payload) -> uploadRun("$.start", "$.stop", finalTest.name, finalTest.owner,
-                    Access.PUBLIC, null, finalSchema.uri, null, payload);
+                    Access.PUBLIC, finalSchema.uri, null, payload);
 
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds1.json")));
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds2.json")));
@@ -1157,7 +1153,7 @@ public class RunServiceTest extends BaseServiceTest {
             Integer lastRunID = runsSummary.runs.stream().map(run -> run.id).max((Comparator.comparingInt(anInt -> anInt)))
                     .get();
 
-            RunService.RunExtended extendedRun = getRun(lastRunID, null);
+            RunService.RunExtended extendedRun = getRun(lastRunID);
 
             assertNotNull(extendedRun.datasets);
 
