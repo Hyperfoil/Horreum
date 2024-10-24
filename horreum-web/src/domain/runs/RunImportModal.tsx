@@ -62,6 +62,7 @@ export const RunImportModal = (props: RunImportModalProps) => {
              )
              , alerting, "UPLOAD_ERROR", "Failed to upload run data")
              .then(noop)
+             .catch(noop)
              .then(() => props.onClose())
 
     }
