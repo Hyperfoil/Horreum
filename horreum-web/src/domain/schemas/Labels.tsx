@@ -75,7 +75,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                         })
                     ),
                 ...deleted.map(l =>
-                    schemaApi.deleteLabel(l.id, l.schemaId).catch(e => {
+                    schemaApi.deleteLabel(l.schemaId, l.id).catch(e => {
                         setLabels([...labels, l])
                         throw e
                     })
