@@ -4689,7 +4689,7 @@
 	</sql>
     </changeSet>
 
-    <changeSet id="126" author="johara">
+    <changeSet id="126" author="wreicher">
         <validCheckSum>ANY</validCheckSum>
         <createProcedure>
             CREATE OR REPLACE FUNCTION extract_path_array(_arr jsonb, _path jsonpath) RETURNS jsonb AS $$
@@ -4706,53 +4706,54 @@
 
 
         CREATE TABLE public.exp_extractor (
-                                          foreach boolean NOT NULL,
-                                          id bigint NOT NULL,
-                                          parent_id bigint,
-                                          target_id bigint,
-                                          column_name character varying(255),
-                                          jsonpath character varying(255),
-                                          name character varying(255),
-                                          type character varying(255),
-                                          CONSTRAINT extractor_type_check CHECK (((type)::text = ANY ((ARRAY['PATH'::character varying, 'VALUE'::character varying, 'METADATA'::character varying])::text[])))
-);
-
-
+            foreach boolean NOT NULL,
+            id bigint NOT NULL,
+            parent_id bigint,
+            target_id bigint,
+            column_name character varying(255),
+            jsonpath character varying(255),
+            name character varying(255),
+            type character varying(255),
+            CONSTRAINT extractor_type_check CHECK (((type)::text = ANY ((ARRAY['PATH'::character varying, 'VALUE'::character varying, 'METADATA'::character varying])::text[])))
+        );
         ALTER TABLE public.exp_extractor OWNER TO "${quarkus.datasource.username}";
-
-
         CREATE SEQUENCE public.exp_extractor_seq
             START WITH 1
             INCREMENT BY 50
             NO MINVALUE
             NO MAXVALUE
             CACHE 1;
-
-
         ALTER SEQUENCE public.exp_extractor_seq OWNER TO "${quarkus.datasource.username}";
 
         CREATE TABLE public.exp_label (
+                                      dirty boolean NOT NULL,
+                                      splitting boolean NOT NULL,
+                                      group_id bigint,
                                       id bigint NOT NULL,
-                                      parent_id bigint,
+                                      originallabel_id bigint,
                                       reducer_id bigint,
-                                      multitype character varying(255),
-                                      name character varying(255),
-                                      parent_uri character varying(255),
-                                      scalarmethod character varying(255),
-                                      target_schema character varying(255),
-                                      uri character varying(255),
+                                      sourcegroup_id bigint,
+                                      sourcelabel_id bigint,
+                                      targetgroup_id bigint,
+                                      multitype character varying(255) NOT NULL,
+                                      name character varying(255) NOT NULL,
+                                      scalarmethod character varying(255) NOT NULL,
                                       CONSTRAINT label_multitype_check CHECK (((multitype)::text = ANY ((ARRAY['Length'::character varying, 'NxN'::character varying])::text[]))),
-    CONSTRAINT label_scalarmethod_check CHECK (((scalarmethod)::text = ANY ((ARRAY['First'::character varying, 'All'::character varying])::text[])))
-);
-
-
-        ALTER TABLE public.exp_label OWNER TO "${quarkus.datasource.username}";
-        CREATE TABLE public.exp_label_reducers (
-                                               id bigint NOT NULL,
-                                               function text
+                                      CONSTRAINT label_scalarmethod_check CHECK (((scalarmethod)::text = ANY ((ARRAY['First'::character varying, 'All'::character varying])::text[])))
         );
+        ALTER TABLE public.exp_label OWNER TO "${quarkus.datasource.username}";
+        CREATE SEQUENCE public.exp_label_seq
+            START WITH 1
+            INCREMENT BY 50
+            NO MINVALUE
+            NO MAXVALUE
+            CACHE 1;
+        ALTER SEQUENCE public.exp_label_seq OWNER TO "${quarkus.datasource.username}";
 
-
+        CREATE TABLE public.exp_label_reducers (
+                                       id bigint NOT NULL,
+                                       function text
+        );
         ALTER TABLE public.exp_label_reducers OWNER TO "${quarkus.datasource.username}";
         CREATE SEQUENCE public.exp_label_reducers_seq
             START WITH 1
@@ -4760,79 +4761,52 @@
             NO MINVALUE
             NO MAXVALUE
             CACHE 1;
-
-
         ALTER SEQUENCE public.exp_label_reducers_seq OWNER TO "${quarkus.datasource.username}";
-        CREATE SEQUENCE public.exp_label_seq
-            START WITH 1
-            INCREMENT BY 50
-            NO MINVALUE
-            NO MAXVALUE
-            CACHE 1;
 
-
-        ALTER SEQUENCE public.exp_label_seq OWNER TO "${quarkus.datasource.username}";
-        CREATE TABLE public.exp_label_set_entry (
-                                                version integer,
-                                                id bigint NOT NULL,
-                                                label_id bigint,
-                                                uri character varying(255)
+        CREATE TABLE public.exp_label_value_sources (
+                                            labelvaluedao_id bigint NOT NULL,
+                                            sources_id bigint NOT NULL
         );
+        ALTER TABLE public.exp_label_value_sources OWNER TO "${quarkus.datasource.username}";
 
-
-        ALTER TABLE public.exp_label_set_entry OWNER TO "${quarkus.datasource.username}";
-        CREATE SEQUENCE public.exp_label_set_entry_seq
-            START WITH 1
-            INCREMENT BY 50
-            NO MINVALUE
-            NO MAXVALUE
-            CACHE 1;
-
-
-        ALTER SEQUENCE public.exp_label_set_entry_seq OWNER TO "${quarkus.datasource.username}";
-        CREATE TABLE public.exp_label_value_pointer (
-                                                    childindex bigint NOT NULL,
-                                                    child_label_id bigint NOT NULL,
-                                                    child_run_id bigint NOT NULL,
-                                                    targetindex bigint NOT NULL,
-                                                    target_label_id bigint NOT NULL,
-                                                    target_run_id bigint NOT NULL
-        );
-
-
-        ALTER TABLE public.exp_label_value_pointer OWNER TO "${quarkus.datasource.username}";
         CREATE TABLE public.exp_label_values (
-                                             iterated boolean NOT NULL,
+                                             ordinal integer NOT NULL,
+                                             id bigint NOT NULL,
                                              label_id bigint NOT NULL,
                                              run_id bigint NOT NULL,
                                              data jsonb
         );
-
-
         ALTER TABLE public.exp_label_values OWNER TO "${quarkus.datasource.username}";
-        CREATE TABLE public.exp_labelset (
-                                         id bigint NOT NULL,
-                                         name character varying(255),
-                                         uri character varying(255)
-        );
-
-
-        ALTER TABLE public.exp_labelset OWNER TO "${quarkus.datasource.username}";
-        CREATE SEQUENCE public.exp_labelset_seq
+        CREATE SEQUENCE public.exp_label_values_seq
             START WITH 1
             INCREMENT BY 50
             NO MINVALUE
             NO MAXVALUE
             CACHE 1;
+        ALTER SEQUENCE public.exp_label_values_seq OWNER TO "${quarkus.datasource.username}";
 
-
-        ALTER SEQUENCE public.exp_labelset_seq OWNER TO "${quarkus.datasource.username}";
         CREATE TABLE public.exp_run (
                                     id bigint NOT NULL,
                                     test_id bigint,
                                     data jsonb,
                                     metadata jsonb
         );
+
+
+        CREATE TABLE public.exp_labelgroup (
+            id bigint NOT NULL,
+            type character varying(31) NOT NULL,
+            name character varying(255) NOT NULL,
+            owner character varying(255)
+        );
+        ALTER TABLE public.exp_labelgroup OWNER TO "${quarkus.datasource.username}";
+            CREATE SEQUENCE public.exp_labelgroup_seq
+            START WITH 1
+            INCREMENT BY 50
+            NO MINVALUE
+            NO MAXVALUE
+            CACHE 1;
+        ALTER SEQUENCE public.exp_labelgroup_seq OWNER TO "${quarkus.datasource.username}";
 
 
         ALTER TABLE public.exp_run OWNER TO "${quarkus.datasource.username}";
@@ -4842,83 +4816,58 @@
             NO MINVALUE
             NO MAXVALUE
             CACHE 1;
-
-
         ALTER SEQUENCE public.exp_run_seq OWNER TO "${quarkus.datasource.username}";
-        CREATE TABLE public.exp_test (
-                                     id bigint NOT NULL,
-                                     name character varying(255)
-        );
 
-
-        ALTER TABLE public.exp_test OWNER TO "${quarkus.datasource.username}";
-        CREATE SEQUENCE public.exp_test_seq
-            START WITH 1
-            INCREMENT BY 50
-            NO MINVALUE
-            NO MAXVALUE
-            CACHE 1;
-
-
-        ALTER SEQUENCE public.exp_test_seq OWNER TO "${quarkus.datasource.username}";
         ALTER TABLE ONLY public.exp_extractor
             ADD CONSTRAINT exp_extractor_pkey PRIMARY KEY (id);
-        ALTER TABLE ONLY public.exp_label
-            ADD CONSTRAINT exp_label_name_parent_id_key UNIQUE (name, parent_id);
         ALTER TABLE ONLY public.exp_label
             ADD CONSTRAINT exp_label_pkey PRIMARY KEY (id);
         ALTER TABLE ONLY public.exp_label_reducers
             ADD CONSTRAINT exp_label_reducers_pkey PRIMARY KEY (id);
-        ALTER TABLE ONLY public.exp_label_set_entry
-            ADD CONSTRAINT exp_label_set_entry_label_id_key UNIQUE (label_id);
-        ALTER TABLE ONLY public.exp_label_set_entry
-            ADD CONSTRAINT exp_label_set_entry_pkey PRIMARY KEY (id);
-        ALTER TABLE ONLY public.exp_label_set_entry
-            ADD CONSTRAINT exp_label_set_entry_uri_version_key UNIQUE (uri, version);
-        ALTER TABLE ONLY public.exp_label_value_pointer
-            ADD CONSTRAINT exp_label_value_pointer_pkey PRIMARY KEY (childindex, child_label_id, child_run_id, targetindex, target_label_id, target_run_id);
         ALTER TABLE ONLY public.exp_label_values
-            ADD CONSTRAINT exp_label_values_pkey PRIMARY KEY (run_id, label_id);
-        ALTER TABLE ONLY public.exp_labelset
-            ADD CONSTRAINT exp_labelset_pkey PRIMARY KEY (id);
-        ALTER TABLE ONLY public.exp_labelset
-            ADD CONSTRAINT exp_labelset_uri_key UNIQUE (uri);
+            ADD CONSTRAINT exp_label_values_pkey PRIMARY KEY (id);
+        ALTER TABLE ONLY public.exp_labelgroup
+            ADD CONSTRAINT exp_labelgroup_pkey PRIMARY KEY (id);
         ALTER TABLE ONLY public.exp_run
             ADD CONSTRAINT exp_run_pkey PRIMARY KEY (id);
-        ALTER TABLE ONLY public.exp_test
-            ADD CONSTRAINT exp_test_pkey PRIMARY KEY (id);
 
-        CREATE INDEX exp_label_target_schema ON public.exp_label USING btree (target_schema);
+        CREATE INDEX exp_label_group ON public.exp_label USING btree (group_id);
+        CREATE INDEX exp_label_target_group ON public.exp_label USING btree (targetgroup_id);
+        CREATE INDEX exp_label_values_label_id ON public.exp_label_values USING btree (label_id);
+        CREATE INDEX exp_label_values_run_id ON public.exp_label_values USING btree (run_id);
+        CREATE INDEX exp_label_value_sources_labelvaluedao_id ON public.exp_label_value_sources USING btree (labelvaluedao_id);
+        CREATE INDEX exp_label_value_sources_sources_id ON public.exp_label_value_sources USING btree (sources_id);
 
-        CREATE INDEX exp_lv_label_id ON public.exp_label_values USING btree (label_id);
-        CREATE INDEX exp_lv_run_id ON public.exp_label_values USING btree (run_id);
-        CREATE INDEX exp_lvp_child_label_id ON public.exp_label_value_pointer USING btree (child_label_id);
-        CREATE INDEX exp_lvp_child_run_id ON public.exp_label_value_pointer USING btree (child_run_id);
-        CREATE INDEX exp_lvp_target_label_id ON public.exp_label_value_pointer USING btree (target_label_id);
         ALTER TABLE ONLY public.exp_extractor
             ADD CONSTRAINT fk2g4rwxy4a7g9wjf1rwp23o06r FOREIGN KEY (target_id) REFERENCES public.exp_label(id);
-        ALTER TABLE ONLY public.exp_label_set_entry
-            ADD CONSTRAINT fka9xtuj74whpjia3yci4x7y673 FOREIGN KEY (id) REFERENCES public.exp_labelset(id);
-        ALTER TABLE ONLY public.exp_label_values
-            ADD CONSTRAINT fkchg0rpfmrxc0y1vbcm21gcqe0 FOREIGN KEY (run_id) REFERENCES public.exp_run(id);
-        ALTER TABLE ONLY public.exp_label
-            ADD CONSTRAINT fkcuk5nomjhy2p0lkahsrjlnh7 FOREIGN KEY (reducer_id) REFERENCES public.exp_label_reducers(id);
-        ALTER TABLE ONLY public.exp_label_value_pointer
-            ADD CONSTRAINT fkncs22kcom9obc1l1a2hgqi1pw FOREIGN KEY (target_run_id, target_label_id) REFERENCES public.exp_label_values(run_id, label_id);
         ALTER TABLE ONLY public.exp_extractor
             ADD CONSTRAINT fkoaabjuviu5ls5xq0pqe5ghy6m FOREIGN KEY (parent_id) REFERENCES public.exp_label(id);
-        ALTER TABLE ONLY public.exp_label_value_pointer
-            ADD CONSTRAINT fkqwkeeid1ps85srrl9jm22qv7w FOREIGN KEY (child_run_id, child_label_id) REFERENCES public.exp_label_values(run_id, label_id);
+
         ALTER TABLE ONLY public.exp_label
-            ADD CONSTRAINT fks7aj6usris8fyljtu9ytapinn FOREIGN KEY (parent_id) REFERENCES public.exp_test(id);
-        ALTER TABLE ONLY public.exp_run
-            ADD CONSTRAINT fksn7i9tqshvqywxhsmq28365yq FOREIGN KEY (test_id) REFERENCES public.exp_test(id);
-        ALTER TABLE ONLY public.exp_label_values
-            ADD CONSTRAINT fkteh5nire3ba4hd6nn23vjrjok FOREIGN KEY (label_id) REFERENCES public.exp_label(id);
-        ALTER TABLE ONLY public.exp_label_set_entry
-            ADD CONSTRAINT fkthfal5t2hq7qndtv3333nr8j6 FOREIGN KEY (label_id) REFERENCES public.exp_label(id);
+            ADD CONSTRAINT fk5shmrnnq7cdn40o000v1hs6r7 FOREIGN KEY (sourcelabel_id) REFERENCES public.exp_label(id);
+        ALTER TABLE ONLY public.exp_label
+            ADD CONSTRAINT fka4bmfdx7hq4u1qv22po9ass5h FOREIGN KEY (originallabel_id) REFERENCES public.exp_label(id);
+        ALTER TABLE ONLY public.exp_label
+            ADD CONSTRAINT fkcuk5nomjhy2p0lkahsrjlnh7 FOREIGN KEY (reducer_id) REFERENCES public.exp_label_reducers(id);
         ALTER TABLE ONLY public.exp_label
             ADD CONSTRAINT fkydx009q5y8ee2rc4c0g9ojbj FOREIGN KEY (id) REFERENCES public.exp_label(id);
+
+        ALTER TABLE ONLY public.exp_label
+            ADD CONSTRAINT fkek2a863ukw4kkv7oi5g0h6g4m FOREIGN KEY (sourcegroup_id) REFERENCES public.exp_labelgroup(id);
+        ALTER TABLE ONLY public.exp_label
+            ADD CONSTRAINT fkk9xk75jsu5r9mgfatyk0r37m1 FOREIGN KEY (group_id) REFERENCES public.exp_labelgroup(id);
+        ALTER TABLE ONLY public.exp_label
+            ADD CONSTRAINT fkv5kkr3oh8fnwd0uj0k684jda FOREIGN KEY (targetgroup_id) REFERENCES public.exp_labelgroup(id);
+
+        ALTER TABLE ONLY public.exp_label_values
+            ADD CONSTRAINT fkchg0rpfmrxc0y1vbcm21gcqe0 FOREIGN KEY (run_id) REFERENCES public.exp_run(id);
+        ALTER TABLE ONLY public.exp_label_values
+            ADD CONSTRAINT fkteh5nire3ba4hd6nn23vjrjok FOREIGN KEY (label_id) REFERENCES public.exp_label(id);
+
+        ALTER TABLE ONLY public.exp_run
+            ADD CONSTRAINT fkfre0ttv8g1062vrmvxtjd208y FOREIGN KEY (test_id) REFERENCES public.exp_labelgroup(id);
+
+
 
         </sql>
     </changeSet>

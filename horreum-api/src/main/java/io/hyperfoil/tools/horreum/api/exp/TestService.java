@@ -1,5 +1,9 @@
 package io.hyperfoil.tools.horreum.api.exp;
 
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+
+import java.util.List;
+
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -7,13 +11,10 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+
 import org.jboss.resteasy.reactive.Separator;
 
-import java.util.List;
-
 import io.hyperfoil.tools.horreum.api.exp.data.Test;
-
-import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 
 @Path("/api/x/test")
 @Produces(APPLICATION_JSON)

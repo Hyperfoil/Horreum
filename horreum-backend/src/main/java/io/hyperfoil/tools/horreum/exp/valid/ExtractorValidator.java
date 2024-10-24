@@ -1,11 +1,12 @@
 package io.hyperfoil.tools.horreum.exp.valid;
 
-import io.hyperfoil.tools.horreum.exp.data.ExtractorDao;
+import java.util.Arrays;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-import java.util.Arrays;
+import io.hyperfoil.tools.horreum.exp.data.ExtractorDao;
 
 @ApplicationScoped
 public class ExtractorValidator implements ConstraintValidator<ValidTarget, ExtractorDao> {
@@ -19,27 +20,35 @@ public class ExtractorValidator implements ConstraintValidator<ValidTarget, Extr
     @Override
     public boolean isValid(ExtractorDao extractor, ConstraintValidatorContext constraintValidatorContext) {
         boolean rtrn = true;
-        if(extractor == null){
+        if (extractor == null) {
             return false;
         }
-        switch (extractor.type){
+        switch (extractor.type) {
             case PATH -> {
-                if(extractor.jsonpath == null || extractor.jsonpath.isBlank()){
+                if (extractor.jsonpath == null || extractor.jsonpath.isBlank()) {
                     rtrn = false;
-                    constraintValidatorContext.buildConstraintViolationWithTemplate("jsonpath cannot be null or empty").addConstraintViolation();
+                    constraintValidatorContext.buildConstraintViolationWithTemplate("jsonpath cannot be null or empty")
+                            .addConstraintViolation();
                 }
             }
             case VALUE -> {
-                if(extractor.targetLabel == null){
-                    constraintValidatorContext.buildConstraintViolationWithTemplate("label value extractor needs a valid target label").addConstraintViolation();
+                if (extractor.targetLabel == null) {
+                    constraintValidatorContext
+                            .buildConstraintViolationWithTemplate("label value extractor needs a valid target label")
+                            .addConstraintViolation();
                     rtrn = false;
-                }else if(!extractor.parent.parent.equals(extractor.targetLabel.parent)){
-                    constraintValidatorContext.buildConstraintViolationWithTemplate("label value extractor must extract from a label in the same test").addConstraintViolation();
+                } else if (!extractor.parent.group.equals(extractor.targetLabel.group)) {
+                    constraintValidatorContext
+                            .buildConstraintViolationWithTemplate(
+                                    "label value extractor must extract from a label in the same test")
+                            .addConstraintViolation();
                 }
             }
             case METADATA -> {
-                if(extractor.column_name == null || !Arrays.asList("metadata").contains(extractor.column_name)){
-                    constraintValidatorContext.buildConstraintViolationWithTemplate("horreum metadata extractor needs a valid target field but target was "+extractor.column_name).addConstraintViolation();
+                if (extractor.column_name == null || !Arrays.asList("metadata").contains(extractor.column_name)) {
+                    constraintValidatorContext.buildConstraintViolationWithTemplate(
+                            "horreum metadata extractor needs a valid target field but target was " + extractor.column_name)
+                            .addConstraintViolation();
                     rtrn = false;
                 }
             }

@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.api.exp.data;
 
-
 import java.util.List;
 
 public class Label {
@@ -9,21 +8,29 @@ public class Label {
 
     public String name;
 
-    public Test parent;
-
-    public String target_schema;
-
-    public String uri;
-    public String parent_uri;
+    public LabelGroup group;
+    public LabelGroup sourceGroup;
+    public Label sourceLabel;
+    public LabelGroup targetGroup;
 
     public List<Extractor> extractors;
 
     public LabelReducer reducer;
 
+    public boolean splitting;
+    public boolean dirty;
+
     public MultiIterationType multiType;
     public ScalarVariableMethod scalarMethod;
 
-    public enum MultiIterationType { Length, NxN}
-    public enum ScalarVariableMethod { First, All}
+    public enum MultiIterationType {
+        Length,
+        NxN
+    }
+
+    public enum ScalarVariableMethod {
+        First,
+        All
+    }
 
 }
