@@ -92,7 +92,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
                                 {
                                     title: (
                                         <NavLink to={`/run/${d.runId}#dataset${d.ordinal}`}>
-                                            {d.runId}/{d.ordinal + 1}
+                                            {d.runId}/{d.ordinal}
                                         </NavLink>
                                     ),
                                 },

@@ -194,7 +194,7 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
                 if (!dataset) return <></>
                 return (
                     <NavLink to={`/run/${dataset.runId}#dataset${dataset.ordinal}`}>
-                        {dataset.runId}/{dataset.ordinal + 1}
+                        {dataset.runId}/{dataset.ordinal}
                     </NavLink>
                 )
             },

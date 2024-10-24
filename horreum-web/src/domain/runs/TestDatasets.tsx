@@ -65,7 +65,7 @@ const staticColumns: DatasetColumn[] = [
                 <>
                     <NavLink to={`/run/${value}#dataset${arg.row.original.ordinal}`}>
                         <ArrowRightIcon />
-                        {`\u00A0${value} #${arg.row.original.ordinal + 1}`}
+                        {`\u00A0${value}/${arg.row.original.ordinal}`}
                     </NavLink>
                 </>
             )

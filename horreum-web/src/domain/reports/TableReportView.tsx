@@ -60,7 +60,7 @@ function DataView(props: DataViewProps) {
                 <>
                     Dataset{" "}
                     <NavLink to={`/run/${data.runId}#dataset${data.ordinal}`}>
-                        {data.runId}/{data.ordinal + 1}
+                        {data.runId}/{data.ordinal}
                     </NavLink>
                 </>
             }

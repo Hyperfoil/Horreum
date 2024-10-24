@@ -150,7 +150,7 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                                     interleave(
                                         result.baseline.map((ds, i) => (
                                             <NavLink key={2 * i} to={`/run/${ds.runId}#dataset${ds.ordinal}`}>
-                                                {ds.runId}/{ds.ordinal + 1}
+                                                {ds.runId}/{ds.ordinal}
                                             </NavLink>
                                         )),
                                         i => <React.Fragment key={2 * i + 1}>, </React.Fragment>

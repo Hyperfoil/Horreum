@@ -122,7 +122,7 @@ public class EmailPlugin implements NotificationPlugin {
         @Override
         public void notifyMissingValues(String testName, String fingerprint, MissingValuesEvent event) {
             String subject = String.format("%s Missing change detection values in test %s, dataset %d#%d",
-                    subjectPrefix, testName, event.dataset.runId, event.dataset.ordinal + 1);
+                    subjectPrefix, testName, event.dataset.runId, event.dataset.ordinal);
             missingValuesNotificationEmail
                     .data("username", username)
                     .data("testName", testName)
