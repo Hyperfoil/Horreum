@@ -12,7 +12,7 @@ API="http://localhost:8080/api"
 KEYCLOAK_URL=$( curl -k -s $API/config/keycloak | jq -r '.url')
 TOKEN=$(curl -s -X POST $KEYCLOAK_URL/realms/horreum/protocol/openid-connect/token \
     -H 'content-type: application/x-www-form-urlencoded' \
-    -d 'username=user&password=secret&grant_type=password&client_id=horreum-ui' \
+    -d 'username=horreum.bootstrap&password=secret&grant_type=password&client_id=horreum-ui' \
     | jq -r .access_token)
 
 fail() {
@@ -127,7 +127,7 @@ if [ "$IMPORT" != "false" ]; then
   post -s /schema/$ACME_HORREUM_SCHEMA_ID/labels throughput_label.json
   post -s /alerting/variables?test=$ROADRUNNER_TEST_ID roadrunner_variables.json
   post -s /subscriptions/$ROADRUNNER_TEST_ID roadrunner_watch.json
-  post -s '/notifications/settings?name=user&team=false' '[{ "method": "email", "data": "dummy@example.com" }]'
+  post -s '/notifications/settings?name=horreum.bootstrap&team=false' '[{ "method": "email", "data": "dummy@example.com" }]'
 
   post -s /action/allowedSites 'http://example.com' 'text/plain'
   post -s /action new_test_action.json
