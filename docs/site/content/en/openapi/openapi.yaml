@@ -666,6 +666,10 @@ paths:
           description: The run data will be processed asynchronously
           content:
             text/plain: {}
+        "204":
+          description: Data is valid but no run was created
+          content:
+            text/plain: {}
         "400":
           description: Some fields are missing or invalid
           content:
