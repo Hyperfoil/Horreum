@@ -503,6 +503,10 @@ public class RunServiceImpl implements RunService {
         if (datastore.uploadType() == Datastore.UploadType.MUILTI
                 && response.payload instanceof ArrayNode) {
 
+            if (response.payload.isEmpty()) {
+                return Response.status(Response.Status.NO_CONTENT).entity("Query returned no results").build();
+            }
+
             //if we return more than 10 results, offload to async queue to process - this might take a LOOONG time
             if (response.payload.size() > 10) {
                 response.payload.forEach(jsonNode -> {

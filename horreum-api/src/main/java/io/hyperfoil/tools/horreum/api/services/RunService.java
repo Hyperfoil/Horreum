@@ -222,6 +222,7 @@ public interface RunService {
     @APIResponses(value = {
             @APIResponse(responseCode = "200", description = "id of the newly generated run", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.INTEGER, implementation = Integer.class), example = "101")),
             @APIResponse(responseCode = "202", description = "The run data will be processed asynchronously", content = @Content(mediaType = MediaType.TEXT_PLAIN)),
+            @APIResponse(responseCode = "204", description = "Data is valid but no run was created", content = @Content(mediaType = MediaType.TEXT_PLAIN)),
             @APIResponse(responseCode = "400", description = "Some fields are missing or invalid", content = @Content(mediaType = MediaType.APPLICATION_JSON))
     })
     @Operation(description = "Upload a new Run")
