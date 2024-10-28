@@ -3227,10 +3227,14 @@ components:
           type: boolean
           example: false
         config:
+          required:
+          - builtIn
           type: object
-          oneOf:
-          - $ref: "#/components/schemas/ElasticsearchDatastoreConfig"
-          - $ref: "#/components/schemas/PostgresDatastoreConfig"
+          properties:
+            builtIn:
+              description: Built In
+              type: boolean
+          example: ElasticsearchDatastoreConfig
         type:
           description: Type of backend datastore
           enum:
@@ -3239,6 +3243,8 @@ components:
           - COLLECTORAPI
           type: string
           example: ELASTICSEARCH
+          discriminator:
+            propertyName: type
     DatastoreTestResponse:
       type: object
       properties:
@@ -3254,6 +3260,8 @@ components:
       - COLLECTORAPI
       type: string
       example: ELASTICSEARCH
+      discriminator:
+        propertyName: type
     EDivisiveDetectionConfig:
       required:
       - builtIn

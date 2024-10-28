@@ -25,8 +25,8 @@ import {
     CollectorApiDatastoreConfig,
     configApi,
     Datastore,
-    DatastoreTypeEnum,
-    ElasticsearchDatastoreConfig
+    DatastoreType,
+    ElasticsearchDatastoreConfig, PostgresDatastoreConfig
 } from "../../api";
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
@@ -66,9 +66,8 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
         },
 
     ];
-    const newBackendConfig: ElasticsearchDatastoreConfig | CollectorApiDatastoreConfig = {
-        url: "",
-        apiKey: "",
+    const newBackendConfig: ({ type: "ELASTICSEARCH";} & ElasticsearchDatastoreConfig) | ({ type: "COLLECTORAPI"; } & CollectorApiDatastoreConfig ) | ({ type: "POSTGRES"; } & PostgresDatastoreConfig)= {
+        type: DatastoreType.Postgres,
         builtIn: false
     }
 
@@ -79,7 +78,7 @@ const DatastoresTable = ( props: dataStoreTableProps) => {
         builtIn: false,
         access: Access.Private,
         config: newBackendConfig,
-        type: DatastoreTypeEnum.Postgres
+        type: DatastoreType.Postgres
     }
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
