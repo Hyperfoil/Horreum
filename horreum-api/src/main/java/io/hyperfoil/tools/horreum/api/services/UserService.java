@@ -88,6 +88,7 @@ public interface UserService {
     @GET
     @Path("defaultTeam")
     @Blocking
+    @Produces(TEXT_PLAIN)
     @Operation(description = "Get the default team of the current user.")
     @APIResponse(responseCode = "200", content = @Content(mediaType = TEXT_PLAIN, schema = @Schema(type = STRING)))
     String defaultTeam();
@@ -95,6 +96,7 @@ public interface UserService {
     @POST
     @Path("defaultTeam")
     @Blocking
+    @Consumes(TEXT_PLAIN)
     @Operation(description = "Set the default team of the current user.")
     @RequestBody(name = "team", required = true, content = @Content(mediaType = TEXT_PLAIN, schema = @Schema(type = STRING)))
     void setDefaultTeam(String team);
@@ -153,6 +155,7 @@ public interface UserService {
     @POST
     @Path("/apikey")
     @Blocking
+    @Produces(TEXT_PLAIN)
     @Operation(description = "Create a new API key.")
     @RequestBody(name = "request", required = true, content = @Content(schema = @Schema(type = OBJECT, implementation = ApiKeyRequest.class)))
     @APIResponse(responseCode = "200", content = @Content(mediaType = TEXT_PLAIN, schema = @Schema(type = STRING)))
@@ -168,6 +171,7 @@ public interface UserService {
     @PUT
     @Path("/apikey/{id}/rename")
     @Blocking
+    @Consumes(TEXT_PLAIN)
     @Operation(description = "Rename API key.")
     @Parameter(name = "id", in = PATH, schema = @Schema(type = INTEGER), description = "id of the key to be renamed")
     @RequestBody(name = "newName", content = @Content(mediaType = TEXT_PLAIN, schema = @Schema(type = STRING)))
