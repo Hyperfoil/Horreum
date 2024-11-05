@@ -23,7 +23,6 @@ import {
     PageSection,
     Spinner,
     EmptyStateHeader,
-    Tab,
 } from "@patternfly/react-core"
 
 import { UserIcon } from "@patternfly/react-icons"
@@ -35,6 +34,7 @@ import ManagedTeams from "./ManagedTeams"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import ApiKeys from "./ApiKeys";
+import {FragmentTab} from "../../components/FragmentTabs";
 
 export const UserProfileLink = () => {
     const profile = useSelector(userProfileSelector)
@@ -210,9 +210,9 @@ export function UserSettings() {
                                 </EmptyState>
                             )}
                         </SavedTab>
-                        <Tab title="API keys" eventKey="api-keys">
+                        <FragmentTab title="API keys" fragment="api-keys">
                             <ApiKeys/>
-                        </Tab>
+                        </FragmentTab>
                         {managedTeams.length > 0 ? (
                             <SavedTab
                                 title="Managed teams"
