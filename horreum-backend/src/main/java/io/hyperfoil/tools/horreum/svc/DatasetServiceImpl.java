@@ -190,7 +190,7 @@ public class DatasetServiceImpl implements DatasetService {
                 .append(SCHEMAS_SELECT).append(" WHERE testid = :testId GROUP BY dataset_id")
                 .append("), ").append(VALIDATION_SELECT);
         JsonNode jsonFilter = null;
-        if (filter != null && !filter.isBlank()) {
+        if (filter != null && !filter.isBlank() && !filter.equals("{}")) {
             sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = :testId GROUP BY dataset.id)");
             sql.append(DATASET_SUMMARY_SELECT);
             addViewIdCondition(sql, viewId);
