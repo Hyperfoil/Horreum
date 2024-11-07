@@ -3,10 +3,11 @@ name: Perform Release
 on:
   workflow_dispatch:
 env:
-  RELEASE_BRANCH: 0.15
+  RELEASE_BRANCH: 0.16
 jobs:
   build:
     name: Perform release
+    if: github.ref != 'refs/heads/master'
     env:
       ENVIRONMENT: CI
     runs-on: ubuntu-latest
@@ -48,11 +49,11 @@ jobs:
       - name: Release to Maven
         run: |
           PROJECT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.4.0:evaluate -Dexpression=project.version -q -DforceStdout)
-          CUR_VER=$(echo ${PROJECT_VERSION} |  awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+0}' |  sed s/[.]$//)
-          NEXT_VER=$(echo ${PROJECT_VERSION} |  awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+1"-SNAPSHOT"}' |  sed s/[.]$//)
+          CUR_VER=$(echo ${PROJECT_VERSION} | awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+0}' | sed s/[.]$//)
+          NEXT_VER=$(echo ${PROJECT_VERSION} | awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+1"-SNAPSHOT"}' | sed s/[.]$//)
           echo "CUR_VER=$CUR_VER" >> "$GITHUB_ENV"
-          mvn -DskipTests clean javadoc:javadoc install
-          mvn --batch-mode -Darguments=-DskipTests -Dtag=$CUR_VER release:prepare release:perform -DreleaseVersion=$CUR_VER -DdevelopmentVersion=$NEXT_VER -Dresume=false
+          mvn -B -ntp -DskipTests clean javadoc:javadoc install
+          mvn -B -ntp -Darguments=-DskipTests -Dtag=$CUR_VER release:prepare release:perform -DreleaseVersion=$CUR_VER -DdevelopmentVersion=$NEXT_VER -Dresume=false
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
