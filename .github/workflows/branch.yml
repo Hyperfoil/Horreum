@@ -8,7 +8,7 @@ jobs:
     name: Create new branch
     env:
       ENVIRONMENT: CI
-    runs-on:  ubuntu-latest
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
           distribution: 'adopt'
           java-version: 17
       - name: install yq
-        run: wget https://github.com/mikefarah/yq/releases/download/v4.2.0/yq_linux_amd64 -O ~/yq &&    chmod +x ~/yq
+        run: wget https://github.com/mikefarah/yq/releases/download/v4.2.0/yq_linux_amd64 -O ~/yq && chmod +x ~/yq
       - name: Maven Version
         run: mvn --version
       # Retrieve current version from the root pom
@@ -28,24 +28,24 @@ jobs:
         run: |
           PROJECT_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.4.0:evaluate -Dexpression=project.version -q -DforceStdout)
           echo PROJECT_VERSION=${PROJECT_VERSION} >> $GITHUB_ENV
-          echo CUR_VERSION=$(echo ${PROJECT_VERSION} |  awk -F'.' '{print $1"."$2+0"."$3}' |  sed s/[.]$//) >> $GITHUB_ENV
-          echo NEXT_VERSION=$(echo ${PROJECT_VERSION} |  awk -F'.' '{print $1"."$2+1}' |  sed s/[.]$//) >> $GITHUB_ENV
+          echo CUR_VERSION=$(echo ${PROJECT_VERSION} | awk -F'.' '{print $1"."$2+0"."$3}' | sed s/[.]$//) >> $GITHUB_ENV
+          echo NEXT_VERSION=$(echo ${PROJECT_VERSION} | awk -F'.' '{print $1"."$2+1}' | sed s/[.]$//) >> $GITHUB_ENV
       - name: Create branch ${{ env.CUR_VERSION }}
         run: git branch ${{ env.CUR_VERSION }} master
       - name: Bump next version ${{ env.NEXT_VERSION }}-SNAPSHOT
-        run: mvn versions:set -DnewVersion=${{ env.NEXT_VERSION }}-SNAPSHOT
+        run: mvn -B -ntp versions:set -DnewVersion=${{ env.NEXT_VERSION }}-SNAPSHOT
       - name: Set major version ${{ env.NEXT_VERSION }}
-        run: mvn versions:set-property -Dproperty=major-version -DnewVersion=${{ env.NEXT_VERSION }}
+        run: mvn -B -ntp versions:set-property -Dproperty=major-version -DnewVersion=${{ env.NEXT_VERSION }}
       - name: Update main workflow
-        run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/main.yml
+        run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]' .github/workflows/main.yml
       - name: Update release branch
-        run: ~/yq -i e '.env.RELEASE_BRANCH |= '${{ env.CUR_VERSION }} .github/workflows/release.yml
+        run: ~/yq -i e '.env.RELEASE_BRANCH |= '${{ env.NEXT_VERSION }} .github/workflows/release.yml
       - name: Update Notify clients workflow
-        run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]'  .github/workflows/notify-clients.yaml
+        run: ~/yq -i e '.on.push.branches |= [ "master", '${{ env.CUR_VERSION }}' ]' .github/workflows/notify-clients.yaml
       - name: Update backport workflow
-        run: ~/yq -i e '.jobs.backporting.steps[1].with.target-branch |= '${{ env.CUR_VERSION }}  .github/workflows/backport.yml
+        run: ~/yq -i e '.jobs.backporting.steps[1].with.target-branch |= '${{ env.CUR_VERSION }} .github/workflows/backport.yml
       - name: build new openapi.yaml
-        run: mvn clean package -DskipTests -DskipITs -pl horreum-api
+        run: mvn -B -ntp clean package -DskipTests -DskipITs -pl horreum-api
       - name: Configure git
         run: |
           git config --global user.name "rh-appservices-perf"
@@ -56,7 +56,7 @@ jobs:
       - name: Update cur branch
         run: |
           git checkout ${{ env.CUR_VERSION }}
-          mvn versions:set -DnewVersion=${{ env.CUR_VERSION }}.0-SNAPSHOT
+          mvn -B -ntp versions:set -DnewVersion=${{ env.CUR_VERSION }}.0-SNAPSHOT
       - name: Commit current release branch
         run: |
           git commit -a -m "Branching ${{ env.CUR_VERSION }}"
