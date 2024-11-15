@@ -1,7 +1,8 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -16,7 +17,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
-import org.junit.Assert;
 import org.junit.jupiter.api.*;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -69,10 +69,11 @@ public class DatasourceTest extends BaseServiceTest {
                  }
                 """.replace("{docID}", "f4a0c0ea-a3cc-4c2e-bb28-00d1a25b0135");
 
-        String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
+        List<Integer> runIDs = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
 
-        assertNotNull(runID);
-        Assert.assertTrue(Integer.parseInt(runID) > 0);
+        assertNotNull(runIDs);
+        assertEquals(1, runIDs.size());
+        assertTrue(runIDs.get(0) > 0);
 
         Dataset.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
         Assertions.assertNotNull(event);
@@ -105,10 +106,10 @@ public class DatasourceTest extends BaseServiceTest {
                  }
                 """;
 
-        String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
+        List<Integer> runIDs = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
 
-        assertNotNull(runID);
-        Assert.assertEquals(4, runID.split(",").length);
+        assertNotNull(runIDs);
+        assertEquals(4, runIDs.size());
 
     }
 
@@ -124,10 +125,10 @@ public class DatasourceTest extends BaseServiceTest {
                  }
                 """;
 
-        String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
+        List<Integer> runIDs = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
 
-        assertNotNull(runID);
-        Assert.assertEquals(4, runID.split(",").length);
+        assertNotNull(runIDs);
+        assertEquals(4, runIDs.size());
     }
 
     @org.junit.jupiter.api.Test
@@ -146,11 +147,12 @@ public class DatasourceTest extends BaseServiceTest {
                  }
                 """;
 
-        String runResponse = uploadRun(payload, testConfig.test.name, testConfig.schema.uri,
+        List<Integer> runResponse = uploadRun(payload, testConfig.test.name, testConfig.schema.uri,
                 jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode());
 
         assertNotNull(runResponse);
-        Assert.assertEquals("More than 10 runs uploaded, processing asynchronously", runResponse);
+        // More than 10 runs uploaded, processing asynchronously
+        assertEquals(0, runResponse.size());
 
     }
 
@@ -184,10 +186,10 @@ public class DatasourceTest extends BaseServiceTest {
                     }
                 }
                 """;
-        String runID = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
+        List<Integer> runIDs = uploadRun(payload, testConfig.test.name, testConfig.schema.uri);
 
-        assertNotNull(runID);
-        Assert.assertEquals(2, runID.split(",").length);
+        assertNotNull(runIDs);
+        assertEquals(2, runIDs.size());
 
     }
 

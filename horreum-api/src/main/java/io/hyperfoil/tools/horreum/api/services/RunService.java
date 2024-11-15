@@ -166,6 +166,12 @@ public interface RunService {
             @Parameter(name = "access", description = "New Access level", example = "0"),
     })
     @RequestBody(name = "runBody", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Run.class)), required = true)
+    @APIResponses(value = {
+            @APIResponse(responseCode = "202", description = "The request has been accepted for processing. Returns a list of created run IDs if available, "
+                    + "or an empty list if processing is still ongoing. Label values and change detection processing " +
+                    "is performed asynchronously.", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.ARRAY, implementation = Integer.class, example = "[101, 102, 103]"), example = "[101, 102, 103]")),
+            @APIResponse(responseCode = "400", description = "Some fields are missing or invalid", content = @Content(mediaType = MediaType.APPLICATION_JSON))
+    })
     Response add(@QueryParam("test") String testNameOrId,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
@@ -199,12 +205,6 @@ public interface RunService {
             "    \"buildDisplayName\": \"#125\"\n" +
             "  }\n" +
             "]"))
-    @APIResponses(value = {
-            @APIResponse(responseCode = "200", description = "id of the newly generated run", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.INTEGER, implementation = Integer.class), example = "101")),
-            @APIResponse(responseCode = "202", description = "The run data will be processed asynchronously", content = @Content(mediaType = MediaType.TEXT_PLAIN)),
-            @APIResponse(responseCode = "204", description = "Data is valid but no run was created", content = @Content(mediaType = MediaType.TEXT_PLAIN)),
-            @APIResponse(responseCode = "400", description = "Some fields are missing or invalid", content = @Content(mediaType = MediaType.APPLICATION_JSON))
-    })
     @Operation(description = "Upload a new Run")
     @Parameters(value = {
             @Parameter(name = "start", required = true, description = "start timestamp of run, or json path expression", examples = {
@@ -222,6 +222,13 @@ public interface RunService {
             @Parameter(name = "description", description = "Run description", example = "AWS runs"),
 
     })
+    @APIResponses(value = {
+            @APIResponse(responseCode = "202", description = "The request has been accepted for processing. Returns a list of created run IDs if available, "
+                    + "or an empty list if processing is still ongoing. Label values and change detection processing " +
+                    "is performed asynchronously.", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.ARRAY, implementation = Integer.class, example = "[101, 102, 103]"), example = "[101, 102, 103]")),
+            @APIResponse(responseCode = "204", description = "Data is valid but no run was created", content = @Content(mediaType = MediaType.TEXT_PLAIN)),
+            @APIResponse(responseCode = "400", description = "Some fields are missing or invalid", content = @Content(mediaType = MediaType.APPLICATION_JSON))
+    })
     Response addRunFromData(@QueryParam("start") String start,
             @QueryParam("stop") String stop,
             @QueryParam("test") String test,
@@ -234,11 +241,14 @@ public interface RunService {
     @POST
     @Path("data")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @Produces(MediaType.TEXT_PLAIN) // run ID as string
     @Operation(description = "Upload a new Run with metadata", hidden = true)
     @APIResponses(value = {
-            @APIResponse(responseCode = "200", content = {
-                    @Content(mediaType = MediaType.TEXT_PLAIN, schema = @Schema(type = SchemaType.STRING)) }) })
+            @APIResponse(responseCode = "202", description = "The request has been accepted for processing. Returns a list of created run IDs if available, "
+                    + "or an empty list if processing is still ongoing. Label values and change detection processing " +
+                    "is performed asynchronously.", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.ARRAY, implementation = Integer.class, example = "[101, 102, 103]"), example = "[101, 102, 103]")),
+            @APIResponse(responseCode = "204", description = "Data is valid but no run was created", content = @Content(mediaType = MediaType.TEXT_PLAIN)),
+            @APIResponse(responseCode = "400", description = "Some fields are missing or invalid", content = @Content(mediaType = MediaType.APPLICATION_JSON))
+    })
     Response addRunFromData(@Parameter(required = true) @QueryParam("start") String start,
             @Parameter(required = true) @QueryParam("stop") String stop,
             @Parameter(required = true) @QueryParam("test") String test,

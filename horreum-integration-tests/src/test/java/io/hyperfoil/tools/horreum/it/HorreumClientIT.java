@@ -121,7 +121,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             run.data = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
             run.description = "Test description";
             try (Response response = apiClient.runService.add(dummyTest.name, dummyTest.owner, Access.PRIVATE, run)) {
-                assertEquals(200, response.getStatus());
+                assertEquals(202, response.getStatus());
             }
         } finally {
             horreumClient.testService.updateAccess(dummyTest.id, dummyTest.owner, Access.PUBLIC);
@@ -367,6 +367,10 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds2.json")));
             uploadData.accept(mapper.readTree(resourceToString("data/experiment-ds3.json")));
 
+            // let process finish async, labelValues calculation is getting processed async
+            // TODO: is there a better way to wait for this?
+            Thread.sleep(6000);
+
             //6. run experiments
             RunService.RunsSummary runsSummary = horreumClient.runService.listTestRuns(dummyTest.id, false, null, null, "name",
                     SortDirection.Ascending);
@@ -384,7 +388,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
                     .runExperiments(maxDataset);
 
             assertNotNull(experimentResults);
-            assertTrue(experimentResults.size() > 0);
+            assertFalse(experimentResults.isEmpty());
 
         } catch (Exception e) {
             e.printStackTrace();

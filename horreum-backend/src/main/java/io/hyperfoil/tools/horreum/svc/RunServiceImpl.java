@@ -83,6 +83,7 @@ import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.RunMapper;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -346,7 +347,6 @@ public class RunServiceImpl implements RunService {
 
     @RolesAllowed(Roles.UPLOADER)
     @WithRoles
-    @Transactional
     @Override
     public Response add(String testNameOrId, String owner, Access access, Run run) {
         if (owner != null) {
@@ -365,8 +365,17 @@ public class RunServiceImpl implements RunService {
 
         TestDAO test = testService.ensureTestExists(testNameOrId);
         run.testid = test.id;
-        Integer runId = addAuthenticated(RunMapper.to(run), test);
-        return Response.status(Response.Status.OK).entity(String.valueOf(runId)).header(HttpHeaders.LOCATION, "/run/" + runId)
+        RunPersistence runPersistence = addAuthenticated(RunMapper.to(run), test);
+        runPersistence.getDatasetIds().forEach(dsId -> {
+            DatasetDAO ds = DatasetDAO.findById(dsId);
+            if (ds != null) {
+                queueDatasetProcessing(ds, false);
+            } else {
+                Log.warnf("Dataset with id %d not found, cannot process it", dsId);
+            }
+        });
+        return Response.status(Response.Status.ACCEPTED).entity(String.valueOf(runPersistence.runId))
+                .header(HttpHeaders.LOCATION, "/run/" + runPersistence.runId)
                 .build();
     }
 
@@ -430,8 +439,32 @@ public class RunServiceImpl implements RunService {
         return addRunFromData(start, stop, test, owner, access, schemaUri, description, dataNode.toString(), metadataNode);
     }
 
+    /**
+     * Processes and persists a run or multiple runs based on the provided data and metadata.
+     * It performs the following steps:
+     * - Validates and parses the input data string into a JSON structure.
+     * - Resolves the appropriate datastore to handle the run processing.
+     * - Handles single or multiple runs based on the datastore's response type.
+     * - Persists runs and their associated datasets in the database.
+     * - Queues dataset recalculation tasks for further processing.
+     *
+     * If the response, in the case of datastore, contains more than 10 runs,
+     * the processing of the entire run is offloaded to an asynchronous queue.
+     * For fewer runs, processing occurs synchronously.
+     *
+     * @param start the start time for the run
+     * @param stop the stop time for the run
+     * @param test the name or identifier of the test
+     * @param owner the owner of the run
+     * @param access the access level for the run
+     * @param schemaUri the URI of the schema used for validation
+     * @param description a description of the run
+     * @param stringData the raw string data to be processed
+     * @param metadata additional metadata associated with the run
+     * @return a Response indicating the result of the operation, including accepted or rejected status
+     * @throws ServiceException if validation or data processing fails
+     */
     @RolesAllowed(Roles.UPLOADER)
-    @Transactional
     @WithRoles
     Response addRunFromData(String start, String stop, String test,
             String owner, Access access,
@@ -461,55 +494,64 @@ public class RunServiceImpl implements RunService {
         DatastoreResponse response = datastore.handleRun(data, metadata, testEntity.backendConfig,
                 Optional.ofNullable(schemaUri));
 
-        List<Integer> runIds = new ArrayList<>();
+        List<RunPersistence> runs = new ArrayList<>();
         if (datastore.uploadType() == Datastore.UploadType.MUILTI
                 && response.payload instanceof ArrayNode) {
 
             if (response.payload.isEmpty()) {
-                return Response.status(Response.Status.NO_CONTENT).entity("Query returned no results").build();
+                // user is trying to upload NO runs
+                return Response.status(Response.Status.NO_CONTENT).entity("Datastore query returned no results").build();
             }
 
+            // TODO: can we store the run/datasets and process datasets recalculation async regardless of the number of runs?
             //if we return more than 10 results, offload to async queue to process - this might take a LOOONG time
             if (response.payload.size() > 10) {
+                Log.infof("Received more than 10 runs, processing them asynchronously");
                 response.payload.forEach(jsonNode -> {
                     mediator.queueRunUpload(start, stop, test, owner, access, schemaUri, description, null, jsonNode,
                             testEntity);
                 });
             } else { //process synchronously
-                response.payload.forEach(jsonNode -> {
-                    runIds.add(getPersistRun(start, stop, test, owner, access, schemaUri, description, metadata, jsonNode,
-                            testEntity));
-                });
+                response.payload.forEach(jsonNode -> runs
+                        .add(getPersistRun(start, stop, test, owner, access, schemaUri, description, metadata, jsonNode,
+                                testEntity)));
             }
         } else {
-            runIds.add(getPersistRun(start, stop, test, owner, access, schemaUri, description, metadata, response.payload,
+            runs.add(getPersistRun(start, stop, test, owner, access, schemaUri, description, metadata, response.payload,
                     testEntity));
         }
-        if (runIds.size() > 0) {
-            return Response.status(Response.Status.OK)
-                    .entity(String.valueOf(runIds.stream().map(val -> Integer.toString(val)).collect(Collectors.joining(", "))))
-                    .build();
-        } else {
-            return Response.status(Response.Status.ACCEPTED).entity("More than 10 runs uploaded, processing asynchronously")
-                    .build();
+
+        if (!runs.isEmpty()) {
+            runs.stream().flatMap(runPersistence -> runPersistence.getDatasetIds().stream()).forEach(dsId -> {
+                DatasetDAO ds = DatasetDAO.findById(dsId);
+                if (ds != null) {
+                    queueDatasetProcessing(ds, false);
+                } else {
+                    Log.warnf("Dataset with id %d not found, cannot process it", dsId);
+                }
+            });
         }
+        // if the request is accepted return 202 with all generated run ids
+        // if no run ids, means all run upload have been queued up (datastore scenario)
+        return Response.status(Response.Status.ACCEPTED)
+                .entity(runs.stream().map(val -> val.runId).toList())
+                .build();
     }
 
-    @Transactional
     void persistRun(ServiceMediator.RunUpload runUpload) {
         runUpload.roles.add("horreum.system");
-        roleManager.setRoles(runUpload.roles.stream().collect(Collectors.joining(",")));
+        roleManager.setRoles(String.join(",", runUpload.roles));
         TestDAO testEntity = TestDAO.findById(runUpload.testId);
         if (testEntity == null) {
             log.errorf("Could not find Test (%d) for Run Upload", runUpload.testId);
             return;
         }
         try {
-            Integer runID = getPersistRun(runUpload.start, runUpload.stop, runUpload.test,
+            RunPersistence run = getPersistRun(runUpload.start, runUpload.stop, runUpload.test,
                     runUpload.owner, runUpload.access, runUpload.schemaUri,
                     runUpload.description, runUpload.metaData, runUpload.payload, testEntity);
 
-            if (runID == null) {
+            if (run.getRunId() == null) {
                 log.errorf("Could not persist Run for Test:  %d", testEntity.name);
             }
         } catch (ServiceException serviceException) {
@@ -518,7 +560,7 @@ public class RunServiceImpl implements RunService {
         }
     }
 
-    private Integer getPersistRun(String start, String stop, String test, String owner, Access access,
+    private RunPersistence getPersistRun(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, JsonNode metadata, JsonNode data, TestDAO testEntity) {
         Object foundStart = findIfNotSet(start, data);
         Object foundStop = findIfNotSet(stop, data);
@@ -576,8 +618,22 @@ public class RunServiceImpl implements RunService {
         }
     }
 
+    /**
+     * Adds a new authenticated run to the database with appropriate ownership and access settings.
+     * This method performs the following tasks:
+     * - Ensures the run's ID is reset and metadata is correctly handled.
+     * - Determines the owner of the run, defaulting to a specific uploader role if no owner is provided.
+     * - Validates ownership permissions against the user's roles.
+     * - Persists or updates the run in the database and handles related datasets.
+     *
+     * @param run the RunDAO object containing the run details
+     * @param test the TestDAO object containing the test details
+     * @return a RunPersistence object containing the persisted run ID and dataset IDs
+     * @throws ServiceException if validation fails or persistence encounters an error
+     */
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    private Integer addAuthenticated(RunDAO run, TestDAO test) {
+    @Transactional
+    public RunPersistence addAuthenticated(RunDAO run, TestDAO test) {
         // Id will be always generated anew
         run.id = null;
         //if run.metadata is null on the client, it will be converted to a NullNode, not null...
@@ -620,12 +676,12 @@ public class RunServiceImpl implements RunService {
         log.debugf("Upload flushed, run ID %d", run.id);
 
         mediator.newRun(RunMapper.from(run));
-        transform(run.id, false);
+        List<Integer> datasetIds = transform(run.id, false);
         if (mediator.testMode())
             Util.registerTxSynchronization(tm,
                     txStatus -> mediator.publishEvent(AsyncEventChannels.RUN_NEW, test.id, RunMapper.from(run)));
 
-        return run.id;
+        return new RunPersistence(run.id, datasetIds);
     }
 
     @PermitAll
@@ -1081,21 +1137,23 @@ public class RunServiceImpl implements RunService {
      * Transforms the data for a given run by applying applicable schemas and transformers.
      * It ensures any existing datasets for the run are removed before creating new ones,
      * handles timeouts for ongoing transformations, and creates datasets with the transformed data.
+     * If the flag {isRecalculation} is set to true the label values recalculation is performed
+     * right away synchronously otherwise it is completely skipped and let to the caller trigger it
      *
      * @param runId the ID of the run to transform
      * @param isRecalculation flag indicating if this is a recalculation
-     * @return the number of datasets created, or 0 if the run is invalid or not found or already ongoing
+     * @return the list of datasets ids that have been created, or empty list if the run is invalid or not found or already ongoing
      */
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
-    int transform(int runId, boolean isRecalculation) {
+    List<Integer> transform(int runId, boolean isRecalculation) {
+        List<Integer> datasetIds = new ArrayList<>();
         if (runId < 1) {
             log.errorf("Transformation parameters error: run %s", runId);
-            return 0;
+            return datasetIds;
         }
 
         log.debugf("Transforming run ID %d, recalculation? %s", runId, Boolean.toString(isRecalculation));
-        int numDatasets = 0;
 
         // check whether there is an ongoing transformation on the same runId
         TestService.RecalculationStatus status = new TestService.RecalculationStatus(1);
@@ -1106,7 +1164,7 @@ public class RunServiceImpl implements RunService {
         if (prev != null) {
             // there is an ongoing transformation that has recently been initiated
             log.warnf("Transformation for run %d already in progress", runId);
-            return numDatasets;
+            return datasetIds;
         }
 
         // We need to make sure all old datasets are gone before creating new; otherwise we could
@@ -1121,7 +1179,7 @@ public class RunServiceImpl implements RunService {
         RunDAO run = RunDAO.findById(runId);
         if (run == null) {
             log.errorf("Cannot load run ID %d for transformation", runId);
-            return numDatasets; // this is 0
+            return datasetIds; // this is still empty
         }
         Map<Integer, JsonNode> transformerResults = new TreeMap<>();
         // naked nodes (those produced by implicit identity transformers) are all added to each dataset
@@ -1188,7 +1246,7 @@ public class RunServiceImpl implements RunService {
                 }
                 // In Horreum it's customary that when a single extractor is used we pass the result directly to the function
                 // without wrapping it in an extra object.
-                if (t.extractors.size() == 1) {
+                if (t.extractors != null && t.extractors.size() == 1) {
                     if (root.size() != 1) {
                         // missing results should be null nodes
                         log.errorf("Unexpected result for single extractor: %s", root.toPrettyString());
@@ -1290,7 +1348,7 @@ public class RunServiceImpl implements RunService {
                             String message = String.format(
                                     "Transformer %d produced an array of %d elements but other transformer " +
                                             "produced %d elements; dataset %d/%d might be missing some data.",
-                                    entry.getKey(), node.size(), max, run.id, numDatasets);
+                                    entry.getKey(), node.size(), max, run.id, datasetIds.size());
                             logMessage(run, PersistentLogDAO.WARN, "%s", message);
                             log.warnf(message);
                         }
@@ -1301,37 +1359,57 @@ public class RunServiceImpl implements RunService {
                     }
                 }
                 nakedNodes.forEach(all::add);
-                createDataset(new DatasetDAO(run, numDatasets++, run.description, all), isRecalculation);
+                DatasetDAO ds = new DatasetDAO(run, datasetIds.size(), run.description, all);
+                datasetIds.add(createDataset(ds, isRecalculation));
             }
-            mediator.validateRun(run.id);
         } else {
-            numDatasets = 1;
             logMessage(run, PersistentLogDAO.INFO, "No applicable schema, dataset will be empty.");
-            createDataset(new DatasetDAO(
+            DatasetDAO ds = new DatasetDAO(
                     run, 0, "Empty Dataset for run data without any schema.",
-                    instance.arrayNode()), isRecalculation);
-            mediator.validateRun(run.id);
+                    instance.arrayNode());
+            datasetIds.add(createDataset(ds, isRecalculation));
         }
-        return numDatasets;
+        mediator.validateRun(run.id);
+        return datasetIds;
+    }
+
+    /**
+     * Persists a dataset, optionally triggers recalculation events, and validates the dataset.
+     * The recalculation is getting triggered sync only if the {isRecalculation} is set to true
+     * otherwise it is completely skipped
+     * @param ds the DatasetDAO object to be persisted
+     * @param isRecalculation whether the dataset is a result of recalculation
+     * @return the ID of the persisted dataset
+     */
+    private Integer createDataset(DatasetDAO ds, boolean isRecalculation) {
+        ds.persistAndFlush();
+        if (isRecalculation) {
+            try {
+                Dataset.EventNew event = new Dataset.EventNew(DatasetMapper.from(ds), true);
+                mediator.onNewDataset(event);
+                if (mediator.testMode())
+                    Util.registerTxSynchronization(tm,
+                            txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_NEW, ds.testid,
+                                    event));
+            } catch (TransactionRequiredException tre) {
+                log.error(
+                        "Failed attempt to persist and send Dataset event during inactive Transaction. Likely due to prior error.",
+                        tre);
+            }
+        }
+        mediator.validateDataset(ds.id);
+        return ds.id;
     }
 
     private String limitLength(String str) {
         return str.length() > 1024 ? str.substring(0, 1024) + "...(truncated)" : str;
     }
 
-    private void createDataset(DatasetDAO ds, boolean isRecalculation) {
-        try {
-            ds.persistAndFlush();
-            mediator.newDataset(new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation));
-            mediator.validateDataset(ds.id);
-            if (mediator.testMode())
-                Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_NEW, ds.testid,
-                        new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation)));
-        } catch (TransactionRequiredException tre) {
-            log.error(
-                    "Failed attempt to persist and send Dataset event during inactive Transaction. Likely due to prior error.",
-                    tre);
-        }
+    private void queueDatasetProcessing(DatasetDAO ds, boolean isRecalculation) {
+        mediator.queueDatasetEvents(new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation));
+        if (mediator.testMode())
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_NEW, ds.testid,
+                    new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation)));
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -1401,13 +1479,36 @@ public class RunServiceImpl implements RunService {
         }
     }
 
-    class Recalculate {
+    static class Recalculate {
         private int runId;
         private int testId;
     }
 
-    class RunFromUri {
+    static class RunFromUri {
         private int id;
         private int testId;
+    }
+
+    /**
+     * Represents the result of persisting a run, including the run ID and associated dataset IDs.
+     * This class is used to encapsulate the ID of the newly persisted run and the IDs of the datasets
+     * connected to the run, providing a structured way to return this data.
+     */
+    public static class RunPersistence {
+        private final Integer runId;
+        private final List<Integer> datasetIds;
+
+        public RunPersistence(Integer runId, List<Integer> dsIds) {
+            this.runId = runId;
+            this.datasetIds = dsIds;
+        }
+
+        public Integer getRunId() {
+            return runId;
+        }
+
+        public List<Integer> getDatasetIds() {
+            return datasetIds;
+        }
     }
 }

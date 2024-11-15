@@ -264,20 +264,19 @@ public class BaseServiceTest {
         return runId;
     }
 
-    protected String uploadRun(Object runJson, String test, String schemaUri) {
-        return uploadRun(runJson, test, schemaUri, jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+    protected List<Integer> uploadRun(Object runJson, String test, String schemaUri) {
+        return uploadRun(runJson, test, schemaUri, jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode());
     }
 
-    protected String uploadRun(Object runJson, String test, String schemaUri, Integer statusCode) {
+    protected List<Integer> uploadRun(Object runJson, String test, String schemaUri, Integer statusCode) {
         long timestamp = System.currentTimeMillis();
         return uploadRun(timestamp, timestamp, runJson, test, schemaUri, statusCode);
     }
 
-    protected String uploadRun(long start, long stop, Object runJson, String test, String schemaUri, Integer statusCode) {
-        String runId = uploadRun(Long.toString(start), Long.toString(stop), test, UPLOADER_ROLES[0], Access.PUBLIC,
+    protected List<Integer> uploadRun(long start, long stop, Object runJson, String test, String schemaUri,
+            Integer statusCode) {
+        return uploadRun(Long.toString(start), Long.toString(stop), test, UPLOADER_ROLES[0], Access.PUBLIC,
                 schemaUri, null, statusCode, runJson);
-        assertNotEquals("-1", runId);
-        return runId;
     }
 
     protected int uploadRun(long timestamp, Object runJson, String test) {
@@ -289,24 +288,27 @@ public class BaseServiceTest {
     }
 
     protected int uploadRun(long start, long stop, Object runJson, String test, String owner, Access access) {
-        String runIdString = RestAssured.given().auth().oauth2(getUploaderToken())
+        List<?> runIds = given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
                 .body(runJson)
                 .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner + "&access="
                         + access)
                 .then()
-                .statusCode(200)
-                .extract().asString();
-        return Integer.parseInt(runIdString);
+                .statusCode(202)
+                .extract().as(List.class);
+
+        assertEquals(1, runIds.size());
+        return Integer.parseInt(runIds.get(0).toString());
     }
 
-    protected String uploadRun(String start, String stop, String test, String owner, Access access,
+    protected List<Integer> uploadRun(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, Object runJson) {
         return uploadRun(start, stop, test, owner, access,
-                schemaUri, description, jakarta.ws.rs.core.Response.Status.OK.getStatusCode(), runJson);
+                schemaUri, description, jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode(), runJson);
     }
 
-    protected String uploadRun(String start, String stop, String test, String owner, Access access,
+    @SuppressWarnings("unchecked")
+    protected List<Integer> uploadRun(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, Integer statusCode, Object runJson) {
         return RestAssured.given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
@@ -315,7 +317,7 @@ public class BaseServiceTest {
                         + "&access=" + access + "&schema=" + schemaUri + "&description=" + description)
                 .then()
                 .statusCode(statusCode)
-                .extract().asString();
+                .extract().as(List.class);
     }
 
     protected int uploadRun(long timestamp, JsonNode data, JsonNode metadata, String testName) {
@@ -324,7 +326,8 @@ public class BaseServiceTest {
 
     protected int uploadRun(long start, long stop, JsonNode data, JsonNode metadata, String testName, String owner,
             Access access) {
-        String runIdString = given().auth().oauth2(getUploaderToken())
+        @SuppressWarnings("unchecked")
+        List<Integer> runIds = given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA)
                 // the .toString().getBytes(...) is required because RestAssured otherwise won't send the filename
                 // and Quarkus in turn will use null FileUpload: https://github.com/quarkusio/quarkus/issues/20938
@@ -334,15 +337,16 @@ public class BaseServiceTest {
                 .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + testName + "&owner=" + owner + "&access="
                         + access)
                 .then()
-                .statusCode(200)
-                .extract().asString();
-        int runId = Integer.parseInt(runIdString);
-        return runId;
+                .statusCode(202)
+                .extract().as(List.class);
+        assertEquals(1, runIds.size());
+        return runIds.get(0);
     }
 
     protected int uploadRun(String start, String stop, JsonNode data, JsonNode metadata, String testName, String owner,
             Access access) {
-        String runIdString = given().auth().oauth2(getUploaderToken())
+        @SuppressWarnings("unchecked")
+        List<Integer> runIds = given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA)
                 // the .toString().getBytes(...) is required because RestAssured otherwise won't send the filename
                 // and Quarkus in turn will use null FileUpload: https://github.com/quarkusio/quarkus/issues/20938
@@ -352,10 +356,10 @@ public class BaseServiceTest {
                 .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + testName + "&owner=" + owner + "&access="
                         + access)
                 .then()
-                .statusCode(200)
-                .extract().asString();
-        int runId = Integer.parseInt(runIdString);
-        return runId;
+                .statusCode(202)
+                .extract().as(List.class);
+        assertEquals(1, runIds.size());
+        return runIds.get(0);
     }
 
     protected Integer addOrUpdateLabel(Integer schemaId, Label label) {
@@ -962,7 +966,7 @@ public class BaseServiceTest {
                 .oauth2(getUploaderToken())
                 .body(r)
                 .post("/api/run/test");
-        assertEquals(200, response.statusCode());
+        assertEquals(202, response.statusCode());
 
     }
 
@@ -1071,10 +1075,41 @@ public class BaseServiceTest {
         }
     }
 
+    protected String labelValuesSetup(Test t, boolean load) {
+        Schema fooSchema = createSchema("foo", "urn:foo");
+        Extractor fooExtractor = new Extractor();
+        fooExtractor.name = "foo";
+        fooExtractor.jsonpath = "$.foo";
+        Extractor barExtractor = new Extractor();
+        barExtractor.name = "bar";
+        barExtractor.jsonpath = "$.bar";
+
+        addLabel(fooSchema, "labelFoo", "", fooExtractor);
+        addLabel(fooSchema, "labelBar", "", barExtractor);
+
+        if (load) {
+            List<Integer> ids = uploadRun("{ \"foo\": \"uno\", \"bar\": \"dox\"}", t.name, fooSchema.uri);
+            assertEquals(1, ids.size());
+            // force to recalculate datasets and label values sync
+            recalculateDatasetForRun(ids.get(0));
+            return ids.get(0).toString();
+        } else {
+            return "-1";
+        }
+    }
+
+    protected List<Integer> recalculateDatasetForRun(int runId) {
+        ArrayNode json = jsonRequest().post("/api/run/" + runId + "/recalculate").then().statusCode(200).extract().body()
+                .as(ArrayNode.class);
+        ArrayList<Integer> list = new ArrayList<>(json.size());
+        json.forEach(item -> list.add(item.asInt()));
+        return list;
+    }
+
     protected DatasetService.DatasetList listTestDatasets(long id, SortDirection direction) {
         StringBuilder url = new StringBuilder("/api/dataset/list/" + id);
         if (direction != null) {
-            url.append("?direction=" + direction);
+            url.append("?direction=").append(direction);
         }
         return jsonRequest()
                 .get(url.toString())

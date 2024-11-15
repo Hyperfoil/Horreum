@@ -666,7 +666,6 @@ public class TestServiceImpl implements TestService {
                     int newDatasets = 0;
                     try {
                         newDatasets = mediator.transform(runId, true);
-                        //               mediator.queueRunRecalculation(runId);
                     } finally {
                         synchronized (status) {
                             status.finished++;

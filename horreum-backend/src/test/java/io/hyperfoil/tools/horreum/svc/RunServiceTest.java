@@ -127,26 +127,7 @@ public class RunServiceTest extends BaseServiceTest {
         assertNewDataset(dataSetQueue, runId);
     }
 
-    private String labelValuesSetup(Test t, boolean load) throws JsonProcessingException {
-        Schema fooSchema = createSchema("foo", "urn:foo");
-        Extractor fooExtractor = new Extractor();
-        fooExtractor.name = "foo";
-        fooExtractor.jsonpath = "$.foo";
-        Extractor barExtractor = new Extractor();
-        barExtractor.name = "bar";
-        barExtractor.jsonpath = "$.bar";
-
-        addLabel(fooSchema, "labelFoo", "", fooExtractor);
-        addLabel(fooSchema, "labelBar", "", barExtractor);
-
-        if (load) {
-            return uploadRun("{ \"foo\": \"uno\", \"bar\": \"dox\"}", t.name, fooSchema.uri);
-        } else {
-            return "-1";
-        }
-    }
-
-    private String createTransformingSchema(Test t) throws JsonProcessingException {
+    private String createTransformingSchema(Test t) {
         Schema fooSchema = createSchema("foo", "urn:fooBar");
         Schema postTransformSchema = createSchema("foo-post-function", postFunctionSchemaUri(fooSchema));
         Extractor fooExtractor = new Extractor();
@@ -166,17 +147,20 @@ public class RunServiceTest extends BaseServiceTest {
         Transformer transformer = createTransformer("fooBar", fooSchema, "", transformExtractor);
         addTransformer(t, transformer);
 
-        return uploadRun("""
+        Integer runId = uploadRun("""
                 { "values":[
                   { "foo": "uno", "bar": "dox"},
                   { "foo": "dos", "bar": "box"}
                   ]
                 }
-                """, t.name, fooSchema.uri);
+                """, t.name, fooSchema.uri)
+                .get(0);
+        recalculateDatasetForRun(runId);
+        return runId.toString();
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesFilterMultiSelect() throws JsonProcessingException {
+    public void labelValuesFilterMultiSelect() {
         Test t = createTest(createExampleTest("my-test"));
         String id = createTransformingSchema(t);
         JsonNode response = jsonRequest()
@@ -200,7 +184,7 @@ public class RunServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesIncludeExcluded() throws JsonProcessingException {
+    public void labelValuesIncludeExcluded() {
         Test t = createTest(createExampleTest("my-test"));
         String id = labelValuesSetup(t, true);
 
@@ -221,7 +205,7 @@ public class RunServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesIncludeTwoParams() throws JsonProcessingException {
+    public void labelValuesIncludeTwoParams() {
         Test t = createTest(createExampleTest("my-test"));
         String id = labelValuesSetup(t, true);
 
@@ -242,7 +226,7 @@ public class RunServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesIncludeTwoSeparated() throws JsonProcessingException {
+    public void labelValuesIncludeTwoSeparated() {
         Test t = createTest(createExampleTest("my-test"));
         String id = labelValuesSetup(t, true);
 
@@ -263,7 +247,7 @@ public class RunServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesInclude() throws JsonProcessingException {
+    public void labelValuesInclude() {
         Test t = createTest(createExampleTest("my-test"));
         String id = labelValuesSetup(t, true);
 
@@ -284,7 +268,7 @@ public class RunServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void labelValuesExclude() throws JsonProcessingException {
+    public void labelValuesExclude() {
         Test t = createTest(createExampleTest("my-test"));
         String id = labelValuesSetup(t, true);
 
@@ -317,6 +301,7 @@ public class RunServiceTest extends BaseServiceTest {
 
         int runId = uploadRun(runWithValue(42, schema).toString(), test.name);
         assertNewDataset(dataSetQueue, runId);
+        recalculateDatasetForRun(runId);
 
         List<ExportedLabelValues> rtrn = jsonRequest()
                 .get("/api/run/" + runId + "/labelValues")
@@ -337,7 +322,6 @@ public class RunServiceTest extends BaseServiceTest {
     private void assertNewDataset(BlockingQueue<Dataset.EventNew> dataSetQueue, int runId) throws InterruptedException {
         Dataset.EventNew event = dataSetQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(event);
-        assertNotNull(event.datasetId);
         assertEquals(runId, event.runId);
         DatasetDAO ds = DatasetDAO.findById(event.datasetId);
         assertNotNull(ds);
@@ -704,7 +688,7 @@ public class RunServiceTest extends BaseServiceTest {
                 }
                 return null;
             });
-            List<Integer> dsIds1 = recalculateDataset(ds.runId);
+            List<Integer> dsIds1 = recalculateDatasetForRun(ds.runId);
             assertEquals(1, dsIds1.size());
             try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
                 List<DatasetDAO> dataSets = DatasetDAO.find("run.id", ds.runId).list();
@@ -712,7 +696,7 @@ public class RunServiceTest extends BaseServiceTest {
                 assertEquals(dsIds1.get(0), dataSets.get(0).id);
                 em.clear();
             }
-            List<Integer> dsIds2 = recalculateDataset(ds.runId);
+            List<Integer> dsIds2 = recalculateDatasetForRun(ds.runId);
             try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
                 List<DatasetDAO> dataSets = DatasetDAO.find("run.id", ds.runId).list();
                 assertEquals(1, dataSets.size());
@@ -720,14 +704,6 @@ public class RunServiceTest extends BaseServiceTest {
             }
             return null;
         });
-    }
-
-    protected List<Integer> recalculateDataset(int runId) {
-        ArrayNode json = jsonRequest().post("/api/run/" + runId + "/recalculate").then().statusCode(200).extract().body()
-                .as(ArrayNode.class);
-        ArrayList<Integer> list = new ArrayList<>(json.size());
-        json.forEach(item -> list.add(item.asInt()));
-        return list;
     }
 
     private void validateScalarArray(Dataset ds, String expectedTarget) {
@@ -748,7 +724,7 @@ public class RunServiceTest extends BaseServiceTest {
         test = createTest(test);
         JsonNode payload = new ObjectMapper().readTree(
                 "{\"start_time\": \"2024-03-13T21:18:10.878423-04:00\", \"stop_time\": \"2024-03-13T21:18:11.878423-04:00\"}");
-        String runId = uploadRun("$.start_time", "$.stop_time", test.name, test.owner, Access.PUBLIC,
+        uploadRun("$.start_time", "$.stop_time", test.name, test.owner, Access.PUBLIC,
                 null, "test", payload);
     }
 
@@ -967,9 +943,9 @@ public class RunServiceTest extends BaseServiceTest {
 
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
-        String runId = uploadRun("$.start", "$.stop", test.name, test.owner, Access.PUBLIC,
-                null, "test", payload);
-        assertTrue(Integer.parseInt(runId) > 0);
+        Integer runId = uploadRun("$.start", "$.stop", test.name, test.owner, Access.PUBLIC,
+                null, "test", payload).get(0);
+        assertTrue(runId > 0);
     }
 
     @org.junit.jupiter.api.Test

@@ -486,24 +486,6 @@ class TestServiceTest extends BaseServiceTest {
         assertEquals("RulesWithJoinsProvides", ((FingerprintValue<String>) values.get(1).values.get(1).children.get(2)).value);
     }
 
-    private String labelValuesSetup(Test t, boolean load) {
-        Schema fooSchema = createSchema("foo", "urn:foo");
-        Extractor fooExtractor = new Extractor();
-        fooExtractor.name = "foo";
-        fooExtractor.jsonpath = "$.foo";
-        Extractor barExtractor = new Extractor();
-        barExtractor.name = "bar";
-        barExtractor.jsonpath = "$.bar";
-        addLabel(fooSchema, "labelFoo", "", fooExtractor);
-        addLabel(fooSchema, "labelBar", "", barExtractor);
-
-        if (load) {
-            return uploadRun("{ \"foo\": \"uno\", \"bar\": \"dox\"}", t.name, fooSchema.uri);
-        } else {
-            return "-1";
-        }
-    }
-
     @org.junit.jupiter.api.Test
     public void labelValuesIncludeExcluded() {
         Test t = createTest(createExampleTest("my-test"));
@@ -532,12 +514,16 @@ class TestServiceTest extends BaseServiceTest {
         long stop = System.currentTimeMillis();
         long start = System.currentTimeMillis();
         long delta = 5000; // 5 seconds
-        uploadRun(start, stop, "{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo",
-                jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
-        uploadRun(start + delta, stop, "{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo",
-                jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
-        uploadRun(start + delta, stop, "{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo",
-                jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+        Integer runId = uploadRun(start, stop, "{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo",
+                jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode()).get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun(start + delta, stop, "{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo",
+                jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode()).get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun(start + delta, stop, "{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo",
+                jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode()).get(0);
+        recalculateDatasetForRun(runId);
+
         JsonNode response = jsonRequest()
                 .urlEncodingEnabled(true)
                 // keep only those runs that started after (start+delta-1)
@@ -572,12 +558,19 @@ class TestServiceTest extends BaseServiceTest {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
         long stop = System.currentTimeMillis();
-        uploadRun(Util.toInstant("2024-10-06T20:20:32.183Z").toEpochMilli(), stop, "{ \"foo\": 1, \"bar\": \"uno\"}", t.name,
-                "urn:foo", jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
-        uploadRun(Util.toInstant("2024-10-06T20:20:32.183Z").toEpochMilli(), stop, "{ \"foo\": 2, \"bar\": \"dos\"}", t.name,
-                "urn:foo", jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
-        uploadRun(Util.toInstant("2024-10-09T20:20:32.183Z").toEpochMilli(), stop, "{ \"foo\": 3, \"bar\": \"tres\"}", t.name,
-                "urn:foo", jakarta.ws.rs.core.Response.Status.OK.getStatusCode());
+        Integer runId = uploadRun(Util.toInstant("2024-10-06T20:20:32.183Z").toEpochMilli(), stop,
+                "{ \"foo\": 1, \"bar\": \"uno\"}", t.name,
+                "urn:foo", jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode()).get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun(Util.toInstant("2024-10-06T20:20:32.183Z").toEpochMilli(), stop, "{ \"foo\": 2, \"bar\": \"dos\"}",
+                t.name,
+                "urn:foo", jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode()).get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun(Util.toInstant("2024-10-09T20:20:32.183Z").toEpochMilli(), stop, "{ \"foo\": 3, \"bar\": \"tres\"}",
+                t.name,
+                "urn:foo", jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode()).get(0);
+        recalculateDatasetForRun(runId);
+
         JsonNode response = jsonRequest()
                 .urlEncodingEnabled(true)
                 // keep only those runs that started after (start+delta-1)
@@ -698,9 +691,12 @@ class TestServiceTest extends BaseServiceTest {
     public void labelValuesFilterMultiSelectMultipleValues() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
-        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        Integer runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
         JsonNode response = jsonRequest()
                 .urlEncodingEnabled(true)
                 .queryParam("filter", Maps.of("labelBar", Arrays.asList("uno", "tres")))
