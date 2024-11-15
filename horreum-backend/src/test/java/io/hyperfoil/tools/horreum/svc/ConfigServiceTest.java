@@ -130,7 +130,7 @@ public class ConfigServiceTest extends BaseServiceTest {
 
         assertNotNull(datastore);
         assertNotNull(config);
-        assertTrue(config instanceof PostgresDatastoreConfig);
+        assertInstanceOf(PostgresDatastoreConfig.class, config);
 
     }
 

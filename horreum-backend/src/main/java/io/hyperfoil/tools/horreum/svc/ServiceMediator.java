@@ -26,7 +26,6 @@ import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
-import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -150,10 +149,6 @@ public class ServiceMediator {
         alertingService.onLabelsUpdated(event);
     }
 
-    void newDataset(Dataset.EventNew eventNew) {
-        datasetService.onNewDataset(eventNew);
-    }
-
     @Transactional
     void newChange(Change.Event event) {
         actionService.onNewChange(event);
@@ -165,8 +160,12 @@ public class ServiceMediator {
     @ActivateRequestContext
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     public void processDatasetEvents(Dataset.EventNew newEvent) {
-        newDataset(newEvent);
+        onNewDataset(newEvent);
         validateDataset(newEvent.datasetId);
+    }
+
+    void onNewDataset(Dataset.EventNew eventNew) {
+        datasetService.onNewDataset(eventNew);
     }
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
@@ -228,19 +227,11 @@ public class ServiceMediator {
     }
 
     int transform(int runId, boolean isRecalculation) {
-        return runService.transform(runId, isRecalculation);
+        return runService.transform(runId, isRecalculation).size();
     }
 
     void newExperimentResult(ExperimentService.ExperimentResult result) {
         actionService.onNewExperimentResult(result);
-    }
-
-    void validate(Action dto) {
-        actionService.validate(dto);
-    }
-
-    void merge(ActionDAO dao) {
-        actionService.merge(dao);
     }
 
     void exportTest(TestExport test) {
@@ -274,10 +265,6 @@ public class ServiceMediator {
 
     public void validateDataset(Integer datasetId) {
         schemaService.validateDatasetData(datasetId, null);
-    }
-
-    public void validateSchema(int schemaId) {
-        schemaService.revalidateAll(schemaId);
     }
 
     public <T> void publishEvent(AsyncEventChannels channel, int testId, T payload) {

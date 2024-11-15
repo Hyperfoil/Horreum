@@ -6,7 +6,7 @@ import java.util.Properties;
 import io.quarkus.logging.Log;
 
 public class Version {
-    public static final String getVersion() {
+    public static String getVersion() {
         final Properties properties = new Properties();
         try {
             properties.load(Version.class.getClassLoader().getResourceAsStream("build.properties"));

@@ -13,7 +13,6 @@ import java.util.stream.IntStream;
 
 import jakarta.inject.Inject;
 
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
@@ -55,7 +54,6 @@ import io.restassured.common.mapper.TypeRef;
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
 public class AlertingServiceTest extends BaseServiceTest {
-    private static final Logger log = Logger.getLogger(AlertingServiceTest.class);
 
     @Inject
     RoleManager roleManager;
@@ -110,6 +108,7 @@ public class AlertingServiceTest extends BaseServiceTest {
                 .getEventQueue(AsyncEventChannels.DATASET_MISSING_VALUES, test.id);
         missingQueue.drainTo(new ArrayList<>());
         int runId = uploadRun(runJson, test.name);
+        recalculateDatasetForRun(runId);
 
         MissingValuesEvent event = missingQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(event);
@@ -118,7 +117,7 @@ public class AlertingServiceTest extends BaseServiceTest {
         Util.withTx(tm, () -> {
             try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
                 List<DatasetLogDAO> logs = DatasetLogDAO.find("dataset.run.id", runId).list();
-                assertTrue(logs.size() > 0);
+                assertFalse(logs.isEmpty());
                 return null;
             }
         });

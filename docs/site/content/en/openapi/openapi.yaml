@@ -648,18 +648,25 @@ paths:
               jobDisplayName: upstream-perf-bre-datastructures
               buildDisplayName: "#125"
       responses:
-        "200":
-          description: id of the newly generated run
+        "202":
+          description: "The request has been accepted for processing. Returns a list\
+            \ of created run IDs if available, or an empty list if processing is still\
+            \ ongoing. Label values and change detection processing is performed asynchronously."
           content:
             application/json:
               schema:
-                format: int32
-                type: integer
-              example: 101
-        "202":
-          description: The run data will be processed asynchronously
-          content:
-            text/plain: {}
+                type: array
+                items:
+                  format: int32
+                  type: integer
+                example:
+                - 101
+                - 102
+                - 103
+              example:
+              - 101
+              - 102
+              - 103
         "204":
           description: Data is valid but no run was created
           content:
@@ -841,8 +848,29 @@ paths:
               $ref: "#/components/schemas/Run"
         required: true
       responses:
-        "200":
-          description: OK
+        "202":
+          description: "The request has been accepted for processing. Returns a list\
+            \ of created run IDs if available, or an empty list if processing is still\
+            \ ongoing. Label values and change detection processing is performed asynchronously."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  format: int32
+                  type: integer
+                example:
+                - 101
+                - 102
+                - 103
+              example:
+              - 101
+              - 102
+              - 103
+        "400":
+          description: Some fields are missing or invalid
+          content:
+            application/json: {}
   /api/run/{id}:
     get:
       tags:
