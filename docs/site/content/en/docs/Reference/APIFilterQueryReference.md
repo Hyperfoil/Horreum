@@ -12,7 +12,7 @@ API operations that support Filter Query provide an HTTP request parameter named
 To use the Filter Query with an operation that returns a [Run](/docs/concepts/core-concepts/#run) data can be done as follows.
 
 ```bash
-curl -s  'http://localhost:8080/api/sql/1/queryrun?query=$.*&array=true'  -H 'content-type: application/json' -H 'Authorization: Bearer '$TOKEN
+curl -s  'http://localhost:8080/api/sql/1/queryrun?query=$.*&array=true'  -H 'content-type: application/json' -H 'X-Horreum-API-Key: '$API_KEY
 {
   "valid": true,
   "jsonpath": "$.*",
@@ -29,7 +29,7 @@ The response contains an enclosing JSON object that is common for Filter Query o
 To filter the above API operation to retrieve only the *results* property of the uploaded [Run](/docs/concepts/core-concepts/#run) object the *query* parameter is defined as `$.results`
 
 ```bash
-curl -s  'http://localhost:8080/api/sql/1/queryrun?query=$.results&array=true'  -H 'content-type: application/json' -H 'Authorization: Bearer '$TOKEN
+curl -s  'http://localhost:8080/api/sql/1/queryrun?query=$.results&array=true'  -H 'content-type: application/json' -H 'X-Horreum-API-Key: '$API_KEY
 {
   "valid": true,
   "jsonpath": "$.results",

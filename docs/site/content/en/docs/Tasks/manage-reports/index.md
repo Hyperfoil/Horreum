@@ -25,10 +25,6 @@ Available Report configurations
 The same task can be repeated using the web API to delete a `Report`. Copy and paste this into your shell. Note, modify the REPORT_ID parameter. The response to expect is a 204 HTTP response code for a successful deletion.
 
 ```bash
-TOKEN=$(curl -s http://localhost:8180/realms/horreum/protocol/openid-connect/token \
-    -d 'username=user' -d 'password=secret' \
-    -d 'grant_type=password' -d 'client_id=horreum-ui' \
-    | jq -r .access_token)
 REPORT_ID=<your_report_id_here>
-curl   'http://localhost:8080/api/report/table/'$REPORT_ID   -H 'content-type: application/json' -H 'Authorization: Bearer '$TOKEN --request DELETE -v
+curl   'http://localhost:8080/api/report/table/'$REPORT_ID   -H 'content-type: application/json' -H 'X-Horreum-API-Key: '$API_KEY --request DELETE -v
 ```
