@@ -288,17 +288,18 @@ public class BaseServiceTest {
     }
 
     protected int uploadRun(long start, long stop, Object runJson, String test, String owner, Access access) {
-        List<?> runIds = given().auth().oauth2(getUploaderToken())
+        String runIdsAsString = given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
                 .body(runJson)
                 .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner + "&access="
                         + access)
                 .then()
                 .statusCode(202)
-                .extract().as(List.class);
+                .extract().asString();
 
+        List<Integer> runIds = parseCommaSeparatedIds(runIdsAsString);
         assertEquals(1, runIds.size());
-        return Integer.parseInt(runIds.get(0).toString());
+        return runIds.get(0);
     }
 
     protected List<Integer> uploadRun(String start, String stop, String test, String owner, Access access,
@@ -307,17 +308,18 @@ public class BaseServiceTest {
                 schemaUri, description, jakarta.ws.rs.core.Response.Status.ACCEPTED.getStatusCode(), runJson);
     }
 
-    @SuppressWarnings("unchecked")
     protected List<Integer> uploadRun(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, Integer statusCode, Object runJson) {
-        return RestAssured.given().auth().oauth2(getUploaderToken())
+        String runIdsAsString = RestAssured.given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
                 .body(runJson)
                 .post("/api/run/data?start=" + start + "&stop=" + stop + "&test=" + test + "&owner=" + owner
                         + "&access=" + access + "&schema=" + schemaUri + "&description=" + description)
                 .then()
                 .statusCode(statusCode)
-                .extract().as(List.class);
+                .extract().asString();
+
+        return parseCommaSeparatedIds(runIdsAsString);
     }
 
     protected int uploadRun(long timestamp, JsonNode data, JsonNode metadata, String testName) {
@@ -326,8 +328,7 @@ public class BaseServiceTest {
 
     protected int uploadRun(long start, long stop, JsonNode data, JsonNode metadata, String testName, String owner,
             Access access) {
-        @SuppressWarnings("unchecked")
-        List<Integer> runIds = given().auth().oauth2(getUploaderToken())
+        String runIdsAsString = given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA)
                 // the .toString().getBytes(...) is required because RestAssured otherwise won't send the filename
                 // and Quarkus in turn will use null FileUpload: https://github.com/quarkusio/quarkus/issues/20938
@@ -338,15 +339,15 @@ public class BaseServiceTest {
                         + access)
                 .then()
                 .statusCode(202)
-                .extract().as(List.class);
+                .extract().asString();
+        List<Integer> runIds = parseCommaSeparatedIds(runIdsAsString);
         assertEquals(1, runIds.size());
         return runIds.get(0);
     }
 
     protected int uploadRun(String start, String stop, JsonNode data, JsonNode metadata, String testName, String owner,
             Access access) {
-        @SuppressWarnings("unchecked")
-        List<Integer> runIds = given().auth().oauth2(getUploaderToken())
+        String runIdsAsString = given().auth().oauth2(getUploaderToken())
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA)
                 // the .toString().getBytes(...) is required because RestAssured otherwise won't send the filename
                 // and Quarkus in turn will use null FileUpload: https://github.com/quarkusio/quarkus/issues/20938
@@ -357,7 +358,8 @@ public class BaseServiceTest {
                         + access)
                 .then()
                 .statusCode(202)
-                .extract().as(List.class);
+                .extract().asString();
+        List<Integer> runIds = parseCommaSeparatedIds(runIdsAsString);
         assertEquals(1, runIds.size());
         return runIds.get(0);
     }
@@ -1153,5 +1155,10 @@ public class BaseServiceTest {
         } catch (JsonProcessingException e) {
             throw new AssertionError("Cannot deserialize " + event + " from " + changeJson.toPrettyString(), e);
         }
+    }
+
+    private List<Integer> parseCommaSeparatedIds(String idsAsString) {
+        return idsAsString.isBlank() ? List.of()
+                : Stream.of(idsAsString.trim().split(",")).map(Integer::parseInt).collect(Collectors.toList());
     }
 }

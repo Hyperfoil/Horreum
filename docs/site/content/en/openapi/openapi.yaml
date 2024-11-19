@@ -653,20 +653,11 @@ paths:
             \ of created run IDs if available, or an empty list if processing is still\
             \ ongoing. Label values and change detection processing is performed asynchronously."
           content:
-            application/json:
+            text/plain:
               schema:
-                type: array
-                items:
-                  format: int32
-                  type: integer
-                example:
-                - 101
-                - 102
-                - 103
-              example:
-              - 101
-              - 102
-              - 103
+                type: string
+                example: "101,102,103"
+              example: "101,102,103"
         "204":
           description: Data is valid but no run was created
           content:
@@ -674,7 +665,7 @@ paths:
         "400":
           description: Some fields are missing or invalid
           content:
-            application/json: {}
+            text/plain: {}
   /api/run/list:
     get:
       tags:

@@ -534,7 +534,7 @@ public class RunServiceImpl implements RunService {
         // if the request is accepted return 202 with all generated run ids
         // if no run ids, means all run upload have been queued up (datastore scenario)
         return Response.status(Response.Status.ACCEPTED)
-                .entity(runs.stream().map(val -> val.runId).toList())
+                .entity(runs.stream().map(val -> Integer.toString(val.runId)).collect(Collectors.joining(",")))
                 .build();
     }
 

@@ -133,7 +133,8 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         JsonNode payload = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
 
         try {
-            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner, Access.PUBLIC,
+            horreumClient.runService.addRunFromData("$.start", "$.stop", dummyTest.name, dummyTest.owner,
+                    Access.PUBLIC,
                     null, "test", payload);
         } catch (BadRequestException badRequestException) {
             fail(badRequestException.getMessage()
