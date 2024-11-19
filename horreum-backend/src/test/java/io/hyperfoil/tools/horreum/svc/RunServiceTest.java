@@ -61,7 +61,7 @@ import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
+import io.hyperfoil.tools.horreum.test.InMemoryAMQTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -75,7 +75,7 @@ import io.restassured.specification.RequestSpecification;
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(HorreumTestProfile.class)
+@TestProfile(InMemoryAMQTestProfile.class)
 public class RunServiceTest extends BaseServiceTest {
     private static final int POLL_DURATION_SECONDS = 10;
 

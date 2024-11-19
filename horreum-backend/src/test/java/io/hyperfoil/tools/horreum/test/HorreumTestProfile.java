@@ -31,6 +31,7 @@ public class HorreumTestProfile implements QuarkusTestProfile {
     @Override
     public List<TestResourceEntry> testResources() {
         return Arrays.asList(
-                new TestResourceEntry(PostgresResource.class), new TestResourceEntry(OidcWiremockTestResource.class));
+                new TestResourceEntry(PostgresResource.class),
+                new TestResourceEntry(OidcWiremockTestResource.class));
     }
 }
