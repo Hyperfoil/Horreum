@@ -44,18 +44,18 @@ Click on Schema/Test and there is a button where you can select either _Import S
 ```bash
 curl 'http://localhost:8080/api/schema/import/' \
     -s -X POST -H 'content-type: application/json' \
-    -H 'Authorization: Bearer '$TOKEN \
+    -H 'X-Horreum-API-Key: '$API_KEY \
     -d @/path/to/schema.json
 ```
 
-If you are unfamiliar with creating the auth token please see [Upload Run](/docs/tasks/upload-new-run/).
+If you are unfamiliar with generating an API Key, please see [Upload Run](/docs/tasks/api-keys/).
 
 ## Import Tests
 
 ```bash
 curl 'http://localhost:8080/api/test/import/' \
     -s -X POST -H 'content-type: application/json' \
-    -H 'Authorization: Bearer '$TOKEN \
+    -H 'X-Horreum-API-Key: '$API_KEY \
     -d @/path/to/test.json
 ```
 
@@ -64,7 +64,7 @@ curl 'http://localhost:8080/api/test/import/' \
 ```bash
 SCHEMAID='123'
 curl 'http://localhost:8080/api/schema/export/?id='$SCHEMAID \
-    -H 'Authorization: Bearer '$TOKEN \
+    -H 'X-Horreum-API-Key: '$API_KEY \
     -O --output-dir /path/to/folder
 ```
 
@@ -74,6 +74,6 @@ curl 'http://localhost:8080/api/schema/export/?id='$SCHEMAID \
 TESTID='123'
 curl 'http://localhost:8080/api/test/export/?id=$TESTID' \
     -s -X POST -H 'content-type: application/json' \
-    -H 'Authorization: Bearer '$TOKEN \
+    -H 'X-Horreum-API-Key: '$API_KEY \
     -O --output-dir /path/to/folder
 ```

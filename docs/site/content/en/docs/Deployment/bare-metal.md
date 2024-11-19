@@ -135,12 +135,6 @@ QUARKUS_MAILER_LOGIN=disabled
 # By default webhook notifications that fail to verify TLS integrity fail; set this to ignore verification result.
 # HORREUM_HOOK_TLS_INSECURE=true
 
-# This is an offline token for the __user_reader user. You can obtain that with
-# curl -s -X POST https://keycloak.example.com/auth/realms/horreum/protocol/openid-connect/token \
-#      -H 'content-type: application/x-www-form-urlencoded' \
-#      -d 'username=__user_reader&password='$PASSWORD'&grant_type=password&client_id=horreum-ui&scope=offline_access' \
-#     | jq -r .refresh_token
-HORREUM_KEYCLOAK_USER_READER_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 With all this in you can finally start Horreum as any other Java application (note: dependencies in `repo/target/lib/` must be present):
