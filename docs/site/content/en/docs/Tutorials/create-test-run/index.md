@@ -16,6 +16,7 @@ We assume that you already went through the [previous tutorial](/docs/tutorials/
 User logged in
 {{% /imgproc %}}
 
+### 1. Create Test
 
 Press the **New Test** button and fill the test name. Test names must be unique within Horreum.
 
@@ -24,6 +25,8 @@ Create new test
 {{% /imgproc %}}
 
 Click on **Save** button on left side at the bottom - a blue banner will confirm that the test was created.
+
+### 2. Prepare test data
 
 Now we can prepare the JSON document representing our benchmark results - open `/tmp/run.json` with your favorite text editor and paste in this:
 
@@ -34,22 +37,27 @@ Now we can prepare the JSON document representing our benchmark results - open `
 }
 ```
 
+### 3. Generate API Key
+
+To interact with the REST API, you will need an API Key, please follow the instructions to [generate an API Key](/docs/tasks/api-keys/)
+
+### 4. Upload Data
+
 Now copy and paste this into shell; the reply will be just `1` - the ID of the newly uploaded run.
 
 ```bash
-TOKEN=$(curl -s http://localhost:8180/realms/horreum/protocol/openid-connect/token \
-    -d 'username=user' -d 'password=secret' \
-    -d 'grant_type=password' -d 'client_id=horreum-ui' \
-    | jq -r .access_token)
+API_KEY='HUSR_00000000_0000_0000_0000_000000000000'
 TEST='Foobar'
 START='2021-08-01T10:35:22.00Z'
 STOP='2021-08-01T10:40:28.00Z'
 OWNER='dev-team'
 ACCESS='PUBLIC'
 curl 'http://localhost:8080/api/run/data?test='$TEST'&start='$START'&stop='$STOP'&owner='$OWNER'&access='$ACCESS \
-    -s -H 'content-type: application/json' -H 'Authorization: Bearer '$TOKEN \
+    -s -H 'content-type: application/json' -H 'X-Horreum-API-Key: '$API_KEY \
     -d @/tmp/run.json
 ```
+
+### 5. View Data in Horreum
 
 Let's navigate into the tests overview (main page) by clicking the **Tests** link in the main menu on the top left of the page:
 
