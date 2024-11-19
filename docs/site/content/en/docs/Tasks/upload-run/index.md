@@ -7,44 +7,11 @@ weight: 3
 
 Horreum accepts any valid **JSON** as the input. To get maximum out of Horreum, though, it is recommended to categorize the input using [JSON schema](https://json-schema.org/).
 
-There are two principal ways to authorize operations:
-
-- Authentication against OIDC provider (Keycloak): This is the standard way that you use when accessing Horreum UI - you use your credentials to get a JSON Web Token (JWT) and this is stored in the browser session. When accessing Horreum over the REST API you need to use this for [Bearer Authentication](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1). The authorization is based on the teams and roles within those teams that you have.
-- Horreum API Keys: See more in [API keys](/docs/tasks/api-keys). These replace the so called "Horreum Tokens" that were used in the past in operations that accepted a `token` parameter. 
+Operations are authorized via API Keys, for details on how to generate an API Key, please refer to [API keys](/docs/tasks/api-keys).
 
 If you're running your tests in Jenkins you can skip a lot of the complexity below using [Horreum Plugin](https://plugins.jenkins.io/horreum/). This plugin supports both Jenkins Pipeline and Freeform jobs.
 
-## Getting JWT token
-
-New data can be uploaded into Horreum only by authorized users. This user must have the permission to upload for given team, e.g. if you'll use `dev-team` as the owner this role is called `dev-uploader` and it is a composition of the team role (`dev-team`) and `uploader` role. You can read more about user management [here](/docs/concepts/users).
-
-```bash
-TOKEN=$(curl -s http://localhost:8180/realms/horreum/protocol/openid-connect/token \
-    -d 'username=user' -d 'password=secret' \
-    -d 'grant_type=password' -d 'client_id=horreum-ui' \
-    | jq -r .access_token)
-```
-
-A note on JWT token issuer: OIDC-enabled applications usually validate the URL that issued the request vs. URL of the authentication server the application is configured to use - if those don't match you receive 403 Forbidden response without further information. Had you used `http://localhost:8180` as `KEYCLOAK_URL` in the example above you would get rejected in developer mode with the default infrastructure, even though `localhost` resolves to `127.0.0.1` - the URL has to match to what you have in `horreum-backend/.env` as `QUARKUS_OIDC_AUTH_SERVER_URL`. You can disable this check with `-Dquarkus.oidc.token.issuer=any` but that is definitely not recommended in production.
-
-## Using offline JWT token
-
-Access token has very limited lifespan; when you want to perform the upload from CI script and don't want to store the password inside you can keep an offline token. This token cannot be used directly as an access token; instead you can store it and use it to obtain a regular short-lived access token:
-
-```bash
-OFFLINE_TOKEN=$(curl -s http://localhost:8180/realms/horreum/protocol/openid-connect/token \
-    -d 'username=user' -d 'password=secret' \
-    -d 'grant_type=password' -d 'client_id=horreum-ui' -d 'scope=offline_access' \
-    | jq -r .refresh_token)
-TOKEN=$(curl -s http://localhost:8180/realms/horreum/protocol/openid-connect/token \
-    -d 'refresh_token='$OFFLINE_TOKEN \
-    -d 'grant_type=refresh_token' -d 'client_id=horreum-ui' \
-    |  jq -r .access_token)
-```
-
-Note that the offline token also expires eventually, by default after 30 days.
-
-## Uploading the data
+## Uploading Data
 
 There are several mandatory parameters for the upload:
 
@@ -59,6 +26,7 @@ Optionally you can also set `schema` with URI of the JSON schema, overriding (or
 The upload itself can look like:
 
 ```bash
+API_KEY='HUSR_00000000_0000_0000_0000_000000000000'
 TEST='$.info.benchmark'
 START='2021-08-01T10:35:22.00Z'
 STOP='2021-08-01T10:40:28.00Z'
@@ -66,7 +34,7 @@ OWNER='dev-team'
 ACCESS='PUBLIC'
 curl 'http://localhost:8080/api/run/data?test='$TEST'&start='$START'&stop='$STOP'&owner='$OWNER'&access='$ACCESS \
     -s -X POST -H 'content-type: application/json' \
-    -H 'Authorization: Bearer '$TOKEN \
+    -H 'X-Horreum-API-Key: '$API_KEY \
     -d @/path/to/data.json
 ```
 

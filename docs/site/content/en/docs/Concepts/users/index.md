@@ -14,10 +14,6 @@ We define 3 levels of access to each item (test, run, dataset or schema):
 - public: available even to non-authenticated users (for reading)
 - protected: available to all authenticated users that have the `viewer` role (see below)
 - private: available only to users who 'own' this data - those who have the team role.
-
-In addition to these 3 levels, runs and schemas can have a 'token' (randomly generated string): everyone who knows this token can read the record. This token is reset any time the restriction level changes.
-
-Tests can have tokens, too: you can have an arbitrary number of tokens, each with a subset of read, modify and upload privileges.
      
 
 ## Users and roles
@@ -32,6 +28,9 @@ There are few generic roles automatically created during initial realm import.
 
 The `admin` role is a system-wide role and is not restricted to a particular teams.
            
+## API Keys
+
+Users can generate an API key, that will provide programatic access to the Horreum API with the same authorization permissions as the user who created the API Key.
 
 ## User authentication
 
