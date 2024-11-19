@@ -1139,6 +1139,14 @@ public class BaseServiceTest {
                 .as(TestService.TestListing.class);
     }
 
+    protected void updateView(View view) {
+        View newView = jsonRequest().body(view).post("/api/ui/view")
+                .then().statusCode(200).extract().body().as(View.class);
+        if (view.id != null) {
+            assertEquals(view.id, newView.id);
+        }
+    }
+
     protected DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
         DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(dpe);

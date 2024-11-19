@@ -3,7 +3,7 @@ package io.hyperfoil.tools.horreum.test;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ElasticsearchTestProfile extends HorreumTestProfile {
+public class ElasticsearchTestProfile extends InMemoryAMQTestProfile {
 
     @Override
     public Map<String, String> getConfigOverrides() {
