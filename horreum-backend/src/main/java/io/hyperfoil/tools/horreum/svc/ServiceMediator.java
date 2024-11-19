@@ -198,7 +198,6 @@ public class ServiceMediator {
     public void processRunUpload(RunUpload runUpload) {
         log.debugf("Run Upload: %d", runUpload.testId);
         runService.persistRun(runUpload);
-
     }
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
