@@ -7,7 +7,7 @@ import org.jboss.logging.Logger;
 
 public class HorreumApiKeyAuthentication implements ClientRequestFilter {
 
-    /** sync with {@link io.hyperfoil.tools.horreum.server.ApiKeyAuthenticationMechanism} */
+    /** sync with io.hyperfoil.tools.horreum.server.ApiKeyAuthenticationMechanism */
     public static final String HORREUM_AUTHENTICATION_HEADER = "X-Horreum-API-Key";
 
     private static final Logger LOG = Logger.getLogger(HorreumApiKeyAuthentication.class);
