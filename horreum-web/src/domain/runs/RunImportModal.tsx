@@ -55,10 +55,9 @@ export const RunImportModal = (props: RunImportModalProps) => {
                  props.test?.name || "",
                  props.owner,
                  access,
-                 undefined,
                  schemaUrn,
                  undefined,
-                  JSON.parse(payloadData || "")
+                 JSON.parse(payloadData || "")
              )
              , alerting, "UPLOAD_ERROR", "Failed to upload run data")
              .then(noop)
