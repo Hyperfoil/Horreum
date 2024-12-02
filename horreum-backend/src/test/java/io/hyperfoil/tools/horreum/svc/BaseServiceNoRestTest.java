@@ -1,11 +1,18 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
@@ -18,6 +25,9 @@ public abstract class BaseServiceNoRestTest {
     protected static final String FOO_TESTER = "foo-tester";
     protected static final String FOO_UPLOADER = "foo-uploader";
     protected static final String BAR_TEAM = "bar-team";
+
+    @Inject
+    protected EntityManager em;
 
     protected Schema createSampleSchema(String name, String uri, String owner) {
         Schema schema = new Schema();
@@ -84,5 +94,19 @@ public abstract class BaseServiceNoRestTest {
         test.datastoreId = datastoreId;
         test.folder = folder == null ? "" : folder;
         return test;
+    }
+
+    protected Run createSampleRun(int testId, JsonNode runJson, String owner) {
+        Instant instant = Instant.now();
+
+        Run run = new Run();
+        run.testid = testId;
+        run.data = runJson;
+        run.trashed = false;
+        run.start = instant;
+        run.stop = instant;
+        run.owner = owner == null ? FOO_TEAM : owner;
+
+        return run;
     }
 }
