@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.svc;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.DEFAULT_USER;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TEAM;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TESTER;
+import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_UPLOADER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -20,12 +21,16 @@ import org.junit.jupiter.api.Disabled;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
+import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
@@ -46,6 +51,9 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
     @Inject
     TestService testService;
+
+    @Inject
+    RunService runService;
 
     @Inject
     ObjectMapper objectMapper;
@@ -496,6 +504,67 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         ServiceException thrown = assertThrows(ServiceException.class, () -> testService.delete(999));
         assertEquals("No test with id 999", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
+    }
+
+    @TestSecurity(user = DEFAULT_USER, roles = { Roles.TESTER, Roles.VIEWER, Roles.UPLOADER, FOO_TEAM, FOO_TESTER,
+            FOO_UPLOADER })
+    @org.junit.jupiter.api.Test
+    void testDeleteTestWithRun() {
+        Test created1 = addTest("test", null, null, null);
+        assertNotNull(created1.id);
+        assertEquals(1, TestDAO.count());
+
+        Run run1 = createSampleRun(created1.id, JsonNodeFactory.instance.objectNode(), FOO_TEAM);
+        int runId;
+        try (Response resp = runService.add(created1.name, FOO_TEAM, Access.PUBLIC, run1)) {
+            assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+            runId = Integer.parseInt(resp.getEntity().toString());
+        }
+        assertEquals(1, RunDAO.count());
+
+        // flush data
+        em.clear();
+
+        testService.delete(created1.id);
+        assertEquals(0, TestDAO.count());
+
+        // atm when a test is deleted, its runs are simply trashed
+        assertEquals(1, RunDAO.count());
+        RunDAO persistedRun = RunDAO.findById(runId);
+        assertNotNull(persistedRun);
+        assertTrue(persistedRun.trashed);
+    }
+
+    @TestSecurity(user = DEFAULT_USER, roles = { Roles.TESTER, Roles.VIEWER, Roles.UPLOADER, FOO_TEAM, FOO_TESTER,
+            FOO_UPLOADER })
+    @org.junit.jupiter.api.Test
+    void testDeleteTestWithAlreadyTrashedRun() {
+        Test created1 = addTest("test", null, null, null);
+        assertNotNull(created1.id);
+        assertEquals(1, TestDAO.count());
+
+        Run run1 = createSampleRun(created1.id, JsonNodeFactory.instance.objectNode(), FOO_TEAM);
+        int runId;
+        try (Response resp = runService.add(created1.name, FOO_TEAM, Access.PUBLIC, run1)) {
+            assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+            runId = Integer.parseInt(resp.getEntity().toString());
+        }
+        assertEquals(1, RunDAO.count());
+
+        // flush data
+        em.clear();
+
+        // trash the run
+        runService.trash(runId, true);
+
+        testService.delete(created1.id);
+        assertEquals(0, TestDAO.count());
+
+        // atm when a test is deleted, its runs are simply trashed
+        assertEquals(1, RunDAO.count());
+        RunDAO persistedRun = RunDAO.findById(runId);
+        assertNotNull(persistedRun);
+        assertTrue(persistedRun.trashed);
     }
 
     @TestSecurity(user = DEFAULT_USER, roles = { Roles.TESTER, Roles.VIEWER, FOO_TEAM, FOO_TESTER, FOO_UPLOADER })

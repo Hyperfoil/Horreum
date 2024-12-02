@@ -119,7 +119,6 @@ public class TestServiceImpl implements TestService {
         if (mediator.testMode())
             Util.registerTxSynchronization(tm,
                     txStatus -> mediator.publishEvent(AsyncEventChannels.TEST_DELETED, test.id, TestMapper.from(test)));
-        ;
     }
 
     @Override

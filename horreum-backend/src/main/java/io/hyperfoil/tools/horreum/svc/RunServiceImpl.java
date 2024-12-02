@@ -921,11 +921,13 @@ public class RunServiceImpl implements RunService {
         if (run == null) {
             throw ServiceException.notFound("Run not found: " + id);
         }
-        if (run.trashed == trashed)
-            throw ServiceException.badRequest("The run " + id + " has already been trashed, not possible to trash it again.");
+        if (run.trashed == trashed && trashed) {
+            log.infof("The run %s has already been trashed, doing nothing.", id);
+            return;
+        }
         if (trashed) {
             trashConnectedDatasets(run.id, run.testid);
-            run.trashed = trashed;
+            run.trashed = true;
             run.persist();
             if (mediator.testMode())
                 Util.registerTxSynchronization(tm,
@@ -935,7 +937,7 @@ public class RunServiceImpl implements RunService {
         // before we try to recalculate the dataset
         else {
             if (TestDAO.findById(run.testid) != null) {
-                run.trashed = trashed;
+                run.trashed = false;
                 run.persistAndFlush();
                 transform(id, true);
             } else
