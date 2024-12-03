@@ -79,8 +79,8 @@ public class CollectorApiDatastore implements Datastore {
             payload = mapper.readTree(response.body());
             return new DatastoreResponse(payload, metaData);
         } catch (JsonProcessingException e) {
-            log.error("Error while parsing responde from collector API ", e);
-            throw ServiceException.serverError("Error while sending request to collector API");
+            log.error("Error while parsing response from collector API ", e);
+            throw ServiceException.serverError("Error while parsing response from collector API");
         } catch (IOException | InterruptedException e) {
             log.error("Error while sending request to collector API", e);
             throw ServiceException.serverError("Error while sending request to collector API");
