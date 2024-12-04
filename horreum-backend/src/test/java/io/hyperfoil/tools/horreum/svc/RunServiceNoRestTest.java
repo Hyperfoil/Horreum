@@ -109,7 +109,7 @@ class RunServiceNoRestTest extends BaseServiceNoRestTest {
         Run run = createSampleRun(testId, runData, owner);
 
         try (Response resp = runService.add(String.valueOf(testId), owner, Access.PUBLIC, run)) {
-            assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+            assertEquals(Response.Status.ACCEPTED.getStatusCode(), resp.getStatus());
             return Integer.parseInt(resp.getEntity().toString());
         }
     }

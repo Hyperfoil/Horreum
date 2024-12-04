@@ -517,7 +517,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         Run run1 = createSampleRun(created1.id, JsonNodeFactory.instance.objectNode(), FOO_TEAM);
         int runId;
         try (Response resp = runService.add(created1.name, FOO_TEAM, Access.PUBLIC, run1)) {
-            assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+            assertEquals(Response.Status.ACCEPTED.getStatusCode(), resp.getStatus());
             runId = Integer.parseInt(resp.getEntity().toString());
         }
         assertEquals(1, RunDAO.count());
@@ -546,7 +546,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         Run run1 = createSampleRun(created1.id, JsonNodeFactory.instance.objectNode(), FOO_TEAM);
         int runId;
         try (Response resp = runService.add(created1.name, FOO_TEAM, Access.PUBLIC, run1)) {
-            assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+            assertEquals(Response.Status.ACCEPTED.getStatusCode(), resp.getStatus());
             runId = Integer.parseInt(resp.getEntity().toString());
         }
         assertEquals(1, RunDAO.count());
