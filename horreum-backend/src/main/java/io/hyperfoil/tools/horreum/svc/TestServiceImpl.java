@@ -669,6 +669,7 @@ public class TestServiceImpl implements TestService {
                             status.finished++;
                             status.datasets += newDatasets;
                             if (status.finished == status.totalRuns) {
+                                log.infof("Datasets recalculation for test %d (%s) completed", testId, test.name);
                                 recalculations.remove(testId, status);
                             }
                         }
