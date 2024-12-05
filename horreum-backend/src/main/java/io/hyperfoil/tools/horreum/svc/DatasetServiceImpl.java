@@ -18,6 +18,8 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
 
 import org.hibernate.Hibernate;
+import org.hibernate.ScrollMode;
+import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
@@ -445,9 +447,8 @@ public class DatasetServiceImpl implements DatasetService {
                         "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
                 (out) -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
 
-        //Create new dataset views from the recently created label values
-        em.createNativeQuery("DELETE FROM dataset_view WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
-        em.createNativeQuery("call calc_dataset_view(?1);").setParameter(1, datasetId).executeUpdate();
+        // create new dataset views from the recently created label values
+        calcDatasetViews(datasetId);
 
         createFingerprint(datasetId, testId);
         mediator.updateLabels(new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
@@ -457,9 +458,47 @@ public class DatasetServiceImpl implements DatasetService {
     }
 
     @Transactional
+    public void calcDatasetViews(int datasetId) {
+        // TODO(user) move calc_dataset_view into Horreum business logic see https://github.com/hibernate/hibernate-orm/pull/7457
+        em.createNativeQuery("DELETE FROM dataset_view WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
+        em.createNativeQuery("call calc_dataset_view(?1, NULL);").setParameter(1, datasetId).executeUpdate();
+    }
+
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public void calcDatasetViewsByTestAndView(int testId, int viewId) {
+        // delete all dataset views associated to the provided viewId and testId
+        // for new views it won't delete anything
+        em.createNativeQuery(
+                "DELETE FROM dataset_view WHERE view_id = ?1 AND dataset_id IN (SELECT id FROM dataset WHERE testid = ?2)")
+                .setParameter(1, viewId)
+                .setParameter(2, testId)
+                .executeUpdate();
+
+        // re-create dataset views associated to the provided viewId
+        try (ScrollableResults<Integer> datasetIds = em
+                .createNativeQuery("SELECT id FROM dataset WHERE testid = ?1")
+                .setParameter(1, testId)
+                .unwrap(NativeQuery.class)
+                .setReadOnly(false)
+                .setFetchSize(100)
+                .scroll(ScrollMode.FORWARD_ONLY)) {
+            while (datasetIds.next()) {
+                int datasetId = datasetIds.get();
+                log.tracef("Recalculate dataset views for view %d and dataset %d", viewId, datasetId);
+                em.createNativeQuery("call calc_dataset_view(?1, ?2);")
+                        .setParameter(1, datasetId)
+                        .setParameter(2, viewId)
+                        .executeUpdate();
+            }
+        }
+    }
+
+    @Transactional
     public void deleteDataset(int datasetId) {
         em.createNativeQuery("DELETE FROM label_values WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
         em.createNativeQuery("DELETE FROM dataset_schemas WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
+        em.createNativeQuery("DELETE FROM dataset_view WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
         em.createNativeQuery("DELETE FROM fingerprint WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
         em.createNativeQuery("DELETE FROM dataset WHERE id = ?1").setParameter(1, datasetId).executeUpdate();
     }
