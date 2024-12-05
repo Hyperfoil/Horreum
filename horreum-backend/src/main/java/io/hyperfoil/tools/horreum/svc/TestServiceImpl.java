@@ -636,9 +636,6 @@ public class TestServiceImpl implements TestService {
         RecalculationStatus status = new RecalculationStatus(RunDAO.count("testid = ?1 AND trashed = false", testId));
         // we don't have to care about races with new runs
         RecalculationStatus prev = recalculations.putIfAbsent(testId, status);
-        // ensure the recalculation is removed, with this approach we should guarantee
-        // it gets removed even if transaction-level exception occurs, e.g., timeout
-        Util.registerTxSynchronization(tm, txStatus -> recalculations.remove(testId, status));
         if (prev != null) {
             log.infof("Recalculation for test %d (%s) already in progress", testId, test.name);
             return;
@@ -652,7 +649,8 @@ public class TestServiceImpl implements TestService {
             log.debugf("Deleted %d datasets for trashed runs in test %s (%d)", deleted, test.name, (Object) testId);
         }
 
-        try (ScrollableResults results = em
+        log.infof("Recalculating datasets for test %d (%s)", testId, test.name);
+        try (ScrollableResults<Integer> results = em
                 .createNativeQuery("SELECT id FROM run WHERE testid = ?1 AND NOT trashed ORDER BY start")
                 .setParameter(1, testId)
                 .unwrap(NativeQuery.class).setReadOnly(true).setFetchSize(100)
