@@ -22,7 +22,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -45,13 +44,13 @@ import io.hyperfoil.tools.horreum.mapper.DatasetLogMapper;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.mapper.ExperimentProfileMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.runtime.Startup;
 
 @ApplicationScoped
 @Startup
 public class ExperimentServiceImpl implements ExperimentService {
-    private static final Logger log = Logger.getLogger(ExperimentServiceImpl.class);
     private static final Map<String, ExperimentConditionModel> MODELS = Map.of(
             RelativeDifferenceExperimentModel.NAME, new RelativeDifferenceExperimentModel());
 
@@ -149,8 +148,8 @@ public class ExperimentServiceImpl implements ExperimentService {
     }
 
     private void addLog(List<DatasetLogDAO> logs, int testId, int datasetId, int level, String format, Object... args) {
-        String msg = args.length == 0 ? format : String.format(format, args);
-        log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
+        String msg = args.length == 0 ? format : format.formatted(args);
+        Log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
         logs.add(new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DatasetDAO.class, datasetId),
                 level, "experiment", msg));
     }

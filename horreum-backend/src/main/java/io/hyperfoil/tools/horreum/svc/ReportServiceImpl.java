@@ -26,7 +26,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -44,13 +43,13 @@ import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.ReportCommentMapper;
 import io.hyperfoil.tools.horreum.mapper.TableReportMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 @Startup
 public class ReportServiceImpl implements ReportService {
-    private static final Logger log = Logger.getLogger(ReportServiceImpl.class);
 
     static {
         System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
@@ -315,16 +314,16 @@ public class ReportServiceImpl implements ReportService {
         NativeQuery<Object[]> timestampQuery;
         if (!nullOrEmpty(config.filterLabels)) {
             List<Integer> datasetIds = filterDatasetIds(config, report);
-            log.debugf("Table report %s(%d) includes datasets %s", config.title, config.id, datasetIds);
+            Log.debugf("Table report %s(%d) includes datasets %s", config.title, config.id, datasetIds);
             series = selectByDatasets(config.seriesLabels, datasetIds);
-            log.debugf("Series: %s", rowsToMap(series));
+            Log.debugf("Series: %s", rowsToMap(series));
             if (!nullOrEmpty(config.scaleLabels)) {
                 scales = selectByDatasets(config.scaleLabels, datasetIds);
-                log.debugf("Scales: %s", rowsToMap(scales));
+                Log.debugf("Scales: %s", rowsToMap(scales));
             }
             if (!nullOrEmpty(config.categoryLabels)) {
                 categories = selectByDatasets(config.categoryLabels, datasetIds);
-                log.debugf("Categories: %s", rowsToMap(categories));
+                Log.debugf("Categories: %s", rowsToMap(categories));
             }
             timestampQuery = em.unwrap(Session.class)
                     .createNativeQuery("SELECT id, start FROM dataset WHERE id IN :datasets", Object[].class)
@@ -333,14 +332,14 @@ public class ReportServiceImpl implements ReportService {
             log(report, PersistentLogDAO.DEBUG, "Table report %s(%d) includes all datasets for test %s(%d)", config.title,
                     config.id, config.test.name, config.test.id);
             series = selectByTest(config.test.id, config.seriesLabels);
-            log.debugf("Series: %s", rowsToMap(series));
+            Log.debugf("Series: %s", rowsToMap(series));
             if (!nullOrEmpty(config.scaleLabels)) {
                 scales = selectByTest(config.test.id, config.scaleLabels);
-                log.debugf("Scales: %s", rowsToMap(scales));
+                Log.debugf("Scales: %s", rowsToMap(scales));
             }
             if (!nullOrEmpty(config.categoryLabels)) {
                 categories = selectByTest(config.test.id, config.categoryLabels);
-                log.debugf("Categories: %s", rowsToMap(categories));
+                Log.debugf("Categories: %s", rowsToMap(categories));
             }
             timestampQuery = em.unwrap(Session.class)
                     .createNativeQuery("SELECT id, start FROM dataset WHERE testid = ?", Object[].class)
@@ -363,7 +362,7 @@ public class ReportServiceImpl implements ReportService {
         }
         Map<Integer, TableReportDAO.Data> datasetData = series.isEmpty() ? Collections.emptyMap()
                 : getData(config, report, categories, series, scales);
-        log.debugf("Data per dataset: %s", datasetData);
+        Log.debugf("Data per dataset: %s", datasetData);
 
         Map<Integer, Instant> timestamps = timestampQuery.getResultStream()
                 .collect(Collectors.toMap(row -> (Integer) row[0], row -> (Instant) row[1]));
@@ -407,7 +406,7 @@ public class ReportServiceImpl implements ReportService {
                             log(report, PersistentLogDAO.ERROR,
                                     "Failed to run report %s(%d) label function on run %d. Offending code: <br><pre>%s</pre>",
                                     config.title, config.id, datasetId, jsCode);
-                            log.debug("Caused by exception", e);
+                            Log.debug("Caused by exception", e);
                         }
                     }
                 }
@@ -455,7 +454,7 @@ public class ReportServiceImpl implements ReportService {
                         log(report, PersistentLogDAO.ERROR,
                                 "Failed to run report %s(%d) category function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
                                 config.title, config.id, data.runId, data.ordinal, data.datasetId, jsCode);
-                        log.debug("Caused by exception", e);
+                        Log.debug("Caused by exception", e);
                         continue;
                     }
                 }
@@ -481,7 +480,7 @@ public class ReportServiceImpl implements ReportService {
                         log(report, PersistentLogDAO.ERROR,
                                 "Failed to run report %s(%d) series function on run %d/%d (%d). Offending code: <br><pre>%s</pre>",
                                 config.title, config.id, runId, ordinal, datasetId, jsCode);
-                        log.debug("Caused by exception", e);
+                        Log.debug("Caused by exception", e);
                     }
                 }
             }
@@ -505,7 +504,7 @@ public class ReportServiceImpl implements ReportService {
                         log(report, PersistentLogDAO.ERROR,
                                 "Failed to run report %s(%d) label function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
                                 config.title, config.id, runId, ordinal, datasetId, jsCode);
-                        log.debug("Caused by exception", e);
+                        Log.debug("Caused by exception", e);
                     }
                 }
             }
@@ -522,7 +521,7 @@ public class ReportServiceImpl implements ReportService {
         for (TableReportDAO.Data data : datasetData.values()) {
             Instant dataTimestamp = timestamps.get(data.datasetId);
             if (dataTimestamp == null) {
-                log.errorf("No timestamp for dataset %d", data.datasetId);
+                Log.errorf("No timestamp for dataset %d", data.datasetId);
                 continue;
             }
             Coords coords = new Coords(data.category, data.series, data.scale);
@@ -533,7 +532,7 @@ public class ReportServiceImpl implements ReportService {
             }
             Instant prevTimestamp = timestamps.get(prev.datasetId);
             if (prevTimestamp == null) {
-                log.errorf("No timestamp for prev dataset %d", prev.datasetId);
+                Log.errorf("No timestamp for prev dataset %d", prev.datasetId);
                 dataByCoords.put(coords, data);
             } else if (prevTimestamp.isBefore(dataTimestamp)) {
                 dataByCoords.put(coords, data);
@@ -666,7 +665,7 @@ public class ReportServiceImpl implements ReportService {
                                 datasetIds.add(datasetId);
                             } else {
                                 debugList.append("(filtered)");
-                                log.debugf("Dataset %d/%d (%d) filtered out, value: %s", runId, ordinal, datasetId, row[3]);
+                                Log.debugf("Dataset %d/%d (%d) filtered out, value: %s", runId, ordinal, datasetId, row[3]);
 
                             }
                         } else {
@@ -680,7 +679,7 @@ public class ReportServiceImpl implements ReportService {
                         log(report, PersistentLogDAO.ERROR,
                                 "Failed to run report %s(%d) filter function on dataset %d/%d (%d). Offending code: <br><pre>%s</pre>",
                                 config.title, config.id, runId, ordinal, datasetId, jsCode);
-                        log.debug("Caused by exception", e);
+                        Log.debug("Caused by exception", e);
                     }
                 }
                 log(report, PersistentLogDAO.DEBUG, "Datasets considered for report: %s", debugList);
@@ -690,7 +689,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private void log(TableReportDAO report, int level, String msg, Object... args) {
-        String message = args.length == 0 ? msg : String.format(msg, args);
+        String message = args.length == 0 ? msg : msg.formatted(args);
         report.logs.add(new ReportLogDAO(report, level, message));
     }
 
@@ -711,7 +710,7 @@ public class ReportServiceImpl implements ReportService {
             }
         } finally {
             if (out.size() > 0) {
-                log.infof("Output while calculating data for report %s(%d): <pre>%s</pre>", config.title, config.id,
+                Log.infof("Output while calculating data for report %s(%d): <pre>%s</pre>", config.title, config.id,
                         out.toString());
             }
         }
@@ -722,6 +721,6 @@ public class ReportServiceImpl implements ReportService {
     public void onTestDelete(int testId) {
         int changedRows = em.createNativeQuery("UPDATE tablereportconfig SET testid = NULL WHERE testid = ?")
                 .setParameter(1, testId).executeUpdate();
-        log.infof("Disowned %d report configs as test (%d) was deleted.", changedRows, testId);
+        Log.infof("Disowned %d report configs as test (%d) was deleted", changedRows, testId);
     }
 }

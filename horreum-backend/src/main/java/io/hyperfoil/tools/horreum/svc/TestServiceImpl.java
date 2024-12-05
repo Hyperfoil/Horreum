@@ -30,7 +30,6 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -57,13 +56,13 @@ import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.mapper.TestMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 public class TestServiceImpl implements TestService {
-    private static final Logger log = Logger.getLogger(TestServiceImpl.class);
 
     private static final String FILTER_BY_NAME_FIELD = "name";
 
@@ -113,7 +112,7 @@ public class TestServiceImpl implements TestService {
         } else if (!identity.getRoles().contains(test.owner)) {
             throw ServiceException.forbidden("You are not an owner of test " + id);
         }
-        log.debugf("Deleting test %s (%d)", test.name, test.id);
+        Log.debugf("Deleting test %s (%d)", test.name, test.id);
         mediator.deleteTest(test.id);
         test.delete();
         if (mediator.testMode())
@@ -181,10 +180,10 @@ public class TestServiceImpl implements TestService {
             if (Roles.hasRoleWithSuffix(identity, test.owner, "-uploader")) {
                 return detached;
             }
-            log.debugf("Failed to retrieve test %s as this user (%s = %s) is not uploader for %s",
+            Log.debugf("Failed to retrieve test %s as this user (%s = %s) is not uploader for %s",
                     testNameOrId, identity.getPrincipal().getName(), identity.getRoles(), test.owner);
         } else {
-            log.debugf("Failed to retrieve test %s - could not find it in the database", testNameOrId);
+            Log.debugf("Failed to retrieve test %s - could not find it in the database", testNameOrId);
         }
         // we need to be vague about the test existence
         throw ServiceException.badRequest("Cannot upload to test " + testNameOrId);
@@ -200,7 +199,7 @@ public class TestServiceImpl implements TestService {
         }
         if (dto.name == null || dto.name.isBlank())
             throw ServiceException.badRequest("Test name can not be empty");
-        log.debugf("Creating new test: %s", dto.toString());
+        Log.debugf("Creating new test: %s", dto.toString());
         return TestMapper.from(addAuthenticated(dto));
     }
 
@@ -640,7 +639,7 @@ public class TestServiceImpl implements TestService {
         // it gets removed even if transaction-level exception occurs, e.g., timeout
         Util.registerTxSynchronization(tm, txStatus -> recalculations.remove(testId, status));
         if (prev != null) {
-            log.infof("Recalculation for test %d (%s) already in progress", testId, test.name);
+            Log.infof("Recalculation for test %d (%s) already in progress", testId, test.name);
             return;
         }
 
@@ -649,7 +648,7 @@ public class TestServiceImpl implements TestService {
                         "DELETE FROM dataset USING run WHERE run.id = dataset.runid AND run.trashed AND dataset.testid = ?1")
                 .setParameter(1, testId).executeUpdate();
         if (deleted > 0) {
-            log.debugf("Deleted %d datasets for trashed runs in test %s (%d)", deleted, test.name, (Object) testId);
+            Log.debugf("Deleted %d datasets for trashed runs in test %s (%d)", deleted, test.name, (Object) testId);
         }
 
         try (ScrollableResults results = em
@@ -659,7 +658,7 @@ public class TestServiceImpl implements TestService {
                 .scroll(ScrollMode.FORWARD_ONLY)) {
             while (results.next()) {
                 int runId = (int) results.get();
-                log.debugf("Recalculate Datasets for run %d - forcing recalculation for test %d (%s)", runId, testId,
+                Log.debugf("Recalculate Datasets for run %d - forcing recalculation for test %d (%s)", runId, testId,
                         test.name);
 
                 mediator.executeBlocking(() -> {

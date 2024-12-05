@@ -47,14 +47,13 @@ public class GitHubIssueCreateAction extends GitHubPluginBase implements ActionP
                 .put("title", title).put("body", body).set("labels", JsonNodeFactory.instance.arrayNode().add("horreum")))
                 .onItem().transformToUni(response -> {
                     if (response.statusCode() < 400) {
-                        return Uni.createFrom()
-                                .item(String.format("Successfully(%d) created issue in %s", response.statusCode(), path));
+                        return Uni.createFrom().item("Successfully(" + response.statusCode() + ") created issue in " + path);
                     } else if (response.statusCode() == 403 && response.getHeader("Retry-After") != null) {
                         return retry(response, config, secrets, payload);
                     } else {
-                        return Uni.createFrom().failure(new RuntimeException(
-                                String.format("Failed to create issue in %s, response %d: %s",
-                                        path, response.statusCode(), response.bodyAsString())));
+                        String message = "Failed to create issue in " + path + ", response" + response.statusCode() + ":\n"
+                                + response.bodyAsString();
+                        return Uni.createFrom().failure(new RuntimeException(message));
                     }
                 }).onFailure()
                 .transform(t -> new RuntimeException("Failed to create issue in " + path + ": " + t.getMessage()));

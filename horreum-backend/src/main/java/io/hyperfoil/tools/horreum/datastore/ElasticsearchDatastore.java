@@ -21,7 +21,6 @@ import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -33,11 +32,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
+import io.quarkus.logging.Log;
 
 @ApplicationScoped
 public class ElasticsearchDatastore implements Datastore {
-
-    protected static final Logger log = Logger.getLogger(ElasticsearchDatastore.class);
 
     @Inject
     ObjectMapper mapper;
@@ -54,9 +52,8 @@ public class ElasticsearchDatastore implements Datastore {
         RestClient restClient = null;
 
         try {
-
             if (metaData != null) {
-                log.warn("Empty request: " + metaData.toString());
+                Log.warnf("Empty request: %s", metaData);
                 throw new BadRequestException("Empty request: " + metaData);
             }
             metaData = payload;
@@ -84,7 +81,7 @@ public class ElasticsearchDatastore implements Datastore {
                 restClient = builder.build();
 
                 if (restClient == null) {
-                    log.warn("Could not find elasticsearch datastore: " + configuration.name);
+                    Log.warnf("Could not find elasticsearch datastore: %s", configuration.name);
                     throw new BadRequestException("Could not find elasticsearch datastore: " + configuration.name);
                 }
 
@@ -92,8 +89,8 @@ public class ElasticsearchDatastore implements Datastore {
                 try {
                     apiRequest = mapper.treeToValue(payload, ElasticRequest.class);
                 } catch (JsonProcessingException e) {
-                    String msg = String.format("Could not parse request: %s, %s", metaData.toString(), e.getMessage());
-                    log.warn(msg);
+                    String msg = "Could not parse request: %s, %s".formatted(metaData, e.getMessage());
+                    Log.warn(msg);
                     throw new BadRequestException(msg);
                 }
 
@@ -112,9 +109,8 @@ public class ElasticsearchDatastore implements Datastore {
                         try {
                             finalString = extracted(restClient, request);
                         } catch (IOException e) {
-                            String msg = String.format("Could not query doc request: %s, %s", metaData.toString(),
-                                    e.getMessage());
-                            log.warn(msg);
+                            String msg = "Could not query doc request: %s, %s".formatted(metaData, e.getMessage());
+                            Log.warn(msg);
                             throw new BadRequestException(msg);
                         }
 
@@ -182,19 +178,16 @@ public class ElasticsearchDatastore implements Datastore {
                                 docString = extracted(finalRestClient, subRequest);
 
                             } catch (IOException e) {
-
                                 docString.replaceAll("ERR_MSG", e.getMessage());
-                                String msg = String.format("Could not query doc request: index: %s; docID: %s (%s)",
+                                Log.errorf("Could not query doc request: index: %s; docID: %s (%s)",
                                         multiIndexQuery.targetIndex, multiIndexQuery.docField, e.getMessage());
-                                log.error(msg);
                             }
 
                             try {
                                 result.put("$doc", mapper.readTree(docString));
                             } catch (JsonProcessingException e) {
                                 docString.replaceAll("ERR_MSG", e.getMessage());
-                                String msg = String.format("Could not parse doc result: %s, %s", docString, e.getMessage());
-                                log.error(msg);
+                                Log.errorf("Could not parse doc result: %s, %s", docString, e.getMessage());
                             }
 
                             extractedResults.add(result);
@@ -218,7 +211,7 @@ public class ElasticsearchDatastore implements Datastore {
                 try {
                     restClient.close();
                 } catch (IOException e) {
-                    log.errorf("Error closing rest client: %s", e.getMessage());
+                    Log.errorf("Error closing rest client: %s", e.getMessage());
                 }
             }
         }

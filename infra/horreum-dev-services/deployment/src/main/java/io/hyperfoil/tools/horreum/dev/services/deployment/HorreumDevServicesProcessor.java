@@ -32,7 +32,7 @@ import io.quarkus.deployment.logging.LoggingSetupBuildItem;
         GlobalDevServicesConfig.Enabled.class })
 public class HorreumDevServicesProcessor {
 
-    private static final Logger LOG = Logger.getLogger(HorreumDevServicesProcessor.class);
+    private static final Logger log = Logger.getLogger(HorreumDevServicesProcessor.class);
 
     private static volatile DevServicesResultBuildItem.RunningDevService horreumKeycloakDevService;
     private static volatile DevServicesResultBuildItem.RunningDevService horreumPostgresDevService;
@@ -56,13 +56,13 @@ public class HorreumDevServicesProcessor {
 
         boolean errors = false;
 
-        LOG.infof("Horreum dev services (enabled: ".concat(Boolean.toString(horreumBuildTimeConfig.enabled())).concat(")"));
+        log.infof("Horreum dev services (enabled: %B)", horreumBuildTimeConfig.enabled());
 
         if (horreumBuildTimeConfig.enabled()) {
             try {
 
                 if (errors = !dockerStatusBuildItem.isContainerRuntimeAvailable()) {
-                    LOG.warn("Docker dev service instance not found");
+                    log.warn("Docker dev service instance not found");
                 }
 
                 if (!errors) {
@@ -70,7 +70,7 @@ public class HorreumDevServicesProcessor {
                     //TODO:: check to see if devServicesConfiguration has changed
                     if (horreumKeycloakDevService == null || horreumPostgresDevService == null) {
 
-                        LOG.infof("Starting Horreum containers");
+                        log.info("Starting Horreum containers");
 
                         final Map<String, String> containerArgs = new HashMap<>();
                         containerArgs.put(HORREUM_DEV_KEYCLOAK_ENABLED,
@@ -172,14 +172,14 @@ public class HorreumDevServicesProcessor {
                         try {
                             horreumKeycloakDevService.close();
                         } catch (Throwable t) {
-                            LOG.error("Failed to stop Keycloak container", t);
+                            log.error("Failed to stop Keycloak container", t);
                         }
                     }
                     if (horreumPostgresDevService != null) {
                         try {
                             horreumPostgresDevService.close();
                         } catch (Throwable t) {
-                            LOG.error("Failed to stop Postgres container", t);
+                            log.error("Failed to stop Postgres container", t);
                         }
                     }
                     horreumKeycloakDevService = null;

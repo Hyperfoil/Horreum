@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static java.text.MessageFormat.format;
 import static java.util.Collections.emptyList;
 
 import java.time.temporal.ChronoUnit;
@@ -52,7 +51,7 @@ public class UserServiceImpl implements UserService {
 
     private UserInfo currentUser() {
         return UserInfo.<UserInfo> findByIdOptional(getUsername())
-                .orElseThrow(() -> ServiceException.notFound(format("Username {0} not found", getUsername())));
+                .orElseThrow(() -> ServiceException.notFound("Username '" + getUsername() + "' not found"));
     }
 
     private String getUsername() {
@@ -84,7 +83,7 @@ public class UserServiceImpl implements UserService {
         userIsManagerForTeam(user.team);
         backend.get().createUser(user);
         createLocalUser(user.user.username, user.team);
-        Log.infov("{0} created user {1} {2} with username {3} on team {4}", getUsername(),
+        Log.infof("%s created user '%s %s' with username '%s' on team '%s'", getUsername(),
                 user.user.firstName, user.user.lastName, user.user.username, user.team);
     }
 
@@ -96,7 +95,7 @@ public class UserServiceImpl implements UserService {
         }
         backend.get().removeUser(username);
         removeLocalUser(username);
-        Log.infov("{0} removed user {1}", getUsername(), username);
+        Log.infof("'%s' removed user '%s'", getUsername(), username);
     }
 
     @Override
@@ -110,7 +109,7 @@ public class UserServiceImpl implements UserService {
     public String defaultTeam() {
         UserInfo userInfo = currentUser();
         if (userInfo == null) {
-            throw ServiceException.notFound(format("User with username {0} not found", getUsername()));
+            throw ServiceException.notFound("User with username '" + getUsername() + "' not found");
         }
         return userInfo.defaultTeam != null ? userInfo.defaultTeam : "";
     }
@@ -121,7 +120,7 @@ public class UserServiceImpl implements UserService {
     public void setDefaultTeam(String unsafeTeam) {
         UserInfo userInfo = currentUser();
         if (userInfo == null) {
-            throw ServiceException.notFound(format("User with username {0} not found", getUsername()));
+            throw ServiceException.notFound("User with username '" + getUsername() + "' not found");
         }
         userInfo.defaultTeam = validateTeamName(unsafeTeam);
         userInfo.persistAndFlush();
@@ -158,7 +157,7 @@ public class UserServiceImpl implements UserService {
     public void addTeam(String unsafeTeam) {
         String team = validateTeamName(unsafeTeam);
         backend.get().addTeam(team);
-        Log.infov("{0} created team {1}", getUsername(), team);
+        Log.infof("%s created team %s", getUsername(), team);
     }
 
     @RolesAllowed(Roles.ADMIN)
@@ -166,7 +165,7 @@ public class UserServiceImpl implements UserService {
     public void deleteTeam(String unsafeTeam) {
         String team = validateTeamName(unsafeTeam);
         backend.get().deleteTeam(team);
-        Log.infov("{0} deleted team {1}", getUsername(), team);
+        Log.infof("%s deleted team %s", getUsername(), team);
     }
 
     @RolesAllowed(Roles.ADMIN)
@@ -187,7 +186,7 @@ public class UserServiceImpl implements UserService {
     private void userIsManagerForTeam(String team) {
         if (!identity.getRoles().contains(Roles.ADMIN)
                 && !identity.hasRole(team.substring(0, team.length() - 4) + Roles.MANAGER)) {
-            throw ServiceException.badRequest(format("This user is not a manager for team {0}", team));
+            throw ServiceException.badRequest("This user is not a manager for " + team);
         }
     }
 
@@ -256,7 +255,7 @@ public class UserServiceImpl implements UserService {
         newKey.persist();
         userInfo.persist();
 
-        Log.debugv("{0} created API key \"{1}\"", getUsername(), request.name == null ? "" : request.name);
+        Log.debugf("'%s' created API key '%s'", getUsername(), request.name == null ? "" : request.name);
         return newKey.keyString();
     }
 
@@ -277,13 +276,13 @@ public class UserServiceImpl implements UserService {
     public void renameApiKey(long keyId, String newName) {
         validateApiKeyName(newName == null ? "" : newName);
         UserApiKey key = UserApiKey.<UserApiKey> findByIdOptional(keyId)
-                .orElseThrow(() -> ServiceException.notFound(format("Key with id {0} not found", keyId)));
+                .orElseThrow(() -> ServiceException.notFound("Key with id " + keyId + " not found"));
         if (key.revoked) {
             throw ServiceException.badRequest("Can't rename revoked key");
         }
         String oldName = key.name;
         key.name = newName == null ? "" : newName;
-        Log.debugv("{0} renamed API key \"{1}\" to \"{2}\"", getUsername(), oldName, newName == null ? "" : newName);
+        Log.debugf("'%s' renamed API key '%s' to '%s'", getUsername(), oldName, newName == null ? "" : newName);
     }
 
     @Transactional
@@ -291,9 +290,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public void revokeApiKey(long keyId) {
         UserApiKey key = UserApiKey.<UserApiKey> findByIdOptional(keyId)
-                .orElseThrow(() -> ServiceException.notFound(format("Key with id {0} not found", keyId)));
+                .orElseThrow(() -> ServiceException.notFound("Key with id " + keyId + " not found"));
         key.revoked = true;
-        Log.debugv("{0} revoked API key \"{1}\"", getUsername(), key.name);
+        Log.debugf("'%s' revoked API key '%s'", getUsername(), key.name);
     }
 
     @PermitAll
@@ -308,7 +307,7 @@ public class UserServiceImpl implements UserService {
         }
         // revoke expired keys -- could be done directly in the DB but iterate instead to be able to log
         UserApiKey.<UserApiKey> stream("#UserApiKey.pastExpiration", timeService.now()).forEach(key -> {
-            Log.debugv("Idle API key \"{0}\" revoked", key.name);
+            Log.debugf("Idle API key '%s' revoked", key.name);
             key.revoked = true;
         });
     }

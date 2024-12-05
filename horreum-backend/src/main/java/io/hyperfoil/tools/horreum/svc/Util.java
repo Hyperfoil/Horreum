@@ -38,7 +38,6 @@ import org.graalvm.polyglot.*;
 import org.graalvm.polyglot.proxy.Proxy;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.hibernate.query.NativeQuery;
-import org.jboss.logging.Logger;
 import org.postgresql.util.PSQLException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -56,6 +55,7 @@ import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.server.RolesInterceptor;
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.context.SmallRyeContextManagerProvider;
 import io.smallrye.mutiny.Uni;
@@ -63,7 +63,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
 public class Util {
-    private static final Logger log = Logger.getLogger(Util.class);
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Configuration JSONPATH_CONFIG = Configuration.builder()
             .jsonProvider(new JacksonJsonNodeJsonProvider())
@@ -211,7 +210,7 @@ public class Util {
                         runnable.run();
                     }
                 } catch (Throwable t) {
-                    log.error("Error in TX synchronization", t);
+                    Log.error("Error in TX synchronization", t);
                     throw t;
                 }
             }
@@ -222,9 +221,9 @@ public class Util {
         try {
             doAfterCommitThrowing(tm, runnable);
         } catch (RollbackException e) {
-            log.debugf("Not performing %s as the transaction has been marked rollback-only", runnable);
+            Log.debugf("Not performing %s as the transaction has been marked rollback-only", runnable);
         } catch (SystemException e) {
-            log.errorf(e, "Failed to perform %s after transaction completion", runnable);
+            Log.errorf(e, "Failed to perform %s after transaction completion", runnable);
         }
     }
 
@@ -232,9 +231,9 @@ public class Util {
         try {
             doAfterCommitThrowing(tm, () -> eventBus.publish(eventName, event));
         } catch (RollbackException e) {
-            log.debug("Not publishing the event as the transaction has been marked rollback-only");
+            Log.debug("Not publishing the event as the transaction has been marked rollback-only");
         } catch (SystemException e) {
-            log.errorf(e, "Failed to publish event %s: %s after transaction completion", eventName, event);
+            Log.errorf(e, "Failed to publish event %s: %s after transaction completion", eventName, event);
         }
     }
 
@@ -245,7 +244,7 @@ public class Util {
             }
             return OBJECT_MAPPER.readTree(str);
         } catch (JsonProcessingException e) {
-            log.errorf(e, "Failed to parse into JSON: %s", str);
+            Log.errorf(e, "Failed to parse into JSON: %s", str);
             return null;
         }
     }
@@ -257,7 +256,7 @@ public class Util {
             }
             return OBJECT_MAPPER.readTree(bytes);
         } catch (IOException e) {
-            log.errorf(e, "Failed to parse into JSON: %s", new String(bytes, StandardCharsets.UTF_8));
+            Log.errorf(e, "Failed to parse into JSON: %s", new String(bytes, StandardCharsets.UTF_8));
             throw new RuntimeException(e);
         }
     }
@@ -476,7 +475,7 @@ public class Util {
                     tm.setRollbackOnly();
                     // Similar code is in BaseTransactionRetryInterceptor
                     if (retry > Util.MAX_TRANSACTION_RETRIES) {
-                        log.error("Exceeded maximum number of retries.");
+                        Log.error("Exceeded maximum number of retries.");
                         throw t;
                     }
                     if (!lookupRetryHint(t, new HashSet<>())) {
@@ -502,8 +501,8 @@ public class Util {
 
     private static void yieldAndLog(int retry, Throwable t) {
         Thread.yield(); // give the other transaction a bit more chance to complete
-        log.infof("Retrying failed transaction, attempt %d/%d", retry, Util.MAX_TRANSACTION_RETRIES);
-        log.trace("This is the exception that caused retry: ", t);
+        Log.infof("Retrying failed transaction, attempt %d/%d", retry, Util.MAX_TRANSACTION_RETRIES);
+        Log.trace("This is the exception that caused retry: ", t);
     }
 
     public static <T extends Annotation> T getAnnotation(Method method, Class<T> annotationClass) {
@@ -535,7 +534,7 @@ public class Util {
             try {
                 wrapped.run();
             } catch (Exception e) {
-                log.error("Failed to execute blocking task", e);
+                Log.error("Failed to execute blocking task", e);
             } finally {
                 promise.complete();
             }
@@ -686,7 +685,7 @@ public class Util {
             } else if (resolved.size() == 1) {
                 value = resolved.get(0);
             } else { //resolve.size() > 1, this doesn't happen
-                log.error("resolved promise size=" + resolved.size() + ", expected 1 for promise = " + value);
+                Log.errorf("resolved promise size= %d, expected 1 for promise = %s", resolved.size(), value);
             }
         }
         return value;
@@ -751,10 +750,10 @@ public class Util {
         try {
             return (T) q.getSingleResult();
         } catch (NoResultException e) {
-            log.errorf("No results in %s with params: %s", query, Arrays.asList(params));
+            Log.errorf("No results in %s with params: %s", query, Arrays.toString(params));
             throw ServiceException.notFound("No result");
         } catch (Throwable t) {
-            log.errorf(t, "Query error in %s with params: %s", query, Arrays.asList(params));
+            Log.errorf(t, "Query error in %s with params: %s", query, Arrays.toString(params));
             throw t;
         }
     }
@@ -798,7 +797,7 @@ public class Util {
             try {
                 return ZonedDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME).toInstant();
             } catch (DateTimeParseException e) {
-                log.debug("failed to convert " + time + " to timestamp using " + str);
+                Log.debugf("failed to convert %s to timestamp using %s", time, str);
             }
         }
         return null;//nothing matched
@@ -906,11 +905,10 @@ public class Util {
 
                     @Override
                     public void afterCompletion(int status) {
-
                         try {
                             consumer.accept(status);
                         } catch (Exception e) {
-                            log.errorf("Tx Synchronization callback failed: %s", e.getMessage());
+                            Log.errorf("Tx Synchronization callback failed: %s", e.getMessage());
                         }
                     }
                 });
@@ -918,13 +916,12 @@ public class Util {
                 consumer.accept(0);
             }
         } catch (SystemException | RollbackException e) {
-            log.errorf("Error occurred in transaction: %s", e.getMessage());
+            Log.errorf("Error occurred in transaction: %s", e.getMessage());
             //         throw new RuntimeException(e);
             consumer.accept(0);
         } catch (Exception e) {
-            log.errorf("Error occurred processing consumer: %s", e.getMessage());
+            Log.errorf("Error occurred processing consumer: %s", e.getMessage());
         }
-
     }
 
     public record DecomposedJsonPath(String root, String jsonpath) {

@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -38,17 +37,4 @@ public abstract class PersistentLog {
         this.timestamp = Instant.now();
     }
 
-    public static Logger.Level logLevel(int level) {
-        switch (level) {
-            case DEBUG:
-                return Logger.Level.DEBUG;
-            case INFO:
-                return Logger.Level.INFO;
-            case WARN:
-                return Logger.Level.WARN;
-            case ERROR:
-            default:
-                return Logger.Level.ERROR;
-        }
-    }
 }
