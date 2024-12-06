@@ -8,11 +8,15 @@ public abstract class BaseDatastoreConfig {
     @Schema(type = SchemaType.BOOLEAN, required = true, description = "Built In")
     public Boolean builtIn = true;
 
+    //    @Schema(type = SchemaType.STRING, required = true, description = "type information")
+    //    public String type = "";
+
     public BaseDatastoreConfig() {
     }
 
-    public BaseDatastoreConfig(Boolean builtIn) {
+    public BaseDatastoreConfig(Boolean builtIn/* , String type */) {
         this.builtIn = builtIn;
+        //        this.type = type;
     }
 
     public abstract String validateConfig();
