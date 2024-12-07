@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import {
 	Bullseye,
 	Button,
+	MenuToggle,
 	Modal,
 	Spinner
 } from '@patternfly/react-core';
@@ -19,6 +20,9 @@ import {
     TableText
 } from '@patternfly/react-table';
 
+import MoonIcon from '@patternfly/react-icons/dist/esm/icons/moon-icon';
+import SunIcon from '@patternfly/react-icons/dist/esm/icons/sun-icon';
+
 import { configApi } from "./api"
 import { formatDateTime } from "./utils"
 
@@ -34,6 +38,14 @@ const VERSION_ERROR = {
 }
 
 export default function About() {
+    const [isDarkTheme, setIsDarkTheme] = useState(JSON.parse(localStorage.getItem('dark-theme') ?? 'false') as boolean);
+    const applyTheme = () => (document.querySelector('html') as Element).classList.toggle('pf-v5-theme-dark', isDarkTheme);
+
+    useEffect(() => {
+        localStorage.setItem('dark-theme', JSON.stringify(isDarkTheme));
+        applyTheme();
+    }, [isDarkTheme]);
+
     const [isDropdownOpen, setDropdownOpen] = useState(false)
     const [isModalOpen, setModalOpen] = useState(false)
     const [versionInfo, setVersionInfo] = useState<VersionInfo>()
@@ -47,6 +59,9 @@ export default function About() {
     }, [isModalOpen])
     return (
         <>
+            <MenuToggle id="toggle-dark-theme" variant="plain" onClick={() => setIsDarkTheme(!isDarkTheme)}>
+                { isDarkTheme ? <SunIcon style={{ color: '#FC0' }} /> : <MoonIcon style={{ color: '#FEC' }} /> }
+            </MenuToggle>
             <Dropdown
                 style={{ marginLeft: "16px" }}
                 position="right"
