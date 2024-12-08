@@ -2,6 +2,10 @@ import { useState, useEffect } from "react"
 import {
 	Bullseye,
 	Button,
+    DescriptionList,
+    DescriptionListDescription,
+    DescriptionListGroup,
+    DescriptionListTerm,
 	MenuToggle,
 	Modal,
 	Spinner
@@ -12,13 +16,6 @@ import {
 	DropdownToggle
 } from '@patternfly/react-core/deprecated';
 import { QuestionCircleIcon } from "@patternfly/react-icons"
-import {
-	Table,
-	TableBody,
-} from '@patternfly/react-table/deprecated';
-import {
-    TableText
-} from '@patternfly/react-table';
 
 import MoonIcon from '@patternfly/react-icons/dist/esm/icons/moon-icon';
 import SunIcon from '@patternfly/react-icons/dist/esm/icons/sun-icon';
@@ -106,20 +103,25 @@ export default function About() {
                     </Bullseye>
                 )}
                 {versionInfo && (
-                    <Table
-                        aria-label="version info"
-                        variant="compact"
-                        cells={["Category", "Value"]}
-                        rows={[
-                            ["Version", versionInfo.version],
-                            ["Up since", formatDateTime(versionInfo.startTimestamp)],
-                            versionInfo.privacyStatement
-                                ? ["Privacy Statement",  <TableText><a href={versionInfo.privacyStatement}>{versionInfo.privacyStatement}</a></TableText>]
-                                : [],
-                        ]}
-                    >
-                        <TableBody />
-                    </Table>
+                    <DescriptionList isHorizontal aria-label="version-info">
+                        <DescriptionListGroup>
+                            <DescriptionListTerm>Version</DescriptionListTerm>
+                            <DescriptionListDescription>{versionInfo.version}</DescriptionListDescription>
+                        </DescriptionListGroup>
+                        <DescriptionListGroup>
+                            <DescriptionListTerm>Up Since</DescriptionListTerm>
+                            <DescriptionListDescription>{formatDateTime(versionInfo.startTimestamp)}</DescriptionListDescription>
+                        </DescriptionListGroup>
+                        {versionInfo.privacyStatement ?
+                            <DescriptionListGroup>
+                                <DescriptionListTerm>Privacy Statement</DescriptionListTerm>
+                                <DescriptionListDescription>
+                                    <a href={versionInfo.privacyStatement}>{versionInfo.privacyStatement}</a>
+                                </DescriptionListDescription>
+                            </DescriptionListGroup> :
+                            <></>
+                        }
+                    </DescriptionList>
                 )}
             </Modal>
         </>
