@@ -25,6 +25,9 @@ public class UIServiceImpl implements UIService {
     @Inject
     TestServiceImpl testService;
 
+    @Inject
+    DatasetServiceImpl datasetService;
+
     @Override
     @RolesAllowed("tester")
     @WithRoles
@@ -64,6 +67,9 @@ public class UIServiceImpl implements UIService {
         test.views.add(view);
         test.persist();
         em.flush();
+
+        // update datasets views
+        datasetService.calcDatasetViewsByTestAndView(test.id, view.id);
         return ViewMapper.from(view);
     }
 
@@ -80,6 +86,8 @@ public class UIServiceImpl implements UIService {
         if (!test.views.removeIf(v -> v.id == viewId)) {
             throw ServiceException.badRequest("Test does not contain this view!");
         }
+        // remove dataset views records linked to this view
+        em.createNativeQuery("DELETE FROM dataset_view WHERE view_id = ?1").setParameter(1, viewId).executeUpdate();
         // the orphan removal doesn't work for some reason, we need to remove if manually
         ViewDAO.deleteById(viewId);
         test.persist();
