@@ -1,11 +1,6 @@
 import {useContext, useEffect, useMemo, useState} from "react"
 
 import { Bullseye, Button, Flex, FlexItem, Modal, Pagination, Radio, Spinner, TextInput } from "@patternfly/react-core"
-import {
-	Table,
-	TableBody,
-	TableHeader
-} from '@patternfly/react-table/deprecated';
 import { NavLink } from "react-router-dom"
 
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
@@ -13,6 +8,7 @@ import Editor from "../../components/Editor/monaco/Editor"
 import {datasetApi, DatasetSummary, QueryResult, runApi, RunSummary, SortDirection, sqlApi} from "../../api"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 
 export type JsonPathTarget = "run" | "dataset"
 
@@ -163,87 +159,79 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             )}
             {(runs || datasets) && result === undefined && (
                 <>
-                    {/* TODO FIXME */}
-                    <div style={{ display: "block", overflowY: "scroll", maxHeight: "50vh" }}>
+                    <OuterScrollContainer style={{ overflowY: "scroll", maxHeight: "70vh" }}>
                         {runs && (
-                            <Table
-                                aria-label="Available runs"
-                                variant="compact"
-                                cells={["Test", "Run", "Description", ""]}
-                                rows={runs.map(r => ({
-                                    cells: [
-                                        r.testname,
-                                        {
-                                            title: (
-                                                <NavLink
-                                                    to={`/run/${r.id}?query=${encodeURIComponent(
-                                                        props.jsonpath || ""
-                                                    )}#run`}
-                                                >
-                                                    {r.id}
+                            <Table aria-label="Available runs" variant="compact" isStickyHeader>
+                                <Thead>
+                                    <Tr>
+                                        {["Test", "Run", "Description", ""].map((col, index) =>
+                                            <Th key={index} aria-label={"header-" + index}>{col}</Th>
+                                        )}
+                                    </Tr>
+                                </Thead>
+                                <Tbody>
+                                    {runs.map((run, index) =>
+                                        <Tr key={index}>
+                                            <Td key="Test">{run.testname}</Td>
+                                            <Td key="Run">
+                                                <NavLink to={`/run/${run.id}?query=${encodeURIComponent(props.jsonpath || "")}#run`}>
+                                                    {run.id}
                                                 </NavLink>
-                                            ),
-                                        },
-                                        r.description,
-                                        {
-                                            title: (
+                                            </Td>
+                                            <Td key="Description">{run.description}</Td>
+                                            <Td key="">
                                                 <Button
+                                                    size="sm"
                                                     onClick={() => {
-                                                        setTarget(r)
-                                                        executeQuery(r.id)
+                                                        setTarget(run)
+                                                        executeQuery(run.id)
                                                     }}
                                                 >
                                                     Execute
                                                 </Button>
-                                            ),
-                                        },
-                                    ],
-                                }))}
-                            >
-                                <TableHeader />
-                                <TableBody />
+
+                                            </Td>
+                                        </Tr>
+                                    )}
+                                </Tbody>
                             </Table>
                         )}
                         {datasets && (
-                            <Table
-                                aria-label="Available datasets"
-                                variant="compact"
-                                cells={["Test", "Dataset", "Description", ""]}
-                                rows={datasets.map(d => ({
-                                    cells: [
-                                        d.testname,
-                                        {
-                                            title: (
-                                                <NavLink
-                                                    to={`/run/${d.runId}?query=${encodeURIComponent(
-                                                        props.jsonpath || ""
-                                                    )}#dataset${d.ordinal}`}
-                                                >
-                                                    {d.runId}/{d.ordinal}
+                            <Table aria-label="Available datasets" variant="compact" isStickyHeader>
+                                <Thead>
+                                    <Tr>
+                                        {["Test", "Dataset", "Description", ""].map((col, index) =>
+                                            <Th key={index} aria-label={"header-" + index}>{col}</Th>
+                                        )}
+                                    </Tr>
+                                </Thead>
+                                <Tbody>
+                                    {datasets.map((dataset, index) =>
+                                        <Tr key={index}>
+                                            <Td key="Test">{dataset.testname}</Td>
+                                            <Td key="Dataset">
+                                                <NavLink to={`/run/${dataset.runId}?query=${encodeURIComponent(props.jsonpath || "")}#dataset${dataset.ordinal}`}>
+                                                    {dataset.runId}/{dataset.ordinal}
                                                 </NavLink>
-                                            ),
-                                        },
-                                        d.description,
-                                        {
-                                            title: (
+                                            </Td>
+                                            <Td key="Description">{dataset.description}</Td>
+                                            <Td key="">
                                                 <Button
+                                                    size="sm"
                                                     onClick={() => {
-                                                        setTarget(d)
-                                                        executeQuery(d.id)
+                                                        setTarget(dataset)
+                                                        executeQuery(dataset.id)
                                                     }}
                                                 >
                                                     Execute
                                                 </Button>
-                                            ),
-                                        },
-                                    ],
-                                }))}
-                            >
-                                <TableHeader />
-                                <TableBody />
+                                            </Td>
+                                        </Tr>
+                                    )}
+                                </Tbody>
                             </Table>
                         )}
-                    </div>
+                    </OuterScrollContainer>
                     <Pagination
                         itemCount={count}
                         perPage={perPage}
