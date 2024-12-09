@@ -1,10 +1,6 @@
 import {useMemo, useState, useRef, useContext} from "react"
 
-import { Button, Checkbox, Form, FormGroup, Modal, Progress } from "@patternfly/react-core"
-import {
-	Table,
-	TableBody
-} from '@patternfly/react-table/deprecated';
+import { Button, Checkbox, DescriptionList, DescriptionListDescription, DescriptionListGroup, DescriptionListTerm, Form, FormGroup, Modal, Progress } from "@patternfly/react-core"
 import { NavLink } from "react-router-dom"
 
 import {alertingApi, DatapointRecalculationStatus, DatasetInfo} from "../../api"
@@ -182,18 +178,20 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
                         </Button>,
                     ]}
                 >
-                    <Table
-                        aria-label="Results table"
-                        variant="compact"
-                        cells={["Category", "Value"]}
-                        rows={[
-                            ["Total number of runs", result.totalDatasets],
-                            ["Datasets without value", datasetsToLinks(result.datasetsWithoutValue)],
-                            ["Value parsing errors", result.errors],
-                        ]}
-                    >
-                        <TableBody />
-                    </Table>
+                    <DescriptionList isHorizontal aria-label="results-info">
+                        <DescriptionListGroup>
+                            <DescriptionListTerm>Total number of runs</DescriptionListTerm>
+                            <DescriptionListDescription>{result.totalDatasets}</DescriptionListDescription>
+                        </DescriptionListGroup>
+                        <DescriptionListGroup>
+                            <DescriptionListTerm>Datasets without value</DescriptionListTerm>
+                            <DescriptionListDescription>{datasetsToLinks(result.datasetsWithoutValue)}</DescriptionListDescription>
+                        </DescriptionListGroup>
+                        <DescriptionListGroup>
+                            <DescriptionListTerm>Value parsing errors</DescriptionListTerm>
+                            <DescriptionListDescription>{result.errors}</DescriptionListDescription>
+                        </DescriptionListGroup>
+                    </DescriptionList>
                 </Modal>
             )}
         </>
