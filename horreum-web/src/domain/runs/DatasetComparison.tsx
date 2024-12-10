@@ -1,4 +1,4 @@
-import {useContext, useEffect, useMemo, useRef, useState} from "react"
+import { SetStateAction, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useSelector } from "react-redux"
 import {
     ActionGroup,
@@ -8,18 +8,23 @@ import {
     EmptyState,
     EmptyStateBody,
     PageSection,
-    Spinner, Tooltip,
+    Spinner,
 } from "@patternfly/react-core"
 import {
-	expandable,
-	ICell,
-	IRow
+    Caption,
+    expandable,
+    ExpandableRowContent,
+    ICell,
+    InnerScrollContainer,
+    IRow,
+    IRowCell,
+    Table,
+    Tbody,
+    Td,
+    Th,
+    Thead,
+    Tr,
 } from '@patternfly/react-table';
-import {
-	Table,
-	TableHeader,
-	TableBody
-} from '@patternfly/react-table/deprecated';
 import { NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
@@ -126,6 +131,43 @@ type LabelsComparisonProps = {
     alerting: AlertContextType
 }
 
+function renderTableHead(headers: ICell[]) {
+    return <Thead>
+        <Tr>
+            <Th key="row-expansion" screenReaderText="Expander" />
+            {headers.map((header, index) =>
+                <Th key={index} aria-label={"header-" + index}>{header.title}</Th>
+            )}
+        </Tr>
+    </Thead>
+}
+
+function renderTableBody(rows: IRow[], setRows: { (v: SetStateAction<IRow[]>): void }) {
+    return <Tbody key="t-body" isExpanded>
+        {rows.map((row, index) =>
+            <Tr key={index} isExpanded={row.isOpen}>
+                <Td expand={
+                    // make this row expandable if next row refers this one as the parent
+                    rows[index + 1]?.parent != index ? undefined : {
+                        rowIndex: index,
+                        isExpanded: rows[index + 1]?.isOpen || false,
+                        onToggle: () => {
+                            rows[index + 1].isOpen = !rows[index + 1].isOpen
+                            setRows([...rows])
+                        },
+                        expandId: 'expandable-' + index
+                    }
+                }/>
+                {row.cells?.map((cell, index) =>
+                    <Td key={index} colSpan={(cell as IRowCell).props?.colSpan}>
+                        <ExpandableRowContent>{(cell as IRowCell).title}</ExpandableRowContent>
+                    </Td>
+                )}
+            </Tr>
+        )}
+    </Tbody>
+}
+
 function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) {
     const [loading, setLoading] = useState(false)
     const [rows, setRows] = useState<IRow[]>([])
@@ -152,16 +194,18 @@ function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) 
                     rows.forEach(row => {
                         const numeric = row.every((value, i) => i === 0 || typeof value === "number")
                         renderRows.push({
-                            isOpen: numeric ? false : undefined,
                             cells: row.map(value => ({
                                 title: typeof value === "object" ? JSON.stringify(value) : value,
                             })),
                         })
                         if (numeric) {
                             renderRows.push({
+                                isOpen: false,
                                 parent: renderRows.length - 1,
                                 cells: [
-                                    "",
+                                    {
+                                        title: ""
+                                    },
                                     {
                                         title: (
                                             <BarValuesChart
@@ -197,21 +241,13 @@ function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) 
                 <PrintButton printRef={componentRef} />
             </ActionGroup>
             <div ref={componentRef}>
-                <Table
-                    caption="Label(s) Comparison"
-                    aria-label="Label comparison"
-                    variant="compact"
-                    cells={headers}
-                    rows={rows}
-                    isExpandable={true}
-                    onCollapse={(_, rowIndex, isOpen) => {
-                        rows[rowIndex].isOpen = isOpen
-                        setRows([...rows])
-                    }}
-                >
-                    <TableHeader />
-                    <TableBody />
-                </Table>
+                <InnerScrollContainer>
+                    <Table title="Label(s) Comparison" aria-label="Label comparison" variant="compact">
+                        <Caption>Label(s) Comparison</Caption>
+                        {renderTableHead(headers)}
+                        {renderTableBody(rows, setRows)}
+                    </Table>
+                </InnerScrollContainer>
             </div>
         </>
     )
@@ -246,7 +282,6 @@ function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps
                     rowsData.forEach((rd, index) => {
                         const isNum = rd.every((data, rdIndex ) => rdIndex === 0 || typeof rd[rdIndex] === 'number' )
                         allRows.push({
-                            isOpen: isNum ? false: undefined,
                             cells:  rd.map( (r, index) => ({
                                     title: typeof r === "object" ? JSON.stringify(r) : r
                                 })
@@ -254,9 +289,12 @@ function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps
                         })
                         if (isNum){
                             allRows.push({
+                                isOpen: false,
                                 parent: allRows.length - 1,
                                 cells: [
-                                    "",
+                                    {
+                                        title: ""
+                                    },
                                     {
                                         title: (
                                             <BarValuesChart
@@ -292,18 +330,13 @@ function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps
                 <PrintButton printRef={componentRef} />
             </ActionGroup>
             <div ref={componentRef}>
-                <Table
-                    caption="View Component(s) Comparison"
-                    aria-label="View comparison" variant="compact" cells={headers} rows={rows}
-                    isExpandable={true}
-                    onCollapse={(_, rowIndex, isOpen) => {
-                        rows[rowIndex].isOpen = isOpen
-                        setRows([...rows])
-                    }}
-                >
-                    <TableHeader />
-                    <TableBody />
-                </Table>
+                <InnerScrollContainer>
+                    <Table aria-label="View comparison" variant="compact">
+                        <Caption>View Component(s) Comparison</Caption>
+                        {renderTableHead(headers)}
+                        {renderTableBody(rows, setRows)}
+                    </Table>
+                </InnerScrollContainer>
             </div>
         </>
     )
