@@ -2,17 +2,11 @@ import React, {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
 import { Bullseye, EmptyState, EmptyStateBody, Modal, Spinner, EmptyStateHeader,  } from "@patternfly/react-core"
-import {
-	Table,
-	TableBody,
-	TableHeader
-} from '@patternfly/react-table/deprecated';
 
-import "../../components/LogModal.css"
 import {datasetApi, LabelValue} from "../../api"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-
+import {OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 
 type LabelValuesModalProps = {
     datasetId: number
@@ -73,12 +67,26 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
                 </Bullseye>
             )}
             {labelValues.length > 0 && (
-                <div className="forceOverflowY">
-                    <Table aria-label="Simple Table" variant="compact" cells={["Label", "Schema", "Value"]} rows={rows}>
-                        <TableHeader />
-                        <TableBody />
+                <OuterScrollContainer style={{ overflowY:"auto", height: "80vh" }}>
+                    <Table aria-label="Simple Table" variant="compact">
+                        <Thead>
+                            <Tr>
+                                {["Label", "Schema", "Value"].map((col, index) =>
+                                    <Th key={index} aria-label={"header-" + index}>{col}</Th>
+                                )}
+                            </Tr>
+                        </Thead>
+                        <Tbody>
+                            {rows.map((row, index) =>
+                                <Tr key={index}>
+                                    {row.cells.map((cell, index) =>
+                                        <Td key={index}>{cell}</Td>
+                                    )}
+                                </Tr>
+                            )}
+                        </Tbody>
                     </Table>
-                </div>
+                </OuterScrollContainer>
             )}
             {labelValues.length === 0 && !loading && (
                 <Bullseye>

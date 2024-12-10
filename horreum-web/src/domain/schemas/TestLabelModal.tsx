@@ -2,17 +2,13 @@ import {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
 import { Bullseye, Button, Modal, Pagination, Spinner, Title } from "@patternfly/react-core"
-import {
-	Table,
-	TableBody,
-	TableHeader
-} from '@patternfly/react-table/deprecated';
 
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"
 import {datasetApi, DatasetSummary, Label, SortDirection} from "../../api"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 
 type TestLabelModalProps = {
     isOpen: boolean
@@ -82,56 +78,56 @@ export default function TestLabelModal(props: TestLabelModalProps) {
             )}
             {datasets && !hasResult && (
                 <>
-                    <Table
-                        aria-label="Available datasets"
-                        variant="compact"
-                        cells={["Test", "Dataset", "Description", ""]}
-                        rows={datasets.map(d => ({
-                            cells: [
-                                d.testname,
-                                {
-                                    title: (
-                                        <NavLink to={`/run/${d.runId}#dataset${d.ordinal}`}>
-                                            {d.runId}/{d.ordinal}
-                                        </NavLink>
-                                    ),
-                                },
-                                d.description,
-                                {
-                                    title: (
-                                        <Button
-                                            onClick={() => {
-                                                setLoading(true)
-                                                datasetApi.previewLabel(d.id, props.label)
-                                                    .then(
-                                                        preview => {
-                                                            setResult(preview.value)
-                                                            setHasResult(true)
-                                                            setOutput(preview.output)
-                                                        },
-                                                        error => {
-                                                            alerting.dispatchError(
-                                                                error,
-                                                                "LABEL_PREVIEW",
-                                                                "Failed to fetch label preview"
-                                                            )
-                                                            reset()
-                                                            props.onClose()
-                                                        }
-                                                    )
-                                                    .finally(() => setLoading(false))
-                                            }}
-                                        >
-                                            Execute
-                                        </Button>
-                                    ),
-                                },
-                            ],
-                        }))}
-                    >
-                        <TableHeader />
-                        <TableBody />
-                    </Table>
+                    <OuterScrollContainer style={{ overflowY: "auto", height: "80vh" }}>
+                        <Table aria-label="Available datasets" variant="compact" isStickyHeader>
+                            <Thead>
+                                <Tr>
+                                    {["Test", "Dataset", "Description", ""].map((col, index) =>
+                                        <Th key={index} aria-label={"header-" + index}>{col}</Th>
+                                    )}
+                                </Tr>
+                            </Thead>
+                            <Tbody>
+                                {datasets.map((dataset, index) =>
+                                    <Tr key={index}>
+                                        <Td key="Test">{dataset.testname}</Td>
+                                        <Td key="Dataset">
+                                            <NavLink to={`/run/${dataset.runId}#dataset${dataset.ordinal}`}>{dataset.runId}/{dataset.ordinal}</NavLink>
+                                        </Td>
+                                        <Td key="Description">{dataset.description}</Td>
+                                        <Td key="">
+                                            <Button
+                                                size="sm"
+                                                onClick={() => {
+                                                    setLoading(true)
+                                                    datasetApi.previewLabel(dataset.id, props.label)
+                                                        .then(
+                                                            preview => {
+                                                                setResult(preview.value)
+                                                                setHasResult(true)
+                                                                setOutput(preview.output)
+                                                            },
+                                                            error => {
+                                                                alerting.dispatchError(
+                                                                    error,
+                                                                    "LABEL_PREVIEW",
+                                                                    "Failed to fetch label preview"
+                                                                )
+                                                                reset()
+                                                                props.onClose()
+                                                            }
+                                                        )
+                                                        .finally(() => setLoading(false))
+                                                }}
+                                            >
+                                                Execute
+                                            </Button>
+                                        </Td>
+                                    </Tr>
+                                )}
+                            </Tbody>
+                        </Table>
+                    </OuterScrollContainer>
                     <Pagination
                         itemCount={count}
                         perPage={perPage}

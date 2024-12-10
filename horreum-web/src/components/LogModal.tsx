@@ -1,13 +1,4 @@
 import {ReactElement, useContext, useEffect, useMemo, useState} from "react"
-import { useDispatch } from "react-redux"
-import {
-	IRow
-} from '@patternfly/react-table';
-import {
-	Table,
-	TableHeader,
-	TableBody
-} from '@patternfly/react-table/deprecated';
 import {
     Button,
     Bullseye,
@@ -28,10 +19,10 @@ import {
 
 import TimeRangeSelect, { TimeRange } from "./TimeRangeSelect"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
-import "./LogModal.css"
 import EnumSelect from "./EnumSelect"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
+import {IRow, IRowCell, OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 
 export type CommonLogModalProps = {
     title: string
@@ -185,12 +176,26 @@ export default function LogModal(props: LogModalProps) {
                             }
                         }}
                     />
-                    <div className="forceOverflowY">
-                        <Table aria-label="Simple Table" variant="compact" cells={props.columns} rows={rows}>
-                            <TableHeader />
-                            <TableBody />
+                    <OuterScrollContainer style={{ overflowY:"auto", height: "80vh" }}>
+                        <Table aria-label="Simple Table" variant="compact">
+                            <Thead>
+                                <Tr>
+                                    {props.columns.map((col, index) =>
+                                        <Th key={index}>{col}</Th>
+                                    )}
+                                </Tr>
+                            </Thead>
+                            <Tbody>
+                                {rows.map((row, index) =>
+                                    <Tr key={index}>
+                                        {row.cells?.map((cell, index) =>
+                                            <Td key={index}>{(cell as IRowCell).title}</Td>
+                                        )}
+                                    </Tr>
+                                )}
+                            </Tbody>
                         </Table>
-                    </div>
+                    </OuterScrollContainer>
                     <Pagination
                         itemCount={count}
                         perPage={limit}
