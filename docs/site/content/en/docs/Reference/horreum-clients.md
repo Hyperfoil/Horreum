@@ -15,9 +15,10 @@ through the `HorreumClient` instance. Therefore, the interaction with the raw cl
 
 ## Prerequisites
 
-In the below sections you can find some usage examples for both clients, the only precondition is that you must have Horreum server up and running (and accessible).
+In the below sections you can find some usage examples for both clients, here the prerequisites to properly running below examples:
 
-You can find more details on how to setup Horreum server in the [Get Started](/docs/tutorials/get-started) section.
+1. You must have Horreum server up and running (and accessible). You can find more details on how to setup Horreum server in the [Get Started](/docs/tutorials/get-started) section.
+2. Generate an API key following these [instructions](/docs/tasks/api-keys/#api-key-creation). Then replace `HUSR_00000000_0000_0000_0000_000000000000` with your generated key.
 
 ## Python Client
 
@@ -35,7 +36,7 @@ import asyncio
 > `asyncio` is required because the client leverages it to perform async requests to the server.
 
 ```python
-from horreum import new_horreum_client, HorreumCredentials
+from horreum import new_horreum_client, ClientConfiguration, AuthMethod, HorreumCredentials
 ```
 
 > `new_horreum_client` utility function to setup the `HorreumClient` instance
@@ -43,7 +44,15 @@ from horreum import new_horreum_client, HorreumCredentials
 Initialize the Horreum client
 
 ```python
-client = await new_horreum_client(base_url="http://localhost:8080", credentials=HorreumCredentials(username=username, password=password))
+client = await new_horreum_client(
+	base_url="http://localhost:8080",
+	credentials=HorreumCredentials(
+		apikey="HUSR_00000000_0000_0000_0000_000000000000"
+	),
+	client_config=ClientConfiguration(
+		auth_method=AuthMethod.API_KEY
+	)
+)
 ```
 
 Now let's start playing with it
@@ -71,7 +80,7 @@ go get github.com/hyperfoil/horreum-client-golang
 Import required Go libraries
 ```go
 import (
-    "github.com/hyperfoil/horreum-client-golang/pkg/horreum"
+	"github.com/hyperfoil/horreum-client-golang/pkg/horreum"
 )
 ```
 
@@ -79,21 +88,20 @@ Define username and password
 
 ```go
 var (
-	username = "user"
-	password = "secret"
+	apiKey = "HUSR_00000000_0000_0000_0000_000000000000"
 )
 ```
 
 Initialize the Horreum client
 
 ```go
-client, err := horreum.NewHorreumClient("http://localhost:8080",
-		&horreum.HorreumCredentials{
-			Username: &username,
-			Password: &password,
-		},
-		nil,
-	)
+client, err := horreum.NewHorreumClient("http://localhost:8080", 
+	&horreum.HorreumCredentials{
+		ApiKey: &apiKey,
+	}, &horreum.ClientConfiguration{
+		AuthMethod: horreum.API_KEY,
+	})
+
 if err != nil {
     log.Fatalf("error creating Horreum client: %s", err.Error())
 }
