@@ -26,5 +26,5 @@ The same task can be repeated using the web API to delete a `Report`. Copy and p
 
 ```bash
 REPORT_ID=<your_report_id_here>
-curl   'http://localhost:8080/api/report/table/'$REPORT_ID   -H 'content-type: application/json' -H 'X-Horreum-API-Key: '$API_KEY --request DELETE -v
+curl   'http://localhost:8080/api/report/table/'$REPORT_ID   -H 'content-type: application/json' -H "X-Horreum-API-Key: $API_KEY" --request DELETE -v
 ```
