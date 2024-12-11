@@ -34,7 +34,7 @@ OWNER='dev-team'
 ACCESS='PUBLIC'
 curl 'http://localhost:8080/api/run/data?test='$TEST'&start='$START'&stop='$STOP'&owner='$OWNER'&access='$ACCESS \
     -s -X POST -H 'content-type: application/json' \
-    -H 'X-Horreum-API-Key: '$API_KEY \
+    -H "X-Horreum-API-Key: $API_KEY" \
     -d @/path/to/data.json
 ```
 
