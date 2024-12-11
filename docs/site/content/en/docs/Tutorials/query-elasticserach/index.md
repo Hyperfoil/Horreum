@@ -52,7 +52,7 @@ The document query can then be sumitted to the Horreum API;
 
 ```bash 
 $ curl 'http://localhost:8080/api/run/data?test='$TEST'&start='$START'&stop='$STOP'&owner='$OWNER'&access='$ACCESS \
-    -s -H 'content-type: application/json' -H 'X-Horreum-API-Key: '$API_KEY \
+    -s -H 'content-type: application/json' -H "X-Horreum-API-Key: $API_KEY" \
     -d @/tmp/elastic_payload.json
 ```
 
@@ -101,7 +101,7 @@ The query can be executed by making a call to the Horreum API;
 
 ```bash
 $ curl 'http://localhost:8080/api/run/data?test='$TEST'&start='$START'&stop='$STOP'&owner='$OWNER'&access='$ACCESS \
-    -s -H 'content-type: application/json' -H 'X-Horreum-API-Key: '$API_KEY \
+    -s -H 'content-type: application/json' -H "X-Horreum-API-Key: $API_KEY" \
     -d @/tmp/elastic_query.json
 ```
 
