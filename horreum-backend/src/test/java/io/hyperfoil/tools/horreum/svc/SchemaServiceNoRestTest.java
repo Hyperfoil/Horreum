@@ -21,7 +21,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
-import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.Extractor;
+import io.hyperfoil.tools.horreum.api.data.Label;
+import io.hyperfoil.tools.horreum.api.data.Schema;
+import io.hyperfoil.tools.horreum.api.data.Transformer;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
@@ -405,7 +409,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
 
         ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateTransformer(999, t));
         assertTrue(
-                thrown.getMessage().contains(String.format("Transformer id=%d, name=%s belongs to a different schema: %d(%s)",
+                thrown.getMessage().contains("Transformer id=%d, name=%s belongs to a different schema: %d(%s)".formatted(
                         t.id, t.name, s.id, s.uri)));
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -441,7 +445,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
 
         // wrong schema id
         thrown = assertThrows(ServiceException.class, () -> schemaService.deleteTransformer(999, id));
-        assertEquals(String.format("Transformer %s does not belong to schema 999", id), thrown.getMessage());
+        assertEquals("Transformer %s does not belong to schema 999".formatted(id), thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
 
@@ -503,7 +507,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         l.id = 999;
 
         ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(s.id, l));
-        assertEquals(String.format("Label %d not found", l.id), thrown.getMessage());
+        assertEquals("Label %d not found".formatted(l.id), thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
 
@@ -562,7 +566,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         // update the label passing the wrong schema id
         l.id = id;
         ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(999, l));
-        assertEquals(String.format("Label id=%d, name=%s belongs to a different schema: %d(%s)",
+        assertEquals("Label id=%d, name=%s belongs to a different schema: %d(%s)".formatted(
                 l.id, l.name, s.id, s.uri), thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -583,8 +587,8 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         l.id = id;
         l.name = "AnotherLabel";
         ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(s.id, l));
-        assertEquals(String.format("There is an existing label with the same name (%s) in this " +
-                "schema; please choose different name.", l.name), thrown.getMessage());
+        assertEquals("There is an existing label with the same name (%s) in this schema; please choose different name."
+                .formatted(l.name), thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
 
@@ -613,11 +617,11 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(1, LabelDAO.count());
 
         ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.deleteLabel(s.id, 999));
-        assertEquals(String.format("Label %d not found", 999), thrown.getMessage());
+        assertEquals("Label %d not found".formatted(999), thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
 
         thrown = assertThrows(ServiceException.class, () -> schemaService.deleteLabel(999, id));
-        assertEquals(String.format("Label %d does not belong to schema %d", id, 999), thrown.getMessage());
+        assertEquals("Label %d does not belong to schema %d".formatted(id, 999), thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
 

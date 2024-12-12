@@ -8,15 +8,14 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 
-import org.jboss.logging.Logger;
+import io.quarkus.logging.Log;
 
 @Provider
 public class ConstraintViolationExceptionMapper implements ExceptionMapper<ConstraintViolationException> {
-    private static final Logger log = Logger.getLogger(ConstraintViolationExceptionMapper.class);
 
     @Override
     public Response toResponse(ConstraintViolationException exception) {
-        log.error("Mapping exception to response", exception);
+        Log.error("Mapping exception to response", exception);
         JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
         for (ConstraintViolation<?> cv : exception.getConstraintViolations()) {
             arrayBuilder.add(Json.createObjectBuilder()

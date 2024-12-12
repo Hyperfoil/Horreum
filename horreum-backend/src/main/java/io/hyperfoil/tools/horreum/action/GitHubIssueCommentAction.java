@@ -70,15 +70,13 @@ public class GitHubIssueCommentAction extends GitHubPluginBase implements Action
         return post(path, secrets, JsonNodeFactory.instance.objectNode().put("body", comment))
                 .onItem().transformToUni(response -> {
                     if (response.statusCode() < 400) {
-                        return Uni.createFrom()
-                                .item(String.format("Successfully(%d) added comment to %s", response.statusCode(), path));
+                        return Uni.createFrom().item("Successfully(" + response.statusCode() + ") added comment to " + path);
                     } else if (response.statusCode() == 403 && response.getHeader("Retry-After") != null) {
                         return retry(response, config, secrets, payload);
-
                     } else {
-                        return Uni.createFrom().failure(new RuntimeException(
-                                String.format("Failed to add comment to %s, response %d: %s",
-                                        path, response.statusCode(), response.bodyAsString())));
+                        String message = "Failed to add comment to " + path + ", response" + response.statusCode() + ":\n"
+                                + response.bodyAsString();
+                        return Uni.createFrom().failure(new RuntimeException(message));
                     }
                 }).onFailure().transform(t -> new RuntimeException("Failed to add comment to " + path + ": " + t.getMessage()));
     }

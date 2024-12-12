@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.svc.user;
 
-import static java.text.MessageFormat.format;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -16,8 +15,6 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.transaction.Transactional;
 
-import org.jboss.logging.Logger;
-
 import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.entity.user.Team;
 import io.hyperfoil.tools.horreum.entity.user.TeamMembership;
@@ -28,6 +25,7 @@ import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.quarkus.arc.lookup.LookupIfProperty;
+import io.quarkus.logging.Log;
 
 /**
  * Implementation of {@link UserBackEnd} that uses Horreum database for storage.
@@ -37,8 +35,6 @@ import io.quarkus.arc.lookup.LookupIfProperty;
 @ApplicationScoped
 @LookupIfProperty(name = "horreum.roles.provider", stringValue = "database")
 public class DatabaseUserBackend implements UserBackEnd {
-
-    private static final Logger LOG = Logger.getLogger(DatabaseUserBackend.class);
 
     private static UserService.UserData toUserInfo(UserInfo info) {
         return new UserService.UserData("", info.username, info.firstName, info.lastName, info.email);
@@ -106,7 +102,7 @@ public class DatabaseUserBackend implements UserBackEnd {
                 } else if (Roles.MANAGER.equals(role)) {
                     addTeamMembership(userInfo, teamName, TeamRole.TEAM_MANAGER);
                 } else {
-                    LOG.infov("Dropping role {0} for user {1} {2}", role, userInfo.firstName, userInfo.lastName);
+                    Log.infof("Dropping role '%s' for user '%s %s'", role, userInfo.firstName, userInfo.lastName);
                 }
             }
         }
@@ -156,7 +152,7 @@ public class DatabaseUserBackend implements UserBackEnd {
     public void updateTeamMembers(String team, Map<String, List<String>> roles) {
         Team teamEntity = Team.find("teamName", removeTeamSuffix(team)).firstResult();
         if (teamEntity == null) {
-            throw ServiceException.notFound(format("The team {0} does not exist", team));
+            throw ServiceException.notFound("The team '" + team + "' does not exist");
         }
 
         // need to remove from the "owning" side of the relationship
@@ -195,7 +191,7 @@ public class DatabaseUserBackend implements UserBackEnd {
     public void deleteTeam(String team) {
         Team teamEntity = Team.find("teamName", removeTeamSuffix(team)).firstResult();
         if (teamEntity == null) {
-            throw ServiceException.notFound(format("The team {0} does not exist", team));
+            throw ServiceException.notFound("The team '" + team + "' does not exist");
         }
         // need to delete memberships with roles
         deleteTeamAndMemberships(teamEntity);
@@ -212,8 +208,8 @@ public class DatabaseUserBackend implements UserBackEnd {
             });
             teamEntity.delete();
         } catch (Throwable t) {
-            LOG.warnv("Unable to delete team {0} due to {1}", teamEntity.teamName, t.getMessage());
-            throw ServiceException.serverError(format("Unable to delete team {0}", teamEntity.teamName));
+            Log.warnf("Unable to delete team '%s' due to %s", teamEntity.teamName, t.getMessage());
+            throw ServiceException.serverError("Unable to delete team '" + teamEntity.teamName + "'");
         }
     }
 
@@ -232,7 +228,7 @@ public class DatabaseUserBackend implements UserBackEnd {
             if (!newAdmins.contains(u.username)) {
                 u.roles.remove(UserRole.ADMIN);
                 u.persist();
-                LOG.infov("Removed administrator role from user {0}", u.username);
+                Log.infof("Removed administrator role from user '%s %s'", u.firstName, u.lastName);
             }
         });
         newAdmins.forEach(username -> {
@@ -240,7 +236,7 @@ public class DatabaseUserBackend implements UserBackEnd {
             user.ifPresent(u -> {
                 u.roles.add(UserRole.ADMIN);
                 u.persist();
-                LOG.infov("Added administrator role to user {0}", username);
+                Log.infof("Added administrator role to user '%s %s'", u.firstName, u.lastName);
             });
         });
     }
@@ -258,7 +254,7 @@ public class DatabaseUserBackend implements UserBackEnd {
     public void setPassword(String username, String password) {
         UserInfo user = UserInfo.findById(username);
         if (user == null) {
-            throw ServiceException.notFound(format("User {0} not found", username));
+            throw ServiceException.notFound("User with username '" + username + "' not found");
         }
         user.setPassword(password);
     }

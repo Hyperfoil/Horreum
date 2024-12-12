@@ -94,14 +94,14 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("changes", event.changes())
                     .createUni().subscribe().with(content -> {
                         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-                        Log.debug("Sending mail: " + content);
+                        Log.debugf("Sending mail: %s", content);
                     });
         }
 
         @Override
         public void notifyMissingDataset(String testName, int testId, String ruleName, long maxStaleness,
                 Instant lastTimestamp) {
-            String subject = String.format("%s Missing expected data for %s/%s", subjectPrefix, testName, ruleName);
+            String subject = "%s Missing expected data for %s/%s".formatted(subjectPrefix, testName, ruleName);
             missingDatasetNotificationEmail
                     .data("username", username)
                     .data("testName", testName)
@@ -115,13 +115,13 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("lastTimestamp", lastTimestamp == null ? null : dateFormat.format(Date.from(lastTimestamp)))
                     .createUni().subscribe().with(content -> {
                         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-                        Log.debug("Sending mail: " + content);
+                        Log.debugf("Sending mail %s", content);
                     });
         }
 
         @Override
         public void notifyMissingValues(String testName, String fingerprint, MissingValuesEvent event) {
-            String subject = String.format("%s Missing change detection values in test %s, dataset %d#%d",
+            String subject = "%s Missing change detection values in test %s, dataset %d#%d".formatted(
                     subjectPrefix, testName, event.dataset.runId, event.dataset.ordinal);
             missingValuesNotificationEmail
                     .data("username", username)
@@ -134,7 +134,7 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("variables", event.variables)
                     .createUni().subscribe().with(content -> {
                         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-                        Log.debug("Sending mail: " + content);
+                        Log.debugf("Sending mail: %s", content);
                     });
         }
 
@@ -151,14 +151,14 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("backlink", backlink)
                     .createUni().subscribe().with(content -> {
                         mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-                        Log.debug("Sending mail: " + content);
+                        Log.debugf("Sending mail: %s", content);
                     });
         }
 
         @Override
         public void notifyApiKeyExpiration(String keyName, Instant creation, Instant lastAccess, long toExpiration,
                 long active) {
-            String subject = String.format("%s API key \"%s\" %s", subjectPrefix, keyName,
+            String subject = "%s API key '%s' %s".formatted(subjectPrefix, keyName,
                     toExpiration == -1 ? "EXPIRED" : "about to expire");
             String content = apiKeyExpirationEmail
                     .data("baseUrl", baseUrl)
@@ -170,7 +170,7 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("active", active)
                     .render();
             mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
-            Log.debug("Sending mail: " + content);
+            Log.debugf("Sending mail: %s", content);
         }
     }
 

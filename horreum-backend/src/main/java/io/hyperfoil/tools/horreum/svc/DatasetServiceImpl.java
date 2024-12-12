@@ -1,7 +1,9 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,7 +23,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -42,13 +43,13 @@ import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 @Startup
 public class DatasetServiceImpl implements DatasetService {
-    private static final Logger log = Logger.getLogger(DatasetServiceImpl.class);
 
     //@formatter:off
     private static final String LABEL_QUERY = """
@@ -262,7 +263,6 @@ public class DatasetServiceImpl implements DatasetService {
                         } catch (JsonProcessingException e) {
                             throw new RuntimeException(e);
                         }
-                        ;
                     }
                     return summary;
                 });
@@ -342,7 +342,7 @@ public class DatasetServiceImpl implements DatasetService {
         try {
             extractors = Util.OBJECT_MAPPER.writeValueAsString(label.extractors);
         } catch (JsonProcessingException e) {
-            log.error("Cannot serialize label extractors", e);
+            Log.error("Cannot serialize label extractors", e);
             throw ServiceException.badRequest("Cannot serialize label extractors");
         }
         JsonNode extracted;
@@ -394,10 +394,9 @@ public class DatasetServiceImpl implements DatasetService {
         if (dataset != null) {
             Hibernate.initialize(dataset.data);
         } else {
-            log.warnf("Could not retrieve dataset: " + datasetId);
+            Log.warnf("Could not retrieve dataset: %d", datasetId);
             throw ServiceException.notFound("Could not find Dataset: " + datasetId
                     + ". If you have recently started a re-tranformation, please wait until datasets are available");
-
         }
         return DatasetMapper.from(dataset);
     }
@@ -405,7 +404,7 @@ public class DatasetServiceImpl implements DatasetService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     void calculateLabelValues(int testId, int datasetId, int queryLabelId, boolean isRecalculation) {
-        log.debugf("Calculating label values for dataset %d, label %d", datasetId, queryLabelId);
+        Log.debugf("Calculating label values for dataset %d, label %d", datasetId, queryLabelId);
         List<Object[]> extracted;
         try {
             // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
@@ -519,7 +518,7 @@ public class DatasetServiceImpl implements DatasetService {
             json = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
                     .setParameter(1, testId).getSingleResult();
         } catch (NoResultException noResultException) {
-            log.infof("Could not find fingerprint for dataset: %d", datasetId);
+            Log.infof("Could not find fingerprint for dataset: %d", datasetId);
         }
         if (json == null)
             return;
@@ -564,10 +563,10 @@ public class DatasetServiceImpl implements DatasetService {
     }
 
     private void logMessage(int datasetId, int level, String message, Object... params) {
-        String msg = String.format(message, params);
+        String msg = params.length == 0 ? message : message.formatted(params);
         DatasetDAO dataset = DatasetDAO.findById(datasetId);
         if (dataset != null) {
-            log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), dataset.testid, datasetId,
+            Log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), dataset.testid, datasetId,
                     msg);
             new DatasetLogDAO(em.getReference(TestDAO.class, dataset.testid), em.getReference(DatasetDAO.class, datasetId),
                     level, "labels", msg).persist();

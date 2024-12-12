@@ -24,7 +24,6 @@ import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.SelectionQuery;
 import org.hibernate.type.StandardBasicTypes;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,13 +62,13 @@ import io.hyperfoil.tools.horreum.mapper.TransformerMapper;
 import io.hyperfoil.tools.horreum.mapper.ValidationErrorMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.quarkus.logging.Log;
 import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
 
 public class SchemaServiceImpl implements SchemaService {
-    private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
 
    //@formatter:off
    private static final String FETCH_SCHEMAS_RECURSIVE =
@@ -175,12 +174,12 @@ public class SchemaServiceImpl implements SchemaService {
             em.flush();
             newOrUpdatedSchema(schema);
         }
-        log.debugf("Added schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
+        Log.debugf("Added schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
         return schema.id;
     }
 
     private void newOrUpdatedSchema(SchemaDAO schema) {
-        log.debugf("Push schema event for async run schemas update: %d (%s)", schema.id, schema.uri);
+        Log.debugf("Push schema event for async run schemas update: %d (%s)", schema.id, schema.uri);
         Util.registerTxSynchronization(tm, txStatus -> mediator.queueSchemaSync(schema.id));
     }
 
@@ -280,10 +279,10 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     void validateRunData(int runId, Predicate<String> schemaFilter) {
-        log.debugf("About to validate data for run %d", runId);
+        Log.debugf("About to validate data for run %d", runId);
         RunDAO run = RunDAO.findById(runId);
         if (run == null) {
-            log.errorf("Cannot load run %d for schema validation", runId);
+            Log.errorf("Cannot load run %d for schema validation", runId);
             return;
         }
         // remember to clear prev validation errors
@@ -303,20 +302,18 @@ public class SchemaServiceImpl implements SchemaService {
             Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.RUN_VALIDATED, run.testid,
                     new Schema.ValidationEvent(run.id, run.validationErrors.stream()
                             .map(ValidationErrorMapper::fromValidationError).collect(Collectors.toList()))));
-
-        ;
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     void validateDatasetData(int datasetId, Predicate<String> schemaFilter) {
-        log.debugf("About to validate data for dataset %d", datasetId);
+        Log.debugf("About to validate data for dataset %d", datasetId);
         DatasetDAO dataset = DatasetDAO.findById(datasetId);
         if (dataset == null) {
             // Don't log error when the dataset is not present and we're revalidating all datasets - it might be
             // concurrently removed because of URI change
             if (schemaFilter != null) {
-                log.errorf("Cannot load dataset %d for schema validation", datasetId);
+                Log.errorf("Cannot load dataset %d for schema validation", datasetId);
             }
             return;
         }
@@ -355,7 +352,7 @@ public class SchemaServiceImpl implements SchemaService {
     void revalidateAll(int schemaId) {
         SchemaDAO schema = SchemaDAO.findById(schemaId);
         if (schema == null) {
-            log.errorf("Cannot load schema %d for validation", schemaId);
+            Log.errorf("Cannot load schema %d for validation", schemaId);
             return;
         }
         //clear tables on schemaId
@@ -429,7 +426,7 @@ public class SchemaServiceImpl implements SchemaService {
                 }
             } catch (Throwable e) {
                 // Do not let messed up schemas fail the upload
-                log.error("Schema validation failed", e);
+                Log.error("Schema validation failed", e);
                 ValidationErrorDAO error = new ValidationErrorDAO();
                 error.schema = rootSchema;
                 error.error = JsonNodeFactory.instance.objectNode().put("type", "Execution error").put("message",
@@ -437,7 +434,7 @@ public class SchemaServiceImpl implements SchemaService {
                 if (!consumer.contains(error))
                     consumer.add(error);
             }
-            log.debug("Validation completed");
+            Log.debug("Validation completed");
         }
     }
 
@@ -457,7 +454,7 @@ public class SchemaServiceImpl implements SchemaService {
         if (schema == null) {
             throw ServiceException.notFound("Schema not found");
         } else {
-            log.debugf("Deleting schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
+            Log.debugf("Deleting schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
             em.createNativeQuery("DELETE FROM label_extractors WHERE label_id IN (SELECT id FROM label WHERE schema_id = ?1)")
                     .setParameter(1, id).executeUpdate();
             updateLabelsForDelete(id);
@@ -745,7 +742,7 @@ public class SchemaServiceImpl implements SchemaService {
                     .setParameter(1, schemaId)
                     .getResultList();
             if (datasetIds == null || datasetIds.isEmpty()) {
-                log.debug("Could not extract datasetIds from dataset_schemas with schemaId=" + schemaId);
+                Log.debugf("Could not extract datasetIds from dataset_schemas with schemaId=%s", schemaId);
                 return;
             }
 
@@ -754,7 +751,7 @@ public class SchemaServiceImpl implements SchemaService {
                         new Dataset.EventNew((Integer) dataset[0], (Integer) dataset[1], 0, labelId, true)));
             }
         } catch (NoResultException nre) {
-            log.debug("Could not find datasetId/testId to recalculate labels: " + nre.getMessage());
+            Log.debugf("Could not find datasetId/testId to recalculate labels: %s", nre.getMessage());
         }
     }
 
