@@ -9,25 +9,25 @@ import {
     Modal, TextInput
 } from "@patternfly/react-core"
 import {
-    Datastore,
-    DatastoreTypeEnum, ElasticsearchDatastoreConfig,
+    Datastore, DatastoreConfig,
+    DatastoreType, ElasticsearchDatastoreConfig
 } from "../../../api";
 import {AppContext} from "../../../context/appContext";
 import {AppContextType} from "../../../context/@types/appContextTypes";
 
 type ConfirmDeleteModalProps = {
     isOpen: boolean
-    dataStore: Datastore
+    dataStore: ({type: 'ELASTICSEARCH', config: DatastoreConfig} & Datastore) | ({type: 'POSTGRES', config: DatastoreConfig} & Datastore) | ({type: 'COLLECTORAPI', config: DatastoreConfig} & Datastore),
     onClose(): void
     onDelete(): Promise<any>
-    updateDatastore(datastore: Datastore): void
+    updateDatastore(datastore: ({type: 'ELASTICSEARCH', config: DatastoreConfig} & Datastore) | ({type: 'POSTGRES', config: DatastoreConfig} & Datastore) | ({type: 'COLLECTORAPI', config: DatastoreConfig} & Datastore) ): void
     persistDatastore: (datastore: Datastore) => Promise<void>
     description: string
     extra?: string
 }
 
 interface datastoreOption {
-    value: DatastoreTypeEnum,
+    value: DatastoreType,
     label: string,
     disabled: boolean,
     urlDisabled: boolean,
@@ -79,9 +79,9 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
     }
 
     const options : datastoreOption[] = [
-        { value:  DatastoreTypeEnum.Postgres, label: 'Please select...', disabled: true, urlDisabled: true, usernameDisable: true, tokenDisbaled: true },
-        { value:  DatastoreTypeEnum.Elasticsearch, label: 'Elasticsearch', disabled: false, urlDisabled: false, usernameDisable: false, tokenDisbaled: false },
-        { value:  DatastoreTypeEnum.Collectorapi, label: 'Collector API', disabled: false, urlDisabled: false, usernameDisable: true, tokenDisbaled: false },
+        { value:  DatastoreType.Postgres, label: 'Please select...', disabled: true, urlDisabled: true, usernameDisable: true, tokenDisbaled: true },
+        { value:  DatastoreType.Elasticsearch, label: 'Elasticsearch', disabled: false, urlDisabled: false, usernameDisable: false, tokenDisbaled: false },
+        { value:  DatastoreType.Collectorapi, label: 'Collector API', disabled: false, urlDisabled: false, usernameDisable: true, tokenDisbaled: false },
     ];
 
     const actionButtons = [
@@ -132,12 +132,12 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     fieldId="horizontal-form-name"
                 >
                     <TextInput
-                        value={"url" in dataStore.config ? dataStore.config.url : ""}
+                        value={"url" in dataStore.config  && typeof dataStore.config.url === 'string' ? dataStore.config.url : ""}
                         onChange={(_, value) => {
                             const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
                             config.url = value
                             updateDatastore({...dataStore, config: config})
-                            }}
+                        }}
                         isDisabled={enabledURL}
                         type="text"
                         id="horizontal-form-url"
@@ -155,7 +155,7 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     fieldId="horizontal-form-token"
                 >
                     <TextInput
-                        value={"apiKey" in dataStore.config ? dataStore.config.apiKey : ""}
+                        value={"apiKey" in dataStore.config && typeof dataStore.config.apiKey === 'string' ? dataStore.config.apiKey : ""}
                         onChange={(_, value) => {
                             const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
                             config.apiKey = value
@@ -178,7 +178,7 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     fieldId="horizontal-form-token"
                 >
                     <TextInput
-                        value={"username" in dataStore.config ? dataStore.config.username : ""}
+                        value={"username" in dataStore.config && typeof dataStore.config.username === 'string' ? dataStore.config.username : ""}
                         onChange={(_, value) => {
                             const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
                             config.username = value
@@ -200,7 +200,7 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     fieldId="horizontal-form-token"
                 >
                     <TextInput
-                        value={"password" in dataStore.config ? dataStore.config.password : ""}
+                        value={"password" in dataStore.config && typeof dataStore.config.password === 'string' ? dataStore.config.password : ""}
                         onChange={(_, value) => {
                             const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
                             config.password = value
