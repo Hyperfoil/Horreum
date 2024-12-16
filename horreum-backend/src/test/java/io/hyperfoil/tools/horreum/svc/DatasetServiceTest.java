@@ -34,6 +34,7 @@ import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.entity.data.ViewComponentDAO;
 import io.hyperfoil.tools.horreum.mapper.LabelMapper;
+import io.hyperfoil.tools.horreum.mapper.ViewMapper;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
@@ -41,6 +42,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import io.restassured.response.Response;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
@@ -380,13 +382,21 @@ public class DatasetServiceTest extends BaseServiceTest {
                 assertTrue(ids.contains(labelA));
                 assertTrue(ids.contains(labelB));
 
-                Util.withTx(tm, () -> {
-                    try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-                        int vcs = em.createNativeQuery("UPDATE viewcomponent SET labels = '[\"a\",\"b\"]'").executeUpdate();
-                        assertEquals(2, vcs);
-                    }
-                    return null;
-                });
+                // there must be only one result here!
+                ViewDAO dbView = (ViewDAO) ViewDAO.findAll().list().get(0);
+                assertEquals(2, dbView.components.size());
+
+                View updateView = ViewMapper.from(dbView);
+                ArrayNode vcLabels = (ArrayNode) updateView.components.stream().filter(vc -> vc.labels.size() == 1).findFirst()
+                        .orElseThrow().labels;
+                vcLabels.add("b");
+
+                Response response = jsonRequest()
+                        .auth()
+                        .oauth2(getTesterToken())
+                        .body(updateView)
+                        .post("/api/ui/view");
+                assertEquals(200, response.getStatusCode());
 
                 JsonNode updated = fetchDatasetsByTest(test.id);
                 JsonNode updatedView = updated.get("datasets").get(0).get("view");

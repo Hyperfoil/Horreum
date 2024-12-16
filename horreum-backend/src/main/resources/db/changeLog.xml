@@ -4688,4 +4688,43 @@
             $$ LANGUAGE plpgsql;
         </sql>
     </changeSet>
+    <changeSet id="126" author="lampajr">
+        <validCheckSum>ANY</validCheckSum>
+        <sql>
+            -- drop triggers
+            DROP TRIGGER IF EXISTS dsv_after_delete ON viewcomponent;
+            DROP TRIGGER IF EXISTS dsv_after_update ON viewcomponent;
+            DROP TRIGGER IF EXISTS recalc_dataset_view ON view_recalc_queue;
+            DROP TRIGGER IF EXISTS dsv_after_insert ON label_values;
+
+            -- drop functions
+            DROP FUNCTION dsv_after_vc_delete_func;
+            DROP FUNCTION dsv_after_vc_update_func;
+            DROP FUNCTION recalc_dataset_view;
+            DROP FUNCTION dsv_after_lv_insert_func;
+
+            -- drop view_recalc_queue table as not needed anymore
+            DROP TABLE view_recalc_queue;
+
+            -- still need db procedure until https://hibernate.atlassian.net/browse/HHH-17314 is fixed in quarkus
+            -- viewId can be NULL
+            CREATE OR REPLACE PROCEDURE calc_dataset_view(datasetId bigint, viewId bigint DEFAULT NULL) AS $$
+            BEGIN
+            WITH view_agg AS (
+                SELECT
+                    vc.view_id, vc.id as vcid, array_agg(DISTINCT label.id) as label_ids, jsonb_object_agg(label.name, lv.value) as value FROM dataset_schemas ds
+                JOIN label ON label.schema_id = ds.schema_id
+                JOIN viewcomponent vc ON vc.labels ? label.name
+                JOIN label_values lv ON lv.label_id = label.id AND lv.dataset_id = ds.dataset_id
+                WHERE ds.dataset_id = datasetId AND (viewId IS NULL OR vc.view_id = viewId)
+                    AND vc.view_id IN (SELECT view.id FROM view JOIN dataset ON view.test_id = dataset.testid WHERE dataset.id = datasetId)
+                GROUP BY vc.view_id, vcid
+            )
+            INSERT INTO dataset_view (dataset_id, view_id, label_ids, value)
+                SELECT datasetId, view_id, array_agg(DISTINCT label_id), jsonb_object_agg(vcid, value) FROM view_agg, unnest(label_ids) as label_id
+                GROUP BY view_id;
+            END
+            $$ LANGUAGE plpgsql;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

@@ -1087,9 +1087,8 @@ public class RunServiceImpl implements RunService {
     @Transactional
     @Override
     public List<Integer> recalculateDatasets(int runId) {
-        transform(runId, true);
-        return session.createNativeQuery("SELECT id FROM dataset WHERE runid = ? ORDER BY ordinal", Integer.class)
-                .setParameter(1, runId).getResultList();
+        log.infof("Transforming run id %d", runId);
+        return transform(runId, true);
     }
 
     @RolesAllowed(Roles.ADMIN)
