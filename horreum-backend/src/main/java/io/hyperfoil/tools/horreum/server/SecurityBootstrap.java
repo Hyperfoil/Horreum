@@ -23,6 +23,7 @@ import io.hyperfoil.tools.horreum.entity.user.TeamRole;
 import io.hyperfoil.tools.horreum.entity.user.UserInfo;
 import io.hyperfoil.tools.horreum.entity.user.UserRole;
 import io.hyperfoil.tools.horreum.svc.Roles;
+import io.hyperfoil.tools.horreum.svc.UserServiceImpl;
 import io.hyperfoil.tools.horreum.svc.user.UserBackEnd;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.LaunchMode;
@@ -128,8 +129,6 @@ public class SecurityBootstrap {
      * Create an admin account if there are no accounts in the system.
      * The account should be removed once other accounts are created.
      */
-    @WithRoles(extras = BOOTSTRAP_ACCOUNT)
-    @Transactional
     public void checkBootstrapAccount() {
         // checks the list of administrators. a user cannot remove himself nor create the bootstrap account (restricted namespace)
         List<String> administrators = backend.get().administrators().stream().map(userData -> userData.username).toList();
@@ -149,10 +148,7 @@ public class SecurityBootstrap {
             backend.get().updateTeamMembers("dev-team",
                     Map.of(BOOTSTRAP_ACCOUNT, List.of(Roles.MANAGER, Roles.TESTER, Roles.UPLOADER, Roles.VIEWER)));
 
-            // create db entry, if not existent, like in UserService.createLocalUser()
-            UserInfo userInfo = UserInfo.<UserInfo> findByIdOptional(BOOTSTRAP_ACCOUNT).orElse(new UserInfo(BOOTSTRAP_ACCOUNT));
-            userInfo.defaultTeam = "dev-team";
-            userInfo.persist();
+            UserServiceImpl.createLocalUser(BOOTSTRAP_ACCOUNT, "dev-team");
 
             Log.infov("\n>>>\n>>> Created temporary account {0} with password {1}\n>>>", BOOTSTRAP_ACCOUNT, user.password);
         } else if (administrators.size() > 1 && administrators.contains(BOOTSTRAP_ACCOUNT)) {
@@ -160,9 +156,9 @@ public class SecurityBootstrap {
         }
     }
 
-    public static String generateRandomPassword(int lenght) {
-        StringBuilder builder = new StringBuilder(lenght);
-        new SecureRandom().ints(lenght, 0, RANDOM_PASSWORD_CHARS.length).mapToObj(i -> RANDOM_PASSWORD_CHARS[i])
+    public static String generateRandomPassword(int length) {
+        StringBuilder builder = new StringBuilder(length);
+        new SecureRandom().ints(length, 0, RANDOM_PASSWORD_CHARS.length).mapToObj(i -> RANDOM_PASSWORD_CHARS[i])
                 .forEach(builder::append);
         return builder.toString();
     }

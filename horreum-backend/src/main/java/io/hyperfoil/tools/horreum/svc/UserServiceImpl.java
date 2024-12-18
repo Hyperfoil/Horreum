@@ -223,7 +223,7 @@ public class UserServiceImpl implements UserService {
      */
     @Transactional
     @WithRoles(fromParams = FirstParameter.class)
-    void createLocalUser(String username, String defaultTeam) {
+    public static void createLocalUser(String username, String defaultTeam) {
         UserInfo userInfo = UserInfo.<UserInfo> findByIdOptional(username).orElse(new UserInfo(username));
         if (defaultTeam != null) {
             userInfo.defaultTeam = defaultTeam;
