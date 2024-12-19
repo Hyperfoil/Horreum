@@ -207,7 +207,7 @@ export default function Teams(props: TeamsProps) {
                                 team={selected.name}
                                 isOpen={newUserModalOpen}
                                 onClose={() => setNewUserModalOpen(false)}
-                                onCreate={(user, roles) => {
+                                onCreate={(user, _, roles) => {
                                     if (teamFuncsRef.current) {
                                         teamFuncsRef.current.addMember(user, roles)
                                     }
