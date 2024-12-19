@@ -17,13 +17,15 @@ import {userApi, UserData} from "../../api"
 import { getRoles } from "./TeamMembers"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {useSelector} from "react-redux";
+import {oidcSelector} from "../../auth";
 
 
 type NewUserModalProps = {
-    team: string
+    team?: string
     isOpen: boolean
     onClose(): void
-    onCreate(user: UserData, roles: string[]): void
+    onCreate(user: UserData, password: string | undefined, roles: string[]): void
 }
 
 export default function NewUserModal(props: NewUserModalProps) {
@@ -38,7 +40,8 @@ export default function NewUserModal(props: NewUserModalProps) {
     const [tester, setTester] = useState(true)
     const [uploader, setUploader] = useState(false)
     const [manager, setManager] = useState(false)
-    const valid = username && password && email && /^.+@.+\..+$/.test(email)
+    const isOidc = useSelector(oidcSelector) !== undefined;
+    const valid = username && (password || isOidc) && email && /^.+@.+\..+$/.test(email)
     useEffect(() => {
         setUsername(undefined)
         setPassword("")
@@ -61,10 +64,10 @@ export default function NewUserModal(props: NewUserModalProps) {
                     onClick={() => {
                         setCreating(true)
                         const user = { id: "", username: username || "", email, firstName, lastName }
-                        const roles = getRoles(viewer, tester, uploader, manager)
+                        const roles = props.team ? getRoles(viewer, tester, uploader, manager) : []
                         userApi.createUser({ user, password, team: props.team, roles })
                             .then(() => {
-                                props.onCreate(user, roles)
+                                props.onCreate(user, password, roles)
                                 alerting.dispatchInfo(
                                     "USER_CREATED",
                                     "User created",
@@ -94,6 +97,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                 <Form isHorizontal>
                     <FormGroup isRequired label="Username" fieldId="username">
                         <TextInput
+                            id="username"
                             isRequired
                             value={username}
                             onChange={(_event, val) => setUsername(val)}
@@ -101,15 +105,16 @@ export default function NewUserModal(props: NewUserModalProps) {
                         />
                     </FormGroup>
                     <FormGroup
-                        isRequired
+                        isRequired={!isOidc}
                         label="Temporary password"
                         fieldId="password"
                     >
                         <TextInput
-                            isRequired
+                            id="password"
+                            isRequired={!isOidc}
                             value={password}
                             onChange={(_event, val) => setPassword(val)}
-                            validated={password ? "default" : "error"}
+                            validated={(password || isOidc) ? "default" : "error"}
                         />
                         <FormHelperText>
                             <HelperText>
@@ -119,6 +124,7 @@ export default function NewUserModal(props: NewUserModalProps) {
                     </FormGroup>
                     <FormGroup isRequired label="Email" fieldId="email">
                         <TextInput
+                            id="email"
                             isRequired
                             type="email"
                             value={email}
@@ -127,27 +133,29 @@ export default function NewUserModal(props: NewUserModalProps) {
                         />
                     </FormGroup>
                     <FormGroup label="First name" fieldId="firstName">
-                        <TextInput value={firstName} onChange={(_event, val) => setFirstName(val)} />
+                        <TextInput id="first_name" value={firstName} onChange={(_event, val) => setFirstName(val)} />
                     </FormGroup>
                     <FormGroup label="Last name" fieldId="lastName">
-                        <TextInput value={lastName} onChange={(_event, val) => setLastName(val)} />
+                        <TextInput id="last_name" value={lastName} onChange={(_event, val) => setLastName(val)} />
                     </FormGroup>
-                    <FormGroup label="Permissions" fieldId="permissions">
-                        <List isPlain>
-                            <ListItem>
-                                <Checkbox id="viewer" isChecked={viewer} onChange={(_event, val) => setViewer(val)} label="Viewer" />
-                            </ListItem>
-                            <ListItem>
-                                <Checkbox id="tester" isChecked={tester} onChange={(_event, val) => setTester(val)} label="Tester" />
-                            </ListItem>
-                            <ListItem>
-                                <Checkbox id="uploader" isChecked={uploader} onChange={(_event, val) => setUploader(val)} label="Uploader" />
-                            </ListItem>
-                            <ListItem>
-                                <Checkbox id="manager" isChecked={manager} onChange={(_event, val) => setManager(val)} label="Manager" />
-                            </ListItem>
-                        </List>
-                    </FormGroup>
+                    {props.team && (
+                        <FormGroup label="Permissions" fieldId="permissions">
+                            <List isPlain>
+                                <ListItem>
+                                    <Checkbox id="viewer" isChecked={viewer} onChange={(_event, val) => setViewer(val)} label="Viewer" />
+                                </ListItem>
+                                <ListItem>
+                                    <Checkbox id="tester" isChecked={tester} onChange={(_event, val) => setTester(val)} label="Tester" />
+                                </ListItem>
+                                <ListItem>
+                                    <Checkbox id="uploader" isChecked={uploader} onChange={(_event, val) => setUploader(val)} label="Uploader" />
+                                </ListItem>
+                                <ListItem>
+                                    <Checkbox id="manager" isChecked={manager} onChange={(_event, val) => setManager(val)} label="Manager" />
+                                </ListItem>
+                            </List>
+                        </FormGroup>
+                    )}
                 </Form>
             )}
         </Modal>

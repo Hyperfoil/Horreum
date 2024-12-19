@@ -90,7 +90,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
                 team={team.key}
                 isOpen={createNewUser}
                 onClose={() => setCreateNewUser(false)}
-                onCreate={(user, roles) => {
+                onCreate={(user, _, roles) => {
                     teamMembersFuncs.current && teamMembersFuncs.current.addMember(user, roles)
                 }}
             />

@@ -196,11 +196,14 @@ public class KeycloakUserBackend implements UserBackEnd {
         rep.setLastName(user.user.lastName);
         rep.setEnabled(true);
 
-        CredentialRepresentation credentials = new CredentialRepresentation();
-        credentials.setType(CredentialRepresentation.PASSWORD);
-        credentials.setTemporary(true);
-        credentials.setValue(user.password);
-        rep.setCredentials(List.of(credentials));
+        if (user.password != null && !user.password.isBlank()) {
+            CredentialRepresentation credentials = new CredentialRepresentation();
+            credentials.setType(CredentialRepresentation.PASSWORD);
+            credentials.setTemporary(true);
+            credentials.setValue(user.password);
+            rep.setCredentials(List.of(credentials));
+        }
+
         return rep;
     }
 
