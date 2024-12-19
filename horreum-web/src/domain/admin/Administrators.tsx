@@ -3,21 +3,17 @@ import { useSelector } from "react-redux"
 import { Button, 
     DualListSelector, 
     Form, 
-    FormGroup,
-    HelperText,
-    HelperTextItem,
-    FormHelperText,     
-    Modal, 
-    Spinner, 
-    TextInput } from "@patternfly/react-core"
+    FormGroup
+} from "@patternfly/react-core"
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import {userApi, UserData} from "../../api"
 import UserSearch from "../../components/UserSearch"
-import { isAdminSelector, userName } from "../../auth"
-import { noop } from "../../utils"
+import {isAdminSelector, userName} from "../../auth"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import NewUserModal from "../user/NewUserModal";
+import {noop} from "../../utils";
 
 
 function userElement(u: UserData) {
@@ -114,117 +110,8 @@ export default function Administrators(props: AdministratorsProps) {
             <NewUserModal
                 isOpen={createNewUser}
                 onClose={() => setCreateNewUser(false)}
-                onCreate={(user, password) => {
-                    return userApi.createUser({ user, password }).then(
-                        () => {
-                            alerting.dispatchInfo(
-                                "USER_CREATED",
-                                "User created",
-                                "User was successfully created",
-                                3000
-                            )
-                        },
-                        error => alerting.dispatchError(error, "USER_NOT_CREATED", "Failed to create new user.")
-                    )
-                }}
+                onCreate={noop}
             />
         </Form>
-    )
-}
-
-type NewUserModalProps = {
-    isOpen: boolean
-    onClose(): void
-    onCreate(user: UserData, password: string): Promise<unknown>
-}
-
-function NewUserModal(props: NewUserModalProps) {
-    const [username, setUsername] = useState<string>()
-    const [password, setPassword] = useState<string>()
-    const [email, setEmail] = useState<string>()
-    const [firstName, setFirstName] = useState<string>()
-    const [lastName, setLastName] = useState<string>()
-    const [creating, setCreating] = useState(false)
-    const valid = username && password && email && /^.+@.+\..+$/.test(email)
-    useEffect(() => {
-        setUsername(undefined)
-        setPassword("")
-        setEmail("")
-        setFirstName("")
-        setLastName("")
-    }, [props.isOpen])
-    return (
-        <Modal
-            title="Create new user"
-            isOpen={props.isOpen}
-            onClose={props.onClose}
-            actions={[
-                <Button
-                    isDisabled={!valid}
-                    onClick={() => {
-                        setCreating(true)
-                        props
-                            .onCreate({ id: "", username: username || "", email, firstName, lastName }, password || "")
-                            .catch(noop)
-                            .finally(() => {
-                                setCreating(false)
-                                props.onClose()
-                            })
-                    }}
-                >
-                    Create
-                </Button>,
-                <Button variant="secondary" onClick={props.onClose}>
-                    Cancel
-                </Button>,
-            ]}
-        >
-            {creating ? (
-                <Spinner size="xl" />
-            ) : (
-                <Form isHorizontal>
-                    <FormGroup isRequired label="Username" fieldId="username">
-                        <TextInput
-                            isRequired
-                            value={username}
-                            onChange={(_event, val) => setUsername(val)}
-                            validated={username ? "default" : "error"}
-                        />
-                    </FormGroup>
-                    <FormGroup
-                        isRequired
-                        label="Temporary password"
-                        fieldId="password"
-                    >
-                        <TextInput
-                            isRequired
-                            value={password}
-                            onChange={(_event, val) => setPassword(val)}
-                            validated={password ? "default" : "error"}
-                        />
-                        <FormHelperText>
-                            <HelperText>
-                                <HelperTextItem variant={password ? "default" : "error"}>This password is only temporary and the user will change it during first login.</HelperTextItem>
-                            </HelperText>
-                        </FormHelperText>
-                    </FormGroup>
-                    <FormGroup isRequired label="Email" fieldId="email">
-                        <TextInput
-                            isRequired
-                            type="email"
-                            value={email}
-                            onChange={(_event, val) => setEmail(val)}
-                            validated={email && /^.+@.+\..+$/.test(email) ? "default" : "error"}
-                        />
-                    </FormGroup>
-                    <FormGroup label="First name" fieldId="firstName">
-                        <TextInput value={firstName} onChange={(_event, val) => setFirstName(val)} />
-                    </FormGroup>
-                    <FormGroup label="Last name" fieldId="lastName">
-                        <TextInput value={lastName} onChange={(_event, val) => setLastName(val)} />
-                    </FormGroup>
-                </Form>
-            )}
-        </Modal>
     )
 }
