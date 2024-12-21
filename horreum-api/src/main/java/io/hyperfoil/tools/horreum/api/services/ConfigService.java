@@ -19,6 +19,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
+import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.quarkus.runtime.Startup;
 
 @Startup
@@ -49,6 +50,11 @@ public interface ConfigService {
     })
     List<Datastore> datastores(@PathParam("team") String team);
 
+    @GET
+    @Path("datastore/types")
+    @Operation(description = "Obtain list of available datastore types")
+    List<DatastoreType.TypeConfig> datastoreTypes();
+
     @POST
     @Path("datastore")
     @Operation(description = "Create a new Datastore")
@@ -66,12 +72,12 @@ public interface ConfigService {
     @GET
     @Path("datastore/{id}/test")
     @Operation(description = "Test a Datastore connection")
-    DatastoreTestResponse testDatastore(@PathParam("id") String datastoreId);
+    DatastoreTestResponse testDatastore(@PathParam("id") Integer datastoreId);
 
     @DELETE
     @Path("datastore/{id}")
     @Operation(description = "Test a Datastore")
-    void deleteDatastore(@PathParam("id") String datastoreId);
+    void deleteDatastore(@PathParam("id") Integer datastoreId);
 
     class VersionInfo {
         @Schema(description = "Version of Horreum", example = "0.9.4")

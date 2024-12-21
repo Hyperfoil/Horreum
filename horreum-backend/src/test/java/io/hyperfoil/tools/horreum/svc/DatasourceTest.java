@@ -28,6 +28,7 @@ import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
+import io.hyperfoil.tools.horreum.api.data.datastore.auth.NoAuth;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
@@ -233,13 +234,12 @@ public class DatasourceTest extends BaseServiceTest {
         Datastore newDatastore = new Datastore();
         newDatastore.name = info.getDisplayName();
         newDatastore.type = DatastoreType.ELASTICSEARCH;
-        newDatastore.builtIn = false;
         newDatastore.access = Access.PRIVATE;
         newDatastore.owner = TESTER_ROLES[0];
 
         ElasticsearchDatastoreConfig elasticConfig = new ElasticsearchDatastoreConfig();
         elasticConfig.url = hosts.get().get(0);
-        elasticConfig.apiKey = apiKey.orElse("123");
+        elasticConfig.authentication = new NoAuth();
 
         newDatastore.config = mapper.valueToTree(elasticConfig);
 

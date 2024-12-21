@@ -67,8 +67,8 @@ import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
-import io.hyperfoil.tools.horreum.datastore.BackendResolver;
 import io.hyperfoil.tools.horreum.datastore.Datastore;
+import io.hyperfoil.tools.horreum.datastore.DatastoreResolver;
 import io.hyperfoil.tools.horreum.datastore.DatastoreResponse;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
@@ -148,7 +148,7 @@ public class RunServiceImpl implements RunService {
     @Inject
     ServiceMediator mediator;
     @Inject
-    BackendResolver backendResolver;
+    DatastoreResolver backendResolver;
 
     @Inject
     Session session;
@@ -440,17 +440,13 @@ public class RunServiceImpl implements RunService {
     }
 
     /**
-     * Processes and persists a run or multiple runs based on the provided data and metadata.
-     * It performs the following steps:
-     * - Validates and parses the input data string into a JSON structure.
-     * - Resolves the appropriate datastore to handle the run processing.
-     * - Handles single or multiple runs based on the datastore's response type.
-     * - Persists runs and their associated datasets in the database.
-     * - Queues dataset recalculation tasks for further processing.
+     * Processes and persists a run or multiple runs based on the provided data and metadata. It performs the following steps: -
+     * Validates and parses the input data string into a JSON structure. - Resolves the appropriate datastore to handle the run
+     * processing. - Handles single or multiple runs based on the datastore's response type. - Persists runs and their
+     * associated datasets in the database. - Queues dataset recalculation tasks for further processing.
      *
-     * If the response, in the case of datastore, contains more than 10 runs,
-     * the processing of the entire run is offloaded to an asynchronous queue.
-     * For fewer runs, processing occurs synchronously.
+     * If the response, in the case of datastore, contains more than 10 runs, the processing of the entire run is offloaded to
+     * an asynchronous queue. For fewer runs, processing occurs synchronously.
      *
      * @param start the start time for the run
      * @param stop the stop time for the run
@@ -490,7 +486,8 @@ public class RunServiceImpl implements RunService {
 
         TestDAO testEntity = testService.ensureTestExists(testNameOrId);
 
-        Datastore datastore = backendResolver.getBackend(testEntity.backendConfig.type);
+        Datastore datastore = backendResolver.getDatastore(testEntity.backendConfig.type);
+
         DatastoreResponse response = datastore.handleRun(data, metadata, testEntity.backendConfig,
                 Optional.ofNullable(schemaUri));
 
@@ -619,12 +616,10 @@ public class RunServiceImpl implements RunService {
     }
 
     /**
-     * Adds a new authenticated run to the database with appropriate ownership and access settings.
-     * This method performs the following tasks:
-     * - Ensures the run's ID is reset and metadata is correctly handled.
-     * - Determines the owner of the run, defaulting to a specific uploader role if no owner is provided.
-     * - Validates ownership permissions against the user's roles.
-     * - Persists or updates the run in the database and handles related datasets.
+     * Adds a new authenticated run to the database with appropriate ownership and access settings. This method performs the
+     * following tasks: - Ensures the run's ID is reset and metadata is correctly handled. - Determines the owner of the run,
+     * defaulting to a specific uploader role if no owner is provided. - Validates ownership permissions against the user's
+     * roles. - Persists or updates the run in the database and handles related datasets.
      *
      * @param run the RunDAO object containing the run details
      * @param test the TestDAO object containing the test details
@@ -1134,15 +1129,15 @@ public class RunServiceImpl implements RunService {
     }
 
     /**
-     * Transforms the data for a given run by applying applicable schemas and transformers.
-     * It ensures any existing datasets for the run are removed before creating new ones,
-     * handles timeouts for ongoing transformations, and creates datasets with the transformed data.
-     * If the flag {isRecalculation} is set to true the label values recalculation is performed
-     * right away synchronously otherwise it is completely skipped and let to the caller trigger it
+     * Transforms the data for a given run by applying applicable schemas and transformers. It ensures any existing datasets for
+     * the run are removed before creating new ones, handles timeouts for ongoing transformations, and creates datasets with the
+     * transformed data. If the flag {isRecalculation} is set to true the label values recalculation is performed right away
+     * synchronously otherwise it is completely skipped and let to the caller trigger it
      *
      * @param runId the ID of the run to transform
      * @param isRecalculation flag indicating if this is a recalculation
-     * @return the list of datasets ids that have been created, or empty list if the run is invalid or not found or already ongoing
+     * @return the list of datasets ids that have been created, or empty list if the run is invalid or not found or already
+     * ongoing
      */
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
@@ -1374,9 +1369,9 @@ public class RunServiceImpl implements RunService {
     }
 
     /**
-     * Persists a dataset, optionally triggers recalculation events, and validates the dataset.
-     * The recalculation is getting triggered sync only if the {isRecalculation} is set to true
-     * otherwise it is completely skipped
+     * Persists a dataset, optionally triggers recalculation events, and validates the dataset. The recalculation is getting
+     * triggered sync only if the {isRecalculation} is set to true otherwise it is completely skipped
+     *
      * @param ds the DatasetDAO object to be persisted
      * @param isRecalculation whether the dataset is a result of recalculation
      * @return the ID of the persisted dataset
@@ -1490,9 +1485,9 @@ public class RunServiceImpl implements RunService {
     }
 
     /**
-     * Represents the result of persisting a run, including the run ID and associated dataset IDs.
-     * This class is used to encapsulate the ID of the newly persisted run and the IDs of the datasets
-     * connected to the run, providing a structured way to return this data.
+     * Represents the result of persisting a run, including the run ID and associated dataset IDs. This class is used to
+     * encapsulate the ID of the newly persisted run and the IDs of the datasets connected to the run, providing a structured
+     * way to return this data.
      */
     public static class RunPersistence {
         private final Integer runId;

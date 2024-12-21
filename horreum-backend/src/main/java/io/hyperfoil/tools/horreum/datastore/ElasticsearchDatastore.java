@@ -2,9 +2,7 @@ package io.hyperfoil.tools.horreum.datastore;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -32,6 +30,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
+import io.hyperfoil.tools.horreum.api.data.datastore.auth.APIKeyAuth;
+import io.hyperfoil.tools.horreum.api.data.datastore.auth.UsernamePassAuth;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 
 @ApplicationScoped
@@ -41,8 +41,6 @@ public class ElasticsearchDatastore implements Datastore {
 
     @Inject
     ObjectMapper mapper;
-
-    Map<String, RestClient> hostCache = new ConcurrentHashMap<>();
 
     @Override
     public DatastoreResponse handleRun(JsonNode payload,
@@ -67,18 +65,27 @@ public class ElasticsearchDatastore implements Datastore {
             if (elasticsearchDatastoreConfig != null) {
 
                 RestClientBuilder builder = RestClient.builder(HttpHost.create(elasticsearchDatastoreConfig.url));
-                if (elasticsearchDatastoreConfig.apiKey != null) {
+
+                if (elasticsearchDatastoreConfig.authentication instanceof APIKeyAuth) {
+
+                    APIKeyAuth apiKeyAuth = (((APIKeyAuth) elasticsearchDatastoreConfig.authentication));
+
                     builder.setDefaultHeaders(new Header[] {
-                            new BasicHeader("Authorization", "ApiKey " + elasticsearchDatastoreConfig.apiKey)
+                            new BasicHeader("Authorization", "ApiKey " + apiKeyAuth.apiKey)
                     });
-                } else {
+
+                } else if (elasticsearchDatastoreConfig.authentication instanceof UsernamePassAuth) {
                     final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+
+                    UsernamePassAuth usernamePassAuth = (((UsernamePassAuth) elasticsearchDatastoreConfig.authentication));
+
                     credentialsProvider.setCredentials(AuthScope.ANY,
-                            new UsernamePasswordCredentials(elasticsearchDatastoreConfig.username,
-                                    elasticsearchDatastoreConfig.password));
+                            new UsernamePasswordCredentials(usernamePassAuth.username,
+                                    usernamePassAuth.password));
 
                     builder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
                             .setDefaultCredentialsProvider(credentialsProvider));
+
                 }
 
                 restClient = builder.build();
@@ -146,62 +153,64 @@ public class ElasticsearchDatastore implements Datastore {
                             throw new BadRequestException("Schema is required for search requests");
                         }
 
-                        //TODO: error handling
-                        final MultiIndexQuery multiIndexQuery = mapper.treeToValue(apiRequest.query, MultiIndexQuery.class);
-
-                        //1st retrieve the list of docs from 1st Index
-                        request = new Request(
-                                "GET",
-                                "/" + apiRequest.index + "/_search");
-
-                        request.setJsonEntity(mapper.writeValueAsString(multiIndexQuery.metaQuery));
-                        finalString = extracted(restClient, request);
-
-                        elasticResults = (ArrayNode) mapper.readTree(finalString).get("hits").get("hits");
-                        extractedResults = mapper.createArrayNode();
-
-                        //2nd retrieve the docs from 2nd Index and combine into a single result with metadata and doc contents
-                        final RestClient finalRestClient = restClient; //copy of restClient for use in lambda
-
-                        elasticResults.forEach(jsonNode -> {
-
-                            ObjectNode result = ((ObjectNode) jsonNode.get("_source")).put("$schema", schemaUri);
-                            String docString = """
-                                    {
-                                        "error": "Could not retrieve doc from secondary index"
-                                        "msg": "ERR_MSG"
-                                    }
-                                    """;
-
-                            var subRequest = new Request(
+                        try {
+                            final MultiIndexQuery multiIndexQuery = mapper.treeToValue(apiRequest.query, MultiIndexQuery.class);
+                            //1st retrieve the list of docs from 1st Index
+                            request = new Request(
                                     "GET",
-                                    "/" + multiIndexQuery.targetIndex + "/_doc/"
-                                            + jsonNode.get("_source").get(multiIndexQuery.docField).textValue());
+                                    "/" + apiRequest.index + "/_search");
 
-                            try {
-                                docString = extracted(finalRestClient, subRequest);
+                            request.setJsonEntity(mapper.writeValueAsString(multiIndexQuery.metaQuery));
+                            finalString = extracted(restClient, request);
 
-                            } catch (IOException e) {
+                            elasticResults = (ArrayNode) mapper.readTree(finalString).get("hits").get("hits");
+                            extractedResults = mapper.createArrayNode();
 
-                                docString.replaceAll("ERR_MSG", e.getMessage());
-                                String msg = String.format("Could not query doc request: index: %s; docID: %s (%s)",
-                                        multiIndexQuery.targetIndex, multiIndexQuery.docField, e.getMessage());
-                                log.error(msg);
-                            }
+                            //2nd retrieve the docs from 2nd Index and combine into a single result with metadata and doc contents
+                            final RestClient finalRestClient = restClient; //copy of restClient for use in lambda
 
-                            try {
-                                result.put("$doc", mapper.readTree(docString));
-                            } catch (JsonProcessingException e) {
-                                docString.replaceAll("ERR_MSG", e.getMessage());
-                                String msg = String.format("Could not parse doc result: %s, %s", docString, e.getMessage());
-                                log.error(msg);
-                            }
+                            elasticResults.forEach(jsonNode -> {
 
-                            extractedResults.add(result);
+                                ObjectNode result = ((ObjectNode) jsonNode.get("_source")).put("$schema", schemaUri);
+                                String docString = """
+                                        {
+                                            "error": "Could not retrieve doc from secondary index"
+                                            "msg": "ERR_MSG"
+                                        }
+                                        """;
 
-                        });
+                                var subRequest = new Request(
+                                        "GET",
+                                        "/" + multiIndexQuery.targetIndex + "/_doc/"
+                                                + jsonNode.get("_source").get(multiIndexQuery.docField).textValue());
 
-                        return new DatastoreResponse(extractedResults, payload);
+                                try {
+                                    docString = extracted(finalRestClient, subRequest);
+
+                                } catch (IOException e) {
+
+                                    docString.replaceAll("ERR_MSG", e.getMessage());
+                                    String msg = String.format("Could not query doc request: index: %s; docID: %s (%s)",
+                                            multiIndexQuery.targetIndex, multiIndexQuery.docField, e.getMessage());
+                                    log.error(msg);
+                                }
+
+                                try {
+                                    result.put("$doc", mapper.readTree(docString));
+                                } catch (JsonProcessingException e) {
+                                    docString.replaceAll("ERR_MSG", e.getMessage());
+                                    String msg = String.format("Could not parse doc result: %s, %s", docString, e.getMessage());
+                                    log.error(msg);
+                                }
+
+                                extractedResults.add(result);
+
+                            });
+
+                            return new DatastoreResponse(extractedResults, payload);
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException("Could not process json query: " + e.getMessage());
+                        }
 
                     default:
                         throw new BadRequestException("Invalid request type: " + apiRequest.type);

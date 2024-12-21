@@ -4688,4 +4688,74 @@
             $$ LANGUAGE plpgsql;
         </sql>
     </changeSet>
+    <!--  Migrate datastore configuration   -->
+    <changeSet id="126" author="johara">
+        <validCheckSum>ANY</validCheckSum>
+        <!-- set default Postgres datastore  -->
+        <sql>
+            UPDATE backendconfig
+            SET configuration = '{"builtIn": true, "authentication": {"type": "none"}}'
+            WHERE id = 1
+        </sql>
+        <!-- update datastores with no auth  -->
+        <sql>
+            UPDATE backendconfig
+            SET configuration = updated.newConfig
+                FROM (select id, jsonb_insert(newConfig - 'apiKey' - 'username' - 'password', '{authentication,type}', '"none"') as newConfig
+                    from (select
+                            id,
+                            jsonb_insert(configuration, '{authentication}', '{}') as newConfig
+                    from backendconfig
+                    where jsonb_path_exists(configuration, '$.apiKey')
+                      AND configuration ->> 'apiKey' = ''
+                     AND not jsonb_path_exists(configuration, '$.username'))
+                )
+                as updated
+            WHERE backendconfig.id = updated.id;
+        </sql>
+
+        <!-- update datastores with apiKey auth -->
+        <sql>
+            UPDATE backendconfig
+            SET configuration = updated.newConfig
+                FROM (select id, jsonb_insert(newConfig, '{authentication,type}', '"api-key"') as newConfig
+                  from (Select rootConfig.id,
+                               jsonb_insert(rootConfig.newConfig - 'apiKey' - 'username' - 'password', '{authentication,apiKey}',
+                                            to_jsonb(rootConfig.apiKey)) as newConfig
+                        FROM (select id,
+                                     name,
+                                     configuration ->> 'apiKey'                            as apiKey,
+                                     configuration,
+                                     jsonb_insert(configuration, '{authentication}', '{}') as newConfig
+                              from backendconfig
+                              where jsonb_path_exists(configuration, '$.apiKey')
+                                AND not configuration ->> 'apiKey' = ''
+                                and not jsonb_path_exists(configuration, '$.authentication'))
+                            as rootConfig)
+                      as updated)
+                as updated
+            WHERE backendconfig.id = updated.id
+        </sql>
+
+        <!-- update datastores with username & password auth -->
+        <sql>
+            UPDATE backendconfig
+            SET configuration = updated.newConfig
+            FROM
+                (select id, jsonb_insert(newConfig, '{authentication,type}', '"username"') as newConfig
+                FROM
+                    (select id, jsonb_insert(updatedConfig.newConfig - 'password', '{authentication,password}', to_jsonb(updatedConfig.password)) as newConfig
+                    from
+                        (Select rootConfig.id, username, password, jsonb_insert(rootConfig.newConfig - 'apiKey' - 'username', '{authentication,username}', to_jsonb(rootConfig.username)) as newConfig
+                        FROM
+                            (select id, name, configuration ->> 'username' as username, configuration ->> 'password' as password, configuration, jsonb_insert(configuration, '{authentication}', '{}') as newConfig
+                            from backendconfig
+                            where jsonb_path_exists(configuration, '$.username')
+                        ) as rootConfig
+                    ) as updatedConfig)
+                ) as updated
+            WHERE backendconfig.id = updated.id;
+        </sql>
+    </changeSet>
+
 </databaseChangeLog>
