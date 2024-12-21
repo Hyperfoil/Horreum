@@ -1,4 +1,4 @@
-import React, {useContext, useState} from "react"
+import React, {useEffect, useState} from "react"
 
 import {
     Button, Form,
@@ -9,84 +9,179 @@ import {
     Modal, TextInput
 } from "@patternfly/react-core"
 import {
+    APIKeyAuth,
     Datastore,
-    DatastoreTypeEnum, ElasticsearchDatastoreConfig,
+    DatastoreTypeEnum, ElasticsearchDatastoreConfig, TypeConfig, UsernamePassAuth,
 } from "../../../api";
-import {AppContext} from "../../../context/appContext";
-import {AppContextType} from "../../../context/@types/appContextTypes";
 
 type ConfirmDeleteModalProps = {
     isOpen: boolean
     dataStore: Datastore
+    dataStoreTypes: Array<TypeConfig>
     onClose(): void
-    onDelete(): Promise<any>
+    onDelete(): void
     updateDatastore(datastore: Datastore): void
-    persistDatastore: (datastore: Datastore) => Promise<void>
+    persistDatastore: () => Promise<void>
     description: string
     extra?: string
 }
 
-interface datastoreOption {
-    value: DatastoreTypeEnum,
-    label: string,
-    disabled: boolean,
-    urlDisabled: boolean,
-    usernameDisable: boolean,
-    tokenDisbaled: boolean
+type UpdateDatastoreProps = {
+    dataStore: Datastore
+    updateDatastore(datastore: Datastore): void
 }
 
-export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore, dataStore, updateDatastore}: ConfirmDeleteModalProps) {
+function NoAuth() {
+    return (<></>)
+}
 
-    const { alerting } = useContext(AppContext) as AppContextType;
-    const [enabledURL, setEnableUrl] = useState(false);
-    const [enabledToken, setEnableToken] = useState(false);
+function UsernameAuth({dataStore, updateDatastore}: UpdateDatastoreProps) {
+    return (
+        <>
+            <FormGroup
+                label="Username"
+                fieldId="horizontal-form-token"
+            >
+                <TextInput
+                    value={(dataStore.config.authentication as UsernamePassAuth).username}
+                    onChange={(_, value) => {
+                        updateDatastore({
+                            ...dataStore,
+                            config: {
+                                ...dataStore.config,
+                                authentication: {...dataStore.config.authentication, type: "username", username: value}
+                            }
+                        })
+                    }}
+                    type="text"
+                    id="horizontal-form-username"
+                    aria-describedby="horizontal-form-token-helper"
+                    name="horizontal-form-token"
+                    isRequired={true}
+                />
+                <FormHelperText>
+                    <HelperText>
+                        <HelperTextItem>Please provide a Username to authenticate against datastore</HelperTextItem>
+                    </HelperText>
+                </FormHelperText>
+            </FormGroup>
+            <FormGroup
+                label="Password"
+                fieldId="horizontal-form-token"
+            >
+                <TextInput
+                    value={(dataStore.config.authentication as UsernamePassAuth).password}
+                    onChange={(_, value) => {
+                        updateDatastore({
+                            ...dataStore,
+                            config: {
+                                ...dataStore.config,
+                                authentication: {...dataStore.config.authentication, type: "username", password: value}
+                            }
+                        })
+                    }}
+                    type="text"
+                    id="horizontal-form-password"
+                    aria-describedby="horizontal-form-token-helper"
+                    name="horizontal-form-token"
+                />
+                <FormHelperText>
+                    <HelperText>
+                        <HelperTextItem>Please provide a Password to authenticate against datastore</HelperTextItem>
+                    </HelperText>
+                </FormHelperText>
+            </FormGroup>
+        </>
+    )
+}
 
+function ApiKeyAuth({dataStore, updateDatastore}: UpdateDatastoreProps) {
+    return (
+        <>
+            <FormGroup
+                label="Api Key"
+                fieldId="horizontal-form-token"
+            >
+                <TextInput
+                    value={(dataStore.config.authentication as APIKeyAuth).apiKey}
+                    onChange={(_, value) => {
+                        updateDatastore({
+                            ...dataStore,
+                            config: {
+                                ...dataStore.config,
+                                authentication: {...dataStore.config.authentication, type: "api-key", apiKey: value}
+                            }
+                        })
+                    }}
+                    type="text"
+                    id="horizontal-form-api-key"
+                    aria-describedby="horizontal-form-token-helper"
+                    name="horizontal-form-token"
+                    isRequired={true}
+                />
+                <FormHelperText>
+                    <HelperText>
+                        <HelperTextItem>Please provide an API token to authenticate against datastore</HelperTextItem>
+                    </HelperText>
+                </FormHelperText>
+            </FormGroup>
+        </>
+    )
+}
+
+export default function ModifyDatastoreModal({
+                                                 isOpen,
+                                                 onClose,
+                                                 persistDatastore,
+                                                 dataStore,
+                                                 dataStoreTypes,
+                                                 updateDatastore
+                                             }: ConfirmDeleteModalProps) {
+
+
+    const [authOptions, setAuthOptions] = useState<Array<string>>([]);
+
+    useEffect(() => { //find initial auth options for the selected datastore
+        setAuthOptions(dataStoreTypes.find(t => t.enumName === dataStore.type)?.supportedAuths || [])
+    }, [dataStore]);
 
     const handleOptionChange = (_event: React.FormEvent<HTMLSelectElement>, value: string) => {
-        const option: datastoreOption | undefined = options.filter( optionvalue => optionvalue.value === value).pop()
-        if ( option ){
-            setEnableUrl(option.urlDisabled)
-            setEnableToken(option.tokenDisbaled)
-
-            updateDatastore({...dataStore, type: option.value})
+        const selectedOption = dataStoreTypes.find(t => t.enumName === value)
+        if (selectedOption) {
+            //some ts wizardry to get the enum value from the option name string
+            const datastoreTyped = selectedOption.name as keyof typeof DatastoreTypeEnum;
+            // let enumKey = Object.keys(DatastoreTypeEnum)[Object.values(DatastoreTypeEnum).indexOf(option.name)];
+            updateDatastore({
+                ...dataStore,
+                type: DatastoreTypeEnum[datastoreTyped],
+                config: {...dataStore.config, authentication: {type: 'none'}}
+            })
         }
     };
 
-    const errorFormatter = (error: any) => {
-        // Check if error has a message property
-        if (error.message) {
-            return error.message;
+    const handleAuthOptionChange = (_event: React.FormEvent<HTMLSelectElement>, value: string) => {
+        switch (value) { //pita, but TS compiler complains need to switch on String value to get the correct union type
+            case "none":
+                updateDatastore({...dataStore, config: {...dataStore.config, authentication: {type: 'none'}}})
+                break;
+            case "username":
+                updateDatastore({
+                    ...dataStore,
+                    config: {...dataStore.config, authentication: {type: 'username', username: "", password: ""}}
+                })
+                break;
+            case "api-key":
+                updateDatastore({
+                    ...dataStore,
+                    config: {...dataStore.config, authentication: {type: 'api-key', apiKey: ""}}
+                })
+                break;
         }
-        // If error is a string, return it as is
-        if (typeof error === 'string') {
-            return error;
-        }
-        // If error is an object, stringify it
-        if (typeof error === 'object') {
-            return JSON.stringify(error);
-        }
-        // If none of the above, return a generic error message
-        return 'An error occurred';
-    }
-
-    const saveBackend = () => {
-        persistDatastore(dataStore)
-            .then( () => {
-                onClose();
-                alerting.dispatchInfo("SAVE", "Saved!", "Datastore was successfully updated!", 3000)
-            })
-            .catch(reason => alerting.dispatchError(reason, "Saved!", "Failed to save changes to Datastore", errorFormatter))
-    }
-
-    const options : datastoreOption[] = [
-        { value:  DatastoreTypeEnum.Postgres, label: 'Please select...', disabled: true, urlDisabled: true, usernameDisable: true, tokenDisbaled: true },
-        { value:  DatastoreTypeEnum.Elasticsearch, label: 'Elasticsearch', disabled: false, urlDisabled: false, usernameDisable: false, tokenDisbaled: false },
-        { value:  DatastoreTypeEnum.Collectorapi, label: 'Collector API', disabled: false, urlDisabled: false, usernameDisable: true, tokenDisbaled: false },
-    ];
+    };
 
     const actionButtons = [
-        <Button variant="primary" onClick={saveBackend}>Save</Button>,
-        <Button variant="link">Cancel</Button>
+        <Button variant="primary" onClick={persistDatastore}>Save</Button>,
+        <Button variant="link" onClick={onClose}>Cancel</Button>
     ]
 
     return (
@@ -102,8 +197,11 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                         name="horizontal-form-datastore-type"
                         aria-label="Backend Type"
                     >
-                        {options.map((option, index) => (
-                            <FormSelectOption isDisabled={option.disabled} key={index} value={option.value} label={option.label}/>
+                        <FormSelectOption isDisabled={false} key={0} value={''} label={'Please select type'}
+                                          placeholder={"true"}/>
+                        {dataStoreTypes.filter(type => !type.builtIn).map((option, index) => (
+                            <FormSelectOption isDisabled={option.builtIn} key={index} value={option.enumName}
+                                              label={option.label || ""}/>
                         ))}
                     </FormSelect>
                 </FormGroup>
@@ -134,11 +232,10 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     <TextInput
                         value={"url" in dataStore.config ? dataStore.config.url : ""}
                         onChange={(_, value) => {
-                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
+                            const config: ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
                             config.url = value
                             updateDatastore({...dataStore, config: config})
-                            }}
-                        isDisabled={enabledURL}
+                        }}
                         type="text"
                         id="horizontal-form-url"
                         aria-describedby="horizontal-form-name-helper"
@@ -146,77 +243,40 @@ export default function ModifyDatastoreModal({isOpen, onClose, persistDatastore,
                     />
                     <FormHelperText>
                         <HelperText>
-                            <HelperTextItem>Please provide the full host URL to for the datastore service</HelperTextItem>
-                        </HelperText>
-                    </FormHelperText>
-                </FormGroup>
-                <FormGroup
-                    label="Api Key"
-                    fieldId="horizontal-form-token"
-                >
-                    <TextInput
-                        value={"apiKey" in dataStore.config ? dataStore.config.apiKey : ""}
-                        onChange={(_, value) => {
-                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
-                            config.apiKey = value
-                            updateDatastore({...dataStore, config: config})
-                        }}isDisabled={enabledToken}
-                        type="text"
-                        id="horizontal-form-api-key"
-                        aria-describedby="horizontal-form-token-helper"
-                        name="horizontal-form-token"
-                    />
-                    <FormHelperText>
-                        <HelperText>
-                            <HelperTextItem>Please provide an API token to authenticate against datastore</HelperTextItem>
+                            <HelperTextItem>Please provide the full host URL to for the datastore
+                                service</HelperTextItem>
                         </HelperText>
                     </FormHelperText>
                 </FormGroup>
 
-                <FormGroup
-                    label="Username"
-                    fieldId="horizontal-form-token"
-                >
-                    <TextInput
-                        value={"username" in dataStore.config ? dataStore.config.username : ""}
-                        onChange={(_, value) => {
-                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
-                            config.username = value
-                            updateDatastore({...dataStore, config: config})
-                        }}isDisabled={enabledToken}
-                        type="text"
-                        id="horizontal-form-username"
-                        aria-describedby="horizontal-form-token-helper"
-                        name="horizontal-form-token"
-                    />
-                    <FormHelperText>
-                        <HelperText>
-                            <HelperTextItem>Please provide a Username to authenticate against datastore</HelperTextItem>
-                        </HelperText>
-                    </FormHelperText>
+                <FormGroup label="Authentication Type" fieldId="horizontal-form-auth-type">
+                    <FormSelect
+                        value={dataStore.config.authentication.type}
+                        onChange={handleAuthOptionChange}
+                        id="horizontal-form-auth-type"
+                        name="horizontal-form-auth-type"
+                        aria-label="Authenticaion Type"
+                    >
+                        {authOptions.map((authOption, index) => (
+                            <FormSelectOption key={index} value={authOption} label={authOption}/>
+                        ))}
+                    </FormSelect>
                 </FormGroup>
-                <FormGroup
-                    label="Password"
-                    fieldId="horizontal-form-token"
-                >
-                    <TextInput
-                        value={"password" in dataStore.config ? dataStore.config.password : ""}
-                        onChange={(_, value) => {
-                            const config :ElasticsearchDatastoreConfig = dataStore.config as ElasticsearchDatastoreConfig;
-                            config.password = value
-                            updateDatastore({...dataStore, config: config})
-                        }}isDisabled={enabledToken}
-                        type="text"
-                        id="horizontal-form-password"
-                        aria-describedby="horizontal-form-token-helper"
-                        name="horizontal-form-token"
+
+                {dataStore.config.authentication.type === "none" && (
+                    <NoAuth/>)}
+                {dataStore.config.authentication.type === "username" && (
+                    <UsernameAuth
+                        dataStore={dataStore}
+                        updateDatastore={updateDatastore}
                     />
-                    <FormHelperText>
-                        <HelperText>
-                            <HelperTextItem>Please provide a Password to authenticate against datastore</HelperTextItem>
-                        </HelperText>
-                    </FormHelperText>
-                </FormGroup>
+                )}
+                {dataStore.config.authentication.type === "api-key" && (
+                    <ApiKeyAuth
+                        dataStore={dataStore}
+                        updateDatastore={updateDatastore}
+                    />
+                )}
             </Form>
         </Modal>
     )

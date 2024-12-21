@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.data.datastore.CollectorApiDatastoreConfig;
 import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
+import io.hyperfoil.tools.horreum.api.data.datastore.auth.APIKeyAuth;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 
@@ -66,8 +67,10 @@ public class CollectorApiDatastore implements Datastore {
                     + "&newerThan=" + newerThan
                     + "&olderThan=" + olderThan);
             HttpRequest.Builder builder = HttpRequest.newBuilder().uri(uri);
-            builder.header("Content-Type", "application/json")
-                    .header("token", jsonDatastoreConfig.apiKey);
+            builder.header("Content-Type", "application/json");
+            if (jsonDatastoreConfig.authentication instanceof APIKeyAuth) {
+                builder.header("token", ((APIKeyAuth) jsonDatastoreConfig.authentication).apiKey);
+            }
             HttpRequest request = builder.build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != Response.Status.OK.getStatusCode()) {
@@ -93,10 +96,15 @@ public class CollectorApiDatastore implements Datastore {
         // Verify that the tag is in the distinct list of tags
         URI tagsUri = URI.create(jsonDatastoreConfig.url + "/tags/distinct");
         HttpRequest.Builder tagsBuilder = HttpRequest.newBuilder().uri(tagsUri);
-        HttpRequest tagsRequest = tagsBuilder
-                .header("Content-Type", "application/json")
-                .header("token", jsonDatastoreConfig.apiKey).build();
-        HttpResponse<String> response = client.send(tagsRequest, HttpResponse.BodyHandlers.ofString());
+
+        tagsBuilder
+                .header("Content-Type", "application/json");
+
+        if (jsonDatastoreConfig.authentication instanceof APIKeyAuth) {
+            tagsBuilder
+                    .header("token", ((APIKeyAuth) jsonDatastoreConfig.authentication).apiKey);
+        }
+        HttpResponse<String> response = client.send(tagsBuilder.build(), HttpResponse.BodyHandlers.ofString());
         String[] distinctTags;
         try {
             distinctTags = mapper.readValue(response.body(), String[].class);
@@ -141,7 +149,9 @@ public class CollectorApiDatastore implements Datastore {
             log.error("Could not find collector API datastore: " + configuration.name);
             throw ServiceException.serverError("Could not find CollectorAPI datastore: " + configuration.name);
         }
-        assert jsonDatastoreConfig.apiKey != null : "API key must be set";
+        if (jsonDatastoreConfig.authentication instanceof APIKeyAuth) {
+            assert ((APIKeyAuth) jsonDatastoreConfig.authentication).apiKey != null : "API key must be set";
+        }
         assert jsonDatastoreConfig.url != null : "URL must be set";
         return jsonDatastoreConfig;
     }

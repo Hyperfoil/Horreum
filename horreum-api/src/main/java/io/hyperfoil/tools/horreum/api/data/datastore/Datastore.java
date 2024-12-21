@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.data.ProtectedType;
 
-@Schema(type = SchemaType.OBJECT, required = true, description = "Type of backend datastore")
+@Schema(type = SchemaType.OBJECT, required = true, description = "Instance of backend datastore")
 public class Datastore extends ProtectedType {
     @JsonProperty(required = true)
     @Schema(description = "Unique Datastore id", example = "101")
@@ -23,12 +23,8 @@ public class Datastore extends ProtectedType {
 
     @NotNull
     @JsonProperty(required = true)
-    @Schema(description = "Is this a built-in datastore? Built-in datastores cannot be deleted or modified", example = "false")
-    public Boolean builtIn;
-
-    @NotNull
-    @JsonProperty(required = true)
     @Schema(type = SchemaType.OBJECT, oneOf = {
+            CollectorApiDatastoreConfig.class,
             ElasticsearchDatastoreConfig.class,
             PostgresDatastoreConfig.class
     })

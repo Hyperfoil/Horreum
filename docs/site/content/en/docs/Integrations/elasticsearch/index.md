@@ -26,8 +26,9 @@ New Datastore
    1. Select `Elasticsearch` from the `Datastore Type` dropdown
    2. Provide a `Name` for the Datastore
    3. Enter the `URL` for the Elasticsearch instance
-   4. Enter the `API Key` for the Elasticsearch instance, generated in step 1
-   5. Click `Save`
+   4. Select `api-key` from `Authentication Type` from dropdown 
+   5. Enter the `API Key` for the Elasticsearch instance, generated in step 1
+   6. Click `Save`
 
 ## Test Configuration
 

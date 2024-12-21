@@ -1,9 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.security.PermitAll;
@@ -20,8 +17,9 @@ import org.jboss.logging.Logger;
 import io.hyperfoil.tools.horreum.api.Version;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
+import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.services.ConfigService;
-import io.hyperfoil.tools.horreum.datastore.BackendResolver;
+import io.hyperfoil.tools.horreum.datastore.DatastoreResolver;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -31,6 +29,10 @@ import io.quarkus.security.identity.SecurityIdentity;
 public class ConfigServiceImpl implements ConfigService {
 
     private static final Logger log = Logger.getLogger(ConfigServiceImpl.class);
+
+    //cache available dataStore configurations
+    private static final List<DatastoreType.TypeConfig> datastoreTypes = Arrays.stream(DatastoreType.values())
+            .map(DatastoreType::getConfig).toList();
 
     @ConfigProperty(name = "horreum.privacy")
     Optional<String> privacyStatement;
@@ -42,7 +44,7 @@ public class ConfigServiceImpl implements ConfigService {
     EntityManager em;
 
     @Inject
-    BackendResolver backendResolver;
+    DatastoreResolver backendResolver;
 
     @Override
     public KeycloakConfig keycloak() {
@@ -81,6 +83,11 @@ public class ConfigServiceImpl implements ConfigService {
     }
 
     @Override
+    public List<DatastoreType.TypeConfig> datastoreTypes() {
+        return datastoreTypes;
+    }
+
+    @Override
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
@@ -102,29 +109,13 @@ public class ConfigServiceImpl implements ConfigService {
         } else if (!identity.getRoles().contains(dao.owner)) {
             log.debugf("Failed to create datastore %s: requested owner %s, available roles: %s", dao.name, dao.owner,
                     identity.getRoles());
-            throw ServiceException.badRequest("This user does not have permissions to upload datastore for owner=" + dao.owner);
+            throw ServiceException.badRequest("This user does not have permissions to create datastore for owner=" + dao.owner);
         }
         if (dao.access == null) {
             dao.access = Access.PRIVATE;
         }
 
-        io.hyperfoil.tools.horreum.datastore.Datastore datastoreImpl;
-        try {
-            datastoreImpl = backendResolver.getBackend(datastore.type);
-        } catch (IllegalStateException e) {
-            throw ServiceException.badRequest("Unknown datastore type: " + datastore.type
-                    + ". Please try again, if the problem persists please contact the system administrator.");
-        }
-
-        if (datastoreImpl == null) {
-            throw ServiceException.badRequest("Unknown datastore type: " + datastore.type);
-        }
-
-        String error = datastoreImpl.validateConfig(datastore.config);
-
-        if (error != null) {
-            throw ServiceException.badRequest(error);
-        }
+        backendResolver.validatedDatastoreConfig(datastore.type, datastore.config);
 
         log.debugf("Creating new Datastore with owner=%s and access=%s", dao.owner, dao.access);
 
@@ -144,17 +135,19 @@ public class ConfigServiceImpl implements ConfigService {
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
-    public Integer updateDatastore(Datastore backend) {
-        DatastoreConfigDAO dao = DatastoreConfigDAO.findById(backend.id);
+    public Integer updateDatastore(Datastore datastore) {
+        DatastoreConfigDAO dao = DatastoreConfigDAO.findById(datastore.id);
         if (dao == null)
-            throw ServiceException.notFound("Datastore with id " + backend.id + " does not exist");
+            throw ServiceException.notFound("Datastore with id " + datastore.id + " does not exist");
 
-        DatastoreConfigDAO newDao = DatasourceMapper.to(backend);
+        DatastoreConfigDAO newDao = DatasourceMapper.to(datastore);
 
         dao.type = newDao.type;
         dao.name = newDao.name;
         dao.configuration = newDao.configuration;
         dao.access = newDao.access;
+
+        backendResolver.validatedDatastoreConfig(datastore.type, datastore.config);
 
         dao.persist();
 
@@ -166,7 +159,7 @@ public class ConfigServiceImpl implements ConfigService {
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
-    public DatastoreTestResponse testDatastore(String datastoreId) {
+    public DatastoreTestResponse testDatastore(Integer datastoreId) {
         return null;
     }
 
@@ -174,8 +167,8 @@ public class ConfigServiceImpl implements ConfigService {
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
-    public void deleteDatastore(String datastoreId) {
-        DatastoreConfigDAO.deleteById(Integer.parseInt(datastoreId));
+    public void deleteDatastore(Integer datastoreId) {
+        DatastoreConfigDAO.deleteById(datastoreId);
     }
 
     private String getString(String propertyName) {

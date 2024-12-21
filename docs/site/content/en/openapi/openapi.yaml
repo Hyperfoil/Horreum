@@ -66,6 +66,21 @@ paths:
               schema:
                 format: int32
                 type: integer
+  /api/config/datastore/types:
+    get:
+      tags:
+      - Config
+      description: Obtain list of available datastore types
+      operationId: datastoreTypes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TypeConfig"
   /api/config/datastore/{id}:
     delete:
       tags:
@@ -77,7 +92,8 @@ paths:
         in: path
         required: true
         schema:
-          type: string
+          format: int32
+          type: integer
       responses:
         "204":
           description: No Content
@@ -92,7 +108,8 @@ paths:
         in: path
         required: true
         schema:
-          type: string
+          format: int32
+          type: integer
       responses:
         "200":
           description: OK
@@ -2569,6 +2586,15 @@ paths:
           description: No Content
 components:
   schemas:
+    APIKeyAuth:
+      type: object
+      properties:
+        type:
+          description: type
+          type: string
+        apiKey:
+          description: Api key
+          type: string
     Access:
       description: "Resources have different visibility within the UI. 'PUBLIC', 'PROTECTED'\
         \ and 'PRIVATE'. Restricted resources are not visible to users who do not\
@@ -2710,17 +2736,26 @@ components:
     CollectorApiDatastoreConfig:
       description: Type of backend datastore
       required:
+      - authentication
       - builtIn
-      - apiKey
       - url
       type: object
       properties:
+        authentication:
+          type: object
+          oneOf:
+          - $ref: "#/components/schemas/NoAuth"
+          - $ref: "#/components/schemas/APIKeyAuth"
+          - $ref: "#/components/schemas/UsernamePassAuth"
+          discriminator:
+            propertyName: type
+            mapping:
+              none: "#/components/schemas/NoAuth"
+              api-key: "#/components/schemas/APIKeyAuth"
+              username: "#/components/schemas/UsernamePassAuth"
         builtIn:
           description: Built In
           type: boolean
-        apiKey:
-          description: Collector API KEY
-          type: string
         url:
           description: "Collector url, e.g. https://collector.foci.life/api/v1/image-stats"
           type: string
@@ -2992,13 +3027,12 @@ components:
           items:
             $ref: "#/components/schemas/ValidationError"
     Datastore:
-      description: Type of backend datastore
+      description: Instance of backend datastore
       required:
       - access
       - owner
       - id
       - name
-      - builtIn
       - config
       - type
       type: object
@@ -3029,14 +3063,10 @@ components:
             \ Test definition"
           type: string
           example: Perf Elasticsearch
-        builtIn:
-          description: Is this a built-in datastore? Built-in datastores cannot be
-            deleted or modified
-          type: boolean
-          example: false
         config:
           type: object
           oneOf:
+          - $ref: "#/components/schemas/CollectorApiDatastoreConfig"
           - $ref: "#/components/schemas/ElasticsearchDatastoreConfig"
           - $ref: "#/components/schemas/PostgresDatastoreConfig"
         type:
@@ -3078,24 +3108,28 @@ components:
     ElasticsearchDatastoreConfig:
       description: Type of backend datastore
       required:
+      - authentication
       - builtIn
       - url
       type: object
       properties:
+        authentication:
+          type: object
+          oneOf:
+          - $ref: "#/components/schemas/NoAuth"
+          - $ref: "#/components/schemas/APIKeyAuth"
+          - $ref: "#/components/schemas/UsernamePassAuth"
+          discriminator:
+            propertyName: type
+            mapping:
+              none: "#/components/schemas/NoAuth"
+              api-key: "#/components/schemas/APIKeyAuth"
+              username: "#/components/schemas/UsernamePassAuth"
         builtIn:
           description: Built In
           type: boolean
-        apiKey:
-          description: Elasticsearch API KEY
-          type: string
         url:
           description: Elasticsearch url
-          type: string
-        username:
-          description: Elasticsearch username
-          type: string
-        password:
-          description: Elasticsearch password
           type: string
     ErrorDetails:
       required:
@@ -3675,6 +3709,12 @@ components:
         testId:
           format: int32
           type: integer
+    NoAuth:
+      type: object
+      properties:
+        type:
+          description: type
+          type: string
     PersistentLog:
       description: Persistent Log
       required:
@@ -3699,9 +3739,22 @@ components:
     PostgresDatastoreConfig:
       description: Built in backend datastore
       required:
+      - authentication
       - builtIn
       type: object
       properties:
+        authentication:
+          type: object
+          oneOf:
+          - $ref: "#/components/schemas/NoAuth"
+          - $ref: "#/components/schemas/APIKeyAuth"
+          - $ref: "#/components/schemas/UsernamePassAuth"
+          discriminator:
+            propertyName: type
+            mapping:
+              none: "#/components/schemas/NoAuth"
+              api-key: "#/components/schemas/APIKeyAuth"
+              username: "#/components/schemas/UsernamePassAuth"
         builtIn:
           description: Built In
           type: boolean
@@ -4883,6 +4936,21 @@ components:
           description: Transformer name
           type: string
           example: my-dataset-transformer
+    TypeConfig:
+      type: object
+      properties:
+        enumName:
+          type: string
+        name:
+          type: string
+        label:
+          type: string
+        supportedAuths:
+          type: array
+          items:
+            type: string
+        builtIn:
+          type: boolean
     UserData:
       required:
       - id
@@ -4898,6 +4966,18 @@ components:
         lastName:
           type: string
         email:
+          type: string
+    UsernamePassAuth:
+      type: object
+      properties:
+        type:
+          description: type
+          type: string
+        username:
+          description: Username
+          type: string
+        password:
+          description: Password
           type: string
     ValidationError:
       required:

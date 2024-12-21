@@ -26,7 +26,7 @@ export default function ValidationErrorTable(props: ValidationErrorTableProps) {
                             <NavLink key="schema" to={`/schema/${error.schemaId}`}>
                                 {props.schemas.find(s => s.id === error.schemaId)?.name || "unknown schema " + error.schemaId}
                             </NavLink>
-                            : "None"}
+                            : "none"}
                         </Td>
                         <Td key="Type">{error.error.type}</Td>
                         <Td key="Path"><code>{error.error.path}</code></Td>
