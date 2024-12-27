@@ -1,13 +1,7 @@
-import { useState, useEffect } from "react"
-
-import {
-	Select,
-	SelectOption,
-	SelectOptionObject
-} from '@patternfly/react-core/deprecated';
+import {SimpleSelect} from "@patternfly/react-templates";
 
 type TimeRangeSelectProps = {
-    selection?: TimeRange
+    selection: TimeRange
     onSelect(range: TimeRange): void
     options: TimeRange[]
 }
@@ -15,33 +9,14 @@ type TimeRangeSelectProps = {
 export type TimeRange = {
     from?: number
     to?: number
-} & SelectOptionObject
-
-function TimeRangeSelect(props: TimeRangeSelectProps) {
-    const [isOpen, setOpen] = useState(false)
-    const selection = props.selection
-    const onSelect = props.onSelect
-    useEffect(() => {
-        if (!selection) {
-            onSelect(props.options[0])
-        }
-    }, [props.options, selection, onSelect])
-    return (
-        <Select
-            onToggle={(_event, val) => setOpen(val)}
-            onSelect={(e, selection) => {
-                setOpen(false)
-                props.onSelect(selection as TimeRange)
-            }}
-            selections={props.selection || props.options[0]}
-            isOpen={isOpen}
-            menuAppendTo="parent"
-        >
-            {props.options.map((tr, i) => (
-                <SelectOption key={i} value={tr} />
-            ))}
-        </Select>
-    )
 }
 
-export default TimeRangeSelect
+export default function TimeRangeSelect(props: TimeRangeSelectProps) {
+    return (
+        <SimpleSelect
+            initialOptions={props.options.map((o, i) => ({value: i, content: o.toString(), selected: o === props.selection}))}
+            onSelect={(_, item) => props.onSelect(props.options[item as number])}
+            selected={props.selection}
+        />
+    )
+}

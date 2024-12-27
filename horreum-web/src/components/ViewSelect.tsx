@@ -1,10 +1,5 @@
-import { useState } from "react"
-import {
-	Select,
-	SelectOption
-} from '@patternfly/react-core/deprecated';
-
-import { View } from "../api"
+import {View} from "../api"
+import {SimpleSelect} from "@patternfly/react-templates";
 
 type ViewSelectProps = {
     views: View[]
@@ -13,23 +8,11 @@ type ViewSelectProps = {
 }
 
 export default function ViewSelect({views, viewId, onChange}: ViewSelectProps) {
-    const [isOpen, setOpen] = useState(false)
-    const selected = views.find(v => v.id === viewId)
     return (
-        <Select
-            isOpen={isOpen}
-            onToggle={(_event, val) => setOpen(val)}
-            selections={selected !== undefined ? { ...selected, toString: () => selected.name } : undefined}
-            onSelect={(_, item) => {
-            onChange((item as View).id)
-            setOpen(false)
-            }}
-        >
-            {views.map(view => (
-                <SelectOption key={view.id} value={view}>
-                    {view.name}
-                </SelectOption>
-            ))}
-        </Select>
+        <SimpleSelect
+            initialOptions={views.map(v => ({value: v.id, content: v.name, selected: v.id === viewId}))}
+            onSelect={(_, item) => onChange(item as number)}
+            selected={viewId}
+        />
     )
 }

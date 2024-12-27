@@ -145,11 +145,11 @@ export default function LogModal(props: LogModalProps) {
                                 />
                             </FlexItem>
                             <FlexItem>
-                                <Button onClick={() => setDeleteRequest(deleteRange)}>Delete logs older than...</Button>
+                                <Button onClick={() => setDeleteRequest(deleteRange ?? timeRangeOptions[0])}>Delete logs older than...</Button>
                             </FlexItem>
                             <FlexItem>
                                 <TimeRangeSelect
-                                    selection={deleteRange}
+                                    selection={deleteRange ?? timeRangeOptions[0]}
                                     onSelect={setDeleteRange}
                                     options={timeRangeOptions}
                                 />
