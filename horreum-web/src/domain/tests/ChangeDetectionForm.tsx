@@ -24,10 +24,7 @@ import {
 	TextInput,
 	Title
 } from '@patternfly/react-core';
-import {
-	Select,
-	SelectOption
-} from '@patternfly/react-core/deprecated';
+import {SimpleSelect} from "@patternfly/react-templates";
 
 import { PlusCircleIcon } from "@patternfly/react-icons"
 
@@ -56,20 +53,19 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm  }: TestSelectModalProps) =>
     const { alerting } = useContext(AppContext) as AppContextType;
     const [test, setTest] = useState<SelectedTest>()
     const [working, setWorking] = useState(false)
-    const [selectGroupOpen, setSelectGroupOpen] = useState(false)
     const [groups, setGroups] = useState<string[]>([])
-    const [group, setGroup] = useState<string>()
+    const [group, setGroup] = useState<string>("<all groups>")
 
     const reset = () => {
         setTest(undefined)
         setWorking(false)
         setGroups([])
-        setGroup(undefined)
+        setGroup("<all groups>")
         onClose()
     }
     return (
         <Modal
-            variant="small"
+            variant="medium"
             title="Copy variables from..."
             isOpen={isOpen}
             onClose={reset}
@@ -91,38 +87,39 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm  }: TestSelectModalProps) =>
         >
             {working && <Spinner />}
             {!working && (
-                <>
-                    <TestSelect
-                        selection={test}
-                        onSelect={t => {
-                            setTest(t)
-                            setGroups([])
-                            if (!t) {
-                                return
-                            }
-                            alertingApi.variables(t.id).then(
-                                response => setGroups(groupNames(response)),
-                                error => alerting.dispatchError( error, "FETCH_VARIABLES", "Failed to fetch variables")
-                            )
-                        }}
-                    />
-                    {test && groups.length > 0 && (
-                        <Select
-                            isOpen={selectGroupOpen}
-                            onToggle={(_event, val) => setSelectGroupOpen(val)}
-                            selections={group}
-                            onSelect={(_, item) => {
-                                setGroup(item as string)
-                                setSelectGroupOpen(false)
+                <Form isHorizontal>
+                    <FormGroup label="Test" fieldId="test">
+                        <TestSelect
+                            selection={test}
+                            onSelect={t => {
+                                setTest(t)
+                                setGroups([])
+                                if (!t) {
+                                    return
+                                }
+                                alertingApi.variables(t.id).then(
+                                    response => setGroups(groupNames(response)),
+                                    error => alerting.dispatchError(error, "FETCH_VARIABLES", "Failed to fetch variables")
+                                )
                             }}
-                        >
-                            {[
-                                <SelectOption key={"all"} value="<all groups>" />,
-                                ...groups.map(group => <SelectOption key={group} value={group} />),
-                            ]}
-                        </Select>
+                        />
+                    </FormGroup>
+                    {test && groups.length > 0 && (
+                        <FormGroup label="Variable(s)" fieldId="varibles">
+                            <SimpleSelect
+                                initialOptions={
+                                    ["<all groups>"].concat(groups).map(g => ({value: g, content: g, selected: g === group}))
+                                }
+                                onSelect={(_, item) => setGroup(item as string)}
+                                selected={group}
+                                isScrollable
+                                maxMenuHeight="45vh"
+                                toggleWidth="100%"
+                                popperProps={{enableFlip: false, preventOverflow: true}}
+                            />
+                        </FormGroup>
                     )}
-                </>
+                </Form>
             )}
         </Modal>
     )
@@ -138,11 +135,10 @@ type RenameGroupModalProps = {
 const RenameGroupModal = (props: RenameGroupModalProps) => {
     const [from, setFrom] = useState<string>()
     const [to, setTo] = useState<string>()
-    const [selectOpen, setSelectOpen] = useState(false)
     return (
         <Modal
-            variant="small"
-            title="Rename group"
+            variant="medium"
+            title="Rename group..."
             isOpen={props.isOpen}
             onClose={props.onClose}
             actions={[
@@ -165,22 +161,17 @@ const RenameGroupModal = (props: RenameGroupModalProps) => {
                 </Button>,
             ]}
         >
-            <Form>
+            <Form isHorizontal>
                 <FormGroup label="Existing group" fieldId="from">
-                    <Select
-                        placeholderText="Select group..."
-                        isOpen={selectOpen}
-                        onToggle={(_event, val) => setSelectOpen(val)}
-                        selections={from}
-                        onSelect={(_, item) => {
-                            setFrom(item as string)
-                            setSelectOpen(false)
-                        }}
-                    >
-                        {props.groups.map(group => (
-                            <SelectOption key={group} value={group} />
-                        ))}
-                    </Select>
+                    <SimpleSelect
+                        initialOptions={props.groups.map(g => ({value: g, content: g}))}
+                        onSelect={(_,item) => setFrom(item as string)}
+                        selected={from}
+                        isScrollable
+                        maxMenuHeight="45vh"
+                        toggleWidth="100%"
+                        popperProps={{enableFlip: false, preventOverflow: true}}
+                    />
                 </FormGroup>
                 <FormGroup label="New group name" fieldId="to">
                     <TextInput value={to} id="to" onChange={(_event, val) => setTo(val)} />
