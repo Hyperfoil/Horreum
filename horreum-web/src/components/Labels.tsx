@@ -16,10 +16,10 @@ import { ExclamationCircleIcon } from "@patternfly/react-icons"
 
 import {LabelInfo, schemaApi} from "../api"
 
-import EnumSelect from "./EnumSelect"
 import NameUri from "./NameUri"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
+import {SimpleSelect} from "@patternfly/react-templates";
 
 type LabelsProps = {
     labels: string[]
@@ -123,10 +123,12 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                         <Flex>
                             <FlexItem>Filter by schema:</FlexItem>
                             <FlexItem>
-                                <EnumSelect
-                                    options={schemaFilterOptions}
+                                <SimpleSelect
+                                    initialOptions={Object.entries(schemaFilterOptions).map(([name, title]) => (
+                                        {value: name, content: title, selected: name === schemaFilter})
+                                    )}
                                     selected={schemaFilter}
-                                    onSelect={setSchemaFilter}
+                                    onSelect={(_, item) => setSchemaFilter(item as string)}
                                 />
                             </FlexItem>
                         </Flex>

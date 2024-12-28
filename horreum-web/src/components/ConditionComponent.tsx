@@ -4,8 +4,8 @@ import { Alert, FormGroup, Switch,
     FormHelperText } from "@patternfly/react-core"
 import { ConditionComponent as ConditionComponentDef } from "../api"
 import LogSlider from "./LogSlider"
-import EnumSelect from "./EnumSelect"
 import NumberBound from "./NumberBound"
+import {SimpleSelect} from "@patternfly/react-templates";
 
 type ConditionComponentProps = {
     value: any
@@ -35,10 +35,12 @@ export default function ConditionComponent({ value, onChange, properties, isTest
             break
         case "ENUM":
             component = (
-                <EnumSelect
-                    options={(properties as any).options}
+                <SimpleSelect
+                    initialOptions={Object.entries((properties as any).options).map(([name, title]) => (
+                        {value: name, content: title, selected: name === value}
+                    ))}
                     selected={value}
-                    onSelect={onChange}
+                    onSelect={(_, item) => onChange(item as string)}
                     isDisabled={!isTester}
                 />
             )

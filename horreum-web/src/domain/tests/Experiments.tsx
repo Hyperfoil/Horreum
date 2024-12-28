@@ -31,9 +31,9 @@ import SplitForm from "../../components/SplitForm"
 import { ExperimentProfile } from "../../generated/models/ExperimentProfile"
 import OptionalFunction from "../../components/OptionalFunction"
 import ConditionComponent from "../../components/ConditionComponent"
-import EnumSelect from "../../components/EnumSelect"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {SimpleSelect} from "@patternfly/react-templates";
 
 
 type ExperimentsProps = {
@@ -368,10 +368,15 @@ export default function Experiments(props: ExperimentsProps) {
                             {tabs}
                             <Tab key="__add" eventKey="__add" title="Add comparison">
                                 <FormGroup label="Model" fieldId="model">
-                                    <EnumSelect
-                                        options={models.reduce((acc, m) => ({ ...acc, [m.name]: m.title }), {})}
+                                    <SimpleSelect
+                                        initialOptions={
+                                            models.map(
+                                                m => ({value: m.name, content: m.title, selected: m.name === modelToAdd})
+                                            )
+                                        }
                                         selected={modelToAdd}
-                                        onSelect={setModelToAdd}
+                                        onSelect={(_, value) => setModelToAdd(value as string)}
+                                        toggleWidth="100%"
                                     />
                                 </FormGroup>
                                 {variables.length === 0 && (

@@ -25,10 +25,10 @@ import {
 import { AddCircleOIcon } from "@patternfly/react-icons"
 
 import ConditionComponent from "../../components/ConditionComponent"
-import EnumSelect from "../../components/EnumSelect"
 import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
 import HelpButton from "../../components/HelpButton"
+import {SimpleSelect} from "@patternfly/react-templates";
 
 type VariableFormProps = {
     variable: Variable
@@ -165,13 +165,12 @@ export default function VariableForm(props: VariableFormProps) {
                         }
                     >
                         <ActionList>
-                            <EnumSelect
-                                options={props.models.reduce((acc, m) => {
-                                    acc[m.name] = m.title
-                                    return acc
-                                }, {} as any)}
+                            <SimpleSelect
+                                initialOptions={
+                                    props.models.map(m => ({value: m.name, content: m.title, selected: m.name === newModel}))
+                                }
                                 selected={newModel}
-                                onSelect={setNewModel}
+                                onSelect={(_, value) => setNewModel(value as string)}
                             />
                             <Button
                                 isDisabled={!newModel}
