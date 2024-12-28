@@ -17,10 +17,6 @@ import {
 	TextInput,
 	Title
 } from '@patternfly/react-core';
-import {
-	Select,
-	SelectOption
-} from '@patternfly/react-core/deprecated';
 
 import { AddCircleOIcon } from "@patternfly/react-icons"
 
@@ -28,7 +24,7 @@ import ConditionComponent from "../../components/ConditionComponent"
 import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
 import HelpButton from "../../components/HelpButton"
-import {SimpleSelect} from "@patternfly/react-templates";
+import {SimpleSelect, TypeaheadSelect} from "@patternfly/react-templates";
 
 type VariableFormProps = {
     variable: Variable
@@ -48,7 +44,6 @@ function checkVariable(v: Variable) {
 }
 
 export default function VariableForm(props: VariableFormProps) {
-    const [groupOpen, setGroupOpen] = useState(false)
     const [changeDetection, setChangeDetection] = useState<ChangeDetection>()
     const [adding, setAdding] = useState(false)
     const [newModel, setNewModel] = useState<string>()
@@ -78,7 +73,7 @@ export default function VariableForm(props: VariableFormProps) {
         />
     ));
     return (
-        <Form id={`variable-${props.variable.id}`} isHorizontal={true}>
+        <Form id={`variable-${props.variable.id}`} isHorizontal>
             <FormGroup label="Name" fieldId="name">
                 <TextInput
                     value={props.variable.name || ""}
@@ -91,29 +86,23 @@ export default function VariableForm(props: VariableFormProps) {
                 />
             </FormGroup>
             <FormGroup label="Group" fieldId="group">
-                <Select
-                    variant="typeahead"
-                    typeAheadAriaLabel="Select group"
-                    onToggle={(_event, val) => setGroupOpen(val)}
-                    onSelect={(e, group, isPlaceholder) => {
-                        setGroupOpen(false)
-                        props.onChange({ ...props.variable, group: isPlaceholder ? undefined : group.toString() })
+                <TypeaheadSelect
+                    placeholder="-none-"
+                    selectOptions={props.groups.map(g => ({value: g, content: g, selected: g === props.variable.group}))}
+                    onSelect={(_, item) => {
+                        if (!props.groups.includes(item as string)) {
+                            props.setGroups([...props.groups, item as string].sort())
+                        }
+                        props.onChange({...props.variable, group: item === "-none-" ? undefined : item as string})
                     }}
-                    onClear={() => {
-                        props.onChange({ ...props.variable, group: undefined })
-                    }}
-                    selections={props.variable.group}
-                    isOpen={groupOpen}
-                    placeholderText="-none-"
-                    isCreatable={true}
-                    onCreateOption={option => {
-                        props.setGroups([...props.groups, option].sort())
-                    }}
-                >
-                    {props.groups.map((g, index) => (
-                        <SelectOption key={index} value={g} />
-                    ))}
-                </Select>
+                    onClearSelection={() => props.onChange({...props.variable, group: undefined})}
+                    selected={props.variable.group}
+                    isCreatable
+                    isScrollable
+                    maxMenuHeight="40vh"
+                    toggleWidth="100%"
+                    popperProps={{enableFlip: false, preventOverflow: true}}
+                />
             </FormGroup>
             <FormGroup label="Labels" fieldId="labels">
                 <Labels
