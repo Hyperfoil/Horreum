@@ -1,15 +1,11 @@
 import {useContext, useEffect, useState} from "react"
-import { useSelector } from "react-redux"
+import {useSelector} from "react-redux"
 
-import {
-	Select,
-	SelectOption
-} from '@patternfly/react-core/deprecated';
-
-import { teamsSelector } from "../auth"
+import {teamsSelector} from "../auth"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {fetchFolders} from "../api";
+import {SimpleSelect, SimpleSelectOption, TypeaheadSelect, TypeaheadSelectOption} from "@patternfly/react-templates";
 
 type FolderSelectProps = {
     folder: string
@@ -19,37 +15,42 @@ type FolderSelectProps = {
     placeHolder: string
 }
 
-    export default function FolderSelect({folder, onChange, canCreate, readOnly, placeHolder}: FolderSelectProps) {
-    const { alerting } = useContext(AppContext) as AppContextType;
-    const [open, setOpen] = useState(false)
-    const [folders, setFolders] = useState<string[]>([])
+export default function FolderSelect({folder, onChange, canCreate, readOnly, placeHolder}: FolderSelectProps) {
+    const {alerting} = useContext(AppContext) as AppContextType
+    const [simpleOptions, setSimpleOptions] = useState<SimpleSelectOption[]>([])
+    const [typeaheadOptions, setTypeaheadOptions] = useState<TypeaheadSelectOption[]>([])
     const teams = useSelector(teamsSelector)
     useEffect(() => {
-        fetchFolders(alerting).then(setFolders)
+        fetchFolders(alerting).then(folders => {
+            // the root folder is represented by a null object in the returned list
+            // remove from TypeaheadOptions as its values must be "truthy" -- root folder is handled by the clear button instead
+            const opts = folders.filter(f => f || !canCreate).map((f, i) => ({key: i, value: f, content: f}))
+            canCreate ? setTypeaheadOptions(opts) : setSimpleOptions(opts)
+        })
     }, [teams])
     return (
-        <Select
-            readOnly={readOnly}
-            isOpen={open}
-            isCreatable={canCreate}
-            variant={canCreate ? "typeahead" : "single"}
-            onToggle={(_event, val) => setOpen(val)}
-            selections={folder}
-            menuAppendTo="parent"
-            onSelect={(_, item) => {
-                onChange(item as string)
-                setOpen(false)
-            }}
-            onCreateOption={newFolder => {
-                onChange(newFolder)
-            }}
-            placeholderText={placeHolder}
-        >
-            {folders.map((folder, i) => (
-                <SelectOption key={i} value={folder || ""}>
-                    {folder || placeHolder }
-                </SelectOption>
-            ))}
-        </Select>
+        canCreate ?
+            <TypeaheadSelect
+                selectOptions={typeaheadOptions}
+                selected={folder}
+                onSelect={(_, item) => {
+                    if (typeaheadOptions.every((o) => o.value !== item)) { // a new item has just been created!
+                        setTypeaheadOptions([...typeaheadOptions, {content: item, value: item}]);
+                    }
+                    onChange(item as string)
+                }}
+                isCreatable
+                onClearSelection={() => onChange("")}
+                placeholder={placeHolder}
+                isDisabled={readOnly}
+            />
+            :
+            <SimpleSelect
+                initialOptions={simpleOptions}
+                selected={folder}
+                placeholder={placeHolder}
+                isDisabled={readOnly}
+                onSelect={(_, item) => onChange(item as string)}
+            />
     )
 }
