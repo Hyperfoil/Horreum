@@ -30,11 +30,7 @@ import {
 	EmptyStateBody,
 	Spinner, EmptyStateHeader, EmptyStateFooter,
 } from '@patternfly/react-core';
-import {
-	Select,
-	SelectOption,
-	SelectOptionObject
-} from '@patternfly/react-core/deprecated';
+import {SimpleSelect} from "@patternfly/react-templates";
 import { useNavigate } from "react-router-dom"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
@@ -45,8 +41,9 @@ type TimespanSelectProps = {
     onChange(span: number): void
 }
 
-type Timespan = SelectOptionObject & {
+type Timespan = {
     seconds: number
+    toString: () => string
 }
 
 function makeTimespan(title: string, seconds: number): Timespan {
@@ -54,7 +51,6 @@ function makeTimespan(title: string, seconds: number): Timespan {
 }
 
 const TimespanSelect = (props: TimespanSelectProps) => {
-    const [isExpanded, setExpanded] = useState(false)
     const options = useMemo(
         () => [
             makeTimespan("all", 2000000000),
@@ -68,26 +64,16 @@ const TimespanSelect = (props: TimespanSelectProps) => {
         ],
         []
     )
-    const defaultOption = options.find((t, _) => { return t.seconds === props.value })
-    const [selected, setSelected] = useState(defaultOption ?? options[4])
+    const [selected, setSelected] = useState((options.find(t => t.seconds === props.value) ?? options[4]).seconds)
     return (
-        <Select
-            isOpen={isExpanded}
-            selections={selected}
-            onToggle={(_event, val) => setExpanded(val)}
-            onSelect={(_, value) => {
-                const timespan = value as Timespan
-                setSelected(timespan)
-                setExpanded(false)
-                props.onChange(timespan.seconds)
+        <SimpleSelect
+            initialOptions={options.map(o => ({value: o.seconds, content: o.toString(), selected: o.seconds === selected}))}
+            onSelect={(_, item) => {
+                setSelected(item as number)
+                props.onChange(item as number)
             }}
-        >
-            {options.map((timespan, i) => (
-                <SelectOption key={i} value={timespan}>
-                    {timespan.toString()}
-                </SelectOption>
-            ))}
-        </Select>
+            selected={selected}
+        />
     )
 }
 
@@ -96,8 +82,9 @@ type LineTypeSelectProps = {
     onChange(type: string): void
 }
 
-type LineType = SelectOptionObject & {
+type LineType = {
     type: string
+    toString: () => string
 }
 
 function makeLineType(title: string, type: string): LineType {
@@ -105,7 +92,6 @@ function makeLineType(title: string, type: string): LineType {
 }
 
 const LineTypeSelect = (props: LineTypeSelectProps) => {
-    const [isExpanded, setExpanded] = useState(false)
     const options = useMemo(
         () => [
             makeLineType("steps", "stepAfter"),
@@ -114,26 +100,16 @@ const LineTypeSelect = (props: LineTypeSelectProps) => {
         ],
         []
     )
-    const defaultOption = options.find((l, _) => { return l.type === props.value })
-    const [selected, setSelected] = useState(defaultOption ?? options[1])
+    const [selected, setSelected] = useState((options.find(l => l.type === props.value) ?? options[1]).type)
     return (
-        <Select
-            isOpen={isExpanded}
-            selections={selected}
-            onToggle={(_event, val) => setExpanded(val)}
-            onSelect={(_, value) => {
-                const linetype = value as LineType
-                setSelected(linetype)
-                setExpanded(false)
-                props.onChange(linetype.type)
+        <SimpleSelect
+            initialOptions={options.map(o => ({value: o.type, content: o.toString(), selected: o.type === selected}))}
+            onSelect={(_, item) => {
+                setSelected(item as string)
+                props.onChange(item as string)
             }}
-        >
-            {options.map((timespan, i) => (
-                <SelectOption key={i} value={timespan}>
-                    {timespan.toString()}
-                </SelectOption>
-            ))}
-        </Select>
+            selected={selected}
+        />
     )
 }
 
