@@ -19,10 +19,10 @@ import {
 
 import TimeRangeSelect, { TimeRange } from "./TimeRangeSelect"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
-import EnumSelect from "./EnumSelect"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {IRow, IRowCell, OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
+import {SimpleSelect} from "@patternfly/react-templates";
 
 export type CommonLogModalProps = {
     title: string
@@ -136,10 +136,12 @@ export default function LogModal(props: LogModalProps) {
                     {props.deleteLogs && (
                         <Flex>
                             <FlexItem>
-                                <EnumSelect
-                                    options={LOG_LEVELS}
+                                <SimpleSelect
+                                    initialOptions={Object.entries(LOG_LEVELS).map(([name, title]) => (
+                                        {value: name, content: title, selected: name === level.toString()}
+                                    ))}
                                     selected={level.toString()}
-                                    onSelect={value => setLevel(parseInt(value))}
+                                    onSelect={(_, value) => setLevel(value as number)}
                                 />
                             </FlexItem>
                             <FlexItem>
