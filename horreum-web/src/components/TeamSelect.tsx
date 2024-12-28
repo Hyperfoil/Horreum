@@ -1,40 +1,36 @@
-import { useState } from "react"
-import { State } from "../store"
+import {Ref, useState} from "react"
+import {State} from "../store"
+import {useSelector} from "react-redux"
+
+import {isAuthenticatedSelector, teamsSelector as allTeamsSelector, teamToName} from "../auth"
 import {
-	Select,
-	SelectGroup,
-	SelectOption,
-	SelectVariant,
-	SelectOptionObject
-} from '@patternfly/react-core/deprecated';
+    Divider,
+    MenuToggle,
+    MenuToggleElement,
+    Select,
+    SelectGroup,
+    SelectList,
+    SelectOption,
+} from "@patternfly/react-core";
 
-import { useSelector } from "react-redux"
-
-import { isAuthenticatedSelector, teamsSelector as allTeamsSelector, teamToName } from "../auth"
-
-export interface Team extends SelectOptionObject {
+export interface Team {
     key: string
+    toString: () => string
 }
 
 export function createTeam(role?: string) {
-    const key = role || ""
-
-    if (key === SHOW_ALL.key) {
-        return SHOW_ALL
-    }
-
-    if (key === ONLY_MY_OWN.key) {
-        return ONLY_MY_OWN
-    }
-
-    return {
-        key: role || "",
-        toString: () => teamToName(role) || "No team",
+    switch (role) {
+        case SHOW_ALL.key:
+            return SHOW_ALL
+        case ONLY_MY_OWN.key:
+            return ONLY_MY_OWN
+        default:
+            return {key: role || "", toString: () => teamToName(role) || "No team"}
     }
 }
 
-export const ONLY_MY_OWN: Team = { key: "__my", toString: () => "Only my own" }
-export const SHOW_ALL: Team = { key: "__all", toString: () => "Show all" }
+export const ONLY_MY_OWN: Team = {key: "__my", toString: () => "Only my own"}
+export const SHOW_ALL: Team = {key: "__all", toString: () => "Show all"}
 
 type TeamSelectProps = {
     includeGeneral: boolean
@@ -43,41 +39,60 @@ type TeamSelectProps = {
     onSelect(selection: Team): void
 }
 
-export default function TeamSelect({ includeGeneral, selection, teamsSelector, onSelect }: TeamSelectProps) {
+export default function TeamSelect({includeGeneral, selection, teamsSelector, onSelect}: TeamSelectProps) {
+    const [isOpen, setIsOpen] = useState(false);
     const teams = useSelector(teamsSelector || allTeamsSelector)
-    const isAuthenticated = useSelector(isAuthenticatedSelector)
-    const generalOptions = [<SelectOption key="__all" value={SHOW_ALL} />]
-    if (isAuthenticated) {
-        generalOptions.push(<SelectOption key="__my" value={ONLY_MY_OWN} />)
-    }
-    const teamsAsSelectOptions = () => {
-        return teams?.map(team => <SelectOption key={team} value={createTeam(team)} />) || []
-    }
-    const [expanded, setExpanded] = useState(false)
+
+    const generalOptions = () =>
+        <SelectList>
+            {(useSelector(isAuthenticatedSelector) ? [SHOW_ALL, ONLY_MY_OWN] : [SHOW_ALL])
+                .map(t => <SelectOption key={t.key} value={t.key}>{t.toString()}</SelectOption>)}
+        </SelectList>
+
+    const teamsAsSelectOptions = () =>
+        <SelectList>
+            {teams.map(t => <SelectOption key={t} value={t}>{teamToName(t)}</SelectOption>)}
+        </SelectList>
+
+    const toggle = (toggleRef: Ref<MenuToggleElement>) =>
+        <MenuToggle
+            ref={toggleRef}
+            isFullWidth
+            isExpanded={isOpen}
+            onClick={() => setIsOpen(!isOpen)}
+        >
+            {selection.toString()}
+        </MenuToggle>
+
     return (
         <Select
-            variant={SelectVariant.single}
+            id="team-select"
             aria-label="Select team"
-            placeholderText="Select team..."
-            onToggle={(_event, val) => setExpanded(val)}
-            onSelect={(event, selection) => {
-                setExpanded(false)
-                onSelect(selection as Team)
+            isOpen={isOpen}
+            selected={selection.toString()}
+            onSelect={(_, value) => {
+                setIsOpen(false);
+                onSelect(createTeam(value as string))
             }}
-            selections={selection}
-            isOpen={expanded}
-            isGrouped={includeGeneral}
+            onOpenChange={(isOpen) => setIsOpen(isOpen)}
+            toggle={toggle}
+            isScrollable
+            maxMenuHeight="45vh"
+            popperProps={{enableFlip: false, preventOverflow: true}}
+            shouldFocusToggleOnSelect
         >
-            {includeGeneral
-                ? [
-                      <SelectGroup key="__general" label="General" value="">
-                          {generalOptions}
-                      </SelectGroup>,
-                      <SelectGroup key="__role" label="Team" value="">
-                          {teamsAsSelectOptions()}
-                      </SelectGroup>,
-                  ]
-                : teamsAsSelectOptions()}
+            {includeGeneral ?
+                <>
+                    <SelectGroup key="__general" label="General">
+                        {generalOptions()}
+                    </SelectGroup>
+                    <Divider/>
+                    <SelectGroup key="__role" label="Team">
+                        {teamsAsSelectOptions()}
+                    </SelectGroup>
+                </>
+                :
+                teamsAsSelectOptions()}
         </Select>
     )
 }
