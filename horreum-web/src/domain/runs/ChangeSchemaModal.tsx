@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react"
 
-import {
-	Button,
-	Modal,
-	Spinner
-} from '@patternfly/react-core';
-import {
-	Select,
-	SelectOption
-} from '@patternfly/react-core/deprecated';
+import {Button, Form, FormGroup, Modal, Spinner} from '@patternfly/react-core';
+import {SimpleSelect} from "@patternfly/react-templates";
 
 import SchemaSelect from "../../components/SchemaSelect"
 
@@ -17,50 +10,7 @@ type InitialSchema = {
     id: number
 }
 
-type PathSelectProps = {
-    hasRoot: boolean
-    paths: string[]
-    value?: string
-    onChange(path: string | undefined): void
-}
-
 const ROOT_PATH = "__root_path__"
-
-function PathSelect(props: PathSelectProps) {
-    const [isExpanded, setExpanded] = useState(false)
-    const options = []
-    if (props.hasRoot) {
-        options.push(
-            <SelectOption key={-1} value={ROOT_PATH}>
-                Root schema
-            </SelectOption>
-        )
-    }
-    props.paths.forEach((option, index) => options.push(<SelectOption key={index} value={option} />))
-    return (
-        <Select
-            aria-label="Select path"
-            isOpen={isExpanded}
-            onToggle={(_event, val) => setExpanded(val)}
-            selections={props.value ? props.value : props.hasRoot ? ROOT_PATH : undefined}
-            onClear={() => {
-                setExpanded(false)
-                props.onChange(undefined)
-            }}
-            onSelect={(_, newValue) => {
-                setExpanded(false)
-                if (newValue === ROOT_PATH) {
-                    props.onChange(undefined)
-                } else {
-                    props.onChange(newValue as string)
-                }
-            }}
-            placeholderText={props.hasRoot || props.paths.length > 0 ? "Select path..." : "No paths available"}
-        >
-            {options}
-        </Select>
-    )
-}
 
 type ChangeSchemaModalProps = {
     isOpen: boolean
@@ -87,7 +37,7 @@ export default function ChangeSchemaModal(props: ChangeSchemaModalProps) {
     }, [props.initialSchema])
     return (
         <Modal
-            variant="small"
+            variant="medium"
             title={"Change run schema"}
             isOpen={props.isOpen}
             onClose={props.onClose}
@@ -109,10 +59,26 @@ export default function ChangeSchemaModal(props: ChangeSchemaModalProps) {
             ]}
         >
             {!updating && (
-                <>
-                    <PathSelect paths={props.paths} hasRoot={props.hasRoot} value={path} onChange={setPath} />
-                    <SchemaSelect value={schema} onChange={setSchema} noSchemaOption={true} />
-                </>
+                <Form isHorizontal id="run-schema-form">
+                    <FormGroup label="Path">
+                        <SimpleSelect
+                            placeholder={props.hasRoot || props.paths.length > 0 ? "Select path..." : "No paths available"}
+                            initialOptions={
+                                (props.hasRoot ? [{value:ROOT_PATH, content: "Root schema", selected: path === undefined}] : [])
+                                    .concat(props.paths.map(p => ({value: p, content: p, selected: p === path})))
+                            }
+                            onSelect={(_, item) => setPath(item === ROOT_PATH ? undefined : item as string)}
+                            selected={path ? path : props.hasRoot ? ROOT_PATH : undefined}
+                            isScrollable
+                            toggleWidth="100%"
+                            maxMenuHeight="45vh"
+                            popperProps={{enableFlip: false, preventOverflow: true}}
+                        />
+                    </FormGroup>
+                    <FormGroup label="Schema">
+                        <SchemaSelect value={schema} onChange={setSchema} noSchemaOption />
+                    </FormGroup>
+                </Form>
             )}
             {updating && <Spinner size="xl" />}
         </Modal>

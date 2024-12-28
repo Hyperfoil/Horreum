@@ -1,10 +1,6 @@
-import { useState, useEffect } from "react"
+import {useState, useEffect} from "react"
 
-import {
-	Select,
-	SelectOption,
-	SelectOptionObject
-} from '@patternfly/react-core/deprecated';
+import {TypeaheadSelect} from "@patternfly/react-templates";
 
 import {schemaApi} from "../api"
 
@@ -16,75 +12,46 @@ type SchemaSelectProps = {
     isCreatable?: boolean
 }
 
-interface Schema extends SelectOptionObject {
+interface Schema {
     name: string
     id: number
     uri: string
+    toString: () => string
 }
 
 export default function SchemaSelect({value, onChange, disabled, noSchemaOption, isCreatable}: SchemaSelectProps) {
-    const [isExpanded, setExpanded] = useState(false)
     const [options, setOptions] = useState<Schema[]>([])
     const noSchemaAllowed = noSchemaOption || false
     useEffect(() => {
-        if (options.length > 0) {
-            return
-        }
-        schemaApi.descriptors().then(response => {
-            const schemas = response.map(s => {
-                return { ...s, toString: () => `${s.name} (${s.uri})` }
-            })
+        options.length || schemaApi.descriptors().then(response => {
+            const schemas = response.map(s => ({...s, toString: () => `${s.name === s.uri ? "" : s.name} [${s.uri}]`}))
             setOptions(schemas)
             if (!noSchemaAllowed && !value && schemas.length > 0) {
                 onChange(schemas[0].uri, schemas[0].id)
             }
         })
     }, [onChange, value, noSchemaAllowed])
-    const extraOptions: Schema[] = []
-    if (noSchemaAllowed) {
-        extraOptions.push({ name: "", id: 0, uri: "", toString: () => "-- no schema --" })
-    }
     return (
-        <Select
-            aria-label="Select schema"
-            menuAppendTo="parent"
-            maxHeight={300} // fixme: menu is clipped in modal
-            isOpen={isExpanded}
-            placeholderText="-- no schema --"
-            variant="typeahead"
-            isCreatable={isCreatable}
-            createText="Use new schema URI: "
-            onToggle={(_event, val) => setExpanded(val)}
-            selections={options.find(o => o.uri === value) || []}
-            onClear={() => {
-                setExpanded(false)
-                onChange(undefined, undefined)
-            }}
-            onSelect={(e, newValue) => {
-                setExpanded(false)
-                if (typeof newValue === "string") {
-                    onChange(newValue as string, 0)
+        <TypeaheadSelect
+            selectOptions={
+                (noSchemaAllowed ? [{name: "", id: 0, uri: "", toString: () => "-- no schema --"}] : []).concat(options)
+                    .map(o => ({value: o.id, content: o.toString(), disabled: disabled?.includes(o.uri)}))
+            }
+            selected={value !== undefined && value.length > 0 ? options.find(o => o.uri === value)?.id ?? 0 : 0}
+            onClearSelection={value !== undefined && value.length > 0 ? () => onChange(undefined, undefined) : undefined}
+            onSelect={(_, item) => {
+                if (typeof item === "string") {
+                    onChange(item as string, 0)
                 } else {
-                    const schema = newValue as Schema
-                    onChange(schema.uri, schema.id)
+                    onChange(options.find(o => o.id === item as number)?.uri, item as number)
                 }
             }}
-            onCreateOption={value => {
-                setOptions([{ name: value, id: 0, uri: value, toString: () => value }, ...options])
-                // onSelect runs automatically
-            }}
-        >
-            {[...extraOptions, ...options].map((option, index) => (
-                <SelectOption key={index} value={option} isDisabled={disabled?.includes(option.uri)}>
-                    {option.name ? (
-                            option.name === option.uri ?
-                                (<code>{option.uri}</code>) :
-                                (<>{option.name} (<code>{option.uri}</code>)</>)
-                        )
-                        : (option.toString())
-                    }
-                </SelectOption>
-            ))}
-        </Select>
+            isCreatable={isCreatable}
+            createOptionMessage={(item) => `Use new schema URI: ${item}`}
+            isScrollable
+            toggleWidth="100%"
+            maxMenuHeight="45vh"
+            popperProps={{enableFlip: false, preventOverflow: true, maxWidth: "200px"}}
+        />
     )
 }
