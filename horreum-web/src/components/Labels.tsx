@@ -1,25 +1,16 @@
-import React, {ReactNode, RefObject, useContext, useEffect, useMemo, useRef, useState} from "react"
+import React, {useContext, useEffect, useMemo, useState} from "react"
 
-import { NavLink } from "react-router-dom"
+import {NavLink} from "react-router-dom"
 
-import {
-	Checkbox,
-	Flex,
-	FlexItem,
-	Tooltip
-} from '@patternfly/react-core';
-import {
-	Select,
-	SelectOption
-} from '@patternfly/react-core/deprecated';
-import { ExclamationCircleIcon } from "@patternfly/react-icons"
+import {Checkbox, HelperText, HelperTextItem, Label, Split, SplitItem, Tooltip} from '@patternfly/react-core';
+import {ExclamationCircleIcon} from "@patternfly/react-icons"
 
 import {LabelInfo, schemaApi} from "../api"
 
-import NameUri from "./NameUri"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
-import {SimpleSelect} from "@patternfly/react-templates";
+import {MultiTypeaheadSelect, SimpleDropdown, TypeaheadSelect} from "@patternfly/react-templates";
+import FilterIcon from "@patternfly/react-icons/dist/esm/icons/filter-icon";
 
 type LabelsProps = {
     labels: string[]
@@ -34,30 +25,22 @@ const ALL_SCHEMAS = "__all__"
 
 export default function Labels({ labels, onChange, isReadOnly, error, defaultMetrics, defaultFiltering }: LabelsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const [isExpanded, setExpanded] = useState(false)
     const [options, setOptions] = useState<LabelInfo[]>([])
     const [schemaFilter, setSchemaFilter] = useState(ALL_SCHEMAS)
-    const [schemaFilterOptions, setSchemaFilterOptions] = useState<Record<string, ReactNode>>({
-        __all__: "All schemas",
-    })
+    const [schemaFilterOptions, setSchemaFilterOptions] = useState<Record<string, string>>({__all__: "All schemas",})
     const [metrics, setMetrics] = useState(defaultMetrics === undefined || defaultMetrics)
     const [filtering, setFiltering] = useState(defaultFiltering === undefined || defaultFiltering)
     useEffect(() => {
         schemaApi.allLabels().then(
             labels => {
-                setOptions(labels)
-                const sfo: Record<string, ReactNode> = { ...schemaFilterOptions }
-                labels.flatMap(l => l.schemas).forEach(s => (sfo[s.uri] = <NameUri descriptor={s} />))
+                setOptions(labels.sort())
+                const sfo: Record<string, string> = {...schemaFilterOptions}
+                labels.flatMap(l => l.schemas).forEach(s => (sfo[s.uri] = `${s.name === s.uri ? "" : s.name} [${s.uri}]`))
                 setSchemaFilterOptions(sfo)
             },
             error => alerting.dispatchError(error, "LIST_ALL_LABELS", "Failed to list available labels.")
         )
     }, [])
-    useEffect(() => {
-        if (!isExpanded) {
-            setSchemaFilter(ALL_SCHEMAS)
-        }
-    }, [isExpanded])
     const selected = labels.map(l => {
         const o = options.find(l2 => l2.name === l)
         if (!o) {
@@ -69,123 +52,82 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                 toString: () => l,
             }
         }
-        return { ...o, toString: () => o.name }
+        return {...o, toString: () => o.name}
     })
-    const footerRef = useRef<HTMLDivElement>()
-    function ensureFooterInView() {
-        setTimeout(() => {
-            if (footerRef.current) {
-                const { bottom } = footerRef.current.getBoundingClientRect()
-                if (bottom > (window.innerHeight || document.documentElement.clientHeight)) {
-                    footerRef.current.scrollIntoView({ behavior: "smooth", block: "end" })
-                }
-            }
-        }, 300)
-    }
     const filteredOptions = useMemo(
-        () =>
-            options
-                .filter(o => schemaFilter === "__all__" || o.schemas.some(s => s.uri === schemaFilter))
-                .filter(o => !labels.includes(o.name) && ((o.metrics && metrics) || (o.filtering && filtering)))
-                .sort()
-                .map((o, index) => <SelectOption key={index} value={o.name} />),
-        [options, schemaFilter, labels]
+        () => (schemaFilter === ALL_SCHEMAS
+                ? options
+                : options.filter(o => labels.includes(o.name) || (o.schemas.some(s => s.uri === schemaFilter) && ((o.metrics && metrics) || (o.filtering && filtering))))
+        ).map(o => ({value: o.name, content: o.name, selected: labels.includes(o.name)})),
+        [options, schemaFilter, metrics, filtering, labels]
     )
     return (
         <>
-            <Select
-                variant="typeaheadmulti"
-                aria-label="Select label(s)"
-                validated={error ? "error" : "default"}
-                placeholderText={isReadOnly ? "No labels" : "Select label(s)"}
-                isOpen={isExpanded}
-                maxHeight={"50vh"}
-                onToggle={(_event, expanded) => {
-                    setExpanded(expanded)
-                    if (expanded) {
-                        ensureFooterInView()
-                    }
-                }}
-                selections={selected}
-                isDisabled={isReadOnly}
-                onClear={() => {
-                    setExpanded(false)
-                    onChange([])
-                }}
-                onFilter={(_, value) => filteredOptions.filter(o => (o.props.value as string).indexOf(value) >= 0)}
-                onSelect={(_, newValue) => {
-                    setExpanded(false)
-                    const label = newValue.toString()
-                    onChange(labels.includes(label) ? labels.filter(l => l !== label) : [...labels, label])
-                }}
-                footer={
-                    <div ref={footerRef as RefObject<HTMLDivElement>}>
-                        <Flex>
-                            <FlexItem>Filter by schema:</FlexItem>
-                            <FlexItem>
-                                <SimpleSelect
-                                    initialOptions={Object.entries(schemaFilterOptions).map(([name, title]) => (
-                                        {value: name, content: title, selected: name === schemaFilter})
-                                    )}
-                                    selected={schemaFilter}
-                                    onSelect={(_, item) => setSchemaFilter(item as string)}
-                                />
-                            </FlexItem>
-                        </Flex>
-                        <Checkbox
-                            id="metrics"
-                            label="Include metrics labels"
-                            isChecked={metrics}
-                            onChange={(_event, checked) => {
-                                setMetrics(checked)
-                                ensureFooterInView()
-                            }}
+            {isReadOnly ||
+                <Split>
+                    <SplitItem>
+                        <TypeaheadSelect
+                            selectOptions={Object.entries(schemaFilterOptions).map(
+                                ([name, title]) => ({value: name, content: title})
+                            )}
+                            selected={schemaFilter}
+                            onSelect={(_, item) => setSchemaFilter(item as string)}
+                            noOptionsFoundMessage={(filter) => `"${filter}" does not match any schema`}
+                            isScrollable
+                            toggleProps={{icon: <FilterIcon/>}}
+                            maxMenuHeight="80vh"
                         />
-                        <Checkbox
-                            id="filtering"
-                            label="Include filtering labels"
-                            isChecked={filtering}
-                            onChange={(_event, checked) => {
-                                setFiltering(checked)
-                                ensureFooterInView()
-                            }}
+                    </SplitItem>
+                    {schemaFilter === ALL_SCHEMAS || <SplitItem>
+                        <SimpleDropdown
+                            toggleContent={<FilterIcon/>}
+                            initialItems={[
+                                {
+                                    value: "0",
+                                    content:
+                                        <Checkbox
+                                            id="metrics"
+                                            label="Include metrics labels"
+                                            isChecked={metrics}
+                                            onChange={(_, checked) => setMetrics(checked)}
+                                        />
+                                },
+                                {
+                                    value: "1",
+                                    content:
+                                        <Checkbox
+                                            id="filtering"
+                                            label="Include filtering labels"
+                                            isChecked={filtering}
+                                            onChange={(_, checked) => setFiltering(checked)}
+                                        />
+                                }
+                            ]}
                         />
-                    </div>
-                }
-            >
-                {filteredOptions}
-            </Select>
-            {error && (
-                <span
-                    style={{
-                        display: "inline-block",
-                        color: "var(--pf-v5-global--danger-color--100)",
-                    }}
-                >
-                    {error}
-                </span>
-            )}
-            {selected.map(o => (
-                <div key={o.name} style={{ marginTop: "5px" }}>
-                    <span
-                        style={{
-                            border: "1px solid #888",
-                            borderRadius: "4px",
-                            padding: "4px",
-                            backgroundColor: "#f0f0f0",
-                        }}
-                    >
-                        {o.name}
-                    </span>{" "}
+                    </SplitItem>}
+                    <SplitItem isFilled>
+                        <MultiTypeaheadSelect
+                            initialOptions={filteredOptions}
+                            placeholder={"Select label"}
+                            noOptionsFoundMessage={(filter) => `"${filter}" label not found`}
+                            onSelectionChange={(_, item) => onChange(item as string[])}
+                            isScrollable
+                            toggleProps={{status: error ? "danger" : undefined}}
+                            maxMenuHeight="80vh"
+                        />
+                    </SplitItem>
+                </Split>
+            }
+            {error && <HelperText><HelperTextItem variant="error">{error}</HelperTextItem></HelperText>}
+            {selected.length == 0
+                ? <>No labels</>
+                : selected.map(o => (
+                <div key={o.name} style={{marginTop: "0px"}}>
+                    <Label color="grey">{o.name}</Label>
                     is valid for schemas:{"\u00A0"}
                     {o.schemas.length === 0 && (
                         <Tooltip content="No schemas implement this label!">
-                            <ExclamationCircleIcon
-                                style={{
-                                    fill: "var(--pf-v5-global--danger-color--100)",
-                                    marginTop: "4px",
-                                }}
-                            />
+                            <ExclamationCircleIcon color="var(--pf-v5-global--danger-color--100)"/>
                         </Tooltip>
                     )}
                     {o.schemas.map((d, i) => (
