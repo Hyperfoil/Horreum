@@ -5,11 +5,6 @@ import { teamsSelector } from "../../auth"
 import {
     ToolbarGroup, ToolbarItem, ToolbarToggleGroup
 } from '@patternfly/react-core';
-import {
-	Select,
-	SelectOption,
-	SelectOptionObject
-} from '@patternfly/react-core/deprecated';
 
 import { deepEquals, noop } from "../../utils"
 import FilterIcon from "@patternfly/react-icons/dist/esm/icons/filter-icon";
@@ -49,7 +44,9 @@ function convertPartial(value: any) {
         return value
 }
 
-export type SelectedLabels = SelectOptionObject | null
+export type SelectedLabels = {
+    toString(): string
+}
 
 type LabelsSelectProps = {
     disabled?: boolean
@@ -166,4 +163,3 @@ export default function LabelFilter({selection, onSelect, source, emptyPlacehold
 
     }
 }
-
