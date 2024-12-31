@@ -1,18 +1,14 @@
-import {useContext, useEffect, useRef, useState} from "react"
+import {useContext, useEffect, useState} from "react"
 import {
 	FormGroup,
+    FormHelperText,
 	InputGroup,
-	TextInput, InputGroupItem,
+    InputGroupItem,
     HelperText,
     HelperTextItem,
-    FormHelperText,
-
+    TextInput,
 } from '@patternfly/react-core';
-import {
-	Dropdown,
-	DropdownItem,
-	DropdownToggle
-} from '@patternfly/react-core/deprecated';
+import {SimpleSelect} from "@patternfly/react-templates";
 
 import { AllowedSite, getAllowedSites} from "../api"
 import {AppContext} from "../context/appContext";
@@ -50,11 +46,6 @@ export default function HttpActionUrlSelector({ active, value, setValue, isDisab
     const isUrlValid = isValidUrl(value)
     const isUrlAllowed = prefixes.some(p => value.startsWith(p.prefix))
     const extraCheckResult = extraCheck ? extraCheck(value) : true
-
-    const [dropdownOpen, setDropdownOpen] = useState(false)
-
-    const ref = useRef<any>()
-
     return (
         <FormGroup
             label="HTTP Action URL"
@@ -62,35 +53,14 @@ export default function HttpActionUrlSelector({ active, value, setValue, isDisab
             fieldId="url"
         >
             <InputGroup>
-                {!isReadOnly && (
-                    <Dropdown
-                        onSelect={event => {
-                            if (event && event.currentTarget) {
-                                if (setValid) {
-                                    setValid(true)
-                                }
-                                setValue(event.currentTarget.innerText)
-                            }
-                            setDropdownOpen(false)
-                            if (ref.current) {
-                                ref.current.focus()
-                            }
-                        }}
-                        toggle={
-                            <DropdownToggle onToggle={(_event, val) => setDropdownOpen(val)} isDisabled={isDisabled}>
-                                Pick URL prefix
-                            </DropdownToggle>
-                        }
-                        isOpen={dropdownOpen}
-                        dropdownItems={prefixes.map((p, i) => (
-                            <DropdownItem key={i} value={p.prefix} component="button">
-                                {p.prefix}
-                            </DropdownItem>
-                        ))}
+                {!isReadOnly &&
+                    <SimpleSelect
+                        placeholder="Pick URL prefix"
+                        initialOptions={prefixes.map(p => ({value: p.prefix, content: p.prefix, selected: false}))}
+                        onSelect={(_, item) => setValue(item as string)}
                     />
-                )}
+                }
                 <InputGroupItem isFill ><TextInput
-                    ref={ref}
                     value={value}
                     isRequired
                     type="text"
