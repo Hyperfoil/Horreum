@@ -28,7 +28,7 @@ import {
 	DatePicker,
 	EmptyState,
 	EmptyStateBody,
-	Spinner, EmptyStateHeader, EmptyStateFooter,
+	Spinner,
 } from '@patternfly/react-core';
 import {SimpleSelect} from "@patternfly/react-templates";
 import { useNavigate } from "react-router-dom"
@@ -333,8 +333,7 @@ export default function Changes(props: ChangesProps) {
                 </CardHeader>
                 <CardBody>
                     {!selectedTest && (
-                        <EmptyState>
-                            <EmptyStateHeader titleText="No test selected" headingLevel="h2" />
+                        <EmptyState titleText="No test selected" headingLevel="h2">
                             <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
                         </EmptyState>
                     )}
@@ -346,14 +345,10 @@ export default function Changes(props: ChangesProps) {
                         </EmptyState>
                     )}
                     {selectedTest && !loadingFingerprints && requiresFingerprint && !selectedFingerprint && (
-                        <EmptyState>
-                            <EmptyStateHeader titleText="Please select datasets fingerprint." headingLevel="h2" />
-                        </EmptyState>
+                        <EmptyState titleText="Please select datasets fingerprint." headingLevel="h2" />
                     )}
                     {selectedTest && !loadingPanels && !requiresFingerprint && panels.length === 0 && (
-                        <EmptyState>
-                            <EmptyStateHeader titleText={<>No change detection variables defined</>} headingLevel="h2" /><EmptyStateFooter>
-                        </EmptyStateFooter></EmptyState>
+                        <EmptyState titleText={<>No change detection variables defined</>} headingLevel="h2" />
                     )}
                     {!loadingFingerprints &&
                         (!requiresFingerprint || selectedFingerprint) &&
