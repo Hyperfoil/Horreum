@@ -5,6 +5,7 @@ import {
     Button,
     EmptyState,
     EmptyStateBody,
+    EmptyStateFooter,
     Flex,
     FlexItem,
     Form,
@@ -12,7 +13,7 @@ import {
     SimpleListItem,
     Spinner,
     Split,
-    SplitItem, EmptyStateHeader, EmptyStateFooter,
+    SplitItem,
     } from "@patternfly/react-core"
 import { PlusCircleIcon } from "@patternfly/react-icons"
 
@@ -61,8 +62,7 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
     if (props.items.length === 0) {
         return (
             <Bullseye>
-                <EmptyState>
-                    <EmptyStateHeader titleText={<>{props.noItemTitle}</>} headingLevel="h3" />
+                <EmptyState titleText={props.noItemTitle} headingLevel="h3">
                     <EmptyStateBody>{props.noItemText}</EmptyStateBody><EmptyStateFooter>
                     {props.canAddItem && <Button onClick={addItem}>{props.addItemText}</Button>}
                 </EmptyStateFooter></EmptyState>

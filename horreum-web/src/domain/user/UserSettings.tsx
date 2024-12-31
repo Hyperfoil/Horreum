@@ -22,7 +22,6 @@ import {
     FormGroup,
     PageSection,
     Spinner,
-    EmptyStateHeader,
 } from "@patternfly/react-core"
 
 import { UserIcon } from "@patternfly/react-icons"
@@ -204,11 +203,7 @@ export function UserSettings() {
                                     }}
                                 />
                             )}
-                            {!selectedTeam && (
-                                <EmptyState>
-                                    <EmptyStateHeader titleText="No team selected" headingLevel="h3" />
-                                </EmptyState>
-                            )}
+                            {!selectedTeam && <EmptyState titleText="No team selected" headingLevel="h3" />}
                         </SavedTab>
                         <FragmentTab title="API keys" fragment="api-keys">
                             <ApiKeys/>

@@ -8,7 +8,7 @@ import {
     FlexItem,
     Modal,
     Pagination,
-    Spinner, EmptyStateHeader,
+    Spinner,
     } from "@patternfly/react-core"
 import {
     CheckCircleIcon,
@@ -113,15 +113,14 @@ export default function LogModal(props: LogModalProps) {
         []
     )
     return (
-        <Modal isOpen={props.isOpen} onClose={props.onClose} title={props.title} showClose={true}>
+        <Modal isOpen={props.isOpen} onClose={props.onClose} title={props.title}>
             {loading && (
                 <Bullseye>
                     <Spinner size="xl" />
                 </Bullseye>
             )}
             {!loading && count === 0 && (
-                <EmptyState>
-                    <EmptyStateHeader titleText="No logs" headingLevel="h4" />
+                <EmptyState titleText="No logs" headingLevel="h4">
                     <EmptyStateBody>
                         {props.emptyMessage}
                         <div style={{ marginTop: "16px" }}>

@@ -1,7 +1,7 @@
 import React, {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
-import { Bullseye, EmptyState, EmptyStateBody, Modal, Spinner, EmptyStateHeader,  } from "@patternfly/react-core"
+import { Bullseye, EmptyState, EmptyStateBody, Modal, Spinner } from "@patternfly/react-core"
 
 import {datasetApi, LabelValue} from "../../api"
 import {AppContext} from "../../context/appContext";
@@ -57,7 +57,6 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
         <Modal
             title="Effective label values"
             variant="large"
-            showClose={true}
             onClose={props.onClose}
             isOpen={props.isOpen}
         >
@@ -90,8 +89,7 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
             )}
             {labelValues.length === 0 && !loading && (
                 <Bullseye>
-                    <EmptyState>
-                        <EmptyStateHeader titleText="No labels found." headingLevel="h4" />
+                    <EmptyState titleText="No labels found." headingLevel="h4">
                         <EmptyStateBody>Check label definitions in referenced schemas.</EmptyStateBody>
                     </EmptyState>
                 </Bullseye>
