@@ -1,4 +1,4 @@
-import { Button, ClipboardCopy, Modal, Text } from "@patternfly/react-core"
+import { Button, ClipboardCopy, Content, Modal } from "@patternfly/react-core"
 
 type ShareLinkModalProps = {
     isOpen: boolean
@@ -28,7 +28,7 @@ export default function ShareLinkModal({ isOpen, onClose, link, isTester, onRese
                 </>
             ) : (
                 <>
-                    <Text component="p">No shareable link yet.</Text>
+                    <Content component="p">No shareable link yet.</Content>
                     <Button variant="primary" onClick={onReset}>
                         Create link
                     </Button>
