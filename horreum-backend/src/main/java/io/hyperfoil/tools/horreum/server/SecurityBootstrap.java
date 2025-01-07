@@ -81,7 +81,7 @@ public class SecurityBootstrap {
 
     @Transactional
     void performUserMigration(UserRepresentation kcUser, List<RoleRepresentation> kcRoles) {
-        Log.infov("Migration of user {0} {1} with username {2}", kcUser.getFirstName(), kcUser.getLastName(),
+        Log.infof("Migration of user '%s %s' with username '%s'", kcUser.getFirstName(), kcUser.getLastName(),
                 kcUser.getUsername());
         String previousRoles = roleManager.setRoles(kcUser.getUsername());
         try {
@@ -105,12 +105,12 @@ public class SecurityBootstrap {
                 } else if ("admin".equals(role)) {
                     userInfo.roles.add(UserRole.ADMIN);
                 } else {
-                    Log.infov("Dropping role {0} for user {1} {2}", role, kcUser.getFirstName(), kcUser.getLastName());
+                    Log.infof("Dropping role '%s' for user '%s %s'}", role, kcUser.getFirstName(), kcUser.getLastName());
                 }
             }
             userInfo.persist();
         } catch (Exception e) {
-            Log.warnv("Unable to perform migration for user {0} {1} due to {2}", kcUser.getFirstName(), kcUser.getLastName(),
+            Log.warnf("Unable to perform migration for user '%s %s' due to '%s'", kcUser.getFirstName(), kcUser.getLastName(),
                     e.getMessage());
         } finally {
             roleManager.setRoles(previousRoles);
@@ -150,9 +150,9 @@ public class SecurityBootstrap {
 
             UserServiceImpl.createLocalUser(BOOTSTRAP_ACCOUNT, "dev-team");
 
-            Log.infov("\n>>>\n>>> Created temporary account {0} with password {1}\n>>>", BOOTSTRAP_ACCOUNT, user.password);
+            Log.infof("\n>>>\n>>> Created temporary account '%s' with password %s\n>>>", BOOTSTRAP_ACCOUNT, user.password);
         } else if (administrators.size() > 1 && administrators.contains(BOOTSTRAP_ACCOUNT)) {
-            Log.warnv("The temporary account {0} can be removed", BOOTSTRAP_ACCOUNT);
+            Log.warnf("The temporary account '%s' can be removed", BOOTSTRAP_ACCOUNT);
         }
     }
 

@@ -60,7 +60,7 @@ public class HorreumResource implements ResourceLifecycleManager {
             jdbcUrl = "jdbc:postgresql://".concat(postgresNetworkAlias).concat(":5432/horreum?loggerLevel=OFF");
         }
 
-        String keycloakUrl = String.format("%s/realms/horreum", keycloakHostUrl);
+        String keycloakUrl = keycloakHostUrl + "/realms/horreum";
         String horreumUrl = "http://" + networkAlias + ":8081";
 
         horreumContainer

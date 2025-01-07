@@ -1,7 +1,5 @@
 package io.hyperfoil.tools.horreum.hibernate;
 
-import static java.lang.String.format;
-
 import java.io.Serializable;
 import java.sql.Array;
 import java.sql.PreparedStatement;
@@ -71,7 +69,7 @@ public class IntArrayType implements UserType<int[]> {
             Array array = ps.getConnection().createArrayOf("integer", castArray);
             ps.setArray(index, array);
         } catch (final Exception ex) {
-            throw new RuntimeException(format("Failed to convert JSON to String: %s", ex.getMessage()), ex);
+            throw new RuntimeException("Failed to convert JSON to String: " + ex.getMessage(), ex);
         }
     }
 

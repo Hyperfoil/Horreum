@@ -12,7 +12,6 @@ import jakarta.persistence.Query;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.JDBCException;
-import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.data.JsonpathValidation;
 import io.hyperfoil.tools.horreum.api.data.QueryResult;
@@ -23,7 +22,6 @@ import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 public class SqlServiceImpl implements SqlService {
-    private static final Logger log = Logger.getLogger(SqlServiceImpl.class);
 
     @Inject
     EntityManager em;

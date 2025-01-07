@@ -80,7 +80,7 @@ public abstract class BaseServiceNoRestTest {
         }
         List<Test> tests = new ArrayList<>();
         for (int i = 0; i < count; i += 1) {
-            tests.add(createSampleTest(String.format("%s_%d", prefix, i), null, null, i));
+            tests.add(createSampleTest("%s_%d".formatted(prefix, i), null, null, i));
         }
         return tests;
     }

@@ -36,11 +36,11 @@ public class RoleManager {
         }
         Object[] row = (Object[]) em.createNativeQuery(SET_ROLES).setParameter(1, roles).getSingleResult();
 
-        if (Log.isDebugEnabled()) { // enabe with: `quarkus.log.category."io.hyperfoil.tools.horreum.server.RoleManager".level=DEBUG`
+        if (Log.isDebugEnabled()) { // enable with: `quarkus.log.category."io.hyperfoil.tools.horreum.server.RoleManager".level=DEBUG`
             try {
-                Log.debugv("Setting roles {0} (replacing {1}) on transaction {2}", roles, row[0], txManager.getTransaction());
+                Log.debugf("Setting roles '%s' (replacing '%s') on transaction %s", roles, row[0], txManager.getTransaction());
             } catch (SystemException e) {
-                Log.debugv("Setting roles {0} (replacing {1}), but obtaining current transaction failed due to {2}", roles,
+                Log.debugf("Setting roles '%s' (replacing '%s'), but obtaining current transaction failed due to %s", roles,
                         row[0], e.getMessage());
             }
         }

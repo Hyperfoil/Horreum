@@ -26,15 +26,14 @@ import java.util.Map;
 
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.infra.common.SelfSignedCert;
+import io.quarkus.logging.Log;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 
 public class ItResource implements QuarkusTestResourceLifecycleManager {
 
-    private static final Logger log = Logger.getLogger(ItResource.class);
-    private static boolean started = false;
+    private static boolean started;
 
     public static String HORREUM_BOOTSTRAP_PASSWORD = "horreum.secret";
 
@@ -42,10 +41,9 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
     public Map<String, String> start() {
         synchronized (ItResource.class) {
             if (!started) {
-                log.info("Starting Horreum IT resources");
+                Log.info("Starting Horreum IT resources");
                 started = true;
                 try {
-
                     String keycloakImage = getProperty(HORREUM_DEV_KEYCLOAK_IMAGE);
                     String postgresImage = getProperty(HORREUM_DEV_POSTGRES_IMAGE);
 
@@ -78,7 +76,7 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
                                     config.getOptionalValue("quarkus.http.host", String.class).orElse("localhost")));
                     return startContainers(containerArgs);
                 } catch (Exception e) {
-                    log.fatal("Could not start Horreum services", e);
+                    Log.fatal("Could not start Horreum services", e);
                     stopContainers();
                     throw new RuntimeException("Could not start Horreum services", e);
                 }
@@ -91,14 +89,13 @@ public class ItResource implements QuarkusTestResourceLifecycleManager {
     public void stop() {
         synchronized (ItResource.class) {
             try {
-                log.info("Stopping Horreum IT resources");
+                Log.info("Stopping Horreum IT resources");
                 stopContainers();
                 started = false;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
-
     }
 
 }

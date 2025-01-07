@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.svc.user;
 
-import static java.text.MessageFormat.format;
 import static java.util.stream.Collectors.joining;
 
 import java.util.ArrayList;
@@ -19,7 +18,6 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.ClientsResource;
 import org.keycloak.admin.client.resource.RoleMappingResource;
@@ -34,6 +32,7 @@ import io.hyperfoil.tools.horreum.api.services.UserService;
 import io.hyperfoil.tools.horreum.svc.Roles;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.quarkus.arc.lookup.LookupIfProperty;
+import io.quarkus.logging.Log;
 
 /**
  * Implementation of {@link UserBackEnd} using an external Keycloak server.
@@ -42,8 +41,6 @@ import io.quarkus.arc.lookup.LookupIfProperty;
 @ApplicationScoped
 @LookupIfProperty(name = "horreum.roles.provider", stringValue = "keycloak")
 public class KeycloakUserBackend implements UserBackEnd {
-
-    private static final Logger LOG = Logger.getLogger(KeycloakUserBackend.class);
 
     private static final String[] ROLE_TYPES = new String[] { "team", Roles.VIEWER, Roles.TESTER, Roles.UPLOADER,
             Roles.MANAGER };
@@ -115,8 +112,8 @@ public class KeycloakUserBackend implements UserBackEnd {
                 keycloak.realm(realm).users().search(username).stream().filter(u -> username.equals(u.getUsername()))
                         .map(KeycloakUserBackend::toUserInfo).forEach(users::add);
             } catch (Throwable t) {
-                LOG.warnv(t, "Failed to fetch info for user {0}", username);
-                throw ServiceException.serverError(format("Failed to fetch info for user {0}", username));
+                Log.warnf(t, "Failed to fetch info for user '%s'", username);
+                throw ServiceException.serverError("Failed to fetch info for user " + username);
             }
         }
         return users;
@@ -128,7 +125,7 @@ public class KeycloakUserBackend implements UserBackEnd {
 
         try (Response response = keycloak.realm(realm).users().create(rep)) {
             if (response.getStatusInfo().getFamily() != Response.Status.Family.SUCCESSFUL) {
-                LOG.warnv("Failed to create new user {0}: {1}", rep.getUsername(), response.getStatusInfo());
+                Log.warnf("Failed to create new user '%s': %s", rep.getUsername(), response.getStatusInfo());
                 if (!keycloak.realm(realm).users().search(rep.getUsername(), true).isEmpty()) {
                     throw ServiceException.badRequest("User exists with same username");
                 } else if (!keycloak.realm(realm).users().searchByEmail(rep.getEmail(), true).isEmpty()) {
@@ -141,7 +138,7 @@ public class KeycloakUserBackend implements UserBackEnd {
         } catch (ServiceException se) {
             throw se; // thrown above, re-throw
         } catch (Throwable t) {
-            throw ServiceException.serverError(format("Failed to create new user {0}", rep.getUsername()));
+            throw ServiceException.serverError("Failed to create new user " + rep.getUsername());
         }
 
         try { // assign the provided roles to the realm
@@ -168,8 +165,8 @@ public class KeycloakUserBackend implements UserBackEnd {
         } catch (ServiceException se) {
             throw se; // thrown above, re-throw
         } catch (Throwable t) {
-            LOG.warnv(t, "Unable to assign roles to new user {0}", rep.getUsername());
-            throw ServiceException.serverError(format("Unable to assign roles to new user {0}", rep.getUsername()));
+            Log.warnf(t, "Unable to assign roles to new user '%s'", rep.getUsername());
+            throw ServiceException.serverError("Unable to assign roles to new user " + rep.getUsername());
         }
     }
 
@@ -177,14 +174,14 @@ public class KeycloakUserBackend implements UserBackEnd {
     public void removeUser(String username) {
         try (Response response = keycloak.realm(realm).users().delete(findMatchingUserId(username))) {
             if (response.getStatusInfo().getFamily() != Response.Status.Family.SUCCESSFUL) {
-                LOG.warnv("Got {0} response for removing user {0}", response.getStatusInfo(), username);
-                throw ServiceException.serverError(format("Unable to remove user {0}", username));
+                Log.warnf("Got %s response for removing user '%s'", response.getStatusInfo(), username);
+                throw ServiceException.serverError("Unable to remove user " + username);
             }
         } catch (ServiceException se) {
             throw se; // thrown above, re-throw
         } catch (Throwable t) {
-            LOG.warnv(t, "Unable to remove user {0}", username);
-            throw ServiceException.serverError(format("Unable to remove user {0}", username));
+            Log.warnf(t, "Unable to remove user '%s'", username);
+            throw ServiceException.serverError("Unable to remove user " + username);
         }
     }
 
@@ -220,12 +217,12 @@ public class KeycloakUserBackend implements UserBackEnd {
     private String findMatchingUserId(String username) { // find the clientID of a single user
         List<UserRepresentation> matchingUsers = keycloak.realm(realm).users().search(username, true);
         if (matchingUsers == null || matchingUsers.isEmpty()) {
-            LOG.warnv("Cannot find user with username {0}", username);
-            throw ServiceException.notFound(format("User {0} does not exist", username));
+            Log.warnf("Cannot find user with username '%s'", username);
+            throw ServiceException.notFound("User " + username + " does not exist");
         } else if (matchingUsers.size() > 1) {
-            LOG.warnv("Multiple matches for exact search for username {0}: {1}", username,
+            Log.warnf("Multiple matches for exact search for username '%s': %s", username,
                     matchingUsers.stream().map(UserRepresentation::getId).collect(joining(" ")));
-            throw ServiceException.serverError(format("More than one user with username {0}", username));
+            throw ServiceException.serverError("More than one user with username " + username);
         }
         return matchingUsers.get(0).getId();
     }
@@ -240,9 +237,9 @@ public class KeycloakUserBackend implements UserBackEnd {
                 keycloak.realm(realm).roles().get(prefix + role).getUserMembers(0, Integer.MAX_VALUE)
                         .forEach(user -> userMap.computeIfAbsent(user.getUsername(), u -> new ArrayList<>()).add(role));
             } catch (NotFoundException e) {
-                LOG.warnv("Cannot find role {0}{1} in Keycloak", prefix, role); // was there a failure when creating the team?
+                Log.warnf("Cannot find role '%s%s' in Keycloak", prefix, role); // was there a failure when creating the team?
             } catch (Throwable t) {
-                LOG.warnv("Error querying keycloak: {0}", t.getMessage());
+                Log.warnf("Error querying keycloak: %s", t.getMessage());
                 throw ServiceException.serverError("Failed to retrieve role users from Keycloak");
             }
         }
@@ -261,9 +258,9 @@ public class KeycloakUserBackend implements UserBackEnd {
                 rolesMappingResource = keycloak.realm(realm).users().get(userId).roles();
                 existingRoles = rolesMappingResource.realmLevel().listAll().stream().map(RoleRepresentation::getName).toList();
             } catch (Throwable t) {
-                LOG.warnv(t, "Failed to retrieve current roles of user {0} from Keycloak", entry.getKey());
+                Log.warnf(t, "Failed to retrieve current roles of user '%s'", entry.getKey());
                 throw ServiceException
-                        .serverError(format("Failed to retrieve current roles of user {0} from Keycloak", entry.getKey()));
+                        .serverError("Failed to retrieve current roles of user " + entry.getKey());
             }
 
             try { // add new roles that are not in the list of current roles and then remove the existing roles that are not on the new roles
@@ -280,8 +277,8 @@ public class KeycloakUserBackend implements UserBackEnd {
                     rolesMappingResource.realmLevel().remove(rolesToRemove);
                 }
             } catch (Throwable t) {
-                LOG.warnv(t, "Failed to modify roles of user {0}", entry.getKey());
-                throw ServiceException.serverError(format("Failed to modify roles of user {0}", entry.getKey()));
+                Log.warnf(t, "Failed to modify roles of user '%s'", entry.getKey());
+                throw ServiceException.serverError("Failed to modify roles of user " + entry.getKey());
             }
         }
 
@@ -297,10 +294,10 @@ public class KeycloakUserBackend implements UserBackEnd {
                 }
             }
         } catch (NotFoundException e) {
-            throw ServiceException.serverError(format("The team {0} does not exist", team));
+            throw ServiceException.serverError("The team " + team + " does not exist");
         } catch (Throwable t) {
-            LOG.warnv(t, "Failed to remove all roles of team {0}", team);
-            throw ServiceException.serverError(format("Failed to remove all roles of team {0}", team));
+            Log.warnv(t, "Failed to remove all roles of team '%s'", team);
+            throw ServiceException.serverError("Failed to remove all roles of team " + team);
         }
     }
 
@@ -311,7 +308,7 @@ public class KeycloakUserBackend implements UserBackEnd {
             keycloak.realm(realm).roles().create(new RoleRepresentation(roleName, null, false));
             return keycloak.realm(realm).roles().get(roleName).toRepresentation();
         } catch (Throwable t) {
-            throw ServiceException.serverError(format("Unable to fetch role {0}", roleName));
+            throw ServiceException.serverError("Unable to fetch role " + roleName);
         }
     }
 
@@ -347,12 +344,12 @@ public class KeycloakUserBackend implements UserBackEnd {
             keycloak.realm(realm).roles().create(role);
         } catch (ClientErrorException e) {
             if (e.getResponse().getStatus() == Response.Status.CONFLICT.getStatusCode()) {
-                LOG.warnv("Registration of role {0} failed because it already exists", roleName);
+                Log.warnv("Registration of role '%s' failed because it already exists", roleName);
             } else {
-                throw ServiceException.serverError(format("Unable to create role {0}", roleName));
+                throw ServiceException.serverError("Unable to create role " + roleName);
             }
         } catch (Throwable t) {
-            throw ServiceException.serverError(format("Unable to create role {0}", roleName));
+            throw ServiceException.serverError("Unable to create role " + roleName);
         }
     }
 
@@ -363,11 +360,11 @@ public class KeycloakUserBackend implements UserBackEnd {
             try {
                 keycloak.realm(realm).roles().deleteRole(prefix + type);
             } catch (NotFoundException e) {
-                LOG.warnv("Role {0}{1} was not found when deleting it", prefix, type);
-                throw ServiceException.notFound(format("Team {0} not found", team));
+                Log.warnf("Role '%s%s' was not found when deleting it", prefix, type);
+                throw ServiceException.notFound("Team " + team + " not found");
             } catch (Throwable t) {
-                LOG.warnv(t, "Unable to delete team {0}", team);
-                throw ServiceException.serverError(format("Unable to delete team {0}", team));
+                Log.warnf(t, "Unable to delete team '%s'", team);
+                throw ServiceException.serverError("Unable to delete team " + team);
             }
         }
     }
@@ -378,7 +375,7 @@ public class KeycloakUserBackend implements UserBackEnd {
             return keycloak.realm(realm).roles().get(Roles.ADMIN).getUserMembers(0, Integer.MAX_VALUE).stream()
                     .map(KeycloakUserBackend::toUserInfo).toList();
         } catch (Throwable t) {
-            LOG.warnv(t, "Unable to list administrators");
+            Log.warnv(t, "Unable to list administrators");
             throw ServiceException
                     .serverError("Please verify with the System Administrators that you have the correct permissions");
         }
@@ -397,9 +394,9 @@ public class KeycloakUserBackend implements UserBackEnd {
                 if (!newAdmins.contains(user.getUsername())) {
                     try {
                         usersResource.get(user.getId()).roles().realmLevel().remove(List.of(adminRole));
-                        LOG.infov("Removed administrator role from user {0}", user.getUsername());
+                        Log.infof("Removed administrator role from user '%s'", user.getUsername());
                     } catch (Throwable t) {
-                        LOG.warnv("Could not remove admin role from user {0} due to {1}", user.getUsername(), t.getMessage());
+                        Log.warnf("Could not remove admin role from user '%s' due to %s", user.getUsername(), t.getMessage());
                     }
                 }
             }
@@ -408,16 +405,16 @@ public class KeycloakUserBackend implements UserBackEnd {
                 if (oldAdmins.stream().noneMatch(old -> username.equals(old.getUsername()))) {
                     try {
                         usersResource.get(findMatchingUserId(username)).roles().realmLevel().add(List.of(adminRole));
-                        LOG.infov("Added administrator role to user {0}", username);
+                        Log.infof("Added administrator role to user '%s'", username);
                     } catch (Throwable t) {
-                        LOG.warnv("Could not add admin role to user {0} due to {1}", username, t.getMessage());
+                        Log.warnf("Could not add admin role to user '%s' due to %s", username, t.getMessage());
                     }
                 }
             }
         } catch (ServiceException se) {
             throw se; // thrown above, re-throw
         } catch (Throwable t) {
-            LOG.warnv(t, "Cannot fetch representation for admin role");
+            Log.warn("Cannot fetch representation for admin role", t);
             throw ServiceException.serverError("Cannot find admin role");
         }
     }
@@ -431,9 +428,9 @@ public class KeycloakUserBackend implements UserBackEnd {
 
             keycloak.realm(realm).users().get(findMatchingUserId(username)).resetPassword(credentials);
         } catch (Throwable t) {
-            LOG.warnv(t, "Failed to retrieve current representation of user {0} from Keycloak", username);
+            Log.warnf(t, "Failed to retrieve current representation of user '%s'", username);
             throw ServiceException
-                    .serverError(format("Failed to retrieve current representation of user {0} from Keycloak", username));
+                    .serverError("Failed to retrieve current representation of user " + username);
         }
     }
 }
