@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import io.hyperfoil.tools.horreum.exp.data.LabelValueDao;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -24,6 +23,7 @@ import io.hyperfoil.tools.horreum.api.exp.LabelService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.exp.data.LabelDao;
 import io.hyperfoil.tools.horreum.exp.data.LabelGroupDao;
+import io.hyperfoil.tools.horreum.exp.data.LabelValueDao;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 
 /**
@@ -127,6 +127,7 @@ public class MigrateService {
         System.out.println("testId = " + testId + " runId = " + runId + " labelId = " + labelId);
         return labelService.labelValues(labelId, runId, testId);
     }
+
     @GET
     @Path("test/{testId}/run/{runId}/label/{labelId}")
     public List<LabelValueDao> runLabelValue(
@@ -134,7 +135,8 @@ public class MigrateService {
             @PathParam("runId") Long runId,
             @PathParam("labelId") Long labelId) {
         System.out.println("testId = " + testId + " runId = " + runId + " labelId = " + labelId);
-        List<LabelValueDao> found = LabelValueDao.find("from LabelValueDao L where L.run.id=?1 and L.label.id=?2",runId,labelId).list();
+        List<LabelValueDao> found = LabelValueDao
+                .find("from LabelValueDao L where L.run.id=?1 and L.label.id=?2", runId, labelId).list();
         return found;
     }
 

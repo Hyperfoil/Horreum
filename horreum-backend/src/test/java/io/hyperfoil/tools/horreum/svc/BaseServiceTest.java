@@ -211,7 +211,9 @@ public class BaseServiceTest {
                 SchemaDAO.deleteAll();
                 em.createNativeQuery("DELETE FROM dataset_schemas").executeUpdate();
                 //TODO this should probably use the appropriate DAO's rather than sql
-                em.createNativeQuery("delete from exp_label_values; delete from exp_extractor; delete from exp_label; delete from exp_run; delete from exp_labelgroup").executeUpdate();
+                em.createNativeQuery(
+                        "delete from exp_label_values; delete from exp_extractor; delete from exp_label; delete from exp_run; delete from exp_labelgroup")
+                        .executeUpdate();
 
                 ActionDAO.deleteAll();
                 AllowedSiteDAO.deleteAll();

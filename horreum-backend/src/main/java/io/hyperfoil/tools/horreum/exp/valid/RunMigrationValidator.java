@@ -1,12 +1,12 @@
 package io.hyperfoil.tools.horreum.exp.valid;
 
-import io.hyperfoil.tools.horreum.liquibase.ComposableMigration;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
+
+import io.hyperfoil.tools.horreum.liquibase.ComposableMigration;
 
 /**
  * WARNING :: DO NOT merge into master
@@ -17,7 +17,7 @@ import java.util.Arrays;
  */
 public class RunMigrationValidator {
 
-    public static void main(String...args) throws SQLException, ClassNotFoundException {
+    public static void main(String... args) throws SQLException, ClassNotFoundException {
         System.out.println("args: " + Arrays.asList(args));
         if (args.length < 3) {
             System.out.println("required args: jdbcUrl username password");

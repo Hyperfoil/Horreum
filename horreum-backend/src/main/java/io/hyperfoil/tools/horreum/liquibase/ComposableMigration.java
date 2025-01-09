@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.liquibase;
 
+import static io.hyperfoil.tools.horreum.exp.data.ExtractorDao.*;
+
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,8 +23,6 @@ import liquibase.exception.CustomChangeException;
 import liquibase.exception.SetupException;
 import liquibase.exception.ValidationErrors;
 import liquibase.resource.ResourceAccessor;
-
-import static io.hyperfoil.tools.horreum.exp.data.ExtractorDao.*;
 
 /**
  * This is basically a duplicate of the logic in the Entities because it has to run before Hibernate initializes.
@@ -85,8 +85,7 @@ public class ComposableMigration implements CustomTaskChange {
         return null;
     }
 
-
-    public static void migrate(Connection conn){
+    public static void migrate(Connection conn) {
         //this ensures testIds do not change when converted to labelgorups
         System.out.println("persisting tests");
         persistAllTests(conn);
@@ -158,14 +157,14 @@ public class ComposableMigration implements CustomTaskChange {
                 //                        return def;
                 //                    }).toList();
                 Map<Long, List<Long>> targetGroupIdToLabelId = ref.transforms.stream().collect(Collectors.toMap(
-                    id -> {
-                        String targetUri = transformTargetUri.get(id);
-                        return globalSchemas.getOrDefault(targetUri, null);
-                    }, id -> new ArrayList<>(Collections.singletonList(id)),
-                    (a, b) -> {
-                        a.addAll(b);
-                        return a;
-                }));
+                        id -> {
+                            String targetUri = transformTargetUri.get(id);
+                            return globalSchemas.getOrDefault(targetUri, null);
+                        }, id -> new ArrayList<>(Collections.singletonList(id)),
+                        (a, b) -> {
+                            a.addAll(b);
+                            return a;
+                        }));
                 targetGroupIdToLabelId.forEach((targetGroupId, legacyTransformIds) -> {
                     //all of targetingDefs target the same new labelGroup
                     boolean moreThanOneDef = legacyTransformIds.size() > 1;
@@ -208,29 +207,28 @@ public class ComposableMigration implements CustomTaskChange {
                         long reducerId = persistReducer(JAVASCRIPT_FIRST_NOT_NULL, conn);
 
                         Label joiningLabel = persistLabel(
-                            newName,
-                            testId,
-                            reducerId,
-                            io.hyperfoil.tools.horreum.api.exp.data.Label.MultiIterationType.Length.toString(),
-                            io.hyperfoil.tools.horreum.api.exp.data.Label.ScalarVariableMethod.First.name(),
-                            false,
-                            null,
-                            null,
-                            targetGroupId,
-                            null,
-                            Collections.emptyList(),
-                            conn,
-                            testContext);
+                                newName,
+                                testId,
+                                reducerId,
+                                io.hyperfoil.tools.horreum.api.exp.data.Label.MultiIterationType.Length.toString(),
+                                io.hyperfoil.tools.horreum.api.exp.data.Label.ScalarVariableMethod.First.name(),
+                                false,
+                                null,
+                                null,
+                                targetGroupId,
+                                null,
+                                Collections.emptyList(),
+                                conn,
+                                testContext);
                         List<Extractor> extractors = persistedLabels.stream().map(persistedLabel -> persistExtractor(
-                            persistedLabel.name,
-                            null,
-                            Type.VALUE,
-                            null,
-                            false,
-                            joiningLabel.id,
-                            persistedLabel.id,
-                            conn)
-                        ).toList();
+                                persistedLabel.name,
+                                null,
+                                Type.VALUE,
+                                null,
+                                false,
+                                joiningLabel.id,
+                                persistedLabel.id,
+                                conn)).toList();
                         joiningLabel.extractors.addAll(extractors);
 
                         testGroup.labels.add(joiningLabel);
@@ -281,7 +279,7 @@ public class ComposableMigration implements CustomTaskChange {
                 Map<String, List<String>> schemaReferences = getReferencedSchema(testId, conn);
                 for (String jsonpath : schemaReferences.keySet()) {
                     Set<String> existingUri = schemaReferences.get(jsonpath).stream()
-                            .filter(uri->globalSchemas.get(uri) != null)
+                            .filter(uri -> globalSchemas.get(uri) != null)
                             .collect(Collectors.toSet());
                     Set<Long> labelGroupsIds = existingUri.stream()
                             .map(globalSchemas::get)
@@ -295,7 +293,7 @@ public class ComposableMigration implements CustomTaskChange {
                         System.out.println(" unknown schema " + schemaReferences.get(jsonpath));
                     } else if ("$.\"$schema\"".equals(jsonpath)) {
                         //if this is something at the top of the json we just import the groups
-                        if(labelGroupsIds.size() == 1){
+                        if (labelGroupsIds.size() == 1) {
                             labelGroupsIds.stream()
                                     .map(id -> loadGroup(id, conn))
                                     .forEach(labelGroup -> {
@@ -305,32 +303,34 @@ public class ComposableMigration implements CustomTaskChange {
                                                 testContext);
                                     });
                         } else {
-                            List<Schema> schemas = existingUri.stream().map(uri->fromSchemaUri(uri,conn)).toList();
-                            List<LabelDef> mergedDefs = mergeLabels(schemas.stream().map(schema->schema.labels).toList());
-                            mergedDefs.stream().map(labelDef->persistLabelDef(labelDef,testGroup.id,false,null,null,null,null,conn,testContext))
+                            List<Schema> schemas = existingUri.stream().map(uri -> fromSchemaUri(uri, conn)).toList();
+                            List<LabelDef> mergedDefs = mergeLabels(schemas.stream().map(schema -> schema.labels).toList());
+                            mergedDefs.stream()
+                                    .map(labelDef -> persistLabelDef(labelDef, testGroup.id, false, null, null, null, null,
+                                            conn, testContext))
                                     .forEach(testGroup.labels::add);
                         }
-
 
                     } else {
                         if (labelGroupsIds.size() == 1) {
                             Long targetGroupId = labelGroupsIds.iterator().next();
                             Label jsonpathLabel = persistLabel(
-                                jsonpath,
-                                testGroup.id,
-                                null /* reducerId */,
-                                io.hyperfoil.tools.horreum.api.exp.data.Label.MultiIterationType.Length.name(),
-                                io.hyperfoil.tools.horreum.api.exp.data.Label.ScalarVariableMethod.First.name(),
-                                false,
-                                null,
-                                null,
-                                targetGroupId,
-                                null,
-                                new ArrayList<>(List.of(
-                                        new Extractor(null, jsonpath.substring(0,jsonpath.length()-".\"$schema\"".length()), null, Type.PATH, null, null, jsonpath, false))),
-                                conn,
-                                testContext
-                            );
+                                    jsonpath,
+                                    testGroup.id,
+                                    null /* reducerId */,
+                                    io.hyperfoil.tools.horreum.api.exp.data.Label.MultiIterationType.Length.name(),
+                                    io.hyperfoil.tools.horreum.api.exp.data.Label.ScalarVariableMethod.First.name(),
+                                    false,
+                                    null,
+                                    null,
+                                    targetGroupId,
+                                    null,
+                                    new ArrayList<>(List.of(
+                                            new Extractor(null,
+                                                    jsonpath.substring(0, jsonpath.length() - ".\"$schema\"".length()), null,
+                                                    Type.PATH, null, null, jsonpath, false))),
+                                    conn,
+                                    testContext);
                             testContext.add(jsonpathLabel, null);
                             testGroup.labels.add(jsonpathLabel);
                             //loading the targetGroup into testGroup
@@ -354,7 +354,7 @@ public class ComposableMigration implements CustomTaskChange {
         //at this point we should be able all set
     }
 
-        public static final String JAVASCRIPT_FIRST_NOT_NULL = "(args)=>Object.values(args).find(el => !!el)";
+    public static final String JAVASCRIPT_FIRST_NOT_NULL = "(args)=>Object.values(args).find(el => !!el)";
 
     // Used to resolve the correct labelId from either an old Id or Name
     private static class LabelContext {
@@ -374,9 +374,10 @@ public class ComposableMigration implements CustomTaskChange {
             return byName.getOrDefault(name, null);
         }
 
-        public String getNameFromNewId(Long newId){
-            return byNewId.getOrDefault(newId,null);
+        public String getNameFromNewId(Long newId) {
+            return byNewId.getOrDefault(newId, null);
         }
+
         public Label get(Long oldId) {
             return byOldId.getOrDefault(oldId, null);
         }
@@ -391,7 +392,7 @@ public class ComposableMigration implements CustomTaskChange {
 
         public void add(Label l, Long oldId) {
             byName.put(l.name, l);
-            byNewId.put(l.id,l.name);
+            byNewId.put(l.id, l.name);
             if (oldId != null && oldId > 0) {
                 byOldId.put(oldId, l);
             }
@@ -426,41 +427,36 @@ public class ComposableMigration implements CustomTaskChange {
         }
     }
 
-    private static List<LabelDef> mergeLabels(List<List<LabelDef>> groups){
+    private static List<LabelDef> mergeLabels(List<List<LabelDef>> groups) {
         List<LabelDef> rtrn = new ArrayList<>();
-        Map<String, List<LabelDef>> labelsByName = groups.stream().flatMap(e->e.stream()).collect(
+        Map<String, List<LabelDef>> labelsByName = groups.stream().flatMap(e -> e.stream()).collect(
                 Collectors.toMap(
-                l->l.name,
-                l->new ArrayList(Collections.singletonList(l)),
-                (a,b)->{
-                    a.addAll(b);
-                    return a;
-                })
-        );
-        for(String labelName : labelsByName.keySet()){
+                        l -> l.name,
+                        l -> new ArrayList(Collections.singletonList(l)),
+                        (a, b) -> {
+                            a.addAll(b);
+                            return a;
+                        }));
+        for (String labelName : labelsByName.keySet()) {
             List<LabelDef> conflictingLabels = labelsByName.get(labelName);
-            if( conflictingLabels.size() == 1 ){
+            if (conflictingLabels.size() == 1) {
                 rtrn.add(conflictingLabels.get(0));
-            }else {
+            } else {
                 AtomicInteger counter = new AtomicInteger(1);
-                List<LabelDef> newLabels = conflictingLabels.stream().map(l->
-                    new LabelDef(
-                            l.name+counter.getAndIncrement(),
-                            l.javascript,
-                            null,/*l.target omitted because not supported*/
-                            l.extractors
-                    )
-                ).toList();
-                List<ExtractorDef> newExtractors = newLabels.stream().map(l->{
-                    return new ExtractorDef(l.name,l.name);
+                List<LabelDef> newLabels = conflictingLabels.stream().map(l -> new LabelDef(
+                        l.name + counter.getAndIncrement(),
+                        l.javascript,
+                        null, /* l.target omitted because not supported */
+                        l.extractors)).toList();
+                List<ExtractorDef> newExtractors = newLabels.stream().map(l -> {
+                    return new ExtractorDef(l.name, l.name);
                 }).toList();
                 rtrn.addAll(newLabels);
                 rtrn.add(new LabelDef(
                         labelName,
                         JAVASCRIPT_FIRST_NOT_NULL,
                         null,
-                        newExtractors
-                ));
+                        newExtractors));
             }
         }
         return rtrn;
@@ -568,8 +564,8 @@ public class ComposableMigration implements CustomTaskChange {
         return newGroup;
     }
 
-    private record ExtractorDef(String name,String path){
-        public Extractor toExtractor(LabelContext context){
+    private record ExtractorDef(String name, String path) {
+        public Extractor toExtractor(LabelContext context) {
             ExtractorDao.Type type = Type.PATH;
             String columnName = null;
             boolean forEach = false;
@@ -609,11 +605,11 @@ public class ComposableMigration implements CustomTaskChange {
                     targetId,
                     columnName,
                     jsonpath,
-                    forEach
-            );
+                    forEach);
 
         }
     }
+
     private record Extractor(Long id, String name, Long parentLabelId, ExtractorDao.Type type, Long targetLabelId,
             String columnName, String jsonpath, boolean foreach) {
 
@@ -640,10 +636,12 @@ public class ComposableMigration implements CustomTaskChange {
                     conn, context);
         }
 
-        public ExtractorDef toExtractorDef(LabelContext context){
-            String namePrefix = type.equals(Type.VALUE) ? context.getNameFromNewId(targetLabelId) : type.equals(Type.METADATA) ? METADATA_PREFIX+columnName+METADATA_SUFFIX : "";
-            String newJsonpath = namePrefix + (foreach ? FOR_EACH_SUFFIX : "") + (!namePrefix.isBlank() && jsonpath!=null && !jsonpath.isBlank() ? NAME_SEPARATOR : "") + jsonpath;
-            return new ExtractorDef(name,newJsonpath);
+        public ExtractorDef toExtractorDef(LabelContext context) {
+            String namePrefix = type.equals(Type.VALUE) ? context.getNameFromNewId(targetLabelId)
+                    : type.equals(Type.METADATA) ? METADATA_PREFIX + columnName + METADATA_SUFFIX : "";
+            String newJsonpath = namePrefix + (foreach ? FOR_EACH_SUFFIX : "")
+                    + (!namePrefix.isBlank() && jsonpath != null && !jsonpath.isBlank() ? NAME_SEPARATOR : "") + jsonpath;
+            return new ExtractorDef(name, newJsonpath);
         }
     }
 
@@ -802,7 +800,7 @@ public class ComposableMigration implements CustomTaskChange {
                             //TODO is passing in null the expected behavior?
                             //TODO is the extractor isArray important?
                             //Extractor e = new Extractor(null, extractorName, null, Type.PATH, null, null, jsonpath, isArray);
-                            extractorList.add(new ExtractorDef(extractorName,jsonpath));
+                            extractorList.add(new ExtractorDef(extractorName, jsonpath));
                         }
                     }
                 }
@@ -883,9 +881,9 @@ public class ComposableMigration implements CustomTaskChange {
         Map<String, List<String>> rtrn = new HashMap<>();
         try (
                 PreparedStatement ps = conn.prepareStatement(
-                    """
-                    with paths as (select jsonb_paths(data,'$',2) as path, id from run where testid = ?), schemapaths as ( select distinct path,jsonb_path_query_first(r.data,path::jsonpath) as value from paths left join run r on r.id = paths.id where path like '%."$schema"') select path, jsonb_agg(value) as schemas from schemapaths group by path;
-                    """)) {
+                        """
+                                with paths as (select jsonb_paths(data,'$',2) as path, id from run where testid = ?), schemapaths as ( select distinct path,jsonb_path_query_first(r.data,path::jsonpath) as value from paths left join run r on r.id = paths.id where path like '%."$schema"') select path, jsonb_agg(value) as schemas from schemapaths group by path;
+                                """)) {
             ps.setLong(1, testId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -1048,7 +1046,7 @@ public class ComposableMigration implements CustomTaskChange {
                 sourceGroupId,
                 targetGroupId,
                 originalLabelId,
-                l.extractors.stream().map(e->e.toExtractor(context)).toList(),
+                l.extractors.stream().map(e -> e.toExtractor(context)).toList(),
                 conn,
                 context);
 
@@ -1056,7 +1054,7 @@ public class ComposableMigration implements CustomTaskChange {
 
     //all the Ids better be in order
     private static Extractor persistExtractor(Extractor e, Connection conn, LabelContext context) {
-        return persistExtractor(e.name,e.jsonpath, e.type, e.columnName, e.foreach, e.parentLabelId, e.targetLabelId, conn);
+        return persistExtractor(e.name, e.jsonpath, e.type, e.columnName, e.foreach, e.parentLabelId, e.targetLabelId, conn);
     }
 
     private static Extractor persistExtractorDef(ExtractorDef def, Long parentId, Long targetId,
@@ -1480,9 +1478,6 @@ public class ComposableMigration implements CustomTaskChange {
         }
         return rtrn;
     }
-
-
-
 
     private static boolean allTheSameLabelDefs(List<LabelDef> labels) {
         if (labels.size() <= 1) {

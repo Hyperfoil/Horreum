@@ -990,7 +990,7 @@ public class LabelServiceImpl implements LabelService {
      */
     //incorrectly reporting that the value of an iterated extractor is not iterated, I think iterated needs to be a logical or of forEach and lv.isIterated
     public ExtractedValues calculateExtractedValuesWithIterated(LabelDao l, long runId) {
-        System.out.println("calculatedExtractedValuesWithIterated "+l.id+" "+l.name+" "+runId);
+        System.out.println("calculatedExtractedValuesWithIterated " + l.id + " " + l.name + " " + runId);
         ExtractedValues rtrn = new ExtractedValues();
 
         //debugging again
@@ -1004,23 +1004,23 @@ public class LabelServiceImpl implements LabelService {
         List<Object[]> found = LabelDao.getEntityManager()
                 .createNativeQuery(
                         """
-                            with m as (
-                                select
-                                    e.name, e.type, e.jsonpath, e.foreach, e.column_name,
-                                    lv.id as value_id, lv.label_id as label_id, lv.data as lv_data, lv.ordinal as ordinal,
-                                    r.data as run_data, r.metadata as run_metadata
-                                from
-                                    exp_extractor e full join exp_label_values lv on e.target_id = lv.label_id,
-                                    exp_run r where e.parent_id = :label_id and (lv.run_id = :run_id or lv.run_id is null) and r.id = :run_id),
-                            n as (select m.name, m.type, m.jsonpath, m.foreach, m.value_id, m.label_id, m.ordinal, (case
-                                when m.type = 'PATH' and m.jsonpath is not null then jsonb_path_query_array(m.run_data,m.jsonpath::jsonpath)
-                                when m.type = 'METADATA' and m.jsonpath is not null and m.column_name = 'metadata' then jsonb_path_query_array(m.run_metadata,m.jsonpath::jsonpath)
-                                when m.type = 'VALUE' and m.jsonpath is not null and m.jsonpath != '' then jsonb_path_query_array(m.lv_data,m.jsonpath::jsonpath)
-                                when m.type = 'VALUE' and (m.jsonpath is null or m.jsonpath = '') then to_jsonb(ARRAY[m.lv_data])
-                                else '[]'::jsonb end) as found from m)
-                            select n.name as name,n.value_id, n.label_id, n.ordinal, (case when jsonb_array_length(n.found) > 1 or strpos(n.jsonpath,'[*]') > 0 then n.found else n.found->0 end) as data, n.foreach as lv_iterated from n
-                            order by label_id,value_id
-                        """)
+                                    with m as (
+                                        select
+                                            e.name, e.type, e.jsonpath, e.foreach, e.column_name,
+                                            lv.id as value_id, lv.label_id as label_id, lv.data as lv_data, lv.ordinal as ordinal,
+                                            r.data as run_data, r.metadata as run_metadata
+                                        from
+                                            exp_extractor e full join exp_label_values lv on e.target_id = lv.label_id,
+                                            exp_run r where e.parent_id = :label_id and (lv.run_id = :run_id or lv.run_id is null) and r.id = :run_id),
+                                    n as (select m.name, m.type, m.jsonpath, m.foreach, m.value_id, m.label_id, m.ordinal, (case
+                                        when m.type = 'PATH' and m.jsonpath is not null then jsonb_path_query_array(m.run_data,m.jsonpath::jsonpath)
+                                        when m.type = 'METADATA' and m.jsonpath is not null and m.column_name = 'metadata' then jsonb_path_query_array(m.run_metadata,m.jsonpath::jsonpath)
+                                        when m.type = 'VALUE' and m.jsonpath is not null and m.jsonpath != '' then jsonb_path_query_array(m.lv_data,m.jsonpath::jsonpath)
+                                        when m.type = 'VALUE' and (m.jsonpath is null or m.jsonpath = '') then to_jsonb(ARRAY[m.lv_data])
+                                        else '[]'::jsonb end) as found from m)
+                                    select n.name as name,n.value_id, n.label_id, n.ordinal, (case when jsonb_array_length(n.found) > 1 or strpos(n.jsonpath,'[*]') > 0 then n.found else n.found->0 end) as data, n.foreach as lv_iterated from n
+                                    order by label_id,value_id
+                                """)
                 .setParameter("run_id", runId).setParameter("label_id", l.id)
                 //TODO add logging in else '[]'
                 .unwrap(NativeQuery.class)
