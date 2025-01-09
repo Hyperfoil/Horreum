@@ -21,9 +21,9 @@ import io.quarkus.hibernate.orm.panache.PanacheEntity;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class LabelDao extends PanacheEntity implements Comparable<LabelDao> {
 
-    @Pattern(regexp = "^[^{].*[^}]$", message = "Extractor names cannot start with '{' or end with '}'")
-    @Pattern(regexp = "^[^$].+", message = "Extractor name cannot start with '$'")
-    @Pattern(regexp = ".*(?<!\\[])$", message = "Extractor name cannot end with '[]'")
+    @Pattern(regexp = "^[^{].*[^}]$", message = "Label names cannot start with '{' or end with '}'")
+    @Pattern(regexp = "^[^$].+", message = "Label name cannot start with '$'")
+    @Pattern(regexp = ".*(?<!\\[])$", message = "Label name cannot end with '[]'")
     public String name;
 
     @NotNull(message = "label must reference a group")
