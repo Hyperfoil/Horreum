@@ -142,10 +142,12 @@ public class LabelServiceImpl implements LabelService {
     }
 
     //cannot be transactional and cannot be run in a transaction as it must write each to db as it runs
-    public void calculateLabelValues(Collection<LabelDao> labels, Long runId) {
+    public List<String> calculateLabelValues(Collection<LabelDao> labels, Long runId) {
+        List<String> rtrn = new ArrayList<>();
         for (LabelDao l : labels) {
-            calculateLabelValue(l, runId);
+            rtrn.addAll(calculateLabelValue(l, runId));
         }
+        return rtrn;
     }
 
     private int storeLabelData(RunDao r, LabelDao l, JsonNode data, int starIndex, List<LabelValueDao> sources) {
@@ -182,12 +184,22 @@ public class LabelServiceImpl implements LabelService {
     }
 
     @Transactional
-    public void calculateLabelValue(LabelDao l, Long runId) {
+    public List<String> calculateLabelValue(LabelDao l, Long runId) {
+        List<String> rtrn = new ArrayList<>();
         ExtractedValues extractedValues = calculateExtractedValuesWithIterated(l, runId);
         RunDao r = RunDao.findById(runId);
         //when would we expect a label without extractors? That just duplicates data storage
         if (l.extractors.isEmpty()) {
-            JsonNode sourceData = l.reducer != null ? l.reducer.evalJavascript(r.data) : r.data;
+            JsonNode sourceData = r.data;
+            if (l.hasReducer()) {
+                LabelReducerDao.EvalResult result = l.reducer.evalJavascript(r.data);
+                if (result.hasError()) {
+                    rtrn.add(result.message());
+                } else {
+                    sourceData = result.result();
+                }
+
+            }
             storeLabelData(r, l, sourceData, 0, null);
         } else if (l.extractors.size() == 1) {
             //we do not have to deal with multitype if there is only one extractor
@@ -198,15 +210,31 @@ public class LabelServiceImpl implements LabelService {
                         ArrayNode arrayNode = (ArrayNode) ev.data;
                         int idx = 0;
                         for (JsonNode childNode : arrayNode) {
-                            JsonNode datum = l.reducer != null ? l.reducer.evalJavascript(childNode) : childNode;
+                            JsonNode datum = childNode;
+                            if (l.hasReducer()) {
+                                LabelReducerDao.EvalResult evalResult = l.reducer.evalJavascript(datum);
+                                if (evalResult.hasError()) {
+                                    rtrn.add(evalResult.message());
+                                } else {
+                                    datum = evalResult.result();
+                                }
+                            }
                             idx = storeLabelData(r, l, datum, idx,
                                     ev.sourceValueId() > 0 ? Arrays.asList(LabelValueDao.findById(ev.sourceValueId)) : null);
                         }
                     } else {
-                        //this means an error occurred in calculating
+                        //this means a message occurred in calculating
                     }
                 } else {
-                    JsonNode datum = l.reducer != null ? l.reducer.evalJavascript(ev.data) : ev.data;
+                    JsonNode datum = ev.data;
+                    if (l.hasReducer()) {
+                        LabelReducerDao.EvalResult evalResult = l.reducer.evalJavascript(ev.data);
+                        if (evalResult.hasError()) {
+                            rtrn.add(evalResult.message());
+                        } else {
+                            datum = evalResult.result();
+                        }
+                    }
                     storeLabelData(r, l, datum, 0,
                             ev.sourceValueId() > 0 ? Arrays.asList(LabelValueDao.findById(ev.sourceValueId)) : null);
                 }
@@ -229,7 +257,15 @@ public class LabelServiceImpl implements LabelService {
                                     sources.add(LabelValueDao.findById(v.sourceValueId));
                                 }
                             });
-                            JsonNode datum = l.reducer != null ? l.reducer.evalJavascript(objectNode) : objectNode;
+                            JsonNode datum = objectNode;
+                            if (l.hasReducer()) {
+                                LabelReducerDao.EvalResult evalResult = l.reducer.evalJavascript(objectNode);
+                                if (evalResult.hasError()) {
+                                    rtrn.add(evalResult.message());
+                                } else {
+                                    datum = evalResult.result();
+                                }
+                            }
                             storeLabelData(r, l, datum, 0, sources);
                         } else {
                             int maxLength = l.extractors.stream()
@@ -266,7 +302,15 @@ public class LabelServiceImpl implements LabelService {
                                         }
                                     }
                                 }
-                                JsonNode datum = l.reducer != null ? l.reducer.evalJavascript(objectNode) : objectNode;
+                                JsonNode datum = objectNode;
+                                if (l.hasReducer()) {
+                                    LabelReducerDao.EvalResult evalResult = l.reducer.evalJavascript(objectNode);
+                                    if (evalResult.hasError()) {
+                                        rtrn.add(evalResult.message());
+                                    } else {
+                                        datum = evalResult.result();
+                                    }
+                                }
                                 idx = storeLabelData(r, l, datum, idx, sources);
                             }
                         }
@@ -332,12 +376,21 @@ public class LabelServiceImpl implements LabelService {
                                 }
                             }
                         }
-                        JsonNode datum = l.reducer != null ? l.reducer.evalJavascript(objectNode) : objectNode;
+                        JsonNode datum = objectNode;
+                        if (l.hasReducer()) {
+                            LabelReducerDao.EvalResult evalResult = l.reducer.evalJavascript(objectNode);
+                            if (evalResult.hasError()) {
+                                rtrn.add(evalResult.message());
+                            } else {
+                                datum = evalResult.result();
+                            }
+                        }
                         idx = storeLabelData(r, l, datum, idx, labelValues);
                     }
                 }
             }
         }
+        return rtrn;
     }
 
     public static class ExtractedValues {
@@ -346,6 +399,7 @@ public class LabelServiceImpl implements LabelService {
         private final Map<String, List<ExtractedValue>> byName = new HashMap<>();
 
         public void add(String name, long valueId, long labelId, boolean iterated, int ordinal, JsonNode data) {
+            //TODO the original model did not remove nulls, should the new model include them?
             if (data == null || data.isNull()) {
                 return;
             }
@@ -751,6 +805,91 @@ public class LabelServiceImpl implements LabelService {
         return rtrn;
     }
 
+    //get the labelValues from a specific run, started as a copy of the previous labelValues(long testId in case
+    List<ValueMap> runLabelValues(
+            long testId,
+            long runId,
+            String filter,
+            String before,
+            String after,
+            String sort,
+            String direction,
+            int limit,
+            int page,
+            List<String> include,
+            List<String> exclude,
+            boolean multiFilter) {
+        if (!checkTestExists(testId)) {
+            throw ServiceException.serverError("Cannot find test " + testId);
+        }
+
+        List<ValueMap> rtrn = new ArrayList<>();
+        String labelNameFilter = "";
+        if (include != null && !include.isEmpty()) {
+            if (exclude != null && !exclude.isEmpty()) {
+                include = new ArrayList<>(include);
+                include.removeAll(exclude);
+            }
+            if (!include.isEmpty()) {
+                labelNameFilter = " AND l.name in :include";
+            }
+        }
+        //includeExcludeSql is empty if include did not contain entries after exclude removal
+        if (labelNameFilter.isEmpty() && exclude != null && !exclude.isEmpty()) {
+            labelNameFilter = " AND l.name NOT in :exclude";
+        }
+
+        //noinspection rawtypes
+        NativeQuery query = (NativeQuery) em.createNativeQuery(
+                """
+                        with bag as (
+                            select
+                                r.test_id, lv.run_id, l.name,
+                                jsonb_agg(lv.data) as data
+                            from exp_label_values lv
+                                left join exp_label l on l.id = lv.label_id
+                                left join exp_run r on r.id = lv.run_id
+                            where r.id = :runId
+                            LABEL_NAME_FILTER
+                            group by r.test_id,lv.run_id,l.name
+                        )
+                        select
+                            run_id, test_id,
+                            jsonb_object_agg(name,(case when jsonb_array_length(data) > 1 then data else data->0 end)) as data
+                        from bag
+                        group by test_id,run_id;
+                        """.replace("LABEL_NAME_FILTER", labelNameFilter))
+                .setParameter("runId", runId);
+        if (!labelNameFilter.isEmpty()) {
+            if (labelNameFilter.contains("include")) {
+                query.setParameter("include", include);
+            }
+            if (labelNameFilter.contains("exclude")) {
+                query.setParameter("exclude", exclude);
+            }
+        }
+
+        //noinspection unchecked
+        List<Object[]> found = query
+                .unwrap(NativeQuery.class)
+                .addScalar("run_id", Long.class)
+                .addScalar("test_id", Long.class)
+                .addScalar("data", JsonBinaryType.INSTANCE)
+                .getResultList();
+
+        for (Object[] object : found) {
+            // tuple (labelId,index) should uniquely identify which label_value entry "owns" the ValueMap for the given test and run
+            // note a label_value can have multiple values that are associated with a (labelId,index) if it is NxN
+            // Long runId = (Long) object[0];
+            //object[1] is testId
+            ObjectNode data = (ObjectNode) object[2];
+
+            ValueMap vm = new ValueMap(data, -1, -1, runId, testId);
+            rtrn.add(vm);
+        }
+        return rtrn;
+    }
+
     public List<ValueMap> labelValues(long labelId, long runId, long testId) {
         return labelValues(labelId, runId, testId, Collections.emptyList(), Collections.emptyList());
     }
@@ -851,6 +990,7 @@ public class LabelServiceImpl implements LabelService {
      */
     //incorrectly reporting that the value of an iterated extractor is not iterated, I think iterated needs to be a logical or of forEach and lv.isIterated
     public ExtractedValues calculateExtractedValuesWithIterated(LabelDao l, long runId) {
+        System.out.println("calculatedExtractedValuesWithIterated "+l.id+" "+l.name+" "+runId);
         ExtractedValues rtrn = new ExtractedValues();
 
         //debugging again
@@ -864,23 +1004,23 @@ public class LabelServiceImpl implements LabelService {
         List<Object[]> found = LabelDao.getEntityManager()
                 .createNativeQuery(
                         """
-                                    with m as (
-                                        select
-                                            e.name, e.type, e.jsonpath, e.foreach, e.column_name,
-                                            lv.id as value_id, lv.label_id as label_id, lv.data as lv_data, lv.ordinal as ordinal,
-                                            r.data as run_data, r.metadata as run_metadata
-                                        from
-                                            exp_extractor e full join exp_label_values lv on e.target_id = lv.label_id,
-                                            exp_run r where e.parent_id = :label_id and (lv.run_id = :run_id or lv.run_id is null) and r.id = :run_id),
-                                    n as (select m.name, m.type, m.jsonpath, m.foreach, m.value_id, m.label_id, m.ordinal, (case
-                                        when m.type = 'PATH' and m.jsonpath is not null then jsonb_path_query_array(m.run_data,m.jsonpath::jsonpath)
-                                        when m.type = 'METADATA' and m.jsonpath is not null and m.column_name = 'metadata' then jsonb_path_query_array(m.run_metadata,m.jsonpath::jsonpath)
-                                        when m.type = 'VALUE' and m.jsonpath is not null and m.jsonpath != '' then jsonb_path_query_array(m.lv_data,m.jsonpath::jsonpath)
-                                        when m.type = 'VALUE' and (m.jsonpath is null or m.jsonpath = '') then to_jsonb(ARRAY[m.lv_data])
-                                        else '[]'::jsonb end) as found from m)
-                                    select n.name as name,n.value_id, n.label_id, n.ordinal, (case when jsonb_array_length(n.found) > 1 or strpos(n.jsonpath,'[*]') > 0 then n.found else n.found->0 end) as data, n.foreach as lv_iterated from n
-                                    order by label_id,value_id
-                                """)
+                            with m as (
+                                select
+                                    e.name, e.type, e.jsonpath, e.foreach, e.column_name,
+                                    lv.id as value_id, lv.label_id as label_id, lv.data as lv_data, lv.ordinal as ordinal,
+                                    r.data as run_data, r.metadata as run_metadata
+                                from
+                                    exp_extractor e full join exp_label_values lv on e.target_id = lv.label_id,
+                                    exp_run r where e.parent_id = :label_id and (lv.run_id = :run_id or lv.run_id is null) and r.id = :run_id),
+                            n as (select m.name, m.type, m.jsonpath, m.foreach, m.value_id, m.label_id, m.ordinal, (case
+                                when m.type = 'PATH' and m.jsonpath is not null then jsonb_path_query_array(m.run_data,m.jsonpath::jsonpath)
+                                when m.type = 'METADATA' and m.jsonpath is not null and m.column_name = 'metadata' then jsonb_path_query_array(m.run_metadata,m.jsonpath::jsonpath)
+                                when m.type = 'VALUE' and m.jsonpath is not null and m.jsonpath != '' then jsonb_path_query_array(m.lv_data,m.jsonpath::jsonpath)
+                                when m.type = 'VALUE' and (m.jsonpath is null or m.jsonpath = '') then to_jsonb(ARRAY[m.lv_data])
+                                else '[]'::jsonb end) as found from m)
+                            select n.name as name,n.value_id, n.label_id, n.ordinal, (case when jsonb_array_length(n.found) > 1 or strpos(n.jsonpath,'[*]') > 0 then n.found else n.found->0 end) as data, n.foreach as lv_iterated from n
+                            order by label_id,value_id
+                        """)
                 .setParameter("run_id", runId).setParameter("label_id", l.id)
                 //TODO add logging in else '[]'
                 .unwrap(NativeQuery.class)
@@ -892,7 +1032,7 @@ public class LabelServiceImpl implements LabelService {
                 .addScalar("lv_iterated", Boolean.class)
                 .getResultList();
         if (found.isEmpty()) {
-            //TODO alert error or assume the data missed all the labels?
+            //TODO alert message or assume the data missed all the labels?
         } else {
             for (int i = 0; i < found.size(); i++) {
                 Object[] row = (Object[]) found.get(i);

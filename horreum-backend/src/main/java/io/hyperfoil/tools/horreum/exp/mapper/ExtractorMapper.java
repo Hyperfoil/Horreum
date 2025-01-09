@@ -11,8 +11,14 @@ public class ExtractorMapper {
         dto.id = l.id;
         dto.name = l.name;
         dto.column_name = l.column_name;
-        dto.jsonpath = l.jsonpath;
-
+        if (l.type.equals(ExtractorDao.Type.VALUE)) {
+            dto.jsonpath = l.targetLabel.name + ExtractorDao.NAME_SEPARATOR + l.jsonpath;
+        } else if (l.type.equals(ExtractorDao.Type.PATH)) {
+            dto.jsonpath = l.jsonpath;
+        } else if (l.type.equals(ExtractorDao.Type.METADATA)) {
+            dto.jsonpath = ExtractorDao.METADATA_PREFIX + l.column_name + ExtractorDao.METADATA_SUFFIX
+                    + ExtractorDao.NAME_SEPARATOR + l.jsonpath;
+        }
         return dto;
     }
 
