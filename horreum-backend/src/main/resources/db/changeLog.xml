@@ -4700,6 +4700,42 @@
             END;
             $$ LANGUAGE plpgsql;
         </createProcedure>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION jsonb_paths (data jsonb, prefix text, depth integer) RETURNS SETOF text LANGUAGE plpgsql AS $$
+            DECLARE
+            key text;
+            value jsonb;
+            path text[];
+            counter integer := 0;
+            BEGIN
+            IF depth = 0 THEN
+            RETURN;
+            END IF;
+            IF jsonb_typeof(data) = 'object' THEN
+            FOR key, value IN
+            SELECT * FROM jsonb_each(data)
+            LOOP
+            IF jsonb_typeof(value) IN ('array', 'object') THEN
+            RETURN QUERY SELECT * FROM jsonb_paths (value, concat(prefix,'."', key, '"'), depth -1);
+            ELSE
+            RETURN NEXT concat(prefix, '."', key, '"');
+            END IF;
+            END LOOP;
+            ELSIF jsonb_typeof(data) = 'array' THEN
+            FOR value IN
+            SELECT * FROM jsonb_array_elements(data)
+            LOOP
+            IF jsonb_typeof(value) IN ('array', 'object') THEN
+            RETURN QUERY SELECT * FROM jsonb_paths (value, concat(prefix,'[', counter::text,']'), depth -1);
+            ELSE
+            RETURN NEXT concat(prefix,'[', counter::text,']');
+            END IF;
+            counter := counter + 1;
+            END LOOP;
+            END IF;
+            END
+            $$;
+        </createProcedure>
         <createSequence sequenceName="exp_extractor_seq" startValue="1" incrementBy="50" cacheSize="1" />
         <createSequence sequenceName="exp_label_seq" startValue="1" incrementBy="50" cacheSize="1" />
         <createSequence sequenceName="exp_label_reducers_seq" startValue="1" incrementBy="50" cacheSize="1" />
@@ -4721,6 +4757,19 @@
                 type character varying(255),
                 CONSTRAINT extractor_type_check CHECK (((type)::text = ANY ((ARRAY['PATH'::character varying, 'VALUE'::character varying, 'METADATA'::character varying])::text[])))
             );
+
+            CREATE TABLE exp_temp_map_schema (
+                schemaId bigint NOT NULL,
+                expLabelGroupId bigint NOT NULL
+            );
+            ALTER TABLE ONLY exp_temp_map_schema
+            ADD CONSTRAINT exp_temp_map_schema_pkey PRIMARY KEY (schemaId);
+
+            CREATE TABLE exp_temp_map_transform (
+                transformId bigint NOT NULL,
+                explabelId bigint NOT NULL
+            );
+
             CREATE TABLE exp_label (
                 dirty boolean NOT NULL,
                 splitting boolean NOT NULL,
@@ -4772,6 +4821,9 @@
             GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE exp_labelgroup TO "${quarkus.datasource.username}";
             GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE exp_run TO "${quarkus.datasource.username}";
             GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE exp_label_value_sources TO "${quarkus.datasource.username}";
+
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE exp_temp_map_schema TO "${quarkus.datasource.username}";
+            GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE exp_temp_map_transform TO "${quarkus.datasource.username}";
 
             ALTER TABLE ONLY exp_extractor
                 ADD CONSTRAINT exp_extractor_pkey PRIMARY KEY (id);
