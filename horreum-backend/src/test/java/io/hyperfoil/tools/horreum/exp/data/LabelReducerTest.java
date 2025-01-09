@@ -15,9 +15,9 @@ public class LabelReducerTest {
 
         JsonNode input;
         input = new ObjectMapper().readTree("{\"foo\":\"bar\"}");
-        assertEquals(input, reducer.evalJavascript(input), "identity function should not change input object");
+        assertEquals(input, reducer.evalJavascript(input).result(), "identity function should not change input object");
         input = new ObjectMapper().getNodeFactory().numberNode(10l);
-        assertEquals(input, reducer.evalJavascript(input), "identity function should not change input number");
+        assertEquals(input, reducer.evalJavascript(input).result(), "identity function should not change input number");
     }
 
     @org.junit.jupiter.api.Test
