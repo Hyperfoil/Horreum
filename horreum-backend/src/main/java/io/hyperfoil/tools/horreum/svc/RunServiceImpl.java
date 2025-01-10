@@ -95,25 +95,34 @@ public class RunServiceImpl implements RunService {
 
     //@formatter:off
     private static final String FIND_AUTOCOMPLETE = """
-         SELECT * FROM (
-            SELECT DISTINCT jsonb_object_keys(q) AS key
-            FROM run, jsonb_path_query(run.data, ? ::jsonpath) q
-            WHERE jsonb_typeof(q) = 'object') AS keys
-         WHERE keys.key LIKE CONCAT(?, '%');
-         """;
-    protected static final String FIND_RUNS_WITH_URI = """
-         SELECT id, testid
-         FROM run
-         WHERE NOT trashed
-            AND (data->>'$schema' = ?1
-            OR (CASE
-               WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values)
-               WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')
-               ELSE false
-               END)
-            OR (metadata IS NOT NULL AND ?1 IN (SELECT jsonb_array_elements(metadata)->>'$schema'))
-         )
-         """;
+        SELECT * FROM (
+        SELECT DISTINCT jsonb_object_keys(q) AS key
+        FROM run, jsonb_path_query(run.data, ? ::jsonpath) q
+        WHERE jsonb_typeof(q) = 'object') AS keys
+        WHERE keys.key LIKE CONCAT(?, '%');
+    """;
+    private static final String FIND_RUNS_WITH_URI = """
+        SELECT id, testid
+        FROM run
+        WHERE NOT trashed
+        AND (data->>'$schema' = ?1
+        OR (CASE
+           WHEN jsonb_typeof(data) = 'object' THEN ?1 IN (SELECT values.value->>'$schema' FROM jsonb_each(data) as values)
+           WHEN jsonb_typeof(data) = 'array' THEN ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')
+           ELSE false
+           END)
+        OR (metadata IS NOT NULL AND ?1 IN (SELECT jsonb_array_elements(metadata)->>'$schema'))
+        )
+    """;
+
+    private static final String UPDATE_DATASET_SCHEMAS = """
+        WITH uris AS (
+            SELECT jsonb_array_elements(ds.data)->>'$schema' AS uri FROM dataset ds WHERE ds.id = ?1
+        ), indexed as (
+            SELECT uri, row_number() over () - 1 as index FROM uris
+        ) INSERT INTO dataset_schemas(dataset_id, uri, index, schema_id)
+            SELECT ?1 as dataset_id, indexed.uri, indexed.index, schema.id FROM indexed JOIN schema ON schema.uri = indexed.uri;
+    """;
     //@formatter:on
     private static final String[] CONDITION_SELECT_TERMINAL = { "==", "!=", "<>", "<", "<=", ">", ">=", " " };
     private static final String CHANGE_ACCESS = "UPDATE run SET owner = ?, access = ? WHERE id = ?";
@@ -188,12 +197,7 @@ public class RunServiceImpl implements RunService {
             log.errorf("Cannot process schema add/update: cannot load schema %d", schemaId);
             return;
         }
-        processNewOrUpdatedSchema(schema);
-    }
-
-    @Transactional
-    void processNewOrUpdatedSchema(SchemaDAO schema) {
-        // we don't have to care about races with new runs
+        clearRunAndDatasetSchemas(schemaId);
         findRunsWithUri(schema.uri, (runId, testId) -> {
             log.debugf("Recalculate Datasets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
             onNewOrUpdatedSchemaForRun(runId, schema.id);
@@ -201,7 +205,8 @@ public class RunServiceImpl implements RunService {
     }
 
     void findRunsWithUri(String uri, BiConsumer<Integer, Integer> consumer) {
-        ScrollableResults<RunFromUri> results = session.createNativeQuery(FIND_RUNS_WITH_URI, Tuple.class).setParameter(1, uri)
+        try (ScrollableResults<RunFromUri> results = session.createNativeQuery(FIND_RUNS_WITH_URI, Tuple.class)
+                .setParameter(1, uri)
                 .setTupleTransformer((tuple, aliases) -> {
                     RunFromUri r = new RunFromUri();
                     r.id = (int) tuple[0];
@@ -209,25 +214,54 @@ public class RunServiceImpl implements RunService {
                     return r;
                 })
                 .setFetchSize(100)
-                .scroll(ScrollMode.FORWARD_ONLY);
-        while (results.next()) {
-            RunFromUri r = results.get();
-            consumer.accept(r.id, r.testId);
+                .scroll(ScrollMode.FORWARD_ONLY)) {
+            while (results.next()) {
+                RunFromUri r = results.get();
+                consumer.accept(r.id, r.testId);
+            }
         }
     }
 
+    /**
+     * Keep the run_schemas table up to date with the associated schemas
+     * If `recalculate` is true, trigger the run recalculation as well.
+     * This is not required when creating a new run as the datasets will be
+     * created automatically by the process, the recalculation is required when updating
+     * the Schema
+     * @param runId id of the run
+     * @param schemaId id of the schema
+     */
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     void onNewOrUpdatedSchemaForRun(int runId, int schemaId) {
-        em.createNativeQuery("SELECT update_run_schemas(?1)::text").setParameter(1, runId).getSingleResult();
-        //clear validation error tables by schemaId
+        updateRunSchemas(runId);
+
+        // clear validation error tables by schemaId
         em.createNativeQuery("DELETE FROM dataset_validationerrors WHERE schema_id = ?1")
                 .setParameter(1, schemaId).executeUpdate();
         em.createNativeQuery("DELETE FROM run_validationerrors WHERE schema_id = ?1")
                 .setParameter(1, schemaId).executeUpdate();
 
         Util.registerTxSynchronization(tm, txStatus -> mediator.queueRunRecalculation(runId));
-        //      transform(runId, true);
+    }
+
+    @Transactional
+    void updateRunSchemas(int runId) {
+        em.createNativeQuery("SELECT update_run_schemas(?1)::text").setParameter(1, runId).getSingleResult();
+    }
+
+    @Transactional
+    public void updateDatasetSchemas(int datasetId) {
+        em.createNativeQuery(UPDATE_DATASET_SCHEMAS).setParameter(1, datasetId).executeUpdate();
+    }
+
+    @Transactional
+    void clearRunAndDatasetSchemas(int schemaId) {
+        // clear old run and dataset schemas associations
+        em.createNativeQuery("DELETE FROM run_schemas WHERE schemaid = ?1")
+                .setParameter(1, schemaId).executeUpdate();
+        em.createNativeQuery("DELETE FROM dataset_schemas WHERE schema_id = ?1")
+                .setParameter(1, schemaId).executeUpdate();
     }
 
     @PermitAll
@@ -336,13 +370,13 @@ public class RunServiceImpl implements RunService {
     @Override
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
     public void updateAccess(int id, String owner, Access access) {
-        Query query = em.createNativeQuery(CHANGE_ACCESS);
-        query.setParameter(1, owner);
-        query.setParameter(2, access.ordinal());
-        query.setParameter(3, id);
-        if (query.executeUpdate() != 1) {
+        int updatedRecords = RunDAO.update("owner = ?1, access = ?2 WHERE id = ?3", owner, access, id);
+        if (updatedRecords != 1) {
             throw ServiceException.serverError("Access change failed (missing permissions?)");
         }
+
+        // propagate the same change to all datasets belonging to the run
+        DatasetDAO.update("owner = ?1, access = ?2 WHERE run.id = ?3", owner, access, id);
     }
 
     @RolesAllowed(Roles.UPLOADER)
@@ -670,6 +704,7 @@ public class RunServiceImpl implements RunService {
         }
         log.debugf("Upload flushed, run ID %d", run.id);
 
+        updateRunSchemas(run.id);
         mediator.newRun(RunMapper.from(run));
         List<Integer> datasetIds = transform(run.id, false);
         if (mediator.testMode())
@@ -991,6 +1026,7 @@ public class RunServiceImpl implements RunService {
                 run.trashed = false;
                 run.persistAndFlush();
                 transform(id, true);
+                updateRunSchemas(run.id);
             } else
                 throw ServiceException.badRequest("Not possible to un-trash a run that's not referenced to a Test");
         }
@@ -1017,7 +1053,8 @@ public class RunServiceImpl implements RunService {
             throw ServiceException.notFound("Run not found: " + id);
         }
         run.description = description;
-        run.persistAndFlush();
+        // propagate the same change to all datasets belonging to the run
+        DatasetDAO.update("description = ?1 WHERE run.id = ?2", description, run.id);
     }
 
     @RolesAllowed(Roles.TESTER)
@@ -1071,7 +1108,7 @@ public class RunServiceImpl implements RunService {
                 .distinct()
                 .collect(
                         Collectors.toMap(
-                                tuple -> ((Integer) tuple.get("key")).intValue(),
+                                tuple -> (Integer) tuple.get("key"),
                                 tuple -> ((String) tuple.get("value"))));
 
         em.flush();
@@ -1377,6 +1414,9 @@ public class RunServiceImpl implements RunService {
      */
     private Integer createDataset(DatasetDAO ds, boolean isRecalculation) {
         ds.persistAndFlush();
+        // re-create the dataset_schemas associations
+        updateDatasetSchemas(ds.id);
+
         if (isRecalculation) {
             try {
                 Dataset.EventNew event = new Dataset.EventNew(DatasetMapper.from(ds), true);
