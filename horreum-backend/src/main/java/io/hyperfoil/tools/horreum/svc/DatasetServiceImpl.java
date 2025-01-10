@@ -169,8 +169,8 @@ public class DatasetServiceImpl implements DatasetService {
          LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
          LEFT JOIN label ON label.id = label_id
          """;
-
     //@formatter:on
+
     @Inject
     EntityManager em;
 
