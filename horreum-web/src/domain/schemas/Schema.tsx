@@ -105,8 +105,9 @@ function General(props: GeneralProps) {
                     {!schema.uri && isTester && props.getUri !== undefined && (
                         <Tooltip content={"Import URI from the schema"}>
                             <Button
+                                icon={<ImportIcon/>}
                                 variant="control"
-                                style={{ float: "left" }}
+                                style={{float: "left"}}
                                 onClick={() => {
                                     if (props.getUri) {
                                         const newUri = props.getUri()
@@ -114,13 +115,11 @@ function General(props: GeneralProps) {
                                             setImportFailed(true)
                                             setInterval(() => setImportFailed(false), 5000)
                                         } else {
-                                            onChange({ uri: newUri })
+                                            onChange({uri: newUri})
                                         }
                                     }
                                 }}
-                            >
-                                <ImportIcon />
-                            </Button>
+                            />
                         </Tooltip>
                     )}
                     <TextInput

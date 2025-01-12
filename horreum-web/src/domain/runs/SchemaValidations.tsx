@@ -42,9 +42,12 @@ export default function SchemaValidations(props: SchemaValidationsProps) {
                                         )}
                                         {errors.length > 0 && <ErrorBadge>{errors.length}</ErrorBadge>}
                                         {props.onEdit && (
-                                            <Button variant="link" style={{ paddingTop: 0 }} onClick={props.onEdit}>
-                                                <EditIcon />
-                                            </Button>
+                                            <Button
+                                                icon={<EditIcon/>}
+                                                variant="link"
+                                                style={{paddingTop: 0}}
+                                                onClick={props.onEdit}
+                                            />
                                         )}
                                     </React.Fragment>
                                 )
@@ -54,9 +57,7 @@ export default function SchemaValidations(props: SchemaValidationsProps) {
                         <>
                             {props.noSchema}
                             {props.onEdit && (
-                                <Button variant="link" style={{ paddingTop: 0 }} onClick={props.onEdit}>
-                                    <EditIcon />
-                                </Button>
+                                <Button icon={<EditIcon/>} variant="link" style={{paddingTop: 0}} onClick={props.onEdit}/>
                             )}
                         </>
                     )}

@@ -26,15 +26,14 @@ export default function OwnerAccess({owner, access, readOnly, onUpdate}: OwnerAc
             {"\u00A0\u00A0"}
             {!readOnly && (
                 <Button
+                    icon={<EditIcon/>}
                     variant="link"
                     onClick={() => {
                         setNewAccess(access)
                         setNewOwner(owner)
                         setModalOpen(true)
                     }}
-                >
-                    <EditIcon />
-                </Button>
+                />
             )}
             <ChangeAccessModal
                 isOpen={modalOpen}

@@ -203,9 +203,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                     </List>
                                 }
                             >
-                                <Button variant="plain" onClick={e => e.preventDefault()}>
-                                    <HelpIcon />
-                                </Button>
+                                <Button icon={<HelpIcon/>} variant="plain" onClick={e => e.preventDefault()}/>
                             </Popover>
                         }
                         fieldId="variant"

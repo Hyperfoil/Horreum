@@ -411,9 +411,12 @@ function SearchQueryHelp({ pathType }: SearchQueryHelpProps) {
                 </div>
             }
         >
-            <Button variant={ButtonVariant.control} aria-label="show jsonpath help" style={{ maxHeight: "36px" }}>
-                <HelpIcon />
-            </Button>
+            <Button
+                icon={<HelpIcon/>}
+                variant={ButtonVariant.control}
+                aria-label="show jsonpath help"
+                style={{maxHeight: "36px"}}
+            />
         </Popover>
     )
 }

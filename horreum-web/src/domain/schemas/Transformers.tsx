@@ -219,9 +219,7 @@ export default function Transformers(props: TransformersProps) {
                                 Target schema URI
                                 {/* Cannot use labelIcon as it would wrap */}
                                 <Popover bodyContent={TARGET_SCHEMA_HELP}>
-                                    <Button variant="plain" onClick={e => e.preventDefault()}>
-                                        <HelpIcon />
-                                    </Button>
+                                    <Button icon={<HelpIcon/>} variant="plain" onClick={e => e.preventDefault()}/>
                                 </Popover>
                             </span>
                         }
