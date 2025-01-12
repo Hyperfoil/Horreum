@@ -60,7 +60,6 @@ export default function ConditionComponent({ value, onChange, properties, isTest
             component = (
                 <Switch
                     label="ON"
-                    labelOff="OFF"
                     isDisabled={!isTester}
                     isChecked={value}
                     onChange={(_event, checked) => onChange(checked)}

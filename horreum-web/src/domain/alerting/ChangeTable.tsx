@@ -120,7 +120,6 @@ const ChangeModal = ({ change, isOpen, onClose, onUpdate }: ChangeModalProps) =>
                         isChecked={confirmed}
                         onChange={(_event, val) => setConfirmed(val)}
                         label="Confirmed"
-                        labelOff="Not confirmed"
                     />
                 </FormGroup>
                 <FormGroup label="Description" fieldId="description">

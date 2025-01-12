@@ -198,7 +198,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
                     <Switch
                         id="notifications-switch"
                         label="Notifications are enabled"
-                        labelOff="All notifications are disabled"
+                        
                         isDisabled={!isTester}
                         isChecked={notificationsEnabled}
                         onChange={(_event, value) => {

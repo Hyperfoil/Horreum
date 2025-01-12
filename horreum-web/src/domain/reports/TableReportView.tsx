@@ -208,7 +208,6 @@ function ComponentTable(props: ComponentTableProps) {
                 <div className="chartSwitch nonPrintable">
                     <Switch
                         label="Min-max Y axis"
-                        labelOff="Natural Y axis"
                         isChecked={minMaxDomain}
                         onChange={(_event, val) => setMinMaxDomain(val)}
                     />

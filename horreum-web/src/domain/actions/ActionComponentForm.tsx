@@ -105,7 +105,6 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
             <FormGroup label="Run always" fieldId="runAlways">
                 <Switch
                     label="Enabled"
-                    labelOff="Disabled"
                     isChecked={props.action.runAlways}
                     onChange={(_event, runAlways) => update({ runAlways })}
                 />

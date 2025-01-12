@@ -61,7 +61,6 @@ export default function ActionList() {
                         <Switch
                             isChecked={arg.cell.value}
                             label="Enabled"
-                            labelOff="Disabled"
                             onChange={(e, _) => e.preventDefault()}
                         />
                     )
