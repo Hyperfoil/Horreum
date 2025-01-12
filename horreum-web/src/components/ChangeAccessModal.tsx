@@ -1,6 +1,7 @@
 import React from "react"
 
-import { Button, Modal } from "@patternfly/react-core"
+import {Button} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 import { teamToName } from "../auth"
 import { Access } from "../api"

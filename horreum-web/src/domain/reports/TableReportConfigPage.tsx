@@ -27,7 +27,9 @@ import {
     Popover,
     Spinner,
     TextInput,
-    Title, Toolbar, ToolbarContent,
+    Title,
+    Toolbar,
+    ToolbarContent
 } from "@patternfly/react-core"
 import { Link, NavLink } from "react-router-dom"
 

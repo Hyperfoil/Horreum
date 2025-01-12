@@ -1,6 +1,7 @@
 import {useState, useEffect, useContext} from "react"
 import { runApi, RunCount } from "../../api"
-import { Bullseye, Button, ButtonVariant, Modal, TextInput, Spinner } from "@patternfly/react-core"
+import {Bullseye, Button, ButtonVariant, TextInput, Spinner} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 

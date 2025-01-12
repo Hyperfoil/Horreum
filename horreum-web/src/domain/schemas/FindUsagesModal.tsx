@@ -9,10 +9,10 @@ import {
     DataListCell,
     List,
     ListItem,
-    Modal,
     Spinner,
-    Title,
-} from "@patternfly/react-core"
+    Title
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 import {
     LabelLocation,

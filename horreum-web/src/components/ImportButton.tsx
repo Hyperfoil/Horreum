@@ -1,6 +1,7 @@
 import {useContext, useState} from "react"
 
-import { Bullseye, Button, FileUpload, Modal, Spinner } from "@patternfly/react-core"
+import {Bullseye, Button, FileUpload, Spinner} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {SchemaExport, TableReportConfig, TestExport} from "../generated";

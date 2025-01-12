@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useContext} from "react"
 
-import { Bullseye, Modal, Spinner, Tab, Tabs } from "@patternfly/react-core"
+import {Bullseye, Spinner, Tab, Tabs} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { Table /* data-codemods */, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table"
 
 import { NavLink } from "react-router-dom"

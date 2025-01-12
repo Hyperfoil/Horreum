@@ -1,4 +1,5 @@
-import { Button, ClipboardCopy, Content, Modal } from "@patternfly/react-core"
+import {Button, ClipboardCopy, Content} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 type ShareLinkModalProps = {
     isOpen: boolean

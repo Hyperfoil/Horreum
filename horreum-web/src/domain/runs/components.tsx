@@ -2,11 +2,11 @@ import {useContext, useState} from "react"
 import {
 	Button,
 	DropdownItem,
-	Modal,
 	Spinner,
 	TextInput,
-	Tooltip,
+	Tooltip
 } from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { WarningTriangleIcon } from "@patternfly/react-icons"
 import moment from "moment"
 import ActionMenu, {

@@ -1,13 +1,17 @@
 import React, {useEffect, useState} from "react"
 
 import {
-    Button, Form,
-    FormGroup, FormSelect, FormSelectOption,
+    Button,
+    Form,
+    FormGroup,
+    FormSelect,
+    FormSelectOption,
     HelperText,
     HelperTextItem,
     FormHelperText,
-    Modal, TextInput
-} from "@patternfly/react-core"
+    TextInput
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import {
     APIKeyAuth,
     Datastore,

@@ -1,6 +1,7 @@
 import {useContext, useEffect, useMemo, useState} from "react"
 
-import { Bullseye, Button, Flex, FlexItem, Modal, Pagination, Radio, Spinner, TextInput } from "@patternfly/react-core"
+import {Bullseye, Button, Flex, FlexItem, Pagination, Radio, Spinner, TextInput} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { NavLink } from "react-router-dom"
 
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"

@@ -1,7 +1,8 @@
 import React, {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
-import { Bullseye, EmptyState, EmptyStateBody, Modal, Spinner } from "@patternfly/react-core"
+import {Bullseye, EmptyState, EmptyStateBody, Spinner} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 import {datasetApi, LabelValue} from "../../api"
 import {AppContext} from "../../context/appContext";

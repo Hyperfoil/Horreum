@@ -1,7 +1,8 @@
-import { useState } from "react"
-import { Button, ButtonVariant, Modal } from "@patternfly/react-core"
-import { Action, ActionConfig, HttpActionConfigFromJSON } from "../../api"
-import { globalEventTypes } from "./reducers"
+import {useState} from "react"
+import {Button, ButtonVariant} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
+import {Action, ActionConfig} from "../../api"
+import {globalEventTypes} from "./reducers"
 import ActionComponentForm from "./ActionComponentForm"
 
 type AddActionModalProps = {

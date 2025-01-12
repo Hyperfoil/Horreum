@@ -6,10 +6,10 @@ import {
     EmptyStateBody,
     Flex,
     FlexItem,
-    Modal,
     Pagination,
-    Spinner,
-    } from "@patternfly/react-core"
+    Spinner
+} from '@patternfly/react-core';
+import { Modal } from '@patternfly/react-core/deprecated';
 import {
     CheckCircleIcon,
     ExclamationCircleIcon,

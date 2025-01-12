@@ -11,9 +11,9 @@ import {
     DropdownList,
     MenuToggle,
     MenuToggleElement,
-    Modal,
     Spinner
 } from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { QuestionCircleIcon } from "@patternfly/react-icons"
 
 import MoonIcon from '@patternfly/react-icons/dist/esm/icons/moon-icon';
