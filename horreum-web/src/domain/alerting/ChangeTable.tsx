@@ -1,20 +1,20 @@
 import {useState, useEffect, useContext} from "react"
 import {
-	ActionGroup,
-	Button,
-	ExpandableSection,
-	Form,
-	FormGroup,
-	Modal,
-	Tab,
-	Tabs,
-	TextArea,
-	Switch,
+    ActionGroup,
+    Button,
+    ExpandableSection,
+    Form,
+    FormGroup,
+    Tab,
+    Tabs,
+    TextArea,
+    Switch,
     Dropdown,
     DropdownItem,
     MenuToggle,
     MenuToggleElement
 } from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import {alertingApi, Change, FingerprintValue, Variable} from "../../api"

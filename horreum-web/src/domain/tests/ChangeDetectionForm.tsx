@@ -6,24 +6,24 @@ import {ChangeDetection, ConditionConfig, Variable, alertingApi, updateChangeDet
 import { NavLink } from "react-router-dom"
 
 import {
-	Alert,
-	AlertActionCloseButton,
-	Bullseye,
-	Button,
-	EmptyState,
-	Form,
-	FormGroup,
-	Modal,
-	Popover,
-	SimpleList,
-	SimpleListGroup,
-	SimpleListItem,
-	Spinner,
-	Split,
-	SplitItem,
-	TextInput,
-	Title
+    Alert,
+    AlertActionCloseButton,
+    Bullseye,
+    Button,
+    EmptyState,
+    Form,
+    FormGroup,
+    Popover,
+    SimpleList,
+    SimpleListGroup,
+    SimpleListItem,
+    Spinner,
+    Split,
+    SplitItem,
+    TextInput,
+    Title
 } from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import {SimpleSelect} from "@patternfly/react-templates";
 
 import { PlusCircleIcon } from "@patternfly/react-icons"

@@ -9,10 +9,10 @@ import {
     FormHelperText,
     List,
     ListItem,
-    Modal,
     Spinner,
-    TextInput,
-} from "@patternfly/react-core"
+    TextInput
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import {userApi, UserData} from "../../api"
 import { getRoles } from "./TeamMembers"
 import {AppContext} from "../../context/appContext";

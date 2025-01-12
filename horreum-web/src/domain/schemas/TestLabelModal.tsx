@@ -1,7 +1,8 @@
 import {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
-import { Bullseye, Button, Modal, Pagination, Spinner, Title } from "@patternfly/react-core"
+import {Bullseye, Button, Pagination, Spinner, Title} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"

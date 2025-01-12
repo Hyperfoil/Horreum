@@ -1,6 +1,7 @@
 import {useState} from "react"
 
-import {Button, Modal, Spinner, Split, SplitItem, Stack, StackItem} from "@patternfly/react-core"
+import {Button, Spinner, Split, SplitItem, Stack, StackItem} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 type ConfirmDeleteModalProps = {
     isOpen: boolean

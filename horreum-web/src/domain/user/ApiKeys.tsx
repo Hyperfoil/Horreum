@@ -7,10 +7,10 @@ import {
     HelperText,
     HelperTextItem,
     Label,
-    Modal,
     TextInput,
-    Tooltip,
-} from "@patternfly/react-core"
+    Tooltip
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 import {ApiKeyResponse, userApi} from "../../api";
 import {AppContext} from "../../context/appContext";

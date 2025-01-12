@@ -1,6 +1,17 @@
 import {useMemo, useState, useRef, useContext} from "react"
 
-import { Button, Checkbox, DescriptionList, DescriptionListDescription, DescriptionListGroup, DescriptionListTerm, Form, FormGroup, Modal, Progress } from "@patternfly/react-core"
+import {
+    Button,
+    Checkbox,
+    DescriptionList,
+    DescriptionListDescription,
+    DescriptionListGroup,
+    DescriptionListTerm,
+    Form,
+    FormGroup,
+    Progress
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { NavLink } from "react-router-dom"
 
 import {alertingApi, DatapointRecalculationStatus, DatasetInfo} from "../../api"

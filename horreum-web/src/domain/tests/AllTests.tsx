@@ -12,7 +12,6 @@ import {
     DropdownList,
     MenuToggle,
     MenuToggleElement,
-    Modal,
     PageSection,
     Spinner,
     Toolbar,
@@ -20,6 +19,7 @@ import {
     ToolbarGroup,
     ToolbarItem
 } from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import {NavLink, useLocation, useNavigate} from "react-router-dom"
 import {EyeIcon, EyeSlashIcon, FolderOpenIcon} from "@patternfly/react-icons"
 
