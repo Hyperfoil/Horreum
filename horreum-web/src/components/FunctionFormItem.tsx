@@ -17,7 +17,7 @@ export default function FunctionFormItem({label, helpText, value, onChange, read
         <FormGroup
             style={{ display: "inline", marginTop: 0 }}
             label={label}
-            labelIcon={
+            labelHelp={
                 <Popover minWidth="50vw" maxWidth="50vw" bodyContent={helpText}>
                     <Button variant="plain" onClick={e => e.preventDefault()}>
                         <HelpIcon />
