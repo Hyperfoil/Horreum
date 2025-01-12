@@ -127,7 +127,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                     is valid for schemas:{"\u00A0"}
                     {o.schemas.length === 0 && (
                         <Tooltip content="No schemas implement this label!">
-                            <ExclamationCircleIcon color="var(--pf-v5-global--danger-color--100)"/>
+                            <ExclamationCircleIcon color="var(--pf-t--global--icon--color--status--danger--default)"/>
                         </Tooltip>
                     )}
                     {o.schemas.map((d, i) => (

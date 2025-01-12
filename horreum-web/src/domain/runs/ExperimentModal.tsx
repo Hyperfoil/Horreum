@@ -83,13 +83,13 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                                                             case "BETTER":
                                                                 style = {
                                                                     backgroundColor:
-                                                                        "var(--pf-v5-global--palette--green-100)",
+                                                                        "var(--pf-t--global--color--status--success--default)",
                                                                 }
                                                                 break
                                                             case "WORSE":
                                                                 style = {
                                                                     backgroundColor:
-                                                                        "var(--pf-v5-global--palette--red-50)",
+                                                                        "var(--pf-t--global--text--color--status--danger--default)",
                                                                 }
                                                                 break
                                                             default:

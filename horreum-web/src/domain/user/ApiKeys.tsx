@@ -88,7 +88,7 @@ export default function ApiKeys() {
             } else if (key.toExpiration < 2) {
                 labels.push(<Label key="expiration" color="orange">Expires TOMORROW</Label>)
             } else if (key.toExpiration < 7) {
-                labels.push(<Label key="expiration" color="gold">Expires in less than a week</Label>)
+                labels.push(<Label key="expiration" color="yellow">Expires in less than a week</Label>)
             }
         }
         return labels
@@ -146,7 +146,7 @@ export default function ApiKeys() {
                             </Td>
                             <Td dataLabel="access" textCenter>
                                 <Tooltip trigger="mouseenter" content={keyAccessTooltip(key)}>
-                                    <span>{key.access?.toLocaleDateString() || <Label color="cyan">Never used</Label>}</span>
+                                    <span>{key.access?.toLocaleDateString() || <Label color="teal">Never used</Label>}</span>
                                 </Tooltip>
                             </Td>
                             <Td dataLabel="status" textCenter>{keyStatus(key)}</Td>

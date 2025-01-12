@@ -186,7 +186,7 @@ export default function VariableForm(props: VariableFormProps) {
                     <FormGroup label="Model" fieldId="model">
                         <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
                             <FlexItem
-                                style={{ paddingTop: "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)" }}
+                                style={{ paddingTop: "var(--pf-t--global--spacer--control--vertical--default)" }}
                             >
                                 {usedModel.title}
                                 <Popover headerContent={usedModel.title} bodyContent={usedModel.description}>

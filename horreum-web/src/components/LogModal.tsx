@@ -33,10 +33,10 @@ export type CommonLogModalProps = {
 
 export function LogLevelIcon(props: { level: number }) {
     const levels = [
-        <CheckCircleIcon style={{ fill: "var(--pf-v5-global--success-color--100)" }} />,
-        <InfoCircleIcon style={{ fill: "var(--pf-v5-global--info-color--100)" }} />,
-        <ExclamationTriangleIcon style={{ fill: "var(--pf-v5-global--warning-color--100)" }} />,
-        <ExclamationCircleIcon style={{ fill: "var(--pf-v5-global--danger-color--100)" }} />,
+        <CheckCircleIcon style={{ fill: "var(--pf-t--global--icon--color--severity--undefined--default)" }} />,
+        <InfoCircleIcon style={{ fill: "var(--pf-t--global--icon--color--severity--none--default)" }} />,
+        <ExclamationTriangleIcon style={{ fill: "var(--pf-t--global--icon--color--severity--moderate--default)" }} />,
+        <ExclamationCircleIcon style={{ fill: "var(--pf-t--global--icon--color--severity--critical--default)" }} />,
     ]
     return levels[props.level]
 }

@@ -104,7 +104,7 @@ function checkName(name: string | undefined) {
 }
 
 const INVALID_NAME_HELPER = (
-    <span style={{ color: "var(--pf-v5-global--warning-color--200)" }}>
+    <span style={{ color: "var(--pf-t--global--text--color--status--warning--default)" }}>
         Name should match <code>[a-zA-Z_][a-zA-Z_0-9]*</code>. It shouldn't be a Javascript-reserved word either.
     </span>
 )
@@ -210,7 +210,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                         }
                         fieldId="variant"
                     >
-                        <Flex style={{ paddingTop: "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)" }}>
+                        <Flex style={{ paddingTop: "var(--pf-t--global--spacer--control--vertical--default)" }}>
                             <FlexItem>
                                 <Radio
                                     name={variantName}

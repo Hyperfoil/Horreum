@@ -42,7 +42,7 @@ function compareRules(r1: MissingDataRule, r2: MissingDataRule) {
 }
 
 function asWarning(text: string) {
-    return <span style={{ color: "var(--pf-v5-global--warning-color--200)" }}>{text}</span>
+    return <span style={{ color: "var(--pf-t--global--text--color--status--warning--default)" }}>{text}</span>
 }
 
 export default function MissingDataNotifications(props: MissingDataNotificationsProps) {

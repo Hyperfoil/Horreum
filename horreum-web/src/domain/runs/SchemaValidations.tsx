@@ -22,7 +22,7 @@ export default function SchemaValidations(props: SchemaValidationsProps) {
             <FormGroup label="Schemas" fieldId="schemas">
                 <div
                     style={{
-                        paddingTop: "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)",
+                        paddingTop: "var(--pf-t--global--spacer--control--vertical--default)",
                     }}
                 >
                     {(props.schemas &&
