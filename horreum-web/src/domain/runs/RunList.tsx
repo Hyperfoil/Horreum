@@ -231,7 +231,7 @@ export default function RunList() {
 
     return (
         <>
-            <Toolbar className="pf-v5-u-justify-content-space-between" style={{ width: "100%" }}>
+            <Toolbar className="pf-v6-u-justify-content-space-between" style={{ width: "100%" }}>
                 <ToolbarGroup>
                     <ToolbarItem>
                         <Checkbox

@@ -35,7 +35,7 @@ const VERSION_ERROR = {
 
 export default function About() {
     const [isDarkTheme, setIsDarkTheme] = useState(JSON.parse(localStorage.getItem('dark-theme') ?? 'false') as boolean);
-    const applyTheme = () => (document.querySelector('html') as Element).classList.toggle('pf-v5-theme-dark', isDarkTheme);
+    const applyTheme = () => (document.querySelector('html') as Element).classList.toggle('pf-v6-theme-dark', isDarkTheme);
 
     useEffect(() => {
         localStorage.setItem('dark-theme', JSON.stringify(isDarkTheme));

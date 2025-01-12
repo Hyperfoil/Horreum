@@ -112,7 +112,7 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
 
     return (
         <Toolbar
-            className="pf-v5-l-toolbar pf-v5-u-justify-content-space-between pf-v5-u-mx-xl pf-v5-u-my-md"
+            className="pf-v6-l-toolbar pf-v6-u-justify-content-space-between pf-v6-u-mx-xl pf-v6-u-my-md"
             style={{ justifyContent: "space-between", width: "100%" }}
         >
             <ToolbarContent style={{ width: "100%" }}>
@@ -139,10 +139,10 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
                             getSuggestionValue={value => updateSuggestionValue(value, pathQuery, pathSuggestions)}
                             renderSuggestion={v => <div>{v}</div>}
                             renderInputComponent={inputProps => (
-                                <span className="pf-v5-c-form-control">
+                                <span className="pf-v6-c-form-control">
                                 <input
                                     {...(inputProps as any)}
-                                    className="pf-v5-c-form-control"
+                                    className="pf-v6-c-form-control"
                                     aria-label="jsonpath"
                                     aria-invalid={pathInvalid}
                                     style={{ width: "500px" }}

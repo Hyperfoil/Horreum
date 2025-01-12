@@ -259,7 +259,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     {"\u00A0"}
                     {props.target === "run" && (
                         <NavLink
-                            className="pf-v5-c-button pf-m-secondary"
+                            className="pf-v6-c-button pf-m-secondary"
                             to={`/run/${target?.id}?query=${encodeURIComponent(props.jsonpath || "")}#run`}
                         >
                             Go to run {target?.id}
@@ -267,7 +267,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     )}
                     {props.target === "run" && (
                         <NavLink
-                            className="pf-v5-c-button pf-m-secondary"
+                            className="pf-v6-c-button pf-m-secondary"
                             to={`/run/${(target as DatasetSummary).runId}?query=${encodeURIComponent(
                                 props.jsonpath || ""
                             )}#dataset${(target as DatasetSummary).ordinal}`}

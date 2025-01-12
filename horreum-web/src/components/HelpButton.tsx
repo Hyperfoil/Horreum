@@ -7,7 +7,7 @@ export default function HelpButton() {
             type="button"
             aria-label="More info"
             onClick={e => e.preventDefault()}
-            className="pf-v5-c-form__group-label-help"
+            className="pf-v6-c-form__group-label-help"
         >
             <Icon isInline={true}>
                 <HelpIcon/>
