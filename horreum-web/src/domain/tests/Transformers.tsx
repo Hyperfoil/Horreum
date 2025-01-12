@@ -4,7 +4,6 @@ import { NavLink } from "react-router-dom"
 import {
     Bullseye,
     Button,
-    DualListSelector,
     DualListSelectorTreeItemData,
     Flex,
     FlexItem,
@@ -12,8 +11,9 @@ import {
     ListItem,
     Spinner,
     Title,
-    Tooltip,
-} from "@patternfly/react-core"
+    Tooltip
+} from '@patternfly/react-core';
+import {DualListSelector} from '@patternfly/react-core/deprecated';
 
 import { useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"

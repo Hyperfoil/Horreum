@@ -1,6 +1,7 @@
 import {ReactElement, useState, useEffect, useContext} from "react"
 import { noop } from "../../utils"
-import { Divider, DualListSelector } from "@patternfly/react-core"
+import {Divider} from '@patternfly/react-core';
+import {DualListSelector} from '@patternfly/react-core/deprecated';
 import {getSubscription, updateSubscription, userApi, UserData} from "../../api"
 import { teamToName, useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
