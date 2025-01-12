@@ -138,7 +138,7 @@ export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: A
                                         id="delete"
                                         aria-labelledby="delete"
                                         aria-label="Settings actions"
-                                        isPlainButtonAction
+                                        
                                     >
                                         <Button
                                             style={{ width: "110%" }}

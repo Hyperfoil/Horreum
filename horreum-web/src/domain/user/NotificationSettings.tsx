@@ -103,7 +103,7 @@ export function NotificationSettingsList({ title, data, onUpdate }: Notification
                                     id="delete"
                                     aria-labelledby="delete"
                                     aria-label="Settings actions"
-                                    isPlainButtonAction
+                                    
                                 >
                                     <Button
                                         onClick={() => {
