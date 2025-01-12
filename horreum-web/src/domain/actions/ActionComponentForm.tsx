@@ -328,9 +328,7 @@ function ExpressionHelp(props: ExpressionHelpProps) {
                 </>
             }
         >
-            <Button variant="plain" onClick={e => e.preventDefault()}>
-                <HelpIcon />
-            </Button>
+            <Button icon={<HelpIcon/>} variant="plain" onClick={e => e.preventDefault()}/>
         </Popover>
     )
 }

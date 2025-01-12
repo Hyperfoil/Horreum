@@ -19,9 +19,7 @@ export default function FunctionFormItem({label, helpText, value, onChange, read
             label={label}
             labelHelp={
                 <Popover minWidth="50vw" maxWidth="50vw" bodyContent={helpText}>
-                    <Button variant="plain" onClick={e => e.preventDefault()}>
-                        <HelpIcon />
-                    </Button>
+                    <Button icon={<HelpIcon/>} variant="plain" onClick={e => e.preventDefault()}/>
                 </Popover>
             }
             fieldId="function"

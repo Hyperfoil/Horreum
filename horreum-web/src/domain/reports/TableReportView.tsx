@@ -290,8 +290,12 @@ function Comment(props: CommentProps) {
             <div className="reportComment markdown-body">
                 <ReactMarkdown>{text}</ReactMarkdown>
                 {props.editable && (
-                    <Button className="reportCommentEdit nonPrintable" variant="link" onClick={() => setEdit(true)}>
-                        <EditIcon />
+                    <Button
+                        icon={<EditIcon/>}
+                        className="reportCommentEdit nonPrintable"
+                        variant="link"
+                        onClick={() => setEdit(true)}
+                    >
                         {text ? " Edit" : " Add"} comment
                     </Button>
                 )}

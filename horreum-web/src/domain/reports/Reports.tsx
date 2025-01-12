@@ -119,15 +119,14 @@ export default function Reports(props: ReportGroup) {
                     }
                     return (
                         <Button
+                            icon={<FolderOpenIcon/>}
                             variant="link"
-                            style={{ paddingTop: 0, paddingBottom: 0 }}
+                            style={{paddingTop: 0, paddingBottom: 0}}
                             onClick={() =>
-                                setTableReportGroup({ testId: arg.row.original.testId, title: arg.row.original.title })
+                                setTableReportGroup({testId: arg.row.original.testId, title: arg.row.original.title})
                             }
                         >
                             {arg.cell.value.length}
-                            {"\u00A0"}
-                            <FolderOpenIcon />
                         </Button>
                     )
                 },

@@ -102,9 +102,7 @@ export default function SplitForm<I extends Item>(props: SplitFormProps<I>) {
                     </SimpleList>
                 )}
                 {props.canAddItem && (
-                    <Button variant="link" onClick={addItem}>
-                        <PlusCircleIcon />
-                        {"\u00A0"}
+                    <Button icon={<PlusCircleIcon/>} variant="link" onClick={addItem}>
                         {props.addItemText}
                     </Button>
                 )}

@@ -644,9 +644,8 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                         </SimpleList>
                     )}
                     {isTester && (
-                        <Button variant="link" onClick={addVariable}>
-                            <PlusCircleIcon />
-                            {"\u00A0"}Add new variable...
+                        <Button icon={<PlusCircleIcon/>} variant="link" onClick={addVariable}>
+                            Add new variable...
                         </Button>
                     )}
                 </SplitItem>
