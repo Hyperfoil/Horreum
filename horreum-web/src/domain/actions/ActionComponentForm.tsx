@@ -135,7 +135,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         secrets={props.action.secrets}
                         onChange={secrets => update({ secrets })}
                     />
-                    <FormGroup label="Issue source" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
+                    <FormGroup label="Issue source" labelHelp={<ExpressionHelp {...props} />} fieldId="issue">
                         <Flex style={{ paddingTop: "14px" }}>
                             <FlexItem>
                                 <Radio
@@ -159,7 +159,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                     </FormGroup>
 
                     {(props.action.config as GithubIssueComment).issueUrl !== undefined ? (
-                        <FormGroup label="Issue URL" labelIcon={<ExpressionHelp {...props} />} fieldId="issueUrl">
+                        <FormGroup label="Issue URL" labelHelp={<ExpressionHelp {...props} />} fieldId="issueUrl">
                             <TextInput
                                 id="issueUrl"
                                 value={(props.action.config as GithubIssueComment).issueUrl}
@@ -170,21 +170,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         </FormGroup>
                     ) : (
                         <>
-                            <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
+                            <FormGroup label="Owner" labelHelp={<ExpressionHelp {...props} />} fieldId="owner">
                                 <TextInput
                                     id="owner"
                                     value={(props.action.config as GithubIssueComment).owner}
                                     onChange={(_event, owner) => updateConfig({ owner })}
                                 />
                             </FormGroup>
-                            <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
+                            <FormGroup label="Repository" labelHelp={<ExpressionHelp {...props} />} fieldId="repo">
                                 <TextInput
                                     id="repo"
                                     value={(props.action.config as GithubIssueComment).repo}
                                     onChange={(_event, repo) => updateConfig({ repo })}
                                 />
                             </FormGroup>
-                            <FormGroup label="Issue" labelIcon={<ExpressionHelp {...props} />} fieldId="issue">
+                            <FormGroup label="Issue" labelHelp={<ExpressionHelp {...props} />} fieldId="issue">
                                 <TextInput
                                     id="issue"
                                     value={(props.action.config as GithubIssueComment).issue}
@@ -217,21 +217,21 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         secrets={props.action.secrets}
                         onChange={secrets => update({ secrets })}
                     />
-                    <FormGroup label="Owner" labelIcon={<ExpressionHelp {...props} />} fieldId="owner">
+                    <FormGroup label="Owner" labelHelp={<ExpressionHelp {...props} />} fieldId="owner">
                         <TextInput
                             id="owner"
                             value={(props.action.config as GithubIssueCreate).owner}
                             onChange={(_event, owner) => updateConfig({ owner })}
                         />
                     </FormGroup>
-                    <FormGroup label="Repository" labelIcon={<ExpressionHelp {...props} />} fieldId="repo">
+                    <FormGroup label="Repository" labelHelp={<ExpressionHelp {...props} />} fieldId="repo">
                         <TextInput
                             id="repo"
                             value={(props.action.config as GithubIssueCreate).repo}
                             onChange={(_event, repo) => updateConfig({ repo })}
                         />
                     </FormGroup>
-                    <FormGroup label="Title" labelIcon={<ExpressionHelp {...props} />} fieldId="title">
+                    <FormGroup label="Title" labelHelp={<ExpressionHelp {...props} />} fieldId="title">
                         <TextInput
                             id="title"
                             value={(props.action.config as GithubIssueCreate).title}
@@ -262,7 +262,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         secrets={props.action.secrets}
                         onChange={secrets => update({ secrets })}
                     />
-                    <FormGroup label="Channel" labelIcon={<ExpressionHelp {...props} />} fieldId="channel">
+                    <FormGroup label="Channel" labelHelp={<ExpressionHelp {...props} />} fieldId="channel">
                         <TextInput
                             id="channel"
                             value={(props.action.config as SlackChannelMessage).channel}
@@ -343,7 +343,7 @@ type GitHubTokenInputProps = {
 
 function GitHubTokenInput(props: GitHubTokenInputProps) {
     return (
-        <FormGroup label="Token" labelIcon={props.helpIcon} fieldId="token">
+        <FormGroup label="Token" labelHelp={props.helpIcon} fieldId="token">
             <TextInput
                 id="token"
                 value={props.secrets.token || ""}
@@ -379,7 +379,7 @@ type SlackTokenInputProps = {
 
 function SlackTokenInput(props: SlackTokenInputProps) {
     return (
-        <FormGroup label="Token" labelIcon={props.helpIcon} fieldId="token">
+        <FormGroup label="Token" labelHelp={props.helpIcon} fieldId="token">
             <TextInput
                 id="token"
                 value={props.secrets.token || ""}

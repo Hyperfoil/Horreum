@@ -392,7 +392,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 <FormGroup
                     fieldId="timelineLabels"
                     label="Timeline labels"
-                    labelIcon={
+                    labelHelp={
                         <Popover
                             headerContent="Labels used to extract timeline"
                             bodyContent={
@@ -430,7 +430,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 <FormGroup
                     fieldId="timelineFunction"
                     label="Timeline function"
-                    labelIcon={
+                    labelHelp={
                         <Popover
                             headerContent="Transform timeline labels into timestamp"
                             bodyContent={
@@ -458,7 +458,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 <FormGroup
                     fieldId="fingerprintLabels"
                     label="Fingerprint labels"
-                    labelIcon={
+                    labelHelp={
                         <Popover
                             headerContent="Labels used to extract fingerprint"
                             bodyContent={
@@ -487,7 +487,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 <FormGroup
                     fieldId="fingerprintFilter"
                     label="Fingerprint filter"
-                    labelIcon={
+                    labelHelp={
                         <Popover
                             headerContent="Filter fingerprints where change detection is applied"
                             bodyContent={

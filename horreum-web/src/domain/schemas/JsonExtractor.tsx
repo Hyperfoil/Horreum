@@ -154,7 +154,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                     </FormGroup>
                     <FormGroup
                         label="JSONPath"
-                        labelIcon={<JsonPathDocsLink />}
+                        labelHelp={<JsonPathDocsLink />}
                         fieldId="jsonpath"
                     >
                         <TextInput
@@ -188,7 +188,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                     </FormGroup>
                     <FormGroup
                         label="Variant"
-                        labelIcon={
+                        labelHelp={
                             <Popover
                                 bodyContent={
                                     <List>
