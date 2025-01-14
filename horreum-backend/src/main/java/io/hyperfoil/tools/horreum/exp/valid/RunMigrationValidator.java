@@ -57,7 +57,7 @@ public class RunMigrationValidator {
      */
     public static boolean purge(Connection conn) {
         try (PreparedStatement ps = conn.prepareStatement(
-                "delete from exp_label_values; delete from exp_run; delete from exp_extractor; delete from exp_label; delete from exp_labelgroup; delete from exp_label_reducers;delete from exp_temp_map_tests; delete from exp_temp_map_schema; delete from exp_temp_map_transform; ")) {
+                "delete from exp_label_values; delete from exp_run; delete from exp_extractor; delete from exp_label; delete from exp_labelgroup; delete from exp_label_reducers; delete from exp_temp_map_schema; delete from exp_temp_map_transform; ")) {
             return ps.execute();
         } catch (SQLException e) {
             throw new RuntimeException(e);

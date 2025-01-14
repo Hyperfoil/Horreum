@@ -82,7 +82,11 @@ public class ComposableMigration implements CustomTaskChange {
 
     @Override
     public ValidationErrors validate(Database database) {
-        return null;
+        if (database.getConnection() instanceof JdbcConnection) {
+            Connection conn = ((JdbcConnection) database.getConnection()).getWrappedConnection();
+            return validateGroups(conn);
+        }
+        return new ValidationErrors();
     }
 
     public static void migrate(Connection conn) {
@@ -172,12 +176,17 @@ public class ComposableMigration implements CustomTaskChange {
                         Label persistedLabel = persistLabelDef(def, testGroup.id, true, null, sourceGroupId,
                                 !moreThanOneDef ? targetGroupId : null,
                                 originalLabelId, conn, testContext);
+                        if(!moreThanOneDef){
+                            LabelGroup targetedGroup = loadGroup(targetGroupId, conn);
+                            List<Label> loadedTargetGroupLabels = persistedLabel.targetGroup(targetedGroup, testContext, conn);
+                            testGroup.labels.addAll(loadedTargetGroupLabels);
+                        }
                         testGroup.labels.add(persistedLabel);
                         addTempTransformMap(id, persistedLabel.id, conn);
 
                         return persistedLabel;
                     }).toList();
-                    if (moreThanOneDef) {
+                    if (moreThanOneDef){
                         LabelDef def = fromTransform(legacyTransformIds.get(0), conn);
                         String newName = def.name;
                         Set<String> usedNames = new HashSet<>(transformNames.values());
@@ -260,7 +269,9 @@ public class ComposableMigration implements CustomTaskChange {
                             Long targetGroupId = labelGroupsIds.iterator().next();
                             String shortenedJsonpath = jsonpath.substring(0, jsonpath.length() - ".\"$schema\"".length());
                             Label jsonpathLabel = persistLabel(
-                                    shortenedJsonpath, /* this sets the name of the value in ValueMap, probably don't want them */
+                                    shortenedJsonpath, /*
+                                                        * this sets the name of the value in ValueMap, probably don't want them
+                                                        */
                                     testGroup.id,
                                     null /* reducerId */,
                                     io.hyperfoil.tools.horreum.api.exp.data.Label.MultiIterationType.Length.name(),
@@ -292,7 +303,7 @@ public class ComposableMigration implements CustomTaskChange {
             //now check
 
         }
-        boolean ok = validateGroups(conn);
+        boolean ok = !validateGroups(conn).hasErrors();
         System.out.println("ok = " + ok);
         persistTestRuns(conn);
         updateRunSeq(conn);
@@ -535,7 +546,7 @@ public class ComposableMigration implements CustomTaskChange {
                 if (jsonpath.contains(NAME_SEPARATOR)) {
                     labelName = jsonpath.substring(0, jsonpath.indexOf(NAME_SEPARATOR));
                     jsonpath = jsonpath.substring(jsonpath.indexOf(NAME_SEPARATOR) + NAME_SEPARATOR.length());
-                }else{
+                } else {
                     //assume the full input is the labelName
                     jsonpath = "";
                 }
@@ -843,16 +854,6 @@ public class ComposableMigration implements CustomTaskChange {
         return rtrn;
     }
 
-    private static void addTempTestMap(long testId, long labelGroupId, Connection conn) {
-        try (PreparedStatement ps = conn
-                .prepareStatement("insert into exp_temp_map_tests (testid,explabelGroupId) values (?,?)")) {
-            ps.setLong(1, testId);
-            ps.setLong(2, labelGroupId);
-            ps.execute();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private static Set<String> getUniqueLabelNames(List<Schema> schemas) {
         return schemas.stream().flatMap(s -> s.labels().stream()).map(l -> l.name).collect(Collectors.toSet());
@@ -895,7 +896,6 @@ public class ComposableMigration implements CustomTaskChange {
                         .map(s -> s.labels.stream().filter(l -> labelName.equals(l.name)).findFirst().orElse(null))
                         .filter(Objects::nonNull).toList();
                 if (labels.size() == 1 || allTheSameLabelDefs(labels)) {
-
 
                     newLabels.add(labels.get(0));
                 } else {//we need to create a merge
@@ -1097,7 +1097,7 @@ public class ComposableMigration implements CustomTaskChange {
         }
         Label rtrn = new Label(newId, name, reducerId, targetGroupId, groupId, splitting, sourceLabelId, sourceGroupId,
                 originalLabelId, new ArrayList<>());
-        context.add(rtrn,null);
+        context.add(rtrn, null);
         extractors.forEach(e -> {
             rtrn.extractors.add(
                     e.withParentAndTarget(rtrn.id, e.targetLabelId, conn, context));
@@ -1429,8 +1429,8 @@ public class ComposableMigration implements CustomTaskChange {
      * @param conn
      * @return
      */
-    private static boolean validateGroups(Connection conn) {
-        boolean rtrn = true;
+    private static ValidationErrors validateGroups(Connection conn) {
+        ValidationErrors rtrn = new ValidationErrors();
         List<Long> groupIds = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement("select id from exp_labelgroup order by id");
                 ResultSet rs = ps.executeQuery()) {
@@ -1448,29 +1448,27 @@ public class ComposableMigration implements CustomTaskChange {
                 for (Long targetGroupId : targetGroupIds) {
                     LabelGroup targetGroup = loadGroup(targetGroupId, conn);
                     if (targetGroup == null) {
-                        rtrn = false;
+                        rtrn.addError("missing LabelGroup "+targetGroupId+" targeted by "+group.name);
                     } else {
                         boolean hasSourceGroup = group.labels.stream()
                                 .anyMatch(l -> Objects.equals(l.sourceGroupId, targetGroupId));
-                        boolean allExist = targetGroup.labels.stream()
-                                .allMatch(l -> group.labels.stream().anyMatch(g -> g.equals(l)));
                         if (!hasSourceGroup) {
-
-                            rtrn = false;
-                        }
-                        if (!allExist) {
-                            System.err.println(group.name + " [" + group.id + "] missing label from target group "
-                                    + targetGroup.name + " [" + targetGroup.id + "]");
-                        }
+                            rtrn.addError(group.name+" ["+group.id+"] is missing labels from group "+targetGroup.name+" ["+targetGroupId+"]");}
+                        targetGroup.labels
+                            .forEach(l->{
+                                boolean exists = group.labels.stream().anyMatch(g -> g.equals(l));
+                                if(!exists){
+                                    rtrn.addError(group.name+" ["+group.id+"] is missing label "+l.name+" from "+targetGroup.name+" ["+targetGroup.id+"]");
+                                }
+                            });
                     }
                 }
             }
 
             List<Label> selfTargeting = group.labels.stream().filter(l -> Objects.equals(l.groupId, l.targetGroupId)).toList();
             if (!selfTargeting.isEmpty()) {
-                rtrn = false;
                 selfTargeting.forEach(l -> {
-                    System.err.println(group.name + " [" + group.id + "] label " + l.name + " is self targeting");
+                    rtrn.addError(group.name + " [" + group.id + "] label " + l.name + " is self targeting");
                 });
             }
         }

@@ -7,18 +7,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import io.hyperfoil.tools.horreum.api.data.Transformer;
-import io.hyperfoil.tools.horreum.api.exp.LabelService;
-import io.hyperfoil.tools.horreum.exp.data.ExtractorDao;
-import io.hyperfoil.tools.horreum.exp.data.TestDao;
-import io.hyperfoil.tools.horreum.exp.svc.RunServiceImpl;
-import io.restassured.RestAssured;
-import io.restassured.response.ValidatableResponse;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
-
 import jakarta.ws.rs.core.HttpHeaders;
-import jakarta.ws.rs.core.Response;
+
 import org.hibernate.Session;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -28,13 +20,17 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.Schema;
 import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.data.Transformer;
+import io.hyperfoil.tools.horreum.api.exp.LabelService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
+import io.hyperfoil.tools.horreum.exp.data.ExtractorDao;
 import io.hyperfoil.tools.horreum.exp.data.LabelDao;
 import io.hyperfoil.tools.horreum.exp.data.LabelGroupDao;
 import io.hyperfoil.tools.horreum.exp.svc.LabelServiceImpl;
+import io.hyperfoil.tools.horreum.exp.svc.RunServiceImpl;
 import io.hyperfoil.tools.horreum.liquibase.ComposableMigration;
 import io.hyperfoil.tools.horreum.svc.BaseServiceTest;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
@@ -43,12 +39,18 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
+import io.restassured.RestAssured;
+import io.restassured.response.ValidatableResponse;
 
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
 @TestProfile(HorreumTestProfile.class)
 public class ComposableMigrationTest extends BaseServiceTest {
+
+    String getMethodName(){
+        return Thread.currentThread().getStackTrace()[0].getMethodName();
+    }
 
     @Inject
     EntityManager em;
@@ -74,16 +76,16 @@ public class ComposableMigrationTest extends BaseServiceTest {
         Schema first = createSchema("migrate_shared_transform_creates_global", base + ":0.1");
 
         Extractor fooExtractor = new Extractor();
-        fooExtractor.name="foo";
-        fooExtractor.jsonpath="$.foo";
+        fooExtractor.name = "foo";
+        fooExtractor.jsonpath = "$.foo";
 
-        Transformer transformer = createTransformer("foo",first,"",fooExtractor);
+        Transformer transformer = createTransformer("foo", first, "", fooExtractor);
 
         Test t1 = createTest(createExampleTest("migrate_shared_transform_creates_global-test1"));
-        Test t2 =createExampleTest("migrate_shared_transform_creates_global-test2");
-        t2.owner = "perf-team";
+        Test t2 = createExampleTest("migrate_shared_transform_creates_global-test2");
+        t2.owner = BAR_TESTER_ROLES[0];
 
-        ValidatableResponse vr = RestAssured.given().auth().oauth2(getAccessToken("alice","perf-team","perf-tester","tester"))
+        ValidatableResponse vr = RestAssured.given().auth().oauth2(getAccessToken("alice", BAR_TESTER_ROLES))
                 .header(HttpHeaders.CONTENT_TYPE, "application/json").body(t2)
                 .post("/api/test")
                 .then();
@@ -91,23 +93,27 @@ public class ComposableMigrationTest extends BaseServiceTest {
         t2 = vr.statusCode(200)
                 .extract().body().as(Test.class);
 
-        addTransformer(t1,transformer);
+        addTransformer(t1, transformer);
         //addTransformer(t2,transformer);
-        vr = RestAssured.given().auth().oauth2(getAccessToken("alice","perf-team","perf-tester","tester"))
+        vr = RestAssured.given().auth().oauth2(getAccessToken("alice", BAR_TESTER_ROLES))
                 .header(HttpHeaders.CONTENT_TYPE, "application/json")
-        .body(Collections.singletonList(transformer.id)).post("/api/test/" + t2.id + "/transformers").then();
+                .body(Collections.singletonList(transformer.id)).post("/api/test/" + t2.id + "/transformers").then();
 
         vr.assertThat().statusCode(204);
 
         em.unwrap(Session.class).doWork(ComposableMigration::migrate);
 
         LabelGroupDao group = LabelGroupDao.find("name", "migrate_shared_transform_creates_global-test1").firstResult();
-        assertNotNull(group,"migrate_shared_transform_creates_global-test1 label group should exist");
+        assertNotNull(group, "migrate_shared_transform_creates_global-test1 label group should exist");
 
-        assertEquals(1,group.labels.size(),"expect one label in the group");
+        assertEquals(1, group.labels.size(), "expect one label in the group");
         LabelDao grouplabel = group.labels.get(0);
-        assertNotNull(grouplabel.sourceGroup,"label should have a source group");
-        assertNotNull(grouplabel.originalLabel,"label should have an original label");
+        assertNotNull(grouplabel.sourceGroup, "label should have a source group");
+        assertNotNull(grouplabel.originalLabel, "label should have an original label");
+
+        LabelGroupDao sourceGroup = grouplabel.sourceGroup;
+        assertNotNull(sourceGroup, "source label group should not be null");
+        assertNotEquals(sourceGroup.owner, group.owner, "the source group should not have have the same owner");
     }
 
     @org.junit.jupiter.api.Test
@@ -164,44 +170,174 @@ public class ComposableMigrationTest extends BaseServiceTest {
         assertEquals(3, group.labels.size(), "group should have 3 labels:\n" + group.labels);
         assertTrue(group.labels.stream().anyMatch(l -> l.name.equals("first")), "group should have a 'first' label");
     }
+    @org.junit.jupiter.api.Test
+    public void migrate_transform_target_same_schema() throws JsonProcessingException {
+        String name = getMethodName();
+        String base = "urn:"+name;
+        Schema first = createSchema(name+"_schema",base);
+
+        Extractor fooExtractor = new Extractor();
+        fooExtractor.name = "foo";
+        fooExtractor.jsonpath = "$.foo";
+
+        Extractor barExtractor = new Extractor();
+        barExtractor.name = "bar";
+        barExtractor.jsonpath = "$.bar";
+
+        addLabel(first,"bar",null,barExtractor);
+        Transformer transformerFoo = createTransformer("foo", first, first, "(v)=>{ return [{\"bar\":v,\"using\":\"foo\"}]}",
+                fooExtractor);
+
+        Test t1 = createTest(createExampleTest(name+"-test"));
+        addTransformer(t1, transformerFoo);
+
+        List<Integer> ids = new ArrayList<>();
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+
+        ids.addAll(uploadRun(mapper.readTree("{ \"foo\": \"foo\"}"), t1.name, null));
+
+        em.unwrap(Session.class).doWork(ComposableMigration::migrate);
+
+        LabelGroupDao group = LabelGroupDao.find("name", t1.name).firstResult();
+        assertNotNull(group," test group should not be null");
+        assertEquals(2,group.labels.size(),"group should have transform and target schema label");
+        assertTrue(group.labels.stream().anyMatch(l->l.name.equals("bar")),"group should have a foo label");
+
+        expLabelService.calculateLabelValues(group.labels, Long.valueOf(ids.get(0)));
+
+        List<LabelService.ValueMap> valueMaps = expLabelService.labelValues(
+                group.id,
+                "",
+                "",
+                "",
+                "",
+                "",
+                Integer.MAX_VALUE,
+                0,
+                Collections.EMPTY_LIST,
+                Collections.EMPTY_LIST,
+                false);
+
+        assertEquals(1,valueMaps.size());
+        LabelService.ValueMap map = valueMaps.get(0);
+        assertNotNull(map,"valueMap should not be null");
+        assertTrue(map.data.hasNonNull("foo"),"valueMap should include the output of the transform label");
+        assertTrue(map.data.hasNonNull("bar"),"valueMap should include the output of the schema's label");
+
+    }
+
+    @org.junit.jupiter.api.Test
+    public void migrate_transform_target_different_schema() throws JsonProcessingException {
+        String name = getMethodName();
+        String base = "urn:"+name;
+        Schema first = createSchema(name+"_schema",base);
+        Schema second = createSchema(name+"_target",base+"_target");
+
+        Extractor fooExtractor = new Extractor();
+        fooExtractor.name = "foo";
+        fooExtractor.jsonpath = "$.foo";
+
+        Extractor barExtractor = new Extractor();
+        barExtractor.name = "bar";
+        barExtractor.jsonpath = "$.bar";
+
+        addLabel(second,"bar",null,barExtractor);
+        Transformer transformerFoo = createTransformer("foo", first, second, "(v)=>{ return [{\"bar\":v,\"using\":\"foo\"}]}",
+                fooExtractor);
+
+        Test t1 = createTest(createExampleTest(name+"-test"));
+        addTransformer(t1, transformerFoo);
+
+        List<Integer> ids = new ArrayList<>();
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+
+        ids.addAll(uploadRun(mapper.readTree("{ \"foo\": \"foo\"}"), t1.name, null));
+
+        em.unwrap(Session.class).doWork(ComposableMigration::migrate);
+
+        LabelGroupDao group = LabelGroupDao.find("name", t1.name).firstResult();
+        assertNotNull(group," test group should not be null");
+        assertEquals(2,group.labels.size(),"group should have transform and target schema label");
+        assertTrue(group.labels.stream().anyMatch(l->l.name.equals("bar")),"group should have a foo label");
+
+        expLabelService.calculateLabelValues(group.labels, Long.valueOf(ids.get(0)));
+
+        List<LabelService.ValueMap> valueMaps = expLabelService.labelValues(
+                group.id,
+                "",
+                "",
+                "",
+                "",
+                "",
+                Integer.MAX_VALUE,
+                0,
+                Collections.EMPTY_LIST,
+                Collections.EMPTY_LIST,
+                false);
+
+        assertEquals(1,valueMaps.size());
+        LabelService.ValueMap map = valueMaps.get(0);
+        assertNotNull(map,"valueMap should not be null");
+        assertTrue(map.data.hasNonNull("foo"),"valueMap should include the output of the transform label");
+        assertTrue(map.data.hasNonNull("bar"),"valueMap should include the output of the schema's label");
+
+    }
 
     /**
      * Two schemas that merge also had transforms that needed to merge
      */
     @org.junit.jupiter.api.Test
-    public void migrate_merge_schema_merge_transforms(){
-        String base = "urn:migrate_merge_schema_merge_transforms";
-        Schema first = createSchema("migrate_merge_schema_merge_transformsOld", base + ":0.1");
-        Schema second = createSchema("migrate_merge_schema_merge_transformsNew", base + ":1.0");
+    public void migrate_merge_schema_merge_transforms_same_target() {
+        String base = "urn:migrate_merge_schema_merge_transforms_same_target";
+        Schema first = createSchema("migrate_merge_schema_merge_transforms_same_target_transformsOld", base + ":0.1");
+        Schema second = createSchema("migrate_merge_schema_merge_transforms_same_target_transformsNew", base + ":1.0");
+        Schema target = createSchema("migrate_merge_schema_merge_transforms_same_target_target", base + "_target");
 
         Extractor fooExtractor = new Extractor();
-        fooExtractor.name="foo";
-        fooExtractor.jsonpath="$.foo";
+        fooExtractor.name = "foo";
+        fooExtractor.jsonpath = "$.foo";
 
         Extractor barExtractor = new Extractor();
-        barExtractor.name="bar";
-        barExtractor.jsonpath="$.bar";
+        barExtractor.name = "bar";
+        barExtractor.jsonpath = "$.bar";
 
-        Transformer transformerFoo = createTransformer("foo",first,"(v)=>{ return [{\"found\":v,\"using\":\"foo\"}]}",fooExtractor);
-        Transformer transformerBar = createTransformer("foo",second,"(v)=>{ return [{\"found\":v,\"using\":\"bar\"}]}",barExtractor);
+        Extractor foundExtractor = new Extractor();
+        foundExtractor.name = "found";
+        foundExtractor.jsonpath = "$.found";
+
+        addLabel(target, "found", null, foundExtractor);
+
+        Transformer transformerFoo = createTransformer("foo", first, target, "(v)=>{ return [{\"found\":v,\"using\":\"foo\"}]}",
+                fooExtractor);
+        Transformer transformerBar = createTransformer("foo", second, target,
+                "(v)=>{ return [{\"found\":v,\"using\":\"bar\"}]}",
+                barExtractor);
 
         Test t1 = createTest(createExampleTest("migrate_merge_schema_merge_transforms-test"));
 
-        addTransformer(t1,transformerFoo,transformerBar);
+        addTransformer(t1, transformerFoo, transformerBar);
 
         em.unwrap(Session.class).doWork(ComposableMigration::migrate);
 
         LabelGroupDao group = LabelGroupDao.find("name", t1.name).firstResult();
         assertNotNull(group);
 
-        assertEquals(3,group.labels.size());
-        LabelDao fooLabel = group.labels.stream().filter(l->l.name.equals("foo")).findFirst().orElse(null);
-        assertNotNull(fooLabel,"group should have a label named foo");
-        assertEquals(2,fooLabel.extractors.size(),"foo should have 2 extractors");
-        assertEquals(2,fooLabel.extractors.stream().filter(e->e.targetLabel!=null).count());
+        assertEquals(4, group.labels.size());
+        LabelDao fooLabel = group.labels.stream().filter(l -> l.name.equals("foo")).findFirst().orElse(null);
+        assertNotNull(fooLabel, "group should have a label named foo");
+        assertEquals(2, fooLabel.extractors.size(), "foo should have 2 extractors");
+        assertEquals(2, fooLabel.extractors.stream().filter(e -> e.targetLabel != null).count());
+
+        assertNotNull(fooLabel.targetGroup, "foo label should target a group");
+
+        LabelDao foundLabel = group.labels.stream().filter(l -> l.name.equals("found")).findFirst().orElse(null);
+        assertNotNull(foundLabel, "test should have a label 'found'");
+        assertEquals(1, foundLabel.extractors.size(), "found label should only have original extractor");
+        ExtractorDao foundLabelExtractor = foundLabel.extractors.get(0);
+        assertNotNull(foundLabelExtractor.targetLabel, "found label's extractor should target a label");
+        assertEquals(fooLabel, foundLabelExtractor.targetLabel, "found label's extractor should target foo label");
+        assertEquals(fooLabel.targetGroup, foundLabel.sourceGroup, "foo label target should be the source for found label");
     }
-
-
 
     /**
      * The schemas should not be merged into one group
@@ -260,8 +396,8 @@ public class ComposableMigrationTest extends BaseServiceTest {
 
         List<Integer> ids = new ArrayList<>();
 
-        ids.addAll( uploadRun(mapper.readTree("{ \"foo\": \"foo\"}"), t.name, foo.uri));
-        ids.addAll( uploadRun(mapper.readTree("{ \"bar\": \"bar\"}"), t.name, bar.uri));
+        ids.addAll(uploadRun(mapper.readTree("{ \"foo\": \"foo\"}"), t.name, foo.uri));
+        ids.addAll(uploadRun(mapper.readTree("{ \"bar\": \"bar\"}"), t.name, bar.uri));
 
         em.unwrap(Session.class).doWork(ComposableMigration::migrate);
 
@@ -275,10 +411,10 @@ public class ComposableMigrationTest extends BaseServiceTest {
         assertNotNull(foundLabel, "group should have a label named found");
         assertEquals(2, foundLabel.extractors.size(), "found should have two extractors");
 
-        foundLabel.extractors.forEach(e->{
-            assertEquals(e.type, ExtractorDao.Type.VALUE,e.name+" should be a VALUE type");
-            assertNotNull(e.targetLabel,e.name+" should have a target label");
-            assertTrue(e.jsonpath==null || e.jsonpath.isBlank(),e.name+" should not have a jsonpath");
+        foundLabel.extractors.forEach(e -> {
+            assertEquals(e.type, ExtractorDao.Type.VALUE, e.name + " should be a VALUE type");
+            assertNotNull(e.targetLabel, e.name + " should have a target label");
+            assertTrue(e.jsonpath == null || e.jsonpath.isBlank(), e.name + " should not have a jsonpath");
         });
         expLabelService.calculateLabelValues(group.labels, Long.valueOf(ids.get(0)));
         expLabelService.calculateLabelValues(group.labels, Long.valueOf(ids.get(1)));
@@ -294,14 +430,13 @@ public class ComposableMigrationTest extends BaseServiceTest {
                 0,
                 Collections.EMPTY_LIST,
                 Collections.EMPTY_LIST,
-                false
-                );
-        assertEquals(2,valueMaps.size());
-        assertEquals(1,valueMaps.stream().filter(v->v.data().hasNonNull("found2")).count());
-        assertEquals(1,valueMaps.stream().filter(v->v.data().hasNonNull("found1")).count());
-        assertEquals(1,valueMaps.stream().filter(v->v.data().get("found").asText().equals("foo")).count());
-        assertEquals(1,valueMaps.stream().filter(v->v.data().get("found").asText().equals("bar")).count());
-        assertEquals(2,valueMaps.stream().filter(v->v.data().hasNonNull("found")).count());
+                false);
+        assertEquals(2, valueMaps.size());
+        assertEquals(1, valueMaps.stream().filter(v -> v.data().hasNonNull("found2")).count());
+        assertEquals(1, valueMaps.stream().filter(v -> v.data().hasNonNull("found1")).count());
+        assertEquals(1, valueMaps.stream().filter(v -> v.data().get("found").asText().equals("foo")).count());
+        assertEquals(1, valueMaps.stream().filter(v -> v.data().get("found").asText().equals("bar")).count());
+        assertEquals(2, valueMaps.stream().filter(v -> v.data().hasNonNull("found")).count());
 
     }
 
@@ -329,13 +464,11 @@ public class ComposableMigrationTest extends BaseServiceTest {
 
         List<Integer> ids = new ArrayList<>();
 
-        ids.addAll( uploadRun(mapper.readTree(
-                "{ \"foo\": \"foo\"}"), t.name, foo.uri)
-        );
+        ids.addAll(uploadRun(mapper.readTree(
+                "{ \"foo\": \"foo\"}"), t.name, foo.uri));
 
-        ids.addAll( uploadRun(mapper.readTree(
-                "{ \"first\": { \"$schema\":\"" + bar.uri + "\", \"bar\": \"bar\" } }"), t.name, null)
-        );
+        ids.addAll(uploadRun(mapper.readTree(
+                "{ \"first\": { \"$schema\":\"" + bar.uri + "\", \"bar\": \"bar\" } }"), t.name, null));
 
         em.unwrap(Session.class).doWork(ComposableMigration::migrate);
 
@@ -363,13 +496,12 @@ public class ComposableMigrationTest extends BaseServiceTest {
                 0,
                 Collections.EMPTY_LIST,
                 Collections.EMPTY_LIST,
-                false
-        );
+                false);
 
-        assertEquals(2,valueMaps.size(),"expect two value map entries");
-        assertEquals(2,valueMaps.stream().filter(m->m.data().hasNonNull("found")).count());
-        assertEquals(1,valueMaps.stream().filter(m->m.data().get("found").textValue().equals("foo")).count());
-        assertEquals(1,valueMaps.stream().filter(m->m.data().get("found").textValue().equals("bar")).count());
+        assertEquals(2, valueMaps.size(), "expect two value map entries");
+        assertEquals(2, valueMaps.stream().filter(m -> m.data().hasNonNull("found")).count());
+        assertEquals(1, valueMaps.stream().filter(m -> m.data().get("found").textValue().equals("foo")).count());
+        assertEquals(1, valueMaps.stream().filter(m -> m.data().get("found").textValue().equals("bar")).count());
     }
 
 }

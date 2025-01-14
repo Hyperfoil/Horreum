@@ -246,7 +246,8 @@ public class LabelDao extends PanacheEntity implements Comparable<LabelDao> {
     @Override
     public String toString() {
         return "label=[name:" + name + " id:" + id + " extractors="
-                + (extractors == null ? "null" : extractors.stream().map(ExtractorDao::toString).collect(Collectors.toList())) + "]";
+                + (extractors == null ? "null" : extractors.stream().map(ExtractorDao::toString).collect(Collectors.toList()))
+                + "]";
     }
 
     @Override

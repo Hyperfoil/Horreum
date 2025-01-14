@@ -20,8 +20,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.collect.Streams;
-import io.restassured.response.ValidatableResponse;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Status;
@@ -42,6 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Streams;
 
 import io.hyperfoil.tools.horreum.action.GitHubIssueCommentAction;
 import io.hyperfoil.tools.horreum.action.HttpAction;
@@ -81,6 +80,7 @@ public class BaseServiceTest {
     protected static final String SCHEMA = "urn:comparison";
     static final String[] UPLOADER_ROLES = { "foo-team", "foo-uploader", "uploader" };
     public static final String[] TESTER_ROLES = { "foo-team", "foo-tester", "tester", "viewer" };
+    public static final String[] BAR_TESTER_ROLES = { "bar-team", "bar-tester", "tester", "viewer" };
     static final List<String> SYSTEM_ROLES = Collections.singletonList(Roles.HORREUM_SYSTEM);
     private static String UPLOADER_TOKEN;
     private static String TESTER_TOKEN;
@@ -188,7 +188,9 @@ public class BaseServiceTest {
     protected void dropAllViewsAndTests() {
         Util.withTx(tm, () -> {
             try (CloseMe ignored = roleManager
-                    .withRoles(Streams.concat(Stream.of("perf-team", "perf-tester", "tester"), Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
+                    .withRoles(Streams
+                            .concat(Stream.of(BAR_TESTER_ROLES), Stream.of(TESTER_ROLES),
+                                    Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
                             .collect(Collectors.toList()))) {
                 ViewComponentDAO.deleteAll();
                 ViewDAO.deleteAll();
@@ -712,7 +714,8 @@ public class BaseServiceTest {
         jsonRequest().body(ids).post("/api/test/" + test.id + "/transformers").then().assertThat().statusCode(204);
     }
 
-    protected Transformer createTransformer(String name, Schema schema, String function, Extractor... paths) {
+    protected Transformer createTransformer(String name, Schema schema, Schema targetSchema, String function,
+            Extractor... paths) {
         Transformer transformer = new Transformer();
         transformer.name = name;
         transformer.extractors = new ArrayList<>();
@@ -728,11 +731,15 @@ public class BaseServiceTest {
         transformer.schemaUri = schema.uri;
         transformer.schemaName = schema.name;
         transformer.function = function;
-        transformer.targetSchemaUri = postFunctionSchemaUri(schema);
+        transformer.targetSchemaUri = targetSchema == null ? postFunctionSchemaUri(schema) : targetSchema.uri;
         Integer id = jsonRequest().body(transformer).post("/api/schema/" + schema.id + "/transformers")
                 .then().statusCode(200).extract().as(Integer.class);
         transformer.id = id;
         return transformer;
+    }
+
+    protected Transformer createTransformer(String name, Schema schema, String function, Extractor... paths) {
+        return createTransformer(name, schema, null, function, paths);
     }
 
     protected String postFunctionSchemaUri(Schema s) {
