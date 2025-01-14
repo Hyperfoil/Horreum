@@ -4796,4 +4796,48 @@
             $$ LANGUAGE plpgsql;
         </sql>
     </changeSet>
+    <changeSet id="128" author="lampajr">
+        <validCheckSum>ANY</validCheckSum>
+        <sql>
+            -- drop triggers
+            DROP TRIGGER IF EXISTS rs_after_run_untrash ON run;
+            DROP TRIGGER IF EXISTS rs_after_run_update ON run;
+            DROP TRIGGER IF EXISTS before_schema_update ON schema;
+            DROP TRIGGER IF EXISTS ds_after_insert ON dataset;
+
+            -- drop functions
+            DROP FUNCTION rs_after_run_update;
+            DROP FUNCTION before_schema_update_func;
+            DROP FUNCTION ds_after_dataset_insert_func;
+        </sql>
+    </changeSet>
+    <changeSet id="129" author="lampajr">
+        <validCheckSum>ANY</validCheckSum>
+        <sql>
+            -- drop triggers
+            DROP TRIGGER IF EXISTS after_run_update_non_data ON run;
+            DROP TRIGGER IF EXISTS delete_run_validations ON run;
+
+            -- drop functions
+            DROP FUNCTION after_run_update_non_data_func;
+            DROP FUNCTION delete_run_validations;
+        </sql>
+    </changeSet>
+    <changeSet id="130" author="lampajr">
+        <validCheckSum>ANY</validCheckSum>
+        <sql>
+            -- drop triggers
+            DROP TRIGGER IF EXISTS lv_before_update ON label;
+            DROP TRIGGER IF EXISTS lv_after_update ON label;
+            DROP TRIGGER IF EXISTS recalc_labels ON label_recalc_queue;
+
+            -- drop functions
+            DROP FUNCTION lv_before_label_update_func;
+            DROP FUNCTION lv_after_label_update_func;
+            DROP FUNCTION recalc_label_values;
+
+            -- drop table as no longer used
+            DROP TABLE label_recalc_queue;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
