@@ -32,7 +32,6 @@ public class RunServiceImpl implements RunService {
     public Response addRunFromData(
             @QueryParam("test") String test,
             String content) {
-        //String test = "rhivos-perf-comprehensive";
         try {
             JsonNode json = new ObjectMapper().readValue(content, JsonNode.class);
             RunDao r = createRun(test, json, new ObjectMapper().getNodeFactory().objectNode());

@@ -722,7 +722,7 @@ public class LabelServiceImpl implements LabelService {
 
     //This is the labelValues endpoint that more closely matches what currently exists in Horreum if run = dataset
     //filter,before,after,sort,direction,limit,page, and multiFilter are not yet supported
-    List<ValueMap> labelValues(
+    public List<ValueMap> labelValues(
             long testId,
             String filter,
             String before,

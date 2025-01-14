@@ -55,7 +55,6 @@ public interface LabelService {
         public long testId() {
             return testId;
         }
-
     }
 
     @GET

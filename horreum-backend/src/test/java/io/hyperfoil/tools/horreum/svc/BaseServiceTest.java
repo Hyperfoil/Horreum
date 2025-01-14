@@ -20,6 +20,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.collect.Streams;
+import io.restassured.response.ValidatableResponse;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Status;
@@ -186,14 +188,15 @@ public class BaseServiceTest {
     protected void dropAllViewsAndTests() {
         Util.withTx(tm, () -> {
             try (CloseMe ignored = roleManager
-                    .withRoles(Stream.concat(Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
+                    .withRoles(Streams.concat(Stream.of("perf-team", "perf-tester", "tester"), Stream.of(TESTER_ROLES), Stream.of(Roles.HORREUM_SYSTEM, Roles.ADMIN))
                             .collect(Collectors.toList()))) {
                 ViewComponentDAO.deleteAll();
                 ViewDAO.deleteAll();
 
-                em.createNativeQuery("DELETE FROM test_transformers").executeUpdate();
+                int test_transformersRemoved = em.createNativeQuery("DELETE FROM test_transformers").executeUpdate();
                 em.createNativeQuery("DELETE FROM transformer_extractors").executeUpdate();
                 em.createNativeQuery("DELETE FROM experiment_comparisons").executeUpdate();
+
                 TransformerDAO.deleteAll();
                 TestDAO.deleteAll();
                 ChangeDAO.deleteAll();
@@ -416,7 +419,6 @@ public class BaseServiceTest {
 
     protected Test createTest(Test test) {
         log.debugf("Creating new test via /api/test: %s", test.toString());
-
         test = jsonRequest()
                 .body(test)
                 .post("/api/test")

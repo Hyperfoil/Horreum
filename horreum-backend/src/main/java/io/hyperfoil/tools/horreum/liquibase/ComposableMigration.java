@@ -87,21 +87,17 @@ public class ComposableMigration implements CustomTaskChange {
 
     public static void migrate(Connection conn) {
         //this ensures testIds do not change when converted to labelgorups
-        System.out.println("persisting tests");
         persistAllTests(conn);
         //make sure we do not get an id conflict
         updateLabelGroupSeq(conn);
 
         //this takes all schemas from Horreum and creates LabelGroups with owner = GLOBAL
-        System.out.println("creating global schemas");
         //this isn't working correctly
         Map<String, Long> globalSchemas = createGlobalSchemas(conn);
-        System.out.println("done creating global schemas");
 
         List<TestTransformsRef> transformsRefs = getTestTransforms(conn);
         Set<Long> sharedTransformIds = getSharedTransformIds(conn);
 
-        System.out.println("creating shared groups");
         Map<Long, Label> transformParents = sharedTransformIds.stream().distinct().collect(Collectors.toMap(id -> id, id -> {
             LabelContext groupContext = new LabelContext();
             LabelDef def = fromTransform(id, conn);
@@ -121,7 +117,6 @@ public class ComposableMigration implements CustomTaskChange {
 
         Set<Long> testIds = getAllTestIds(conn);
         for (long testId : testIds) {
-            System.out.println("migrating test: " + testId);
             //create a lookup context for the test and a new group
             LabelContext testContext = new LabelContext();
             LabelGroup testGroup = loadGroup(testId, conn);
@@ -143,19 +138,13 @@ public class ComposableMigration implements CustomTaskChange {
                     ref.transforms.add(first);
                 }
                 //This is the start of the new logic (attempt)
+                //Transform id to new name
                 Map<Long, String> transformNames = ref.transforms.stream().collect(Collectors.toMap(id -> id, id -> {
                     LabelDef def = fromTransform(id, conn);
                     return def.name + (useCounter ? counter.getAndIncrement() : "");
                 }));
-
-                //                    List<LabelDef> transformLabels = ref.transforms.stream().map(id->{
-                //                        LabelDef def = fromTransform(id, conn);
-                //                        if (useCounter) {
-                //                            def = new LabelDef(def.name + counter.getAndIncrement(), def.javascript, def.target,
-                //                                    def.extractors);
-                //                        }
-                //                        return def;
-                //                    }).toList();
+                //new group id to the list of transforms that target it
+                // so basically if multiple transforms target the same new label group because their schema's were merged.
                 Map<Long, List<Long>> targetGroupIdToLabelId = ref.transforms.stream().collect(Collectors.toMap(
                         id -> {
                             String targetUri = transformTargetUri.get(id);
@@ -185,17 +174,9 @@ public class ComposableMigration implements CustomTaskChange {
                                 originalLabelId, conn, testContext);
                         testGroup.labels.add(persistedLabel);
                         addTempTransformMap(id, persistedLabel.id, conn);
-                        if (legacyTransformIds.size() == 1 && targetGroupId != null) {
-                            //loading the targetGroup into testGroup, something is wrong with this
-                            LabelGroup targetedGroup = loadGroup(targetGroupId, conn);
-                            //This is a mistake, this should be done by a label that merges all the transforms not individually
-                            List<Label> loadedTargetGroupLabels = persistedLabel.targetGroup(targetedGroup, testContext,
-                                    conn);
-                            testGroup.labels.addAll(loadedTargetGroupLabels);
-                        }
+
                         return persistedLabel;
                     }).toList();
-                    //
                     if (moreThanOneDef) {
                         LabelDef def = fromTransform(legacyTransformIds.get(0), conn);
                         String newName = def.name;
@@ -239,42 +220,6 @@ public class ComposableMigration implements CustomTaskChange {
                         }
                     }
                 });
-
-                // this is the start of the original logic
-
-                //                    ref.transforms.forEach(id -> {
-                //                        LabelDef def = fromTransform(id, conn);
-                //                        if (useCounter) {
-                //                            def = new LabelDef(def.name + counter.getAndIncrement(), def.javascript, def.target,
-                //                                    def.extractors);
-                //                        }
-                //
-                //                        Long targetGroupId = null;
-                //                        Long originalLabelId = null;
-                //                        Long sourceGroupId = null;
-                //                        if (transformParents.containsKey(id)) {
-                //                            Label ancestorLabel = transformParents.get(id);
-                //                            originalLabelId = ancestorLabel.id;
-                //                            sourceGroupId = ancestorLabel.groupId;
-                //
-                //                        }
-                //                        if (def.target != null && !def.target.isBlank()) {
-                //                            targetGroupId = globalSchemas.getOrDefault(def.target, null);
-                //                        }
-                //
-                //                        Label persistedLabel = persistLabelDef(def, testGroup.id, true, null, sourceGroupId, targetGroupId,
-                //                                originalLabelId, conn, testContext);
-                //                        testGroup.labels.add(persistedLabel);
-                //                        addTempTransformMap(id, persistedLabel.id, conn);
-                //                        //loading the targetGroup into testGroup, something is wrong with this
-                //                        LabelGroup targetedGroup = loadGroup(targetGroupId, conn);
-                //                        //This is a mistake, this shoudl be done by a label that merges all the transforms not individually
-                //                        List<Label> loadedTargetGroupLabels = persistedLabel.targetGroup(targetedGroup, testContext, conn);
-                //                        testGroup.labels.addAll(loadedTargetGroupLabels);
-                //
-                //                    });
-
-                //we need to first create a transform
             } else {
                 Map<String, List<String>> schemaReferences = getReferencedSchema(testId, conn);
                 for (String jsonpath : schemaReferences.keySet()) {
@@ -288,7 +233,6 @@ public class ComposableMigration implements CustomTaskChange {
 
                     assert existingUri.size() == labelGroupsIds.size();
 
-                    System.out.println(jsonpath + " -> " + labelGroupsIds + " schemas =" + schemaReferences.get(jsonpath));
                     if (labelGroupsIds.isEmpty()) {
                         System.out.println(" unknown schema " + schemaReferences.get(jsonpath));
                     } else if ("$.\"$schema\"".equals(jsonpath)) {
@@ -314,8 +258,9 @@ public class ComposableMigration implements CustomTaskChange {
                     } else {
                         if (labelGroupsIds.size() == 1) {
                             Long targetGroupId = labelGroupsIds.iterator().next();
+                            String shortenedJsonpath = jsonpath.substring(0, jsonpath.length() - ".\"$schema\"".length());
                             Label jsonpathLabel = persistLabel(
-                                    jsonpath,
+                                    shortenedJsonpath, /* this sets the name of the value in ValueMap, probably don't want them */
                                     testGroup.id,
                                     null /* reducerId */,
                                     io.hyperfoil.tools.horreum.api.exp.data.Label.MultiIterationType.Length.name(),
@@ -327,8 +272,8 @@ public class ComposableMigration implements CustomTaskChange {
                                     null,
                                     new ArrayList<>(List.of(
                                             new Extractor(null,
-                                                    jsonpath.substring(0, jsonpath.length() - ".\"$schema\"".length()), null,
-                                                    Type.PATH, null, null, jsonpath, false))),
+                                                    shortenedJsonpath, null,
+                                                    Type.PATH, null, null, shortenedJsonpath, false))),
                                     conn,
                                     testContext);
                             testContext.add(jsonpathLabel, null);
@@ -357,6 +302,8 @@ public class ComposableMigration implements CustomTaskChange {
     public static final String JAVASCRIPT_FIRST_NOT_NULL = "(args)=>Object.values(args).find(el => !!el)";
 
     // Used to resolve the correct labelId from either an old Id or Name
+    // Does Context need a parent context for the case where a labelName exists in two places under a Group?
+    //      (two separate labels target the same group)
     private static class LabelContext {
         private final Map<String, Label> byName = new HashMap<>();
         private final Map<Long, String> byNewId = new HashMap<>();
@@ -382,11 +329,11 @@ public class ComposableMigration implements CustomTaskChange {
             return byOldId.getOrDefault(oldId, null);
         }
 
-        public Long getId(String name) {
+        public Long getIdFromName(String name) {
             return has(name) ? get(name).id : null;
         }
 
-        public Long getId(Long oldId) {
+        public Long getIdFromOldId(Long oldId) {
             return has(oldId) ? get(oldId).id : null;
         }
 
@@ -407,7 +354,7 @@ public class ComposableMigration implements CustomTaskChange {
         public LabelGroup withOwner(String newOwner, Connection conn, LabelContext context) {
             LabelGroup rtrn = persistGroup(new LabelGroup(null, name, newOwner, type, new ArrayList<>()), conn, context);
             labels.forEach(label -> {
-                rtrn.labels.add(label.withGroupSourceTarget(rtrn.id, context.getId(label.sourceLabelId),
+                rtrn.labels.add(label.withGroupSourceTarget(rtrn.id, context.getIdFromOldId(label.sourceLabelId),
                         label.targetGroupId, context, conn));
             });
             return rtrn;
@@ -416,13 +363,15 @@ public class ComposableMigration implements CustomTaskChange {
         public void addGroup(LabelGroup group, Connection conn, LabelContext context) {
             //TODO should this check for unique name conflicts?
             group.labels.forEach(label -> {
+                //withGroupSourceTarget takes care of adding the id to Context
                 Label newLabel = label.withGroupSourceTarget(
                         id,
-                        context.getId(label.sourceLabelId),
+                        context.getIdFromOldId(label.sourceLabelId),
                         label.targetGroupId,
                         context,
                         conn);
                 labels.add(newLabel);
+
             });
         }
     }
@@ -481,7 +430,7 @@ public class ComposableMigration implements CustomTaskChange {
                 Label first = labelList.get(0);
                 Label newLabel = first.withGroupSourceTarget(
                         newGroup.id,
-                        context.getId(first.sourceLabelId),
+                        context.getIdFromOldId(first.sourceLabelId),
                         first.targetGroupId,
                         context,
                         conn);
@@ -519,12 +468,13 @@ public class ComposableMigration implements CustomTaskChange {
                                         e.columnName,
                                         e.foreach,
                                         newLabel.id,
-                                        context.getId(e.targetLabelId),
+                                        context.getIdFromOldId(e.targetLabelId),
                                         conn));
                     });
                 }
                 List<Extractor> extractors = newNames.stream().map(newLabelName -> {
-                    return new Extractor(null, newLabelName, null, Type.VALUE, null, null, newLabelName + NAME_SEPARATOR,
+
+                    return new Extractor(null, newLabelName, null, Type.VALUE, context.getIdFromName(newLabelName), null, null,
                             false);
                 }).toList();
                 //                    Label joiningLabel = new LabelDef(labelName, "(args)=>Object.values(args).find(el => !!el)", null,
@@ -585,13 +535,15 @@ public class ComposableMigration implements CustomTaskChange {
                 if (jsonpath.contains(NAME_SEPARATOR)) {
                     labelName = jsonpath.substring(0, jsonpath.indexOf(NAME_SEPARATOR));
                     jsonpath = jsonpath.substring(jsonpath.indexOf(NAME_SEPARATOR) + NAME_SEPARATOR.length());
+                }else{
+                    //assume the full input is the labelName
+                    jsonpath = "";
                 }
                 if (labelName.endsWith(FOR_EACH_SUFFIX)) {
                     forEach = true;
                     labelName = labelName.substring(0, labelName.length() - FOR_EACH_SUFFIX.length());
                 }
                 Label found = context.get(labelName);
-                System.out.println("fetched " + labelName + " as " + found);
                 if (found != null) {
                     targetId = found.id;
                 }
@@ -631,17 +583,8 @@ public class ComposableMigration implements CustomTaskChange {
         }
 
         public Extractor withParentAndTarget(long newParentId, Long newTargetId, Connection conn, LabelContext context) {
-            //the targetId will get detected by persistExtractor
             return persistExtractor(new Extractor(null, name, newParentId, type, newTargetId, columnName, jsonpath, foreach),
                     conn, context);
-        }
-
-        public ExtractorDef toExtractorDef(LabelContext context) {
-            String namePrefix = type.equals(Type.VALUE) ? context.getNameFromNewId(targetLabelId)
-                    : type.equals(Type.METADATA) ? METADATA_PREFIX + columnName + METADATA_SUFFIX : "";
-            String newJsonpath = namePrefix + (foreach ? FOR_EACH_SUFFIX : "")
-                    + (!namePrefix.isBlank() && jsonpath != null && !jsonpath.isBlank() ? NAME_SEPARATOR : "") + jsonpath;
-            return new ExtractorDef(name, newJsonpath);
         }
     }
 
@@ -703,9 +646,7 @@ public class ComposableMigration implements CustomTaskChange {
         public List<Label> targetGroup(LabelGroup group, LabelContext context, Connection conn) {
             long beforeParentGroupCount = countGroupLabels(groupId, conn);
             long beforeTargetGroupCount = countGroupLabels(group.id, conn);
-            System.out.println("label.targetGroup before extractor count = " + countTotalExtractors(conn) + " adding "
-                    + group.labels.stream().mapToInt(l -> l.extractors.size()).sum() + " from " + group.name + " [" + group.id
-                    + "] to " + name);
+
             List<Label> rtrn = new ArrayList<>();
 
             group.labels.forEach(label -> {
@@ -720,7 +661,6 @@ public class ComposableMigration implements CustomTaskChange {
             assert (beforeTargetGroupCount == afterTargetGroupCount);
             assert (afterParentGroupCount == beforeParentGroupCount + beforeTargetGroupCount);
 
-            System.out.println("label.targetGroup after extractor count = " + countTotalExtractors(conn));
             return rtrn;
         }
 
@@ -828,7 +768,6 @@ public class ComposableMigration implements CustomTaskChange {
                 "select test_id,jsonb_agg(transformer_id) as transformer_ids from test_transformers group by test_id");
                 ResultSet resultSet = statement.executeQuery();) {
             if (resultSet != null) {
-                System.out.println("warnings = " + resultSet.getWarnings());
                 while (resultSet.next()) {
                     Long testId = resultSet.getLong("test_id");
                     ArrayNode nodes = (ArrayNode) new ObjectMapper().readTree(resultSet.getString("transformer_ids"));
@@ -947,8 +886,6 @@ public class ComposableMigration implements CustomTaskChange {
         //now we check each collection of schemas
         for (String baseUri : groupedSchemas.keySet()) {
             LabelContext context = new LabelContext();
-            System.out.println(baseUri + " " + groupedSchemas.get(baseUri).size() + " bizbuz "
-                    + groupedSchemas.get(baseUri).stream().map(schema -> schema.uri).collect(Collectors.toSet()));
             List<Schema> schemas = groupedSchemas.get(baseUri);
             Set<String> uniqueLabelNames = getUniqueLabelNames(schemas);
             List<LabelDef> newLabels = new ArrayList<>();
@@ -959,21 +896,14 @@ public class ComposableMigration implements CustomTaskChange {
                         .filter(Objects::nonNull).toList();
                 if (labels.size() == 1 || allTheSameLabelDefs(labels)) {
 
+
                     newLabels.add(labels.get(0));
                 } else {//we need to create a merge
-                    System.out.println("  creating joining Label for " + baseUri + " " + labelName);
                     AtomicInteger counter = new AtomicInteger(1);
                     Set<String> newNames = new HashSet<>();
                     Set<LabelDef> uniqueLabels = schemas.stream()
                             .map(s -> s.labels.stream().filter(l -> labelName.equals(l.name)).findFirst().orElse(null))
                             .filter(Objects::nonNull).collect(Collectors.toSet());
-
-                    System.out.println("    labels.size=" + labels.size() + "  uniqueLabels.size=" + uniqueLabels.size());
-                    System.out.println("    All labels:");
-                    labels.forEach(l -> System.out.println("      " + l));
-                    System.out.println("    Unique labels:");
-                    uniqueLabels.forEach(l -> System.out.println("      " + l));
-
                     schemas.stream().forEach(s -> {
                         LabelDef found = s.labels.stream().filter(l -> labelName.equals(l.name)).findFirst().orElse(null);
                         m.reset(s.uri);
@@ -985,13 +915,12 @@ public class ComposableMigration implements CustomTaskChange {
                             while (newNames.contains(newName)) {
                                 newName = newName + counter.getAndIncrement();
                             }
-                            System.out.println("  adding   " + found + "\n  as " + newName + " from " + s.uri);
                             newNames.add(newName);
                             LabelDef newLabel = new LabelDef(newName, found.javascript, found.target, found.extractors);
 
                             newLabels.add(newLabel);
                         } else if (found != null) {
-                            System.out.println("  skipping " + found);
+                            //skipping when not found
                         }
                     });
                     //create the new label
@@ -1085,7 +1014,6 @@ public class ComposableMigration implements CustomTaskChange {
                 labelName = labelName.substring(0, labelName.length() - FOR_EACH_SUFFIX.length());
             }
             Label found = context.get(labelName);
-            System.out.println("fetched " + labelName + " as " + found);
             if (found != null) {
                 targetId = found.id;
             }
@@ -1124,6 +1052,7 @@ public class ComposableMigration implements CustomTaskChange {
         return null;
     }
 
+    //Does NOT mutage the Extractor targets, that needs to happen beforehand
     private static Label persistLabel(String name, long groupId, Long reducerId, String multitype, String scalarmethod,
             boolean splitting, Long sourceLabelId,
             Long sourceGroupId, Long targetGroupId, Long originalLabelId, List<Extractor> extractors, Connection conn,
@@ -1168,10 +1097,10 @@ public class ComposableMigration implements CustomTaskChange {
         }
         Label rtrn = new Label(newId, name, reducerId, targetGroupId, groupId, splitting, sourceLabelId, sourceGroupId,
                 originalLabelId, new ArrayList<>());
-
+        context.add(rtrn,null);
         extractors.forEach(e -> {
             rtrn.extractors.add(
-                    e.withParentAndTarget(rtrn.id, context.getId(e.targetLabelId), conn, context));
+                    e.withParentAndTarget(rtrn.id, e.targetLabelId, conn, context));
         });
 
         return rtrn;
@@ -1268,8 +1197,8 @@ public class ComposableMigration implements CustomTaskChange {
             rtrn.labels.add(
                     label.withGroupSourceTarget(
                             rtrn.id,
-                            context.getId(label.sourceLabelId),
-                            context.getId(label.targetGroupId),
+                            context.getIdFromOldId(label.sourceLabelId),
+                            context.getIdFromOldId(label.targetGroupId),
                             context, conn));
         });
         return rtrn;
@@ -1519,7 +1448,6 @@ public class ComposableMigration implements CustomTaskChange {
                 for (Long targetGroupId : targetGroupIds) {
                     LabelGroup targetGroup = loadGroup(targetGroupId, conn);
                     if (targetGroup == null) {
-                        System.out.println(group.name + " [" + group.id + "] missing target " + targetGroupId);
                         rtrn = false;
                     } else {
                         boolean hasSourceGroup = group.labels.stream()
@@ -1527,12 +1455,11 @@ public class ComposableMigration implements CustomTaskChange {
                         boolean allExist = targetGroup.labels.stream()
                                 .allMatch(l -> group.labels.stream().anyMatch(g -> g.equals(l)));
                         if (!hasSourceGroup) {
-                            System.out.println(group.name + " [" + group.id + "] missing labels from " + targetGroup.name + " ["
-                                    + targetGroup.id + "]");
+
                             rtrn = false;
                         }
                         if (!allExist) {
-                            System.out.println(group.name + " [" + group.id + "] missing label from target group "
+                            System.err.println(group.name + " [" + group.id + "] missing label from target group "
                                     + targetGroup.name + " [" + targetGroup.id + "]");
                         }
                     }
@@ -1543,7 +1470,7 @@ public class ComposableMigration implements CustomTaskChange {
             if (!selfTargeting.isEmpty()) {
                 rtrn = false;
                 selfTargeting.forEach(l -> {
-                    System.out.println(group.name + " [" + group.id + "] label " + l.name + " is self targeting");
+                    System.err.println(group.name + " [" + group.id + "] label " + l.name + " is self targeting");
                 });
             }
         }
