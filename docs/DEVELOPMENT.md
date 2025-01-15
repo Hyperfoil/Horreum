@@ -203,3 +203,6 @@ quarkus.liquibase.migration.validate-on-migrate=false
 quarkus.datasource.migration.username=<migration-user-name>
 quarkus.datasource.migration.password=<migration-user-password>
 ```
+
+# Backports
+When developing new features, we always create pull requests (PRs) in the `master` branch. However, we always support the latest stable branch. If you encounter an issue that requires a fix for the stable branch, you can add the `backport` label to the original PR and a new PR will be automatically generated. You will then need to review and merge the backport PR.
