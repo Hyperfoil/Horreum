@@ -203,3 +203,13 @@ quarkus.liquibase.migration.validate-on-migrate=false
 quarkus.datasource.migration.username=<migration-user-name>
 quarkus.datasource.migration.password=<migration-user-password>
 ```
+
+# Backports
+When developing new features, we always create pull requests (PRs) in the `master` branch. However, we always support the latest stable branch. If you encounter an issue that requires a fix for the stable branch, you can add the `backport` (or `backport-squash`) label to the original PR and a new PR will be automatically generated. You will then need to review and merge the backport PR.
+
+Which label should I use?
+* `backport`: (default) this uses the `no-squash=true` option so that the tool tries to backport all commits coming from the original pull request you are trying to backport.
+> _**Note**_ that in this case the commit SHAs should exist during the backporting, i.e,
+delete the source branch only after the backporting PR got created.
+* `backport-squash`: with this label you set `no-squash=false` option, so that the tool tries to backport the pull request `merge_commit_sha`.
+> _**Note**_ the value of the `merge_commit_sha` attribute changes depending on the state of the pull request, see [Github doc](https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request) for more details.
