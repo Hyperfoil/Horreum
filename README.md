@@ -58,15 +58,15 @@ Horreum is running on [localhost:8080](http://localhost:8080)
 
 * Linux (Fedora, RHEL)
 * Windows/WSL2 (Windows 10 and Windows 11)
-* MacOS (13.3) on M2 hardware 
+* MacOS (13.3) on M2 hardware
 
 ## Operator
 
 The [Horreum operator](https://github.com/Hyperfoil/horreum-operator) can help to setup a production environment.
 
-## 🧑‍💻 Contributing
+## Contributing
 
-Contributions to `Horreum` Please check our [CONTRIBUTING.md](./CONTRIBUTING.md)
+Please check the [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ### If you have any idea or doubt 👇
 
@@ -82,6 +82,12 @@ community.
 
 Consider giving the project a [star](https://github.com/Hyperfoil/Horreum/stargazers) on
 [GitHub](https://github.com/Hyperfoil/Horreum/) if you find it useful.
+
+## Development Process
+Please check the [DEVELOPMENT.md](./docs/DEVELOPMENT.md)
+
+## Release
+Please check the [RELEASE.md](./docs/RELEASE.md)
 
 ## License
 
