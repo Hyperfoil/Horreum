@@ -1,6 +1,8 @@
 # Release Horreum
 
 ## Creating a new stable branch
+This step is not required if you are going to perform a micro release from an already existing stable branch, e.g., `0.17.5`. 
+
 Open https://github.com/Hyperfoil/Horreum/actions/workflows/branch.yml and run the workflow. Select the `master` branch.
 
 ## Perform Release
