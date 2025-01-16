@@ -535,6 +535,7 @@ public class RunServiceImpl implements RunService {
                 .build();
     }
 
+    @Transactional
     void persistRun(ServiceMediator.RunUpload runUpload) {
         runUpload.roles.add("horreum.system");
         roleManager.setRoles(String.join(",", runUpload.roles));
