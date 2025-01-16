@@ -222,6 +222,7 @@ public interface RunService {
             @Parameter(name = "description", description = "Run description", example = "AWS runs"),
 
     })
+    @Produces(MediaType.TEXT_PLAIN)
     @APIResponses(value = {
             @APIResponse(responseCode = "202", description = "The request has been accepted for processing. Returns a list of created run IDs if available, "
                     + "or an empty list if processing is still ongoing. Label values and change detection processing " +
@@ -242,6 +243,7 @@ public interface RunService {
     @Path("data")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Operation(description = "Upload a new Run with metadata", hidden = true)
+    @Produces(MediaType.TEXT_PLAIN)
     @APIResponses(value = {
             @APIResponse(responseCode = "202", description = "The request has been accepted for processing. Returns a list of created run IDs if available, "
                     + "or an empty list if processing is still ongoing. Label values and change detection processing " +
