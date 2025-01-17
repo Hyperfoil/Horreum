@@ -141,6 +141,18 @@ public class MigrateService {
     }
 
     @GET
+    @Path("test/{testId}/group/")
+    public List<Long> getTargetLabelGroups(
+            @PathParam("testId") Long testId) {
+        System.out.println("testId = " + testId);
+cha        List<Long> found = em.createNativeQuery("select targetgroup_id from exp_label where group_id=?1 and targetgroup_id is not null",Long.class)
+                .setParameter(1, testId)
+                .getResultList();
+        return found;
+    }
+
+
+    @GET
     @Path("test/{testId}/group/{groupId}/labelValues")
     public List<LabelService.ValueMap> runLabelValuesByLabelGroup(
             @PathParam("testId") Long testId,

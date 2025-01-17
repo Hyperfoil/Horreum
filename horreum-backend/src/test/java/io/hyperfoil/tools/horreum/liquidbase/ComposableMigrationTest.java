@@ -48,7 +48,7 @@ import io.restassured.response.ValidatableResponse;
 @TestProfile(HorreumTestProfile.class)
 public class ComposableMigrationTest extends BaseServiceTest {
 
-    String getMethodName(){
+    String getMethodName() {
         return Thread.currentThread().getStackTrace()[0].getMethodName();
     }
 
@@ -170,11 +170,12 @@ public class ComposableMigrationTest extends BaseServiceTest {
         assertEquals(3, group.labels.size(), "group should have 3 labels:\n" + group.labels);
         assertTrue(group.labels.stream().anyMatch(l -> l.name.equals("first")), "group should have a 'first' label");
     }
+
     @org.junit.jupiter.api.Test
     public void migrate_transform_target_same_schema() throws JsonProcessingException {
         String name = getMethodName();
-        String base = "urn:"+name;
-        Schema first = createSchema(name+"_schema",base);
+        String base = "urn:" + name;
+        Schema first = createSchema(name + "_schema", base);
 
         Extractor fooExtractor = new Extractor();
         fooExtractor.name = "foo";
@@ -184,11 +185,11 @@ public class ComposableMigrationTest extends BaseServiceTest {
         barExtractor.name = "bar";
         barExtractor.jsonpath = "$.bar";
 
-        addLabel(first,"bar",null,barExtractor);
+        addLabel(first, "bar", null, barExtractor);
         Transformer transformerFoo = createTransformer("foo", first, first, "(v)=>{ return [{\"bar\":v,\"using\":\"foo\"}]}",
                 fooExtractor);
 
-        Test t1 = createTest(createExampleTest(name+"-test"));
+        Test t1 = createTest(createExampleTest(name + "-test"));
         addTransformer(t1, transformerFoo);
 
         List<Integer> ids = new ArrayList<>();
@@ -199,9 +200,9 @@ public class ComposableMigrationTest extends BaseServiceTest {
         em.unwrap(Session.class).doWork(ComposableMigration::migrate);
 
         LabelGroupDao group = LabelGroupDao.find("name", t1.name).firstResult();
-        assertNotNull(group," test group should not be null");
-        assertEquals(2,group.labels.size(),"group should have transform and target schema label");
-        assertTrue(group.labels.stream().anyMatch(l->l.name.equals("bar")),"group should have a foo label");
+        assertNotNull(group, " test group should not be null");
+        assertEquals(2, group.labels.size(), "group should have transform and target schema label");
+        assertTrue(group.labels.stream().anyMatch(l -> l.name.equals("bar")), "group should have a foo label");
 
         expLabelService.calculateLabelValues(group.labels, Long.valueOf(ids.get(0)));
 
@@ -218,20 +219,20 @@ public class ComposableMigrationTest extends BaseServiceTest {
                 Collections.EMPTY_LIST,
                 false);
 
-        assertEquals(1,valueMaps.size());
+        assertEquals(1, valueMaps.size());
         LabelService.ValueMap map = valueMaps.get(0);
-        assertNotNull(map,"valueMap should not be null");
-        assertTrue(map.data.hasNonNull("foo"),"valueMap should include the output of the transform label");
-        assertTrue(map.data.hasNonNull("bar"),"valueMap should include the output of the schema's label");
+        assertNotNull(map, "valueMap should not be null");
+        assertTrue(map.data.hasNonNull("foo"), "valueMap should include the output of the transform label");
+        assertTrue(map.data.hasNonNull("bar"), "valueMap should include the output of the schema's label");
 
     }
 
     @org.junit.jupiter.api.Test
     public void migrate_transform_target_different_schema() throws JsonProcessingException {
         String name = getMethodName();
-        String base = "urn:"+name;
-        Schema first = createSchema(name+"_schema",base);
-        Schema second = createSchema(name+"_target",base+"_target");
+        String base = "urn:" + name;
+        Schema first = createSchema(name + "_schema", base);
+        Schema second = createSchema(name + "_target", base + "_target");
 
         Extractor fooExtractor = new Extractor();
         fooExtractor.name = "foo";
@@ -241,11 +242,11 @@ public class ComposableMigrationTest extends BaseServiceTest {
         barExtractor.name = "bar";
         barExtractor.jsonpath = "$.bar";
 
-        addLabel(second,"bar",null,barExtractor);
+        addLabel(second, "bar", null, barExtractor);
         Transformer transformerFoo = createTransformer("foo", first, second, "(v)=>{ return [{\"bar\":v,\"using\":\"foo\"}]}",
                 fooExtractor);
 
-        Test t1 = createTest(createExampleTest(name+"-test"));
+        Test t1 = createTest(createExampleTest(name + "-test"));
         addTransformer(t1, transformerFoo);
 
         List<Integer> ids = new ArrayList<>();
@@ -256,9 +257,9 @@ public class ComposableMigrationTest extends BaseServiceTest {
         em.unwrap(Session.class).doWork(ComposableMigration::migrate);
 
         LabelGroupDao group = LabelGroupDao.find("name", t1.name).firstResult();
-        assertNotNull(group," test group should not be null");
-        assertEquals(2,group.labels.size(),"group should have transform and target schema label");
-        assertTrue(group.labels.stream().anyMatch(l->l.name.equals("bar")),"group should have a foo label");
+        assertNotNull(group, " test group should not be null");
+        assertEquals(2, group.labels.size(), "group should have transform and target schema label");
+        assertTrue(group.labels.stream().anyMatch(l -> l.name.equals("bar")), "group should have a foo label");
 
         expLabelService.calculateLabelValues(group.labels, Long.valueOf(ids.get(0)));
 
@@ -275,11 +276,11 @@ public class ComposableMigrationTest extends BaseServiceTest {
                 Collections.EMPTY_LIST,
                 false);
 
-        assertEquals(1,valueMaps.size());
+        assertEquals(1, valueMaps.size());
         LabelService.ValueMap map = valueMaps.get(0);
-        assertNotNull(map,"valueMap should not be null");
-        assertTrue(map.data.hasNonNull("foo"),"valueMap should include the output of the transform label");
-        assertTrue(map.data.hasNonNull("bar"),"valueMap should include the output of the schema's label");
+        assertNotNull(map, "valueMap should not be null");
+        assertTrue(map.data.hasNonNull("foo"), "valueMap should include the output of the transform label");
+        assertTrue(map.data.hasNonNull("bar"), "valueMap should include the output of the schema's label");
 
     }
 

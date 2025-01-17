@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.exp.svc;
 import java.util.*;
 import java.util.function.Function;
 
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -36,7 +37,7 @@ public class LabelServiceImpl implements LabelService {
         @Override
         public String toString() {
             return "EV valueId=" + sourceValueId + " labelId=" + souceLabelId + " ordinal=" + ordinal + " iterated="
-                    + isIterated + " data=" + data;
+                    + isIterated + " data.type=" + data.getNodeType()+" date.size="+data.size();
         }
 
         public boolean hasSourceValue() {
@@ -151,6 +152,7 @@ public class LabelServiceImpl implements LabelService {
     }
 
     private int storeLabelData(RunDao r, LabelDao l, JsonNode data, int starIndex, List<LabelValueDao> sources) {
+        System.out.println("  storeLabelData runId = "+r.id+" labelId = "+l.id+" sourceCount = "+sources.size());
         int idx = starIndex;
         if (l.isSplitting() && data.isArray()) {
             for (JsonNode datum : data) {
@@ -185,8 +187,10 @@ public class LabelServiceImpl implements LabelService {
 
     @Transactional
     public List<String> calculateLabelValue(LabelDao l, Long runId) {
+        System.out.println("calculateLabelValue "+l.name+" id = "+l.id+(l.targetGroup!=null?" sourceGroup = "+l.targetGroup.id : "")+(l.sourceGroup!=null?" sourceGroup = "+l.sourceGroup.id : "")+" runId = "+runId);
         List<String> rtrn = new ArrayList<>();
         ExtractedValues extractedValues = calculateExtractedValuesWithIterated(l, runId);
+        System.out.println("    "+extractedValues.toString().replaceAll("\n","\n    "));
         RunDao r = RunDao.findById(runId);
         //when would we expect a label without extractors? That just duplicates data storage
         if (l.extractors.isEmpty()) {
@@ -246,6 +250,7 @@ public class LabelServiceImpl implements LabelService {
                     for (Map<String, ExtractedValue> map : todo) {
                         boolean haveIterated = map.values().stream().anyMatch(ev -> ev.isIterated) || extractedValues.getNames()
                                 .stream().anyMatch(name -> extractedValues.getByName(name).size() > 1);
+                        System.out.println("    haveIterated = "+haveIterated);
                         if (!haveIterated) {
                             //create the object node
                             ObjectNode objectNode = JsonNodeFactory.instance.objectNode();
@@ -257,10 +262,15 @@ public class LabelServiceImpl implements LabelService {
                                     sources.add(LabelValueDao.findById(v.sourceValueId));
                                 }
                             });
+                            System.out.println("    objectNode:");
+                            objectNode.fields().forEachRemaining(e->{
+                                System.out.println("      "+e.getKey()+" "+e.getValue().getNodeType()+" "+e.getValue().size());
+                            });
                             JsonNode datum = objectNode;
                             if (l.hasReducer()) {
                                 LabelReducerDao.EvalResult evalResult = l.reducer.evalJavascript(objectNode);
                                 if (evalResult.hasError()) {
+                                    System.out.println("    error!! "+evalResult.message());
                                     rtrn.add(evalResult.message());
                                 } else {
                                     datum = evalResult.result();
@@ -523,7 +533,7 @@ public class LabelServiceImpl implements LabelService {
         public String toString() {
             StringBuilder sb = new StringBuilder();
             for (String name : getNames()) {
-                sb.append("name=" + name + " " + getByName(name).size() + "\n");
+                sb.append( name + " size=" + getByName(name).size() + "\n");
                 for (ExtractedValue v : getByName(name)) {
                     sb.append("  source=" + v + "\n");
                 }
@@ -601,7 +611,6 @@ public class LabelServiceImpl implements LabelService {
         if (!checkTestExists(testId)) {
             throw ServiceException.serverError("Cannot find test " + testId);
         }
-        List<ValueMap> rtrn = new ArrayList<>();
         //LabelGroup group = LabelGroup.find("name",schema).firstResult();
         String labelNameFilter = "";
         if (include != null && !include.isEmpty()) {
@@ -990,7 +999,7 @@ public class LabelServiceImpl implements LabelService {
      */
     //incorrectly reporting that the value of an iterated extractor is not iterated, I think iterated needs to be a logical or of forEach and lv.isIterated
     public ExtractedValues calculateExtractedValuesWithIterated(LabelDao l, long runId) {
-        System.out.println("calculatedExtractedValuesWithIterated " + l.id + " " + l.name + " " + runId);
+        System.out.println("  calculatedExtractedValuesWithIterated " + l.id + " " + l.name + " " + runId);
         ExtractedValues rtrn = new ExtractedValues();
 
         //debugging again

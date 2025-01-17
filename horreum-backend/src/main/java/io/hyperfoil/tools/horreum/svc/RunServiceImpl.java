@@ -19,6 +19,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.fasterxml.jackson.databind.node.*;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -51,10 +52,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
@@ -1238,6 +1235,13 @@ public class RunServiceImpl implements RunService {
                         extractedData = Collections.emptyList();
                     }
                     addExtracted((ObjectNode) root, extractedData);
+                    System.out.println(t.name);
+                    root.fields().forEachRemaining(e->{
+                        System.out.println("  "+e.getKey()+" "+e.getValue().getNodeType()+" "+e.getValue().size());
+                        if(e.getValue().getNodeType().equals(JsonNodeType.ARRAY)){
+                            System.out.println("    [0] "+e.getValue().get(0).getNodeType()+" "+e.getValue().get(0).size());
+                        }
+                    });
                 }
                 // In Horreum it's customary that when a single extractor is used we pass the result directly to the function
                 // without wrapping it in an extra object.

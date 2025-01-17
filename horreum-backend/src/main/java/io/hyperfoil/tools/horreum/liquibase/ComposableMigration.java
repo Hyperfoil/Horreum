@@ -80,12 +80,13 @@ public class ComposableMigration implements CustomTaskChange {
 
     }
 
+    //This is called BEFORE the change not AFTER ::facepalm::
     @Override
     public ValidationErrors validate(Database database) {
-        if (database.getConnection() instanceof JdbcConnection) {
-            Connection conn = ((JdbcConnection) database.getConnection()).getWrappedConnection();
-            return validateGroups(conn);
-        }
+        //        if (database.getConnection() instanceof JdbcConnection) {
+        //            Connection conn = ((JdbcConnection) database.getConnection()).getWrappedConnection();
+        //            return validateGroups(conn);
+        //        }
         return new ValidationErrors();
     }
 
@@ -176,7 +177,7 @@ public class ComposableMigration implements CustomTaskChange {
                         Label persistedLabel = persistLabelDef(def, testGroup.id, true, null, sourceGroupId,
                                 !moreThanOneDef ? targetGroupId : null,
                                 originalLabelId, conn, testContext);
-                        if(!moreThanOneDef){
+                        if (!moreThanOneDef) {
                             LabelGroup targetedGroup = loadGroup(targetGroupId, conn);
                             List<Label> loadedTargetGroupLabels = persistedLabel.targetGroup(targetedGroup, testContext, conn);
                             testGroup.labels.addAll(loadedTargetGroupLabels);
@@ -186,7 +187,7 @@ public class ComposableMigration implements CustomTaskChange {
 
                         return persistedLabel;
                     }).toList();
-                    if (moreThanOneDef){
+                    if (moreThanOneDef) {
                         LabelDef def = fromTransform(legacyTransformIds.get(0), conn);
                         String newName = def.name;
                         Set<String> usedNames = new HashSet<>(transformNames.values());
@@ -303,12 +304,17 @@ public class ComposableMigration implements CustomTaskChange {
             //now check
 
         }
+
+        // we don't have the labels in the correct order for all the groups...
+
         boolean ok = !validateGroups(conn).hasErrors();
         System.out.println("ok = " + ok);
         persistTestRuns(conn);
         updateRunSeq(conn);
         //at this point we should be able all set
     }
+
+
 
     public static final String JAVASCRIPT_FIRST_NOT_NULL = "(args)=>Object.values(args).find(el => !!el)";
 
@@ -853,7 +859,6 @@ public class ComposableMigration implements CustomTaskChange {
         }
         return rtrn;
     }
-
 
     private static Set<String> getUniqueLabelNames(List<Schema> schemas) {
         return schemas.stream().flatMap(s -> s.labels().stream()).map(l -> l.name).collect(Collectors.toSet());
@@ -1448,19 +1453,22 @@ public class ComposableMigration implements CustomTaskChange {
                 for (Long targetGroupId : targetGroupIds) {
                     LabelGroup targetGroup = loadGroup(targetGroupId, conn);
                     if (targetGroup == null) {
-                        rtrn.addError("missing LabelGroup "+targetGroupId+" targeted by "+group.name);
+                        rtrn.addError("missing LabelGroup " + targetGroupId + " targeted by " + group.name);
                     } else {
                         boolean hasSourceGroup = group.labels.stream()
                                 .anyMatch(l -> Objects.equals(l.sourceGroupId, targetGroupId));
                         if (!hasSourceGroup) {
-                            rtrn.addError(group.name+" ["+group.id+"] is missing labels from group "+targetGroup.name+" ["+targetGroupId+"]");}
+                            rtrn.addError(group.name + " [" + group.id + "] is missing labels from group " + targetGroup.name
+                                    + " [" + targetGroupId + "]");
+                        }
                         targetGroup.labels
-                            .forEach(l->{
-                                boolean exists = group.labels.stream().anyMatch(g -> g.equals(l));
-                                if(!exists){
-                                    rtrn.addError(group.name+" ["+group.id+"] is missing label "+l.name+" from "+targetGroup.name+" ["+targetGroup.id+"]");
-                                }
-                            });
+                                .forEach(l -> {
+                                    boolean exists = group.labels.stream().anyMatch(g -> g.equals(l));
+                                    if (!exists) {
+                                        rtrn.addError(group.name + " [" + group.id + "] is missing label " + l.name + " from "
+                                                + targetGroup.name + " [" + targetGroup.id + "]");
+                                    }
+                                });
                     }
                 }
             }

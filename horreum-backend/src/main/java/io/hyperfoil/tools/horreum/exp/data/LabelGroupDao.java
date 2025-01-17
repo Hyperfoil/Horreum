@@ -74,6 +74,12 @@ public class LabelGroupDao extends PanacheEntity implements Comparable<LabelGrou
                 && ((!e.isPersistent() && !e.targetLabel.isPersistent()) || (!e.targetLabel.group.equals(this)));
     }
 
+    //need this to ensure ordering as the migration does not provide label order
+    @PostLoad
+    public void sortLabels(){
+        this.labels = LabelDao.kahnDagSort(this.labels);
+    }
+
     @PreUpdate
     @PrePersist
     public void checkLabels() {

@@ -4811,8 +4811,6 @@
         <createSequence sequenceName="exp_labelgroup_seq" startValue="1" incrementBy="50" cacheSize="1" />
         <createSequence sequenceName="exp_run_seq" startValue="1" incrementBy="50" cacheSize="1" />
         <sql>
-            GRANT ALL ON SEQUENCE exp_extractor_seq, exp_label_seq, exp_label_reducers_seq,
-            exp_label_values_seq, exp_labelgroup_seq, exp_run_seq TO "${quarkus.datasource.username}";
 
             CREATE TABLE exp_extractor (
             foreach boolean NOT NULL,
@@ -4893,6 +4891,10 @@
             GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE exp_temp_map_schema TO "${quarkus.datasource.username}";
             GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE exp_temp_map_transform TO "${quarkus.datasource.username}";
 
+            GRANT ALL ON SEQUENCE exp_extractor_seq, exp_label_seq, exp_label_reducers_seq,
+            exp_label_values_seq, exp_labelgroup_seq, exp_run_seq TO "${quarkus.datasource.username}";
+
+
             ALTER TABLE ONLY exp_extractor
             ADD CONSTRAINT exp_extractor_pkey PRIMARY KEY (id);
             ALTER TABLE ONLY exp_label
@@ -4942,5 +4944,8 @@
             ALTER TABLE ONLY exp_run
             ADD CONSTRAINT fk_run_label_group FOREIGN KEY (test_id) REFERENCES exp_labelgroup(id);
         </sql>
+        <customChange class="io.hyperfoil.tools.horreum.liquibase.ComposableMigration" >
+<!--            <param name="helloTo" value="world"/>-->
+        </customChange>
     </changeSet>
 </databaseChangeLog>
