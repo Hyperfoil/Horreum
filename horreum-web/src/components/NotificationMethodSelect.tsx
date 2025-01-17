@@ -1,9 +1,6 @@
-import { useEffect, useState } from "react"
+import {useEffect, useState} from "react"
+import {SimpleSelect} from "@patternfly/react-templates";
 
-import {
-	Select,
-	SelectOption
-} from '@patternfly/react-core/deprecated';
 import {notificationsApi} from "../api"
 
 type NotificationMethodSelectProps = {
@@ -13,26 +10,17 @@ type NotificationMethodSelectProps = {
 }
 
 export default function NotificationMethodSelect({isDisabled, method, onChange}: NotificationMethodSelectProps) {
-    const [methodOpen, setMethodOpen] = useState(false)
     const [methods, setMethods] = useState<string[]>([])
     useEffect(() => {
         notificationsApi.methods().then(response => setMethods(response))
     }, [])
     return (
-        <Select
+        <SimpleSelect
+            initialOptions={methods.map(m => ({value: m, content: m, selected: m === method}))}
+            onSelect={(_, item) => onChange(item as string)}
+            selected={method}
             isDisabled={isDisabled}
-            isOpen={methodOpen}
-            onToggle={(_event, open) => setMethodOpen(open)}
-            selections={method}
-            onSelect={(event, selection) => {
-            onChange(selection.toString())
-            setMethodOpen(false)
-            }}
-            placeholderText="Please select..."
-        >
-            {methods.map((method, i) => (
-                <SelectOption key={i} value={method} />
-            ))}
-        </Select>
+            toggleWidth="100%"
+        />
     )
 }

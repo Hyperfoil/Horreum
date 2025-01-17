@@ -1,20 +1,19 @@
-import { useState, useEffect } from "react"
+import {useState, useEffect, Ref} from "react"
 import {
-	Bullseye,
-	Button,
+    Bullseye,
+    Button,
     DescriptionList,
     DescriptionListDescription,
     DescriptionListGroup,
     DescriptionListTerm,
-	MenuToggle,
-	Modal,
-	Spinner
+    Dropdown,
+    DropdownItem,
+    DropdownList,
+    MenuToggle,
+    MenuToggleElement,
+    Modal,
+    Spinner
 } from '@patternfly/react-core';
-import {
-	Dropdown,
-	DropdownItem,
-	DropdownToggle
-} from '@patternfly/react-core/deprecated';
 import { QuestionCircleIcon } from "@patternfly/react-icons"
 
 import MoonIcon from '@patternfly/react-icons/dist/esm/icons/moon-icon';
@@ -60,18 +59,20 @@ export default function About() {
                 { isDarkTheme ? <SunIcon style={{ color: '#FC0' }} /> : <MoonIcon style={{ color: '#FEC' }} /> }
             </MenuToggle>
             <Dropdown
-                style={{ marginLeft: "16px" }}
-                position="right"
-                menuAppendTo="parent"
-                onSelect={() => setDropdownOpen(false)}
-                toggle={
-                    <DropdownToggle toggleIndicator={null} onToggle={(_event, val) => setDropdownOpen(val)} id="toggle-icon-only">
-                        <QuestionCircleIcon style={{ fill: "#ffffff" }} />
-                    </DropdownToggle>
-                }
                 isOpen={isDropdownOpen}
-                isPlain
-                dropdownItems={[
+                onSelect={() => setDropdownOpen(false)}
+                popperProps={{preventOverflow: true, position: "end"}}
+                toggle={(toggleRef: Ref<MenuToggleElement>) => (
+                    <MenuToggle
+                        id="toggle-icon-only"
+                        ref={toggleRef}
+                        variant="plain"
+                        onClick={() => setDropdownOpen(!isDropdownOpen)}>
+                        <QuestionCircleIcon color="white"/>
+                    </MenuToggle>
+                )}
+            >
+                <DropdownList>
                     <DropdownItem
                         key="docs"
                         onClick={() => {
@@ -80,12 +81,12 @@ export default function About() {
                         }}
                     >
                         Project documentation
-                    </DropdownItem>,
+                    </DropdownItem>
                     <DropdownItem key="version info" onClick={() => setModalOpen(true)}>
                         Version info
-                    </DropdownItem>,
-                ]}
-            />
+                    </DropdownItem>
+                </DropdownList>
+            </Dropdown>
             <Modal
                 variant="small"
                 title="About Horreum"

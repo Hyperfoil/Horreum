@@ -30,9 +30,9 @@ import {
     GithubIssueCreateActionConfigFromJSON,
     SlackChannelMessageActionConfigFromJSON,
 } from "../../api"
-import EnumSelect from "../../components/EnumSelect"
 import HttpActionUrlSelector from "../../components/HttpActionUrlSelector"
 import { CHANGE_NEW, EXPERIMENT_RESULT_NEW, TEST_NEW } from "./reducers"
+import {SimpleSelect} from "@patternfly/react-templates";
 
 function defaultConfig(type: string): ActionConfig {
   var config
@@ -89,18 +89,17 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                 </FormSelect>
             </FormGroup>
             <FormGroup label="Action type" fieldId="type">
-                <EnumSelect
-                    options={{
-                        http: "Generic HTTP POST request",
-                        "github-issue-comment": "GitHub issue comment",
-                        "github-issue-create": "Create GitHub issue",
-                        "slack-channel-message": "Slack message",
-                    }}
+                <SimpleSelect
+                    initialOptions={[
+                        {value: 'http', content: 'Generic HTTP POST request'},
+                        {value: 'github-issue-comment', content: 'GitHub issue comment'},
+                        {value: 'github-issue-create', content: 'GitHub issue create'},
+                        {value: 'slack-channel-message', content: 'Slack channel message'}
+                    ].map(option => ({... option, selected: option.value === props.action.type }))}
                     selected={props.action.type}
-                    onSelect={type => {
-                        update({ type: type, config: defaultConfig(type) })
-                    }}
+                    onSelect={(_, value) => update({type: value as string, config: defaultConfig(value as string)})}
                     isDisabled={!props.isTester}
+                    toggleWidth="100%"
                 />
             </FormGroup>
             <FormGroup label="Run always" fieldId="runAlways">
@@ -196,14 +195,18 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         </>
                     )}
                     <FormGroup label="Formatter" fieldId="formatter">
-                        <EnumSelect
-                            options={
-                                props.action.event === EXPERIMENT_RESULT_NEW
-                                    ? { experimentResultToMarkdown: "Experiment result to Markdown" }
-                                    : {}
+                        <SimpleSelect
+                            initialOptions={
+                                (props.action.event === EXPERIMENT_RESULT_NEW
+                                        ? [{value: "experimentsResultToMarkdown", content: "Experiment result to Markdown"}]
+                                        : []
+                                ).map(
+                                    o => ({...o, selected: o.value == (props.action.config as GithubIssueComment).formatter})
+                                )
                             }
                             selected={(props.action.config as GithubIssueComment).formatter}
-                            onSelect={formatter => updateConfig({ formatter })}
+                            onSelect={(_, value) => updateConfig({formatter: value as string})}
+                            toggleWidth="100%"
                         />
                     </FormGroup>
                 </>
@@ -237,12 +240,18 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         />
                     </FormGroup>
                     <FormGroup label="Formatter" fieldId="formatter">
-                        <EnumSelect
-                            options={
-                                props.action.event === CHANGE_NEW ? { changeToMarkdown: "Change to Markdown" } : {}
+                        <SimpleSelect
+                            initialOptions={
+                                (props.action.event === CHANGE_NEW
+                                        ? [{value: "changeToMarkdown", content: "Change to Markdown"}]
+                                        : []
+                                ).map(
+                                    o => ({...o, selected: o.value === (props.action.config as GithubIssueCreate).formatter})
+                                )
                             }
                             selected={(props.action.config as GithubIssueCreate).formatter}
-                            onSelect={formatter => updateConfig({ formatter })}
+                            onSelect={(_, value) => updateConfig({formatter: value as string})}
+                            toggleWidth="100%"
                         />
                     </FormGroup>
                 </>
@@ -262,18 +271,22 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         />
                     </FormGroup>
                     <FormGroup label="Formatter" fieldId="formatter">
-                        <EnumSelect
-                            options={
-                                props.action.event === CHANGE_NEW
-                                    ? { changeToMarkdown: "Change to Markdown" }
-                                    : props.action.event === EXPERIMENT_RESULT_NEW
-                                      ? { experimentResultToMarkdown: "Experiment result to Markdown" }
-                                      : props.action.event === TEST_NEW
-                                        ? { testToSlack: "Test to Slack Markdown" }
-                                        : {}
+                        <SimpleSelect
+                            initialOptions={
+                                (props.action.event === CHANGE_NEW
+                                        ? [{value: "changeToMarkdown", content: "Change to Markdown"}]
+                                        : props.action.event === EXPERIMENT_RESULT_NEW
+                                            ? [{value: "experimentsResultToMarkdown", content: "Experiment result to Markdown"}]
+                                            : props.action.event === TEST_NEW
+                                                ? [{value: "testToSlack", content: "Test to Slack Markdown"}]
+                                                : []
+                                ).map(
+                                    o => ({...o, selected: o.value == (props.action.config as SlackChannelMessage).formatter})
+                                )
                             }
-                            selected={(props.action.config as SlackChannelMessage)?.formatter}
-                            onSelect={formatter => updateConfig({ formatter })}
+                            selected={(props.action.config as SlackChannelMessage).formatter}
+                            onSelect={(_, value) => updateConfig({formatter: value as string})}
+                            toggleWidth="100%"
                         />
                     </FormGroup>
                 </>

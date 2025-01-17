@@ -8,11 +8,7 @@ import {
 	Split,
 	SplitItem
 } from '@patternfly/react-core';
-import {
-	Select,
-	SelectOption,
-	SelectOptionObject
-} from '@patternfly/react-core/deprecated';
+import {SimpleSelect, TypeaheadSelect} from "@patternfly/react-templates";
 
 import { deepEquals, noop } from "../utils"
 
@@ -49,7 +45,9 @@ function convertPartial(value: any) {
         return value
 }
 
-export type SelectedLabels = SelectOptionObject | null
+export type SelectedLabels = {
+    toString(): string
+}
 
 type LabelsSelectProps = {
     disabled?: boolean
@@ -86,7 +84,7 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
             }
         }, noop)
     }, [source, onSelect, teams, optionForAll])
-    const all: SelectOptionObject = useMemo(
+    const all: SelectedLabels = useMemo(
         () => ({
             toString: () => optionForAll || "",
         }),
@@ -200,8 +198,8 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
                 <SplitItem style={{ alignSelf: "end" }} key="__reset_button">
                     <Button
                         onClick={() => {
-                        setPartialSelect({})
-                        onSelect({})
+                            setPartialSelect({})
+                            onSelect({toString: () => ""})
                         }}
                     >
                         Reset
@@ -218,41 +216,38 @@ type InnerSelectProps = {
     isTypeahead?: boolean
     hasOnlyOneOption?: boolean
     selection?: SelectedLabels
-    options: SelectOptionObject[]
-    all?: SelectOptionObject
-    onSelect(opt: SelectedLabels | undefined): void
+    options: SelectedLabels[]
+    all?: SelectedLabels
+    onSelect(opt: string | undefined): void
     onOpen?(): void
     placeholderText: string
     style?: CSSProperties
 }
 
 function InnerSelect({disabled, isTypeahead, hasOnlyOneOption, selection, options, all, onSelect, onOpen, placeholderText, style}: InnerSelectProps) {
-    const [open, setOpen] = useState(false)
+    const initialOptions = options.map(
+        o => ({value: o?.toString(), content: o?.toString(), selected: o?.toString() === selection?.toString()})
+    )
     return (
-        <Select
-            isDisabled={disabled || hasOnlyOneOption}
-            variant={isTypeahead ? "typeahead" : "single"}
-            isOpen={open}
-            onToggle={(_event, expanded) => {
-                if (expanded && onOpen) {
-                    onOpen()
-                }
-                setOpen(expanded)
-            }}
-            selections={[selection === null && all || selection]}
-            onSelect={(_, item) => {
-                onSelect(item === all && null || item)
-                setOpen(false)
-            }}
-            onClear={hasOnlyOneOption ? undefined : () => onSelect(undefined)}
-            menuAppendTo="parent"
-            placeholderText={placeholderText}
-            style={style}
-            width={style?.width || "auto"}
-        >
-            {options.map((labels: SelectOptionObject | string, i: number) => (
-                <SelectOption key={i} value={labels} />
-            ))}
-        </Select>
+        isTypeahead
+            ? <TypeaheadSelect
+                selectOptions={initialOptions}
+                onSelect={(_, item) => onSelect(item as string)}
+                selected={(selection === all && all || selection)?.toString()}
+                onToggle={(expanding: any) => expanding && onOpen && onOpen()}
+                onClearSelection={hasOnlyOneOption ? undefined : () => onSelect(undefined)}
+                placeholder={placeholderText}
+                isDisabled={disabled}
+                style={style}
+            />
+            : <SimpleSelect
+                initialOptions={initialOptions}
+                onSelect={(_, item) => onSelect(item as string)}
+                selected={(selection === all && all || selection)?.toString()}
+                onToggle={(expanding: any) => expanding && onOpen && onOpen()}
+                placeholder={placeholderText}
+                isDisabled={disabled}
+                style={style}
+            />
     )
 }

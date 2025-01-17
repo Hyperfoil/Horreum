@@ -169,7 +169,7 @@ public class LogServiceImpl implements LogService {
     public void deleteActionLogs(int testId, Long from, Long to) {
         Instant fromTs = from == null ? EPOCH_START : Instant.ofEpochMilli(from);
         Instant toTs = to == null ? FAR_FUTURE : Instant.ofEpochMilli(to);
-        long deleted = ActionLogDAO.delete("test.id = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
+        long deleted = ActionLogDAO.delete("testId = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
         log.debugf("Deleted %d logs for test %d", deleted, testId);
     }
 

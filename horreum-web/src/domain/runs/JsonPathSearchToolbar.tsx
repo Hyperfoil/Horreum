@@ -6,16 +6,13 @@ import {
 	Button,
 	ButtonVariant,
 	InputGroup,
+    InputGroupItem,
 	Popover,
 	Toolbar,
 	ToolbarContent,
-	ToolbarItem, InputGroupItem
+	ToolbarItem,
 } from '@patternfly/react-core';
-import {
-	Dropdown,
-	DropdownToggle,
-	DropdownItem
-} from '@patternfly/react-core/deprecated';
+import {SimpleSelect} from "@patternfly/react-templates";
 import { HelpIcon } from "@patternfly/react-icons"
 import { toString } from "../../components/Editor"
 import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from "react-autosuggest"
@@ -29,12 +26,15 @@ type ToolbarProps = {
     onDataUpdate(newData: string): void
 }
 
+const JS_QUERY_FIRST = "jsonb_path_query_first"
+const JS_QUERY_ARRAY = "jsonb_path_query_array"
+const JS_QUERY_LOCAL = "js"
+
 export default function JsonPathSearchToolbar(props: ToolbarProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
     const [pathQuery, setPathQuery] = useState("")
     const [pathInvalid, setPathInvalid] = useState(false)
-    const [pathType, setPathType] = useState("jsonb_path_query_first")
-    const [pathTypeOpen, setPathTypeOpen] = useState(false)
+    const [pathType, setPathType] = useState(JS_QUERY_FIRST)
     const [pathSuggestions, setPathSuggestions] = useState<string[]>([])
 
     function runPathQuery(type?: string, query?: string) {
@@ -118,36 +118,16 @@ export default function JsonPathSearchToolbar(props: ToolbarProps) {
             <ToolbarContent style={{ width: "100%" }}>
                 <ToolbarItem aria-label="search" style={{ marginTop: 0 }}>
                     <InputGroup>
-                        <InputGroupItem><Dropdown
-                            isOpen={pathTypeOpen}
-                            onSelect={(e?: React.SyntheticEvent<HTMLDivElement>) => {
-                                if (e) {
-                                    setPathType(e.currentTarget.id)
-                                    onQueryUpdate(e.currentTarget.id, pathQuery)
-                                }
-                                setPathTypeOpen(false)
-                            }}
-                            toggle={
-                                <DropdownToggle
-                                    onToggle={(_event, e) => {
-                                        setPathTypeOpen(e)
-                                    }}
-                                >
-                                    {pathType}
-                                </DropdownToggle>
-                            }
-                            dropdownItems={[
-                                <DropdownItem id="jsonb_path_query_first" key="jsonb_path_query_first">
-                                    jsonb_path_query_first
-                                </DropdownItem>,
-                                <DropdownItem id="jsonb_path_query_array" key="jsonb_path_query_array">
-                                    jsonb_path_query_array
-                                </DropdownItem>,
-                                <DropdownItem id="js" key="query">
-                                    js
-                                </DropdownItem>
-                            ]}
-                        ></Dropdown></InputGroupItem>
+                        <InputGroupItem>
+                            <SimpleSelect
+                                initialOptions={[JS_QUERY_FIRST, JS_QUERY_ARRAY, JS_QUERY_LOCAL].map(
+                                    t => ({value: t, content: t, selected: pathType === t})
+                                )}
+                                selected={pathType}
+                                onSelect={(_, item) => setPathType(item as string)}
+                                toggleWidth="225px"
+                            />
+                        </InputGroupItem>
                         <InputGroupItem><SearchQueryHelp pathType={pathType} /></InputGroupItem>
                         <InputGroupItem><Autosuggest
                             inputProps={inputProps}
@@ -205,11 +185,11 @@ function execQuery(
     }
     let array = false
     switch (type) {
-        case "js":
+        case JS_QUERY_LOCAL:
             return Promise.resolve(execQueryLocal(data, query))
-        case "jsonb_path_query_first":
+        case JS_QUERY_FIRST:
             break
-        case "jsonb_path_query_array":
+        case JS_QUERY_ARRAY:
             array = true
             break
         default:
@@ -392,7 +372,7 @@ function SearchQueryHelp({ pathType }: SearchQueryHelpProps) {
             hasAutoWidth={true}
             bodyContent={
                 <div style={{ width: "450px" }}>
-                    {pathType == "js" ? (
+                    {pathType == JS_QUERY_LOCAL ? (
                         <>
                             <p>
                                 Variant <code>js</code> executes the search expression inside your browser using{" "}

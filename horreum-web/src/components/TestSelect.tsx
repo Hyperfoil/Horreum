@@ -1,25 +1,25 @@
-import {CSSProperties, useContext, useEffect, useMemo, useState} from "react"
-
+import {CSSProperties, Ref, useContext, useEffect, useMemo, useState} from "react"
 import {
-	Split,
-	SplitItem
+    MenuToggle,
+    MenuToggleElement,
+    Select,
+    SelectGroup,
+    SelectList,
+    SelectOption,
+    Split,
+    SplitItem
 } from '@patternfly/react-core';
-import {
-	Select,
-	SelectGroup,
-	SelectOption,
-	SelectOptionObject
-} from '@patternfly/react-core/deprecated';
-
+import {SimpleSelect} from "@patternfly/react-templates";
 import {fetchTests, Test} from "../api"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
 import {teamsSelector} from "../auth";
 
-export interface SelectedTest extends SelectOptionObject {
+export interface SelectedTest {
     id: number
     owner?: string
+    toString: () => string
 }
 
 type TestSelectProps = {
@@ -85,53 +85,65 @@ const ROOT_FOLDER = "Horreum"
 
 function FewTestsSelect(props: TestSelectProps) {
     const [open, setOpen] = useState(false)
+    const [selected, setSelected] = useState<string | undefined>();
     const groupedTests = useMemo(() => groupByFolder(props.tests), [props.tests])
+
+    const toggle = (toggleRef: Ref<MenuToggleElement>) =>
+        <MenuToggle
+            ref={toggleRef}
+            isFullWidth
+            isExpanded={open}
+            isDisabled={props.isDisabled}
+            onClick={() => setOpen(!open)}
+        >
+            {selected}
+        </MenuToggle>
+
     return (
         <Select
+            id="test-select"
             isOpen={open}
-            onToggle={(_event, val) => setOpen(val)}
-            selections={props.selection}
-            menuAppendTo="parent"
+            selected={selected}
             onSelect={(_, item) => {
-                const test = item as SelectedTest
-                const actualTest = props.tests?.find(t => t.id === test.id)
+                const actualTest = props.tests?.find(t => t.id === item)
                 // if this is extra option => folder === undefined
                 // if this is test we'll force "" for root folder
                 const folder = actualTest === undefined ? undefined : actualTest.folder || ""
-                props.onSelect(test, folder || "", false)
+                props.onSelect(actualTest, folder || "", false)
+                setSelected(actualTest?.name || props.extraOptions?.find(o => o.id === item)?.toString())
                 setOpen(false)
             }}
-            direction={props.direction}
-            placeholderText="Select test..."
-            hasPlaceholderStyle={true}
-            isDisabled={props.isDisabled}
+            onOpenChange={(open) => setOpen(open)}
+            toggle={toggle}
+            placeholder={"Select a test..."}
+            isScrollable
+            maxMenuHeight="45vh"
+            shouldFocusToggleOnSelect
+            popperProps={{enableFlip: false, preventOverflow: true}}
             style={props.style}
-            width={props.style?.width || "auto"}
         >
-            {[
-                ...(props.extraOptions
-                    ? props.extraOptions.map((option, i) => <SelectOption key={`extra${i}`} value={option} />)
-                    : []),
-                ...groupedTests.map((group, i) => (
-                    <SelectGroup key={i} label={group[0].folder || ROOT_FOLDER}>
-                        {group.map((test: Test, j) => (
-                            <SelectOption
-                                key={j}
-                                value={{ id: test.id, owner: test.owner, toString: () => test.name } as SelectedTest}
-                            />
-                        ))}
-                    </SelectGroup>
-                )),
-            ]}
+            {props.extraOptions ?
+                <SelectList>
+                    {props.extraOptions?.map(o => <SelectOption key={o.id} value={o.id}>{o.toString()}</SelectOption>)}
+                </SelectList>
+                :
+                <></>
+            }
+            {groupedTests.map((g, i) =>
+                <SelectGroup key={i} label={g[0].folder || ROOT_FOLDER}>
+                    <SelectList>
+                        {g.map(t => <SelectOption key={t.id} value={t.id}>{t.name}</SelectOption>)}
+                    </SelectList>
+                </SelectGroup>
+            )}
         </Select>
     )
 }
 
 function ManyTestsSelect(props: TestSelectProps) {
-    const [foldersOpen, setFoldersOpen] = useState(false)
-    const [testsOpen, setTestsOpen] = useState(false)
     const [selectedFolder, setSelectedFolder] = useState<string>()
     const [selectedExtra, setSelectedExtra] = useState<SelectedTest>()
+    const [selectedTest, setSelectedTest] = useState<number | undefined>();
     useEffect(() => {
         if (!props.selection || !props.tests) {
             return
@@ -143,71 +155,50 @@ function ManyTestsSelect(props: TestSelectProps) {
         () => [ROOT_FOLDER, ...[...new Set((props.tests || []).map(t => t.folder).filter(f => !!f))].sort()],
         [props.tests]
     )
+
+    const options = [
+        ...props.extraOptions
+            ? props.extraOptions.map(o => ({value: o.id, content: o.toString(), selected: o.id === selectedExtra?.id}))
+            : [],
+        ...folders.map(f => ({value: f || ROOT_FOLDER, content: f, selected: f === selectedFolder})),
+    ]
+
     return (
         <Split style={props.style}>
             <SplitItem>
-                <Select
-                    isOpen={foldersOpen}
-                    onToggle={(_event, val) => setFoldersOpen(val)}
-                    selections={selectedExtra || selectedFolder}
-                    menuAppendTo="parent"
+                <SimpleSelect
+                    initialOptions={options}
                     onSelect={(_, item) => {
-                        if (props.extraOptions?.some(o => o === item)) {
-                            const extra = item as SelectedTest
-                            setSelectedExtra(extra)
-                            setSelectedFolder(undefined)
-                            props.onSelect(extra, undefined, false)
-                        } else {
-                            const folder = item as string
-                            setSelectedExtra(undefined)
-                            setSelectedFolder(folder)
-                            props.onSelect(undefined, folder === ROOT_FOLDER ? "" : folder, false)
-                        }
-                        setFoldersOpen(false)
+                        setSelectedExtra(props.extraOptions?.find(o => o.id === item))
+                        setSelectedFolder(selectedExtra ? undefined : item as string)
+                        props.onSelect(selectedExtra, selectedFolder === ROOT_FOLDER ? "" : selectedFolder, false)
                     }}
-                    placeholderText="Select folder..."
-                    hasPlaceholderStyle={true}
-                    direction={props.direction}
-                    isDisabled={props.isDisabled}
-                >
-                    {[
-                        ...(props.extraOptions
-                            ? props.extraOptions.map((option, i) => <SelectOption key={`extra${i}`} value={option} />)
-                            : []),
-                        ...folders.map((f, i) => <SelectOption key={i} value={f} />),
-                    ]}
-                </Select>
+                    selected={props.selection?.owner}
+                    placeholder={"Select a folder..."}
+                    isScrollable
+                    maxMenuHeight="45vh"
+                    popperProps={{enableFlip: false, preventOverflow: true}}
+                />
             </SplitItem>
-            <SplitItem>
-                <Select
-                    isOpen={testsOpen}
-                    onToggle={(_event, val) => setTestsOpen(val)}
-                    selections={selectedExtra ? undefined : props.selection}
-                    menuAppendTo="parent"
+            <SplitItem isFilled>
+                <SimpleSelect
+                    initialOptions={
+                        props.tests?.filter(t => t.folder ? t.folder === selectedFolder : selectedFolder === ROOT_FOLDER)
+                            .map(t => ({value: t.id, content: t.name, selected: t.id === selectedTest}))
+                    }
                     onSelect={(_, item) => {
-                        props.onSelect(item as SelectedTest, selectedFolder || "", false)
-                        setTestsOpen(false)
+                        const test = props.tests?.find(t => t.id == item)
+                        setSelectedTest(test?.id)
+                        props.onSelect(test, selectedFolder || "", false)
                     }}
-                    direction={props.direction}
-                    placeholderText="Select test..."
-                    hasPlaceholderStyle={true}
+                    selected={selectedExtra ? undefined : selectedFolder}
+                    placeholder={"Select a test..."}
                     isDisabled={props.isDisabled || selectedFolder === undefined || selectedExtra !== undefined}
-                >
-                    {props.tests
-                        ?.filter(t => t.folder === selectedFolder || (selectedFolder === ROOT_FOLDER && !t.folder))
-                        .map((test, i) => (
-                            <SelectOption
-                                key={i}
-                                value={
-                                    {
-                                        id: test.id,
-                                        owner: test.owner,
-                                        toString: () => test.name,
-                                    } as SelectedTest
-                                }
-                            />
-                        ))}
-                </Select>
+                    isScrollable
+                    maxMenuHeight="45vh"
+                    toggleWidth="100%"
+                    popperProps={{enableFlip: false, preventOverflow: true}}
+                />
             </SplitItem>
         </Split>
     )

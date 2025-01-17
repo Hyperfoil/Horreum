@@ -230,9 +230,9 @@ export default function Transformers(props: TransformersProps) {
                             <SchemaSelect
                                 value={selected.targetSchemaUri}
                                 onChange={targetSchemaUri => update({ targetSchemaUri })}
-                                noSchemaOption={true}
-                                isCreatable={true}
-                            ></SchemaSelect>
+                                noSchemaOption
+                                isCreatable
+                            />
                         ) : (
                             <TextInput id="targetSchemaUri" value={selected.targetSchemaUri}  readOnlyVariant="default" />
                         )}
