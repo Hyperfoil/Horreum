@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 import io.hyperfoil.tools.horreum.action.ExperimentResultToMarkdown;
 import io.hyperfoil.tools.horreum.api.SortDirection;
+import io.hyperfoil.tools.horreum.api.alerting.MissingDataRule;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.api.data.Action;
@@ -440,10 +441,17 @@ class TestServiceTest extends BaseServiceTest {
         ep.baselineFilter = "value => {return true;}";
         ep.comparisons = new ArrayList<>();
         ep.extraLabels = JSON_NODE_FACTORY.arrayNode();
+        var msdr = new MissingDataRule();
+        msdr.testId = testExport.id;
+        msdr.name = "imported missing rule";
+        msdr.maxStaleness = 42;
+        testExport.missingDataRules = Collections.singletonList(msdr);
         jsonRequest().body(testExport).post("/api/test/import").then().statusCode(204);
         ExperimentProfileDAO epDAO = ExperimentProfileDAO.<ExperimentProfileDAO> find("name", "acme Quarkus experiment")
                 .firstResult();
         assertNotNull(epDAO);
+        MissingDataRuleDAO mdr = MissingDataRuleDAO.find("name", "imported missing rule").firstResult();
+        assertEquals(42, mdr.maxStaleness);
     }
 
     private void addSubscription(Test test) {
