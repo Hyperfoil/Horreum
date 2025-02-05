@@ -385,7 +385,7 @@ public class AlertingServiceImpl implements AlertingService {
 
     void importMissingDataRules(TestExport test) {
         for (var rule : test.missingDataRules) {
-            if (MissingDataRuleDAO.findById(rule.id) != null) {
+            if (rule.id != null && rule.id > 0 && MissingDataRuleDAO.findById(rule.id) != null) {
                 em.merge(MissingDataRuleMapper.to(rule));
             } else {
                 rule.id = null;

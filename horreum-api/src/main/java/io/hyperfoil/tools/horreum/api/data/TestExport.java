@@ -48,19 +48,23 @@ public class TestExport extends Test {
         if (experiments != null && !experiments.isEmpty()) {
             for (ExperimentProfile experiment : experiments) {
                 experiment.testId = id;
+                experiment.id = null;
             }
         }
         if (actions != null && !actions.isEmpty()) {
             for (Action action : actions) {
                 action.testId = id;
+                action.id = null;
             }
         }
         if (subscriptions != null) {
             subscriptions.testId = id;
+            subscriptions.id = null;
         }
         if (missingDataRules != null && !missingDataRules.isEmpty()) {
             for (MissingDataRule rule : missingDataRules) {
                 rule.testId = id;
+                rule.id = null;
             }
         }
     }
