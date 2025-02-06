@@ -71,6 +71,7 @@ import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import io.smallrye.jwt.build.Jwt;
@@ -295,6 +296,7 @@ public class BaseServiceTest {
                         + access)
                 .then()
                 .statusCode(202)
+                .contentType(ContentType.JSON)
                 .extract().asString();
 
         List<Integer> runIds = parseCommaSeparatedIds(runIdsAsString);
