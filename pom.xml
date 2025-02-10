@@ -84,7 +84,7 @@
         <commons.math3.version>3.6.1</commons.math3.version>
         <graalvm.version>23.1.2</graalvm.version>
         <quarkus.version>3.14.4</quarkus.version>
-        <quinoa.version>2.5.0</quinoa.version>
+        <quinoa.version>2.5.1</quinoa.version>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
         <failsafe-plugin.version>3.5.1</failsafe-plugin.version>
         <keycloak-admin-client.version>23.0.3</keycloak-admin-client.version>
