@@ -259,11 +259,9 @@ class TestServiceTest extends BaseServiceTest {
         Response response = jsonRequest().get("/api/test/" + test.id + "/export").then()
                 .statusCode(200).extract().response();
 
-        String export = response.asString();
-
         TestExport testExport = response.as(TestExport.class);
         assertEquals(testExport.id, test.id);
-        assertEquals(testExport.variables.size(), 1);
+        assertEquals(1, testExport.variables.size());
 
         if (wipe) {
             BlockingQueue<Test> events = serviceMediator.getEventQueue(AsyncEventChannels.TEST_DELETED, test.id);
@@ -297,7 +295,7 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void testImportWithTransformers() throws InterruptedException {
+    public void testImportWithTransformers() {
         Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
         p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
 
@@ -317,6 +315,80 @@ class TestServiceTest extends BaseServiceTest {
         List<ExperimentProfileDAO> experiments = ExperimentProfileDAO.list("test.id", test.id);
         assertEquals(1, experiments.size());
         assertNotNull(experiments.get(0).comparisons.get(0).variable);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testExportImportWithExistingDatastore() {
+        String datastoreName = "My Datastore";
+        int datastoreId = createDatastore(datastoreName);
+        Test test = createTest(createExampleTest("to-be-exported", datastoreId));
+
+        Response response = jsonRequest().get("/api/test/" + test.id + "/export").then()
+                .statusCode(200).extract().response();
+
+        TestExport export = response.as(TestExport.class);
+        assertEquals(test.id, export.id);
+        assertNotNull(export.datastore);
+        assertEquals(test.datastoreId, export.datastore.id);
+        assertEquals(datastoreName, export.datastore.name);
+
+        // re-import the test as new one
+        export.id = null;
+        export.name = "imported-test";
+        jsonRequest().body(export).post("/api/test/import").then().statusCode(204);
+
+        assertEquals(2, TestDAO.count());
+
+        TestDAO imported = TestDAO.<TestDAO> find("name", "imported-test").firstResult();
+        assertNotNull(imported);
+        assertNotEquals(test.id, imported.id);
+
+        TestExport importedTestExported = jsonRequest().get("/api/test/" + imported.id + "/export").then()
+                .statusCode(200).extract().response().as(TestExport.class);
+        assertEquals(imported.id, importedTestExported.id);
+        assertNotNull(importedTestExported.datastore);
+        assertEquals(test.datastoreId, importedTestExported.datastore.id);
+        assertEquals(datastoreId, importedTestExported.datastore.id);
+        assertEquals(datastoreName, importedTestExported.datastore.name);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testExportImportWithNotExistingDatastore() {
+        String datastoreName = "My Datastore";
+        int datastoreId = createDatastore(datastoreName);
+        Test test = createTest(createExampleTest("to-be-exported", datastoreId));
+
+        Response response = jsonRequest().get("/api/test/" + test.id + "/export").then()
+                .statusCode(200).extract().response();
+
+        TestExport export = response.as(TestExport.class);
+        assertEquals(test.id, export.id);
+        assertNotNull(export.datastore);
+        assertEquals(test.datastoreId, export.datastore.id);
+        assertEquals(datastoreName, export.datastore.name);
+
+        // force to create a new test during the import
+        export.id = null;
+        export.name = "imported-test";
+        // force to create a new datastore
+        export.datastore.id = null;
+        String datastoreName2 = "My Datastore 2";
+        export.datastore.name = datastoreName2;
+        jsonRequest().body(export).post("/api/test/import").then().statusCode(204);
+
+        assertEquals(2, TestDAO.count());
+
+        TestDAO imported = TestDAO.<TestDAO> find("name", "imported-test").firstResult();
+        assertNotNull(imported);
+        assertNotEquals(test.id, imported.id);
+
+        TestExport importedTestExported = jsonRequest().get("/api/test/" + imported.id + "/export").then()
+                .statusCode(200).extract().response().as(TestExport.class);
+        assertEquals(imported.id, importedTestExported.id);
+        assertNotNull(importedTestExported.datastore);
+        assertNotNull(importedTestExported.datastore.id);
+        assertNotEquals(test.datastoreId, importedTestExported.datastore.id);
+        assertEquals(datastoreName2, importedTestExported.datastore.name);
     }
 
     @org.junit.jupiter.api.Test
