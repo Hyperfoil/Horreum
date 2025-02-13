@@ -51,6 +51,10 @@ import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
+import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
+import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
+import io.hyperfoil.tools.horreum.api.data.datastore.ElasticsearchDatastoreConfig;
+import io.hyperfoil.tools.horreum.api.data.datastore.auth.NoAuth;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.api.report.ReportComponent;
 import io.hyperfoil.tools.horreum.api.report.TableReportConfig;
@@ -255,6 +259,25 @@ public class BaseServiceTest {
                 .jws()
                 .keyId("1")
                 .sign();
+    }
+
+    protected int createDatastore(String datastoreName) {
+        Datastore newDatastore = new Datastore();
+        newDatastore.name = datastoreName;
+        newDatastore.type = DatastoreType.ELASTICSEARCH;
+        newDatastore.access = Access.PRIVATE;
+        newDatastore.owner = TESTER_ROLES[0];
+
+        ElasticsearchDatastoreConfig elasticConfig = new ElasticsearchDatastoreConfig();
+        elasticConfig.url = "http://localhost:9999";
+        elasticConfig.authentication = new NoAuth();
+
+        newDatastore.config = mapper.valueToTree(elasticConfig);
+
+        JsonNode datasourceTree = mapper.valueToTree(newDatastore);
+
+        return jsonRequest().body(datasourceTree.toString()).post("/api/config/datastore")
+                .then().statusCode(200).extract().as(Integer.class);
     }
 
     protected int uploadRun(Object runJson, String test) {
