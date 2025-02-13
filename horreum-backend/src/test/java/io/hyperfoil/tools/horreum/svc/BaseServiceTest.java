@@ -237,16 +237,6 @@ public class BaseServiceTest {
         return test;
     }
 
-    public static List<View> createExampleViews(int testId) {
-        View defaultView = new View();
-        defaultView.name = "Default";
-        defaultView.testId = testId;
-        defaultView.components = new ArrayList<>();
-        defaultView.components.add(new io.hyperfoil.tools.horreum.api.data.ViewComponent("Some column", null, "foo"));
-
-        return Collections.singletonList(defaultView);
-    }
-
     public static String getAccessToken(String userName, String... groups) {
         return Jwt.preferredUserName(userName)
                 .groups(new HashSet<>(Arrays.asList(groups)))
@@ -616,10 +606,12 @@ public class BaseServiceTest {
         return array;
     }
 
-    protected BlockingQueue<Integer> trashRun(int runId, Integer testId) throws InterruptedException {
+    protected BlockingQueue<Integer> trashRun(int runId, Integer testId, boolean trashed) throws InterruptedException {
         BlockingQueue<Integer> trashedQueue = serviceMediator.getEventQueue(AsyncEventChannels.RUN_TRASHED, testId);
-        jsonRequest().post("/api/run/" + runId + "/trash").then().statusCode(204);
-        assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
+        jsonRequest().post("/api/run/" + runId + "/trash?isTrashed=" + trashed).then().statusCode(204);
+        if (trashed) {
+            assertEquals(runId, trashedQueue.poll(10, TimeUnit.SECONDS));
+        }
         return trashedQueue;
     }
 
