@@ -728,18 +728,20 @@ public class TestServiceImpl implements TestService {
             throw ServiceException.badRequest("Failed to parse Test definition: " + e.getMessage());
         }
 
-        //need to add logic for datastore
-        if (newTest.datastore != null) {
-            //first check if datastore already exists
-            boolean exists = DatastoreConfigDAO.findById(newTest.datastore.id) != null;
+        // if the datastore does NOT exist in our db then create it
+        if (newTest.datastore != null
+                && (newTest.datastore.id == null || (DatastoreConfigDAO.findById(newTest.datastore.id) == null))) {
+            // reset the datastore to be sure we are creating a new one
+            newTest.datastore.id = null;
             DatastoreConfigDAO datastore = DatasourceMapper.to(newTest.datastore);
-            if (!exists)
-                datastore.id = null;
             datastore.persist();
-            if (!exists) {
-                newTest.datastore.id = datastore.id;
-            }
+            newTest.datastore.id = datastore.id;
+            newTest.datastoreId = newTest.datastore.id;
+        } else if (newTest.datastore != null && newTest.datastore.id != null) {
+            // if the datastore already exists in the db simply link its id to the datastoreId field
+            newTest.datastoreId = newTest.datastore.id;
         }
+
         Test t = add(newTest);
 
         if (!Objects.equals(t.id, newTest.id)) {
