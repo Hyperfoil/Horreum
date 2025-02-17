@@ -1551,7 +1551,8 @@ paths:
     post:
       tags:
       - Schema
-      description: Save new or update existing Label for a Schema
+      description: Save new or update existing Label for a Schema (Label id only required
+        when updating existing one)
       operationId: addOrUpdateLabel
       parameters:
       - name: schemaId

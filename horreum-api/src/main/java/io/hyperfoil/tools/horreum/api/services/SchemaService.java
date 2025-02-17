@@ -168,7 +168,7 @@ public interface SchemaService {
     @POST
     @Path("{schemaId}/labels")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Operation(description = "Save new or update existing Label for a Schema")
+    @Operation(description = "Save new or update existing Label for a Schema (Label id only required when updating existing one)")
     @Parameters(value = {
             @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
     })
