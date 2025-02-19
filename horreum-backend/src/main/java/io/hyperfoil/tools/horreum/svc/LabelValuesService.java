@@ -56,7 +56,7 @@ public class LabelValuesService {
                      LEFT JOIN label ON label.id = lv.label_id
                      WHERE dataset.testid = :testId
                         AND (label.id IS NULL OR (:filteringLabels AND label.filtering) OR (:metricLabels AND label.metrics)) INCLUDE_EXCLUDE_PLACEHOLDER
-            ) SELECT * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER LIMIT_PLACEHOLDER
+            ) SELECT * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER
             """;
 
     protected static final String LABEL_VALUES_QUERY_BY_RUN = """
@@ -67,7 +67,7 @@ public class LabelValuesService {
                      LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
                      LEFT JOIN label ON label.id = lv.label_id
                      WHERE dataset.runid = :runId INCLUDE_EXCLUDE_PLACEHOLDER
-            ) SELECT * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER LIMIT_PLACEHOLDER
+            ) SELECT * from combined FILTER_PLACEHOLDER ORDER_PLACEHOLDER
             """;
 
     protected static final String LABEL_VALUES_DATASETS_BY_TEST_AND_FILTER = """
@@ -278,7 +278,7 @@ public class LabelValuesService {
             includeExcludeSql = "AND label.name NOT in :exclude";
         }
 
-        if (filterSql.isBlank() && filter != null && !filter.isBlank()) {
+        if (filterSql.isBlank() && filter != null && !filter.equals("{}") && !filter.isBlank()) {
             Log.errorf("Filter SQL is empty but received not empty filter: %s", filter);
             //TODO there was an error with the filter, do we return that info to the user?
         }
@@ -295,16 +295,10 @@ public class LabelValuesService {
             Log.warnf("Invalid sort order received: %s", sort);
         }
 
-        // --- limit
-        String limitSql = "";
-        if (limit != null) {
-            limitSql = "limit " + limit + " offset " + limit * Math.max(0, page);
-        }
         String sql = LABEL_VALUES_QUERY_BY_TEST
                 .replace("FILTER_PLACEHOLDER", filterSql)
                 .replace("INCLUDE_EXCLUDE_PLACEHOLDER", includeExcludeSql)
-                .replace("ORDER_PLACEHOLDER", orderSql)
-                .replace("LIMIT_PLACEHOLDER", limitSql);
+                .replace("ORDER_PLACEHOLDER", orderSql);
 
         NativeQuery<Object[]> query = (NativeQuery<Object[]>) (em.createNativeQuery(sql))
                 .setParameter("testId", testId)
@@ -368,7 +362,7 @@ public class LabelValuesService {
                 .addScalar("start", StandardBasicTypes.INSTANT)
                 .addScalar("stop", StandardBasicTypes.INSTANT);
 
-        return LabelValuesService.parse(query.getResultList());
+        return LabelValuesService.parse(query.getResultList(), limit, page);
     }
 
     /**
@@ -405,7 +399,7 @@ public class LabelValuesService {
             includeExcludeSql = "AND label.name NOT in :exclude";
         }
 
-        if (filterSql.isBlank() && filter != null && !filter.isBlank()) {
+        if (filterSql.isBlank() && filter != null && !filter.equals("{}") && !filter.isBlank()) {
             Log.errorf("Filter SQL is empty but received not empty filter: %s", filter);
             //TODO there was an error with the filter, do we return that info to the user?
         }
@@ -419,14 +413,10 @@ public class LabelValuesService {
             Log.warnf("Provided sort param which is no longer supported: %s", sort);
         }
 
-        // --- limit
-        String limitSql = "limit " + limit + " offset " + limit * Math.max(0, page);
-
         String sql = LABEL_VALUES_QUERY_BY_RUN
                 .replace("FILTER_PLACEHOLDER", filterSql)
                 .replace("INCLUDE_EXCLUDE_PLACEHOLDER", includeExcludeSql)
-                .replace("ORDER_PLACEHOLDER", orderSql)
-                .replace("LIMIT_PLACEHOLDER", limitSql);
+                .replace("ORDER_PLACEHOLDER", orderSql);
 
         NativeQuery<Object[]> query = (NativeQuery<Object[]>) (em.createNativeQuery(sql))
                 .setParameter("runId", runId);
@@ -484,7 +474,7 @@ public class LabelValuesService {
                 .addScalar("start", StandardBasicTypes.INSTANT)
                 .addScalar("stop", StandardBasicTypes.INSTANT);
 
-        return LabelValuesService.parse(query.getResultList());
+        return LabelValuesService.parse(query.getResultList(), limit, page);
     }
 
     /**
@@ -502,7 +492,7 @@ public class LabelValuesService {
      * @param nodes
      * @return
      */
-    protected static List<ExportedLabelValues> parse(List<Object[]> nodes) {
+    protected static List<ExportedLabelValues> parse(List<Object[]> nodes, Integer limit, Integer page) {
         if (nodes == null || nodes.isEmpty())
             return new ArrayList<>();
 
@@ -530,6 +520,11 @@ public class LabelValuesService {
 
                                     return exportedLabelValue;
                                 })));
+
+        if (limit != null && limit > 0) {
+            long toSkip = (long) limit * ((page == null || page < 0) ? 0 : page);
+            return exportedLabelValues.values().stream().skip(toSkip).limit(limit).collect(Collectors.toList());
+        }
 
         return new ArrayList<>(exportedLabelValues.values());
     }

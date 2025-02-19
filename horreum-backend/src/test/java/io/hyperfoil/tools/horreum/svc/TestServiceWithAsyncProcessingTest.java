@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -17,7 +15,6 @@ import org.apache.groovy.util.Maps;
 import org.hibernate.query.NativeQuery;
 import org.junit.jupiter.api.TestInfo;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -42,6 +39,12 @@ import io.quarkus.test.junit.TestProfile;
 import io.quarkus.test.oidc.server.OidcWiremockTestResource;
 import io.restassured.common.mapper.TypeRef;
 
+/**
+ * Note that for most of the labelValues tests we are explicitly
+ * calling {@link #recalculateDatasetForRun} so that the label values
+ * computation is also performed sync, and we are sure the data will be
+ * populated before the checks are performed
+ */
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
@@ -269,9 +272,9 @@ class TestServiceWithAsyncProcessingTest extends BaseServiceTest {
     public void labelValuesFilterWithJsonpath() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
-        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        int runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
         JsonNode response = jsonRequest()
                 .urlEncodingEnabled(true)
                 .queryParam("filter", "$.labelFoo ? (@ < 2)")
@@ -296,9 +299,12 @@ class TestServiceWithAsyncProcessingTest extends BaseServiceTest {
     public void labelValuesFilterWithInvalidJsonpath() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
-        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        int runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
         jsonRequest()
                 .urlEncodingEnabled(true)
                 .queryParam("filter", "$..name")
@@ -311,9 +317,12 @@ class TestServiceWithAsyncProcessingTest extends BaseServiceTest {
     public void labelValuesFilterWithObject() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
-        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        int runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
         JsonNode response = jsonRequest()
                 .urlEncodingEnabled(true)
                 .queryParam("filter", Maps.of("labelBar", "uno", "labelFoo", 1))
@@ -336,12 +345,48 @@ class TestServiceWithAsyncProcessingTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
+    public void labelValuesFilterWithObject2() {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        int runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                .queryParam("filter", Maps.of("labelBar", "tres", "labelFoo", 3))
+                .queryParam("multiFilter", false)
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(1, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelBar"), values.toString());
+        assertEquals(JsonNodeType.STRING, values.get("labelBar").getNodeType());
+        assertEquals("tres", values.get("labelBar").asText());
+        assertTrue(values.has("labelFoo"), values.toString());
+    }
+
+    @org.junit.jupiter.api.Test
     public void labelValuesFilterWithObjectNoMatch() {
         Test t = createTest(createExampleTest("my-test"));
         labelValuesSetup(t, false);
-        uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo");
-        uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo");
+        int runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
         JsonNode response = jsonRequest()
                 .urlEncodingEnabled(true)
                 // no runs match both conditions
@@ -560,37 +605,95 @@ class TestServiceWithAsyncProcessingTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void testLabelValues() throws JsonProcessingException {
-        List<Object[]> toParse = new ArrayList<>();
-        toParse.add(
-                new Object[] { "job", mapper.readTree("\"quarkus-release-startup\""), 10, 10, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Max RSS", mapper.readTree("[]"), 10, 10, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "build-id", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 1 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 2 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 4 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 8 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 32 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Quarkus - Kafka_tags", mapper.readTree("\"quarkus-release-startup\""), 10, 10,
-                Instant.now(), Instant.now() });
-        List<ExportedLabelValues> values = LabelValuesService.parse(toParse);
-        assertEquals(1, values.size());
-        assertEquals(9, values.get(0).values.size());
-        assertEquals("quarkus-release-startup", values.get(0).values.get("job").asText());
-        assertEquals("null", values.get(0).values.get("Throughput 32 CPU").asText());
+    public void labelValuesFilterWithLimitSingle() {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        int runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                .queryParam("limit", 1)
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(1, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelFoo"), values.toString());
+        assertTrue(values.has("labelBar"), values.toString());
+    }
 
-        toParse.add(
-                new Object[] { "job", mapper.readTree("\"quarkus-release-startup\""), 10, 11, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Max RSS", mapper.readTree("[]"), 10, 11, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "build-id", mapper.readTree("null"), 10, 11, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 1 CPU", mapper.readTree("17570.30"), 10, 11, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 2 CPU", mapper.readTree("43105.62"), 10, 11, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 4 CPU", mapper.readTree("84895.13"), 10, 11, Instant.now(), Instant.now() });
-        toParse.add(new Object[] { "Throughput 8 CPU", mapper.readTree("141086.29"), 10, 11, Instant.now(), Instant.now() });
-        values = LabelValuesService.parse(toParse);
-        assertEquals(2, values.size());
-        assertEquals(9, values.get(0).values.size());
-        assertEquals(7, values.get(1).values.size());
-        assertEquals(84895.13d, values.get(1).values.get("Throughput 4 CPU").asDouble());
+    @org.junit.jupiter.api.Test
+    public void labelValuesFilterWithLimitSingleSecondPage() {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        int runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                .queryParam("limit", 1)
+                .queryParam("page", 1)
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(1, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelFoo"), values.toString());
+        assertTrue(values.has("labelBar"), values.toString());
+        assertEquals(2, values.get("labelFoo").asInt());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesFilterWithLimitMultiple() {
+        Test t = createTest(createExampleTest("my-test"));
+        labelValuesSetup(t, false);
+        int runId = uploadRun("{ \"foo\": 1, \"bar\": \"uno\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 2, \"bar\": \"dos\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        runId = uploadRun("{ \"foo\": 3, \"bar\": \"tres\"}", t.name, "urn:foo").get(0);
+        recalculateDatasetForRun(runId);
+        JsonNode response = jsonRequest()
+                .urlEncodingEnabled(true)
+                .queryParam("limit", 2)
+                .queryParam("page", 0)
+                .get("/api/test/" + t.id + "/labelValues")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(2, arrayResponse.size(), "unexpected number of responses " + response);
+        JsonNode first = arrayResponse.get(0);
+        assertTrue(first.has("values"), first.toString());
+        JsonNode values = first.get("values");
+        assertTrue(values.has("labelFoo"), values.toString());
+        assertTrue(values.has("labelBar"), values.toString());
+        values = arrayResponse.get(1).get("values");
+        assertTrue(values.has("labelFoo"), values.toString());
+        assertTrue(values.has("labelBar"), values.toString());
     }
 }

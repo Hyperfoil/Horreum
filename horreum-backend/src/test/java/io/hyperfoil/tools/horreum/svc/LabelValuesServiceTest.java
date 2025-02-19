@@ -6,16 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -23,6 +27,9 @@ import io.quarkus.test.junit.TestProfile;
 @QuarkusTest
 @TestProfile(HorreumTestProfile.class)
 class LabelValuesServiceTest extends BaseServiceNoRestTest {
+
+    @Inject
+    ObjectMapper mapper;
 
     @Inject
     LabelValuesService labelValuesService;
@@ -237,5 +244,81 @@ class LabelValuesServiceTest extends BaseServiceNoRestTest {
         assertEquals(1, filterDef.simpleFilterObject().size());
         assertNotNull(filterDef.simpleFilterObject().get("key1"));
         assertEquals(3, filterDef.totalKeyChecks());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testLabelValuesParse() throws JsonProcessingException {
+        List<Object[]> toParse = new ArrayList<>();
+        toParse.add(
+                new Object[] { "job", mapper.readTree("\"quarkus-release-startup\""), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Max RSS", mapper.readTree("[]"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "build-id", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 1 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 2 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 4 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 8 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 32 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Quarkus - Kafka_tags", mapper.readTree("\"quarkus-release-startup\""), 10, 10,
+                Instant.now(), Instant.now() });
+        List<ExportedLabelValues> values = LabelValuesService.parse(toParse, null, 0);
+        assertEquals(1, values.size());
+        assertEquals(9, values.get(0).values.size());
+        assertEquals("quarkus-release-startup", values.get(0).values.get("job").asText());
+        assertEquals("null", values.get(0).values.get("Throughput 32 CPU").asText());
+
+        toParse.add(
+                new Object[] { "job", mapper.readTree("\"quarkus-release-startup\""), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Max RSS", mapper.readTree("[]"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "build-id", mapper.readTree("null"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 1 CPU", mapper.readTree("17570.30"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 2 CPU", mapper.readTree("43105.62"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 4 CPU", mapper.readTree("84895.13"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 8 CPU", mapper.readTree("141086.29"), 10, 11, Instant.now(), Instant.now() });
+        values = LabelValuesService.parse(toParse, null, 0);
+        assertEquals(2, values.size());
+        assertEquals(9, values.get(0).values.size());
+        assertEquals(7, values.get(1).values.size());
+        assertEquals(84895.13d, values.get(1).values.get("Throughput 4 CPU").asDouble());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testLabelValuesParseWithLimit() throws JsonProcessingException {
+        List<Object[]> toParse = new ArrayList<>();
+        toParse.add(
+                new Object[] { "job", mapper.readTree("\"quarkus-release-startup\""), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Max RSS", mapper.readTree("[]"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "build-id", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 1 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 2 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 4 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 8 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 32 CPU", mapper.readTree("null"), 10, 10, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Quarkus - Kafka_tags", mapper.readTree("\"quarkus-release-startup\""), 10, 10,
+                Instant.now(), Instant.now() });
+
+        List<ExportedLabelValues> values = LabelValuesService.parse(toParse, null, 0);
+        assertEquals(1, values.size());
+        assertEquals(9, values.get(0).values.size());
+        assertEquals("quarkus-release-startup", values.get(0).values.get("job").asText());
+        assertEquals("null", values.get(0).values.get("Throughput 32 CPU").asText());
+
+        toParse.add(
+                new Object[] { "job", mapper.readTree("\"quarkus-release-startup\""), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Max RSS", mapper.readTree("[]"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "build-id", mapper.readTree("null"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 1 CPU", mapper.readTree("17570.30"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 2 CPU", mapper.readTree("43105.62"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 4 CPU", mapper.readTree("84895.13"), 10, 11, Instant.now(), Instant.now() });
+        toParse.add(new Object[] { "Throughput 8 CPU", mapper.readTree("141086.29"), 10, 11, Instant.now(), Instant.now() });
+        // limit the results to 1 record per page
+        values = LabelValuesService.parse(toParse, 1, 0);
+        assertEquals(1, values.size());
+        assertEquals(9, values.get(0).values.size());
+        assertEquals("quarkus-release-startup", values.get(0).values.get("job").asText());
+        assertEquals("null", values.get(0).values.get("Throughput 32 CPU").asText());
+        values = LabelValuesService.parse(toParse, 1, 1);
+        assertEquals(1, values.size());
+        assertEquals(7, values.get(0).values.size());
+        assertEquals(84895.13d, values.get(0).values.get("Throughput 4 CPU").asDouble());
     }
 }
