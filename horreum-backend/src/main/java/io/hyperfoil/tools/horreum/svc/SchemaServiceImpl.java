@@ -71,8 +71,8 @@ import io.quarkus.security.identity.SecurityIdentity;
 public class SchemaServiceImpl implements SchemaService {
     private static final Logger log = Logger.getLogger(SchemaServiceImpl.class);
 
-   //@formatter:off
-   private static final String FETCH_SCHEMAS_RECURSIVE =
+    //@formatter:off
+    private static final String FETCH_SCHEMAS_RECURSIVE =
          """
          WITH RECURSIVE refs(uri) AS
                (
@@ -86,7 +86,7 @@ public class SchemaServiceImpl implements SchemaService {
          FROM schema
          INNER JOIN refs ON schema.uri = refs.uri
          """;
-   //@formatter:on
+    //@formatter:on
 
     private static final JsonSchemaFactory JSON_SCHEMA_FACTORY = new JsonSchemaFactory.Builder()
             .defaultMetaSchemaIri(JsonMetaSchema.getV4().getIri())
@@ -160,13 +160,6 @@ public class SchemaServiceImpl implements SchemaService {
             em.flush();
             if (!Objects.equals(schema.uri, existing.uri) ||
                     Objects.equals(schema.schema, existing.schema)) {
-                //We need to delete from run_schemas and dataset_schemas as they will be recreated
-                //when we create new datasets psql will still create new entries in dataset_schemas
-                // https://github.com/Hyperfoil/Horreum/blob/master/horreum-backend/src/main/resources/db/changeLog.xml#L2522
-                em.createNativeQuery("DELETE FROM run_schemas WHERE schemaid = ?1")
-                        .setParameter(1, schema.id).executeUpdate();
-                em.createNativeQuery("DELETE FROM dataset_schemas WHERE schema_id = ?1")
-                        .setParameter(1, schema.id).executeUpdate();
                 newOrUpdatedSchema(schema);
             }
         } else {
@@ -710,7 +703,7 @@ public class SchemaServiceImpl implements SchemaService {
             }
             existing.name = label.name;
 
-            //When we clear extractors we should also delete label_values
+            // when we clear extractors we should also delete label_values
             em.createNativeQuery(
                     "DELETE FROM dataset_view WHERE dataset_id IN (SELECT dataset_id FROM label_values WHERE label_id = ?1)")
                     .setParameter(1, existing.id).executeUpdate();
@@ -865,7 +858,7 @@ public class SchemaServiceImpl implements SchemaService {
         }
 
         boolean newSchema = true;
-        SchemaDAO schema = null;
+        SchemaDAO schema;
         if (importSchema.id != null) {
             //first check if this schema exists
             schema = SchemaDAO.findById(importSchema.id);
@@ -917,6 +910,7 @@ public class SchemaServiceImpl implements SchemaService {
         //let's wrap flush in a try/catch, if we get any role issues at commit we can give a sane msg
         try {
             em.flush();
+            newOrUpdatedSchema(schema);
         } catch (Exception e) {
             throw ServiceException.serverError("Failed to persist Schema: " + e.getMessage());
         }

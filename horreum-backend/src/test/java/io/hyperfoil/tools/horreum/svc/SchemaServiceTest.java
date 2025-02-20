@@ -663,9 +663,15 @@ class SchemaServiceTest extends BaseServiceTest {
         assertNotNull(updatedSchema);
         assertEquals(schema.id, updatedSchema.id);
 
-        List<?> runSchemasAfter = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1").setParameter(1, runId)
-                .getResultList();
-        assertEquals(0, runSchemasAfter.size());
+        TestUtil.eventually(() -> {
+            Util.withTx(tm, () -> {
+                List<?> runSchemasAfter = em.createNativeQuery("SELECT * FROM run_schemas WHERE runid = ?1")
+                        .setParameter(1, runId)
+                        .getResultList();
+                assertEquals(0, runSchemasAfter.size());
+                return null;
+            });
+        });
     }
 
     @org.junit.jupiter.api.Test
