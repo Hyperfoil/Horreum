@@ -26,7 +26,7 @@ public class Dataset extends ProtectedTimeType {
     public Integer testid;
 
     @NotNull
-    @Schema(implementation = JsonNode.class, type = SchemaType.STRING, description = "Data payload")
+    @Schema(type = SchemaType.STRING, description = "Data payload")
     public JsonNode data;
     @NotNull
     @Schema(description = "Dataset ordinal for ordered list of Datasets derived from a Run", example = "1")
