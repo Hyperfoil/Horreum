@@ -92,6 +92,7 @@ export default function Run() {
                                     <Tr>
                                         <Th>Id</Th>
                                         <Th>Test</Th>
+                                        <Th>Owner</Th>
                                         <Th>Start</Th>
                                         <Th>Stop</Th>
                                         <Th>Description</Th>
