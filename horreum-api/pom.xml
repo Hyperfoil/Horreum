@@ -55,7 +55,7 @@
             <plugin>
                 <artifactId>smallrye-open-api-maven-plugin</artifactId>
                 <groupId>io.smallrye</groupId>
-                <version>3.12.0</version>
+                <version>4.0.8</version>
                 <executions>
                     <!--Generate External Schema-->
                     <execution>
