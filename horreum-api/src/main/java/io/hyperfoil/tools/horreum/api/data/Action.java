@@ -8,7 +8,6 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -78,12 +77,14 @@ public class Action {
     }
 
     @JsonProperty("secrets")
+    @Schema(type = SchemaType.OBJECT, implementation = Secret.class)
     public void setSecrets(ObjectNode secrets) {
         this.secrets = secrets;
     }
 
     @JsonProperty("secrets")
-    public JsonNode getMaskedSecrets() {
+    @Schema(type = SchemaType.OBJECT, implementation = Secret.class)
+    public ObjectNode getSecrets() {
         if (this.secrets != null && this.secrets.isObject()) {
             ObjectNode masked = JsonNodeFactory.instance.objectNode();
             this.secrets.fieldNames().forEachRemaining((name) -> {
