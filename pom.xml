@@ -75,19 +75,22 @@
         <version.maven.install>3.1.4</version.maven.install>
         <version.maven.jar>3.4.2</version.maven.jar>
         <version.maven.javadoc>3.11.2</version.maven.javadoc>
+        <version.maven.helper>3.6.0</version.maven.helper>
         <version.maven.project-info-reports>3.9.0</version.maven.project-info-reports>
         <version.maven.resources>3.3.1</version.maven.resources>
         <version.maven.source>3.3.1</version.maven.source>
+
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <commons.math3.version>3.6.1</commons.math3.version>
         <graalvm.version>23.1.2</graalvm.version>
-        <quarkus.version>3.14.4</quarkus.version>
+        <quarkus.version>3.21.0</quarkus.version>
         <quinoa.version>2.5.3</quinoa.version>
         <surefire-plugin.version>3.5.3</surefire-plugin.version>
         <failsafe-plugin.version>3.5.3</failsafe-plugin.version>
         <keycloak-admin-client.version>23.0.3</keycloak-admin-client.version>
+        <quarkus-test-keycloak.version>3.14.4</quarkus-test-keycloak.version>
         <validator.version>1.5.6</validator.version>
         <jayway.jsonpath.version>2.9.0</jayway.jsonpath.version>
 
@@ -217,6 +220,10 @@
                         <groupId>org.keycloak</groupId>
                         <artifactId>keycloak-common</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>org.keycloak</groupId>
+                        <artifactId>keycloak-authz-client</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
 
@@ -235,6 +242,20 @@
                 <groupId>org.keycloak</groupId>
                 <artifactId>keycloak-common</artifactId>
                 <version>${keycloak.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-authz-client</artifactId>
+                <version>${keycloak.version}</version>
+            </dependency>
+
+            <!-- Force quarkus test keycloak server -->
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-test-keycloak-server</artifactId>
+                <version>${quarkus-test-keycloak.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

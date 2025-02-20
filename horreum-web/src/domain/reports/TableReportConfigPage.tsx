@@ -226,7 +226,7 @@ export default function TableReportConfigPage() {
                     // TODO save locally for faster reload...
                     setSaving(true)
                     reportApi
-                        .updateTableReportConfig(reportId, config)
+                        .updateTableReportConfig(config, reportId)
                         .then(
                             report => history(`/test/${testId}/reports/table/` + report.id),
                             error => alerting.dispatchError(error,"SAVE_CONFIG", "Failed to save report configuration.")
@@ -612,7 +612,7 @@ export default function TableReportConfigPage() {
                                     onClick={() => {
                                         setSaving(true)
                                         reportApi
-                                            .previewTableReport(reportId, config)
+                                            .previewTableReport(config, reportId)
                                             .then(
                                                 report => setPreview(report),
                                                 error =>

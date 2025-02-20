@@ -23,10 +23,10 @@ public class Run extends ProtectedTimeType {
     @Schema(description = "Test ID run relates to", example = "101")
     public Integer testid;
     @NotNull
-    @Schema(implementation = JsonNode.class, type = SchemaType.STRING, description = "Run result payload")
+    @Schema(type = SchemaType.STRING, description = "Run result payload")
     @JsonProperty(required = true)
     public JsonNode data;
-    @Schema(implementation = JsonNode.class, type = SchemaType.STRING, description = "JSON metadata related to run, can be tool configuration etc")
+    @Schema(type = SchemaType.STRING, description = "JSON metadata related to run, can be tool configuration etc")
     public JsonNode metadata;
     @NotNull
     @JsonProperty(required = true)
