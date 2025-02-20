@@ -13,11 +13,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ProtectedTimeType extends ProtectedType {
     @NotNull
     @JsonProperty(required = true)
-    @Schema(implementation = Instant.class, type = SchemaType.INTEGER, format = "int64", description = "Run Start timestamp", example = "1704965908267")
+    @Schema(type = SchemaType.INTEGER, format = "int64", description = "Run Start timestamp", example = "1704965908267")
     public Instant start;
     @NotNull
     @JsonProperty(required = true)
-    @Schema(implementation = Instant.class, type = SchemaType.INTEGER, format = "int64", description = "Run Stop timestamp", example = "1704965908267")
+    @Schema(type = SchemaType.INTEGER, format = "int64", description = "Run Stop timestamp", example = "1704965908267")
     public Instant stop;
 
     public ProtectedTimeType() {
