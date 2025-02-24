@@ -245,9 +245,12 @@ export function removeUserOrTeam(id: number, userOrTeam: string, alerting: Alert
     return apiCall(subscriptionsApi.removeUserOrTeam(id, userOrTeam), alerting, "REMOVE_SUBSCRIPTION", "Failed to remove test subscriptions");
 }
 
-export function sendTest(test: Test, alerting: AlertContextType): Promise<Test> {
+export function addTest(test: Test, alerting: AlertContextType): Promise<Test> {
     return apiCall(testApi.add(test), alerting, "SEND_TEST", "Failed to send test");
+}
 
+export function updateTest(test: Test, alerting: AlertContextType): Promise<Test> {
+    return apiCall(testApi.update(test), alerting, "UPDATE_TEST", "Failed to update test");
 }
 
 

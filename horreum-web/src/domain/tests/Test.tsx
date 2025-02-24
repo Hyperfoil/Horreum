@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useContext } from "react"
-import { useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 
 import { useSelector } from "react-redux"
 
@@ -39,6 +39,7 @@ import RunList from "../runs/RunList";
 import ExportButton from "../../components/ExportButton";
 
 export default function TestView() {
+    const navigate = useNavigate()
     const {testId} = useParams<any>()
     const [testIdVal, setTestIdVal] = useState(testId === "_new" ? 0 : parseInt(testId ?? "-1"))
     const [test, setTest] = useState<Test | undefined>()
@@ -75,6 +76,13 @@ export default function TestView() {
     useEffect(() => {
         document.title = (testIdVal === 0 ? "New test" : test && test.name ? test.name : "Loading test...") + " | Horreum"
     }, [test, testIdVal])
+
+    useEffect(() => {
+        // something has changed, i.e., new test created
+        if (testIdVal > 0 && testIdVal !== test?.id) {
+            navigate("/test/" + testIdVal, {replace: false})
+        }
+    }, [testIdVal])
 
     //TODO:: replace redux
     const isTester = useTester(test ? test.owner : undefined)
