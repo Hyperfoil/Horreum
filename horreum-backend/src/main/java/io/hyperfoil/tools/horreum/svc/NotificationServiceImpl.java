@@ -40,8 +40,8 @@ import io.quarkus.runtime.Startup;
 @Startup
 public class NotificationServiceImpl implements NotificationService {
     private static final Logger log = Logger.getLogger(NotificationServiceImpl.class);
-   //@formatter:off
-   private static final String GET_NOTIFICATIONS = """
+    //@formatter:off
+    private static final String GET_NOTIFICATIONS = """
          WITH ens AS (
             SELECT ns.*, watch_id FROM notificationsettings ns
                JOIN watch_users wu ON NOT ns.isteam AND ns.name = wu.users
@@ -60,7 +60,7 @@ public class NotificationServiceImpl implements NotificationService {
          WHERE testid = ?
           AND name NOT IN (SELECT optout FROM watch_optout WHERE ens.watch_id  = watch_optout.watch_id)
          """;
-   //@formatter:on
+    //@formatter:on
     public final Map<String, NotificationPlugin> plugins = new HashMap<>();
 
     @Inject
@@ -147,6 +147,7 @@ public class NotificationServiceImpl implements NotificationService {
     @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN })
     @Transactional
     @Override
+    // remove and re-create the settings for the user
     public void updateSettings(String name, boolean team, NotificationSettings[] settings) {
         NotificationSettingsDAO.delete("name = ?1 AND isTeam = ?2", name, team);
         Arrays.stream(settings).map(NotificationSettingsMapper::to).forEach(ns -> {
@@ -158,9 +159,11 @@ public class NotificationServiceImpl implements NotificationService {
                 }
                 throw ServiceException.badRequest("Invalid method " + ns.method);
             }
+            // reset the id
+            ns.id = null;
             ns.name = name;
             ns.isTeam = team;
-            em.merge(ns);
+            ns.persist();
         });
     }
 
