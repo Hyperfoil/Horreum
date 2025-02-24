@@ -438,12 +438,19 @@ public class BaseServiceTest {
         return test;
     }
 
-    protected void createViews(List<View> views) {
-        jsonRequest()
-                .body(views)
-                .post("/api/ui/views")
+    protected Test updateTest(Test test) {
+        log.debugf("Updating test via /api/test: %s", test.toString());
+
+        test = jsonRequest()
+                .body(test)
+                .put("/api/test")
                 .then()
-                .statusCode(204);
+                .statusCode(200)
+                .extract().body().as(Test.class);
+
+        log.debugf("Test updated via /api/test: %s", test.toString());
+
+        return test;
     }
 
     protected View createView(View view) {
