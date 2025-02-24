@@ -299,7 +299,7 @@ export default function AllTests() {
         accessor: "watching",
         disableSortBy: true,
         Cell: (arg: C) => {
-            return <WatchDropdown watching={arg.cell.value} id={arg.row.original.id} />
+            return <WatchDropdown watching={arg.cell.value ? Array.from(arg.cell.value) : []} id={arg.row.original.id} />
         },
     }
 
