@@ -18,7 +18,7 @@ import {
 import FolderSelect from "../../components/FolderSelect"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
-import { Test, Access, sendTest, configApi, Datastore, apiCall } from "../../api"
+import { Test, Access, addTest, configApi, Datastore, apiCall, updateTest } from "../../api"
 import { useTester, defaultTeamSelector, teamToName } from "../../auth"
 import { AppContext } from "../../context/appContext";
 import { AppContextType } from "../../context/@types/appContextTypes";
@@ -105,7 +105,9 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
                 access: access,
                 transformers: test?.transformers || [],
             }
-            const response = await sendTest(newTest, alerting)
+            const response = (test?.id && test?.id > 0)
+                ? await updateTest(newTest, alerting)
+                : await addTest(newTest, alerting)
             if (response.id !== test?.id) {
                 return onTestIdChange(response.id)
             }

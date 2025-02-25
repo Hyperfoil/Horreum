@@ -1730,6 +1730,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TestQueryResult"
+    put:
+      tags:
+      - Test
+      description: Update an existing test
+      operationId: update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Test"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Test"
     post:
       tags:
       - Test
