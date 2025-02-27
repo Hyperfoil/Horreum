@@ -6,7 +6,10 @@ import java.io.Closeable;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -160,13 +163,7 @@ public class HorreumClient implements Closeable {
                 }
             }
 
-            ConfigService.KeycloakConfig keycloakConfig;
-            try {
-                URL url = new URL(this.horreumUrl.concat(KEYCLOAK_BOOTSTRAP_URL));
-                keycloakConfig = new ObjectMapper().readValue(url, ConfigService.KeycloakConfig.class);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            ConfigService.KeycloakConfig keycloakConfig = getKeycloakConfig();
 
             ResteasyClientBuilderImpl clientBuilder = new ResteasyClientBuilderImpl();
 
@@ -212,6 +209,26 @@ public class HorreumClient implements Closeable {
                     target.proxyBuilder(SubscriptionService.class).build(),
                     target.proxyBuilder(TestService.class).build(),
                     target.proxyBuilder(UserService.class).build());
+        }
+
+        private ConfigService.KeycloakConfig getKeycloakConfig() {
+            ConfigService.KeycloakConfig keycloakConfig;
+            try {
+                HttpClient client = HttpClient.newBuilder()
+                        .sslContext(this.sslContext)
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(this.horreumUrl.concat(KEYCLOAK_BOOTSTRAP_URL)))
+                        .GET()
+                        .build();
+
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                keycloakConfig = new ObjectMapper().readValue(response.body(), ConfigService.KeycloakConfig.class);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return keycloakConfig;
         }
     }
 
