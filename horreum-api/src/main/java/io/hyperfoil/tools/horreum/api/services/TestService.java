@@ -9,6 +9,7 @@ import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -69,6 +70,10 @@ public interface TestService {
     @POST
     @Operation(description = "Create a new test")
     Test add(@RequestBody(required = true) Test test);
+
+    @PUT
+    @Operation(description = "Update an existing test")
+    Test update(@RequestBody(required = true) Test test);
 
     @GET
     @Operation(description = "Retrieve a paginated list of Tests with available count")

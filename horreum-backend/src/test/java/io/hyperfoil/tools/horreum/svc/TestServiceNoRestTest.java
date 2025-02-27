@@ -200,13 +200,39 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         created.name = "differentName";
         created.notificationsEnabled = false;
 
-        Test updated = testService.add(created);
+        Test updated = testService.update(created);
         assertEquals(1, TestDAO.count());
         test = TestDAO.findById(updated.id);
         assertEquals(created.name, test.name);
         assertEquals(FOO_TEAM, test.owner);
         assertEquals(Access.PUBLIC, test.access);
         assertEquals(false, test.notificationsEnabled);
+    }
+
+    @org.junit.jupiter.api.Test
+    void testUpdateNotExistingTest() {
+        Test t = createSampleTest("test", null, null, null);
+
+        Test created = testService.add(t);
+        assertNotNull(created.id);
+        assertEquals(1, TestDAO.count());
+        TestDAO test = TestDAO.findById(created.id);
+        assertEquals(t.name, test.name);
+        assertEquals(FOO_TEAM, test.owner);
+        assertEquals(Access.PUBLIC, test.access);
+        assertEquals(true, test.notificationsEnabled);
+
+        // change to a non-existing id
+        created.id = 999;
+        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.update(created));
+        assertEquals("Missing test id or test with id 999 does not exist", thrown.getMessage());
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
+
+        // change to a null id
+        created.id = null;
+        thrown = assertThrows(ServiceException.class, () -> testService.update(created));
+        assertEquals("Missing test id or test with id null does not exist", thrown.getMessage());
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
 
     @org.junit.jupiter.api.Test

@@ -260,7 +260,7 @@ public class AlertingServiceTest extends BaseServiceTest {
         test.fingerprintLabels = ((ArrayNode) test.fingerprintLabels).add("bar");
         // We'll change the filter here but we do NOT expect to be applied to existing datapoints
         test.fingerprintFilter = "value => false";
-        test = createTest(test); // this is update
+        test = updateTest(test); // this is update
         // the fingerprint should be updated within the same transaction as test update
         em.clear();
         List<FingerprintDAO> fingerprintsAfter = FingerprintDAO.listAll();
