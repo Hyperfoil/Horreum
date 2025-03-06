@@ -30,6 +30,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.jboss.resteasy.reactive.ResponseStatus;
 import org.jboss.resteasy.reactive.Separator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -69,10 +70,17 @@ public interface TestService {
 
     @POST
     @Operation(description = "Create a new test")
+    @ResponseStatus(201)
+    @APIResponses(value = {
+            @APIResponse(responseCode = "201", description = "New test created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Test.class)))
+    })
     Test add(@RequestBody(required = true) Test test);
 
     @PUT
     @Operation(description = "Update an existing test")
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "Test updated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Test.class)))
+    })
     Test update(@RequestBody(required = true) Test test);
 
     @GET

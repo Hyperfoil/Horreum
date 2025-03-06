@@ -430,7 +430,7 @@ public class BaseServiceTest {
                 .body(test)
                 .post("/api/test")
                 .then()
-                .statusCode(200)
+                .statusCode(201)
                 .extract().body().as(Test.class);
 
         log.debugf("New test created via /api/test: %s", test.toString());
