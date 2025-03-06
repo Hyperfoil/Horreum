@@ -505,9 +505,8 @@ public class BaseServiceTest {
         schema.access = Access.PUBLIC;
         schema.name = name + "." + displayName;
         schema.uri = "urn:" + className + ":" + displayName + ":1.0";
-        Integer id = jsonRequest().body(schema).post("/api/schema").then()
-                .statusCode(200).extract().as(Integer.class);
-        schema.id = id;
+        schema.id = jsonRequest().body(schema).post("/api/schema").then()
+                .statusCode(201).extract().as(Integer.class);
 
         if (label) {
             addLabel(schema, "value", null, new Extractor("value", "$.value", false));
@@ -526,7 +525,7 @@ public class BaseServiceTest {
         schema.name = name;
         schema.uri = uri;
         schema.schema = jsonSchema;
-        return addOrUpdateSchema(schema);
+        return addSchema(schema);
     }
 
     protected Schema getSchema(int id, String token) {
@@ -538,8 +537,15 @@ public class BaseServiceTest {
                 .extract().as(Schema.class);
     }
 
-    protected Schema addOrUpdateSchema(Schema schema) {
+    protected Schema addSchema(Schema schema) {
         Response response = jsonRequest().body(schema).post("/api/schema");
+        response.then().statusCode(201);
+        schema.id = Integer.parseInt(response.body().asString());
+        return schema;
+    }
+
+    protected Schema updateSchema(Schema schema) {
+        Response response = jsonRequest().body(schema).put("/api/schema");
         response.then().statusCode(200);
         schema.id = Integer.parseInt(response.body().asString());
         return schema;
@@ -951,7 +957,7 @@ public class BaseServiceTest {
                 readFile(p.resolve("acme_benchmark_schema.json").toFile()), Schema.class);
         assertEquals("dev-team", s.owner);
         s.owner = "foo-team";
-        s = addOrUpdateSchema(s);
+        s = addSchema(s);
 
         Label l = new ObjectMapper().readValue(
                 readFile(p.resolve("throughput_label.json").toFile()), Label.class);

@@ -1,5 +1,5 @@
 import {useEffect, useState, useRef, useContext} from "react"
-import { useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 
 import {
@@ -43,9 +43,6 @@ import {AppContextType} from "../../context/@types/appContextTypes";
 import { TimeoutBanner, TimeoutBannerProps } from "../../Banner"
 import ExportButton from "../../components/ExportButton";
 
-type SchemaParams = {
-    schemaId: string
-}
 
 type GeneralProps = {
     schema: SchemaDef | undefined
@@ -205,6 +202,7 @@ function General(props: GeneralProps) {
 }
 
 export default function Schema() {
+    const navigate = useNavigate()
     const { alerting } = useContext(AppContext) as AppContextType;
     const { schemaId } = useParams<any>()
     const [schemaIdVal, setSchemaIdVal] = useState(schemaId === "_new" ? -1 : Number.parseInt(schemaId ?? "-1"))
@@ -224,11 +222,13 @@ export default function Schema() {
             setLoading(true)
             getSchema(schemaIdVal, alerting)
                 .then(setSchema)
+                .then(() => navigate("/schema/" + schemaIdVal, {replace: false}))
                 .finally(() => setLoading(false))
         } else {
             setLoading(false)
         }
     }, [schemaIdVal])
+
     useEffect(() => {
         document.title = (schemaIdVal < 0 ? "New schema" : schema?.name || "(unknown schema)") + " | Horreum"
         setModifiedSchema(schema)
@@ -258,7 +258,7 @@ export default function Schema() {
             schema: editorSchema ? JSON.parse(editorSchema) : null,
         } as SchemaDef
 
-        return schemaApi.add(newSchema)
+        return (newSchema.id > 0 ? schemaApi.update(newSchema) : schemaApi.add(newSchema))
             .then(id=>  id,
                 error => alerting.dispatchError(error, "SAVE_SCHEMA", "Failed to save schema")
             ).then(id => {

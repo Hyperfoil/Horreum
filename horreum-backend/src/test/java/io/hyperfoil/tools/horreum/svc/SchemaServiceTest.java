@@ -107,9 +107,10 @@ class SchemaServiceTest extends BaseServiceTest {
         schema.uri = "urn:invalid-id:schema";
         schema.id = 9999; // does not exist
 
+        // expect 201 as the id is cleared up when creating new schema
         jsonRequest().body(schema).post("/api/schema")
                 .then()
-                .statusCode(400);
+                .statusCode(201);
     }
 
     @org.junit.jupiter.api.Test
@@ -232,7 +233,7 @@ class SchemaServiceTest extends BaseServiceTest {
 
         allowAnySchema.schema = allowNone.deepCopy();
         ((ObjectNode) allowAnySchema.schema).set("$id", allowAny.path("$id").deepCopy());
-        addOrUpdateSchema(allowAnySchema);
+        updateSchema(allowAnySchema);
 
         Schema.ValidationEvent runValidation2 = runValidations.poll(10, TimeUnit.SECONDS);
         assertNotNull(runValidation2);
@@ -269,7 +270,7 @@ class SchemaServiceTest extends BaseServiceTest {
 
         schema.name = "Different name";
         schema.description = "Bla bla";
-        schema = addOrUpdateSchema(schema);
+        schema = updateSchema(schema);
         checkEntities(labelId, transformerId);
         //check labels and transformers using the rest interface as well
         labels = jsonRequest().get("/api/schema/" + schema.id + "/labels")
@@ -283,13 +284,13 @@ class SchemaServiceTest extends BaseServiceTest {
 
         schema.uri = "http://example.com/otherschema";
         schema.description = null;
-        addOrUpdateSchema(schema);
+        updateSchema(schema);
         checkEntities(labelId, transformerId);
 
         // back to original
         schema.name = "My schema";
         schema.uri = "urn:my:schema";
-        schema = addOrUpdateSchema(schema);
+        schema = updateSchema(schema);
         assertEquals("urn:my:schema", schema.uri);
         checkEntities(labelId, transformerId);
 
@@ -659,7 +660,7 @@ class SchemaServiceTest extends BaseServiceTest {
 
         // update the schema uri afterward
         schema.uri = "urn:new-dummy:schema";
-        Schema updatedSchema = addOrUpdateSchema(schema);
+        Schema updatedSchema = updateSchema(schema);
         assertNotNull(updatedSchema);
         assertEquals(schema.id, updatedSchema.id);
 

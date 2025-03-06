@@ -66,4 +66,8 @@ public class Schema extends ProtectedType {
                     '}';
         }
     }
+
+    public void clearIds() {
+        id = null;
+    }
 }
