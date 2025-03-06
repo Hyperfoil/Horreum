@@ -1743,7 +1743,7 @@ paths:
         required: true
       responses:
         "200":
-          description: OK
+          description: Test updated successfully
           content:
             application/json:
               schema:
@@ -1760,8 +1760,8 @@ paths:
               $ref: "#/components/schemas/Test"
         required: true
       responses:
-        "200":
-          description: OK
+        "201":
+          description: New test created successfully
           content:
             application/json:
               schema:
