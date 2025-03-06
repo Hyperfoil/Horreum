@@ -115,7 +115,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         schema.id = id;
         schema.name = "urn:dummy:schema:v1";
 
-        int afterUpdateId = schemaService.add(schema);
+        int afterUpdateId = schemaService.update(schema);
         assertEquals(id, afterUpdateId);
 
         SchemaDAO savedSchema = SchemaDAO.findById(id);
@@ -132,9 +132,9 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         schema.id = 9999;
 
         // try to update a not existing schema
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.add(schema));
-        assertEquals("An id was given, but it does not exist.", thrown.getMessage());
-        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.update(schema));
+        assertEquals("Missing schema id or schema with id 9999 does not exist", thrown.getMessage());
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
 
     @org.junit.jupiter.api.Test

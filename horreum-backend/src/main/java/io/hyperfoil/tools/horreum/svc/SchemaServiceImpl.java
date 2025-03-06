@@ -3,7 +3,17 @@ package io.hyperfoil.tools.horreum.svc;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -146,29 +156,65 @@ public class SchemaServiceImpl implements SchemaService {
     @Transactional
     @Override
     public Integer add(Schema schemaDTO) {
-        verifyNewSchema(schemaDTO);
+        // we are creating a new schema, ensure all ids are cleaned up
+        schemaDTO.clearIds();
+
+        log.debugf("Creating new schema: %s", schemaDTO.toString());
+        return addOrUpdateSchema(schemaDTO);
+    }
+
+    @RolesAllowed(Roles.TESTER)
+    @WithRoles
+    @Transactional
+    @Override
+    public Integer update(Schema schemaDTO) {
+        // check the schema already exists in the db
+        if (schemaDTO.id == null || SchemaDAO.findById(schemaDTO.id) == null) {
+            throw ServiceException.notFound("Missing schema id or schema with id " + schemaDTO.id + " does not exist");
+        }
+
+        log.debugf("Updating schema (%d): %s", schemaDTO.id, schemaDTO.toString());
+        return addOrUpdateSchema(schemaDTO);
+    }
+
+    /**
+     * Create or update a Schema entity by performing the appropriate validation logics
+     * @param schemaDTO the DTO that should be mapped to the database
+     * @return the db Schema id
+     */
+    private int addOrUpdateSchema(Schema schemaDTO) {
+        // whether we should trigger a schema synchronization
+        // this happens when creating new schemas or, updating uri or JSON schema
+        boolean syncSchemas = false;
+
+        validateSchema(schemaDTO);
+
         // Note: isEmpty is true for all non-object and non-array nodes
         if (schemaDTO.schema != null && schemaDTO.schema.isEmpty()) {
             schemaDTO.schema = null;
         }
+
         SchemaDAO schema = SchemaMapper.to(schemaDTO);
         if (schemaDTO.id != null && schemaDTO.id > 0) {
-            SchemaDAO existing = SchemaDAO.findById(schema.id);
-            if (existing == null)
-                throw ServiceException.badRequest("An id was given, but it does not exist.");
+            // update existing Schema
+            SchemaDAO existing = (SchemaDAO) SchemaDAO.findByIdOptional(schema.id)
+                    .orElseThrow(() -> ServiceException.badRequest("Cannot find schema with id " + schemaDTO.id));
             em.merge(schema);
             em.flush();
-            if (!Objects.equals(schema.uri, existing.uri) ||
-                    Objects.equals(schema.schema, existing.schema)) {
-                newOrUpdatedSchema(schema);
+            if (!Objects.equals(schema.uri, existing.uri) || Objects.equals(schema.schema, existing.schema)) {
+                syncSchemas = true;
             }
         } else {
-            schema.id = null;
+            // persist new Schema
+            syncSchemas = true;
             schema.persist();
             em.flush();
+        }
+
+        if (syncSchemas) {
             newOrUpdatedSchema(schema);
         }
-        log.debugf("Added schema %s (%d), URI %s", schema.name, schema.id, schema.uri);
+
         return schema.id;
     }
 
@@ -177,7 +223,7 @@ public class SchemaServiceImpl implements SchemaService {
         Util.registerTxSynchronization(tm, txStatus -> mediator.queueSchemaSync(schema.id));
     }
 
-    private void verifyNewSchema(Schema schemaDTO) {
+    private void validateSchema(Schema schemaDTO) {
         if (schemaDTO.uri == null || Arrays.stream(ALL_URNS).noneMatch(scheme -> schemaDTO.uri.startsWith(scheme + ":"))) {
             throw ServiceException
                     .badRequest("Please use URI starting with one of these schemes: " + Arrays.toString(ALL_URNS));
@@ -866,13 +912,13 @@ public class SchemaServiceImpl implements SchemaService {
                 em.merge(SchemaMapper.to(importSchema));
                 newSchema = false;
             } else {
-                verifyNewSchema(importSchema);
+                validateSchema(importSchema);
                 schema = SchemaMapper.to(importSchema);
                 schema.id = null;
                 schema.persist();
             }
         } else {
-            verifyNewSchema(importSchema);
+            validateSchema(importSchema);
             schema = SchemaMapper.to(importSchema);
             em.persist(schema);
         }
