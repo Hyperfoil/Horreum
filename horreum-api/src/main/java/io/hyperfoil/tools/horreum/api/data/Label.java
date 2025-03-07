@@ -49,6 +49,10 @@ public class Label extends ProtectedType {
         this.schemaId = schemaId;
     }
 
+    public void clearIds() {
+        id = null;
+    }
+
     public static class Value implements Serializable {
         public int datasetId;
         public int labelId;

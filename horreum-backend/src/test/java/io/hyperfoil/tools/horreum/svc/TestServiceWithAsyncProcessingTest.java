@@ -111,8 +111,8 @@ class TestServiceWithAsyncProcessingTest extends BaseServiceTest {
         String name = info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
         Schema schema = createSchema(name, uriForTest(info, "1.0"));
 
-        addLabel(schema, "filter-1", null, true, false, new Extractor("filter", "$.filter1", false));
-        addLabel(schema, "filter-2", null, true, false, new Extractor("filter", "$.filter2", false));
+        addLabel(schema, "filter-1", null, new Extractor("filter", "$.filter1", false));
+        addLabel(schema, "filter-2", null, new Extractor("filter", "$.filter2", false));
 
         BlockingQueue<Dataset.LabelsUpdatedEvent> newDatasetQueue = serviceMediator
                 .getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
