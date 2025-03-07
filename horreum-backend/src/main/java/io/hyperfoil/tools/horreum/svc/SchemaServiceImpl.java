@@ -62,6 +62,7 @@ import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
+import io.hyperfoil.tools.horreum.entity.data.LabelValueDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
@@ -710,33 +711,54 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public Integer addOrUpdateLabel(int schemaId, Label labelDTO) {
+    public Integer addLabel(int schemaId, Label labelDTO) {
         if (labelDTO == null) {
             throw ServiceException.badRequest("No label?");
         }
+
+        if (labelDTO.id != null && LabelDAO.findById(labelDTO.id) != null) {
+            throw ServiceException.badRequest("Label with id " + labelDTO.id + " already exists");
+        }
+
+        // ensure we are creating new instance by clearing the id
+        labelDTO.clearIds();
+
+        labelDTO.schemaId = schemaId;
+        return addOrUpdateLabel(labelDTO);
+    }
+
+    @WithRoles
+    @Transactional
+    @Override
+    public Integer updateLabel(int schemaId, Label labelDTO) {
+        if (labelDTO == null) {
+            throw ServiceException.badRequest("No label?");
+        }
+
+        if (labelDTO.id == null || LabelDAO.findById(labelDTO.id) == null) {
+            throw ServiceException.notFound("Missing label id or label with id " + labelDTO.id + " does not exist");
+        }
+
+        labelDTO.schemaId = schemaId;
+        return addOrUpdateLabel(labelDTO);
+    }
+
+    private int addOrUpdateLabel(Label labelDTO) {
         if (!identity.hasRole(labelDTO.owner)) {
             throw ServiceException.forbidden("This user is not a member of team " + labelDTO.owner);
         }
-        if (labelDTO.name == null || labelDTO.name.isBlank()) {
-            throw ServiceException.badRequest("Label must have a non-blank name");
-        }
+
+        // some validation logic
+        validateLabel(labelDTO);
         validateExtractors(labelDTO.extractors);
 
         LabelDAO label = LabelMapper.to(labelDTO);
-        if (label.id == null || label.id < 0) {
-            label.id = null;
-
-            label.schema = (SchemaDAO) SchemaDAO.findByIdOptional(schemaId)
-                    .orElseThrow(() -> ServiceException.notFound("Schema " + schemaId + " not found"));
-
-            checkSameName(label);
-            label.persistAndFlush();
-            emitLabelChanged(label.id, schemaId);
-        } else {
+        if (label.id != null && label.id > 0) {
+            // update existing label
             LabelDAO existing = (LabelDAO) LabelDAO.findByIdOptional(label.id)
                     .orElseThrow(() -> ServiceException.notFound("Label " + label.id + " not found"));
 
-            if (!Objects.equals(existing.schema.id, schemaId)) {
+            if (!Objects.equals(existing.schema.id, labelDTO.schemaId)) {
                 throw ServiceException.badRequest("Label id=" + label.id + ", name=" + existing.name +
                         " belongs to a different schema: " + existing.schema.id + "(" + existing.schema.uri + ")");
             }
@@ -745,28 +767,42 @@ public class SchemaServiceImpl implements SchemaService {
                         .forbidden("Cannot transfer ownership: this user is not a member of team " + existing.owner);
             }
             if (!existing.name.equals(label.name)) {
+                // if we are changing the name checks if it conflicts with others
                 checkSameName(label);
             }
-            existing.name = label.name;
 
-            // when we clear extractors we should also delete label_values
+            // when we clear extractors we should also delete label_values and dataset views
             em.createNativeQuery(
                     "DELETE FROM dataset_view WHERE dataset_id IN (SELECT dataset_id FROM label_values WHERE label_id = ?1)")
                     .setParameter(1, existing.id).executeUpdate();
-            em.createNativeQuery("DELETE FROM label_values WHERE label_id = ?1").setParameter(1, existing.id).executeUpdate();
+            LabelValueDAO.delete("labelId = ?1", existing.id);
+
+            existing.name = label.name;
             existing.extractors.clear();
             existing.extractors.addAll(label.extractors);
-
             existing.function = label.function;
             existing.owner = label.owner;
             existing.access = label.access;
             existing.filtering = label.filtering;
             existing.metrics = label.metrics;
-            existing.persistAndFlush();
-
-            emitLabelChanged(existing.id, existing.getSchemaId());
+        } else {
+            // create new label
+            // check whether the schema is existing, otherwise throw error
+            label.schema = (SchemaDAO) SchemaDAO.findByIdOptional(labelDTO.schemaId)
+                    .orElseThrow(() -> ServiceException.notFound("Schema " + labelDTO.schemaId + " not found"));
+            // check the name is a valid one and does not collide with others
+            checkSameName(label);
+            label.persistAndFlush();
         }
+
+        emitLabelChanged(label.id, label.getSchemaId());
         return label.id;
+    }
+
+    private void validateLabel(Label labelDTO) {
+        if (labelDTO.name == null || labelDTO.name.isBlank()) {
+            throw ServiceException.badRequest("Label must have a non-blank name");
+        }
     }
 
     private void emitLabelChanged(int labelId, int schemaId) {

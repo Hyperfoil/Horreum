@@ -175,10 +175,26 @@ public interface SchemaService {
     @Path("{schemaId}/labels")
     @Consumes(MediaType.APPLICATION_JSON)
     @Operation(description = "Save new or update existing Label for a Schema (Label id only required when updating existing one)")
+    @ResponseStatus(201)
     @Parameters(value = {
             @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
     })
-    Integer addOrUpdateLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
+    @APIResponses(value = {
+            @APIResponse(responseCode = "201", description = "New schema created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+    })
+    Integer addLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
+
+    @PUT
+    @Path("{schemaId}/labels")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(description = "Update existing Label for a Schema (Label id only required when updating existing one)")
+    @Parameters(value = {
+            @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
+    })
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "Schema updated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+    })
+    Integer updateLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
 
     @DELETE
     @Path("{schemaId}/labels/{labelId}")

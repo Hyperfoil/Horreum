@@ -278,7 +278,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             lblCpu.owner = dummyTest.owner;
             lblCpu.metrics = true;
             lblCpu.filtering = false;
-            lblCpu.id = horreumClient.schemaService.addOrUpdateLabel(schema.id, lblCpu);
+            lblCpu.id = horreumClient.schemaService.addLabel(schema.id, lblCpu);
 
             Label lblThroughput = new Label();
             lblThroughput.name = "throughput";
@@ -288,7 +288,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             lblThroughput.owner = dummyTest.owner;
             lblThroughput.metrics = true;
             lblThroughput.filtering = false;
-            lblThroughput.id = horreumClient.schemaService.addOrUpdateLabel(schema.id, lblThroughput);
+            lblThroughput.id = horreumClient.schemaService.addLabel(schema.id, lblThroughput);
 
             Label lblJob = new Label();
             lblJob.name = "job";
@@ -298,7 +298,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             lblJob.owner = dummyTest.owner;
             lblJob.metrics = false;
             lblJob.filtering = true;
-            lblJob.id = horreumClient.schemaService.addOrUpdateLabel(schema.id, lblJob);
+            lblJob.id = horreumClient.schemaService.addLabel(schema.id, lblJob);
 
             Label lblBuildID = new Label();
             lblBuildID.name = "build-id";
@@ -308,7 +308,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             lblBuildID.owner = dummyTest.owner;
             lblBuildID.metrics = false;
             lblBuildID.filtering = true;
-            lblBuildID.id = horreumClient.schemaService.addOrUpdateLabel(schema.id, lblBuildID);
+            lblBuildID.id = horreumClient.schemaService.addLabel(schema.id, lblBuildID);
 
             //3. Config change detection variables
             Variable variable = new Variable();

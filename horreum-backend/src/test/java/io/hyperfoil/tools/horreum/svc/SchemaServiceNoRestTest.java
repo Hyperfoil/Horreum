@@ -4,6 +4,7 @@ import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.DEFAULT_USER;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TEAM;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TESTER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -467,7 +468,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Label l = createSampleLabel("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateLabel(s.id, l);
+        int id = schemaService.addLabel(s.id, l);
         assertEquals(1, LabelDAO.count());
         LabelDAO label = LabelDAO.findById(id);
         assertNotNull(label);
@@ -483,13 +484,13 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
         // empty name
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(s.id, l));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addLabel(s.id, l));
         assertEquals("Label must have a non-blank name", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
 
         // null name
         l.name = null;
-        thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(s.id, l));
+        thrown = assertThrows(ServiceException.class, () -> schemaService.addLabel(s.id, l));
         assertEquals("Label must have a non-blank name", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -502,9 +503,14 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
         l.id = 999;
 
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(s.id, l));
-        assertEquals(String.format("Label %d not found", l.id), thrown.getMessage());
-        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
+        // adding a label ensure the id is cleared if not existing
+        int id = schemaService.addLabel(s.id, l);
+        assertEquals(1, LabelDAO.count());
+        LabelDAO label = LabelDAO.findById(id);
+        assertNotNull(label);
+        assertEquals("my-awesome-label", label.name);
+        assertEquals(2, label.extractors.size());
+        assertNotEquals(999, label.id);
     }
 
     @org.junit.jupiter.api.Test
@@ -515,12 +521,12 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
         // null label dto
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(s.id, null));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addLabel(s.id, null));
         assertEquals("No label?", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
 
         // not existing schema
-        thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(999, l));
+        thrown = assertThrows(ServiceException.class, () -> schemaService.addLabel(999, l));
         assertEquals("Schema 999 not found", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -532,14 +538,14 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Label l = createSampleLabel("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateLabel(s.id, l);
+        int id = schemaService.addLabel(s.id, l);
         assertEquals(1, LabelDAO.count());
 
         // update the label
         l.id = id;
         l.name = "AnotherName";
         l.extractors.add(new Extractor("z", "$.z", false));
-        int afterUpdateId = schemaService.addOrUpdateLabel(s.id, l);
+        int afterUpdateId = schemaService.updateLabel(s.id, l);
         assertEquals(id, afterUpdateId);
 
         assertEquals(1, LabelDAO.count());
@@ -556,14 +562,31 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Label l = createSampleLabel("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateLabel(s.id, l);
+        int id = schemaService.addLabel(s.id, l);
         assertEquals(1, LabelDAO.count());
 
         // update the label passing the wrong schema id
         l.id = id;
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(999, l));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.updateLabel(999, l));
         assertEquals(String.format("Label id=%d, name=%s belongs to a different schema: %d(%s)",
                 l.id, l.name, s.id, s.uri), thrown.getMessage());
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
+    }
+
+    @org.junit.jupiter.api.Test
+    void testAddExistingSchemaLabel() {
+        Schema s = createSchema("dummy", "urn:dummy:schema");
+
+        Label l = createSampleLabel("Blabla", s, null, "({x, y}) => ({ z: 1 })",
+                new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
+
+        int id = schemaService.addLabel(s.id, l);
+        assertEquals(1, LabelDAO.count());
+
+        // update the label passing the wrong schema id
+        l.id = id;
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addLabel(999, l));
+        assertEquals(String.format("Label with id %d already exists", l.id), thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
 
@@ -575,14 +598,14 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
         Label another = createSampleLabel("AnotherLabel", s, null, "({x, y}) => ({ z: 1 })");
 
-        int id = schemaService.addOrUpdateLabel(s.id, l);
-        schemaService.addOrUpdateLabel(s.id, another);
+        int id = schemaService.addLabel(s.id, l);
+        schemaService.addLabel(s.id, another);
         assertEquals(2, LabelDAO.count());
 
         // update the label
         l.id = id;
         l.name = "AnotherLabel";
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateLabel(s.id, l));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.updateLabel(s.id, l));
         assertEquals(String.format("There is an existing label with the same name (%s) in this " +
                 "schema; please choose different name.", l.name), thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
@@ -595,7 +618,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Label l = createSampleLabel("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateLabel(s.id, l);
+        int id = schemaService.addLabel(s.id, l);
         assertEquals(1, LabelDAO.count());
 
         schemaService.deleteLabel(s.id, id);
@@ -609,7 +632,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Label l = createSampleLabel("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateLabel(s.id, l);
+        int id = schemaService.addLabel(s.id, l);
         assertEquals(1, LabelDAO.count());
 
         ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.deleteLabel(s.id, 999));

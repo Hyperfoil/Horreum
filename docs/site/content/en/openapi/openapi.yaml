@@ -1567,12 +1567,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Label"
-    post:
+    put:
       tags:
       - Schema
-      description: Save new or update existing Label for a Schema (Label id only required
-        when updating existing one)
-      operationId: addOrUpdateLabel
+      description: Update existing Label for a Schema (Label id only required when
+        updating existing one)
+      operationId: updateLabel
       parameters:
       - name: schemaId
         in: path
@@ -1590,7 +1590,36 @@ paths:
         required: true
       responses:
         "200":
-          description: OK
+          description: Schema updated successfully
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+    post:
+      tags:
+      - Schema
+      description: Save new or update existing Label for a Schema (Label id only required
+        when updating existing one)
+      operationId: addLabel
+      parameters:
+      - name: schemaId
+        in: path
+        description: Schema ID
+        required: true
+        schema:
+          format: int32
+          type: integer
+        example: 101
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Label"
+        required: true
+      responses:
+        "201":
+          description: New schema created successfully
           content:
             application/json:
               schema:
