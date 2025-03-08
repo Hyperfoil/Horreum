@@ -382,7 +382,7 @@ public class BaseServiceTest {
                 .body(label)
                 .post("/api/schema/" + schemaId + "/labels")
                 .then()
-                .statusCode(200)
+                .statusCode(201)
                 .extract().asString();
         return Integer.parseInt(labelId);
     }
@@ -391,13 +391,13 @@ public class BaseServiceTest {
             Integer limit, Integer page, String sort, SortDirection direction) {
         StringBuilder url = new StringBuilder("/api/run/list/" + testId + "?trashed=" + trashed);
         if (limit != null)
-            url.append("&limit=" + limit);
+            url.append("&limit=").append(limit);
         if (page != null)
-            url.append("&page=" + page);
+            url.append("&page=").append(page);
         if (sort != null)
-            url.append("&sort=" + sort);
+            url.append("&sort=").append(sort);
         if (direction != null)
-            url.append("&direction=" + direction);
+            url.append("&direction=").append(direction);
         return jsonRequest()
                 .get(url.toString())
                 .then()
@@ -505,9 +505,8 @@ public class BaseServiceTest {
         schema.access = Access.PUBLIC;
         schema.name = name + "." + displayName;
         schema.uri = "urn:" + className + ":" + displayName + ":1.0";
-        Integer id = jsonRequest().body(schema).post("/api/schema").then()
-                .statusCode(200).extract().as(Integer.class);
-        schema.id = id;
+        schema.id = jsonRequest().body(schema).post("/api/schema").then()
+                .statusCode(201).extract().as(Integer.class);
 
         if (label) {
             addLabel(schema, "value", null, new Extractor("value", "$.value", false));
@@ -526,7 +525,7 @@ public class BaseServiceTest {
         schema.name = name;
         schema.uri = uri;
         schema.schema = jsonSchema;
-        return addOrUpdateSchema(schema);
+        return addSchema(schema);
     }
 
     protected Schema getSchema(int id, String token) {
@@ -538,8 +537,15 @@ public class BaseServiceTest {
                 .extract().as(Schema.class);
     }
 
-    protected Schema addOrUpdateSchema(Schema schema) {
+    protected Schema addSchema(Schema schema) {
         Response response = jsonRequest().body(schema).post("/api/schema");
+        response.then().statusCode(201);
+        schema.id = Integer.parseInt(response.body().asString());
+        return schema;
+    }
+
+    protected Schema updateSchema(Schema schema) {
+        Response response = jsonRequest().body(schema).put("/api/schema");
         response.then().statusCode(200);
         schema.id = Integer.parseInt(response.body().asString());
         return schema;
@@ -559,22 +565,12 @@ public class BaseServiceTest {
         return lastAddedLabelId;
     }
 
-    protected int addLabel(Schema schema, String name, String function, boolean filtering, boolean metric,
+    protected int updateLabel(Schema schema, Integer labelId, String name, String function, Extractor... extractors) {
+        return putLabel(schema, labelId, name, function, l -> l.id = labelId, extractors);
+    }
+
+    protected int postLabel(Schema schema, String name, String function, Consumer<Label> mutate,
             Extractor... extractors) {
-        lastAddedLabelId = postLabel(schema, name, function, null, filtering, metric, extractors);
-        return lastAddedLabelId;
-    }
-
-    protected int updateLabel(Schema schema, int labelId, String name, String function, Extractor... extractors) {
-        return postLabel(schema, name, function, l -> l.id = labelId, extractors);
-    }
-
-    protected int postLabel(Schema schema, String name, String function, Consumer<Label> mutate, Extractor... extractors) {
-        return postLabel(schema, name, function, mutate, true, true, extractors);
-    }
-
-    protected int postLabel(Schema schema, String name, String function, Consumer<Label> mutate, boolean filtering,
-            boolean metric, Extractor... extractors) {
         Label l = new Label();
         l.name = name;
         l.function = function;
@@ -586,6 +582,24 @@ public class BaseServiceTest {
             mutate.accept(l);
         }
         Response response = jsonRequest().body(l).post("/api/schema/" + schema.id + "/labels");
+        response.then().statusCode(201);
+        return Integer.parseInt(response.body().asString());
+    }
+
+    protected int putLabel(Schema schema, Integer labelId, String name, String function, Consumer<Label> mutate,
+            Extractor... extractors) {
+        Label l = new Label();
+        l.id = labelId;
+        l.name = name;
+        l.function = function;
+        l.schemaId = schema.id;
+        l.owner = TESTER_ROLES[0];
+        l.access = Access.PUBLIC;
+        l.extractors = Arrays.asList(extractors);
+        if (mutate != null) {
+            mutate.accept(l);
+        }
+        Response response = jsonRequest().body(l).put("/api/schema/" + schema.id + "/labels");
         response.then().statusCode(200);
         return Integer.parseInt(response.body().asString());
     }
@@ -951,7 +965,7 @@ public class BaseServiceTest {
                 readFile(p.resolve("acme_benchmark_schema.json").toFile()), Schema.class);
         assertEquals("dev-team", s.owner);
         s.owner = "foo-team";
-        s = addOrUpdateSchema(s);
+        s = addSchema(s);
 
         Label l = new ObjectMapper().readValue(
                 readFile(p.resolve("throughput_label.json").toFile()), Label.class);
@@ -959,7 +973,7 @@ public class BaseServiceTest {
         l.owner = "foo-team";
         Response response = jsonRequest().body(l)
                 .post("/api/schema/" + s.id + "/labels");
-        assertEquals(200, response.statusCode());
+        assertEquals(201, response.statusCode());
         l.id = Integer.parseInt(response.body().asString());
 
         Transformer transformer = new ObjectMapper().readValue(

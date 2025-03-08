@@ -69,7 +69,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                 ...labels
                     .filter(l => l.modified)
                     .map(l =>
-                        schemaApi.addOrUpdateLabel(l.schemaId, l).then(id => {
+                        (l.id > 0 ? schemaApi.updateLabel(l.schemaId, l) : schemaApi.addLabel(l.schemaId, l)).then(id => {
                             l.id = id
                             l.modified = false
                         })

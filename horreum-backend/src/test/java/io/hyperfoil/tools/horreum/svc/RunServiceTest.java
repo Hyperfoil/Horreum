@@ -1001,7 +1001,7 @@ public class RunServiceTest extends BaseServiceTest {
         schema.name = "Dummy";
         schema.owner = test.owner;
         schema.access = Access.PUBLIC;
-        schema = addOrUpdateSchema(schema);
+        schema = addSchema(schema);
 
         long now = System.currentTimeMillis();
         String ts = String.valueOf(now);
@@ -1046,7 +1046,7 @@ public class RunServiceTest extends BaseServiceTest {
             schema.name = "test";
             schema.owner = test.owner;
             schema.access = Access.PUBLIC;
-            schema = addOrUpdateSchema(schema);
+            schema = addSchema(schema);
 
             //2. Define schema labels
             Label lblCpu = new Label();

@@ -465,7 +465,7 @@ public class DatasetServiceTest extends BaseServiceTest {
         schema.access = Access.PRIVATE;
         schema.name = "private-schema";
         schema.uri = "urn:private";
-        addOrUpdateSchema(schema);
+        addSchema(schema);
         postLabel(schema, "value", null, l -> l.access = Access.PRIVATE, new Extractor("value", "$.value", false));
 
         Test test = createExampleTest("private-test");

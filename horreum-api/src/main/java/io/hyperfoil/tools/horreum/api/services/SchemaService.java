@@ -9,6 +9,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -26,6 +27,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.jboss.resteasy.reactive.ResponseStatus;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -67,11 +69,15 @@ public interface SchemaService {
     int idByUri(@PathParam("uri") String uri);
 
     @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     @Operation(description = "Save a new Schema")
-    @APIResponse(responseCode = "200", description = "Import a new Schema", content = @Content(schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.INTEGER, implementation = Integer.class), example = "103"))
+    @ResponseStatus(201)
+    @APIResponse(responseCode = "201", description = "New schema created successfully", content = @Content(schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.INTEGER, implementation = Integer.class), example = "103"))
     Integer add(Schema schema);
+
+    @PUT
+    @Operation(description = "Update an existing Schema")
+    @APIResponse(responseCode = "200", description = "Schema updated successfully", content = @Content(schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.INTEGER, implementation = Integer.class), example = "103"))
+    Integer update(Schema schema);
 
     @GET
     @Operation(description = "Retrieve a paginated list of Schemas with available count")
@@ -169,10 +175,26 @@ public interface SchemaService {
     @Path("{schemaId}/labels")
     @Consumes(MediaType.APPLICATION_JSON)
     @Operation(description = "Save new or update existing Label for a Schema (Label id only required when updating existing one)")
+    @ResponseStatus(201)
     @Parameters(value = {
             @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
     })
-    Integer addOrUpdateLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
+    @APIResponses(value = {
+            @APIResponse(responseCode = "201", description = "New schema created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+    })
+    Integer addLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
+
+    @PUT
+    @Path("{schemaId}/labels")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(description = "Update existing Label for a Schema (Label id only required when updating existing one)")
+    @Parameters(value = {
+            @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
+    })
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "Schema updated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+    })
+    Integer updateLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
 
     @DELETE
     @Path("{schemaId}/labels/{labelId}")
