@@ -618,10 +618,46 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public int addOrUpdateTransformer(int schemaId, Transformer transformerDTO) {
+    public int addTransformer(int schemaId, Transformer transformerDTO) {
+        if (transformerDTO == null) {
+            throw ServiceException.badRequest("No transformer?");
+        }
+
+        if (transformerDTO.id != null && TransformerDAO.findById(transformerDTO.id) != null) {
+            throw ServiceException.badRequest("Transformer with id " + transformerDTO.id + " already exists");
+        }
+
+        // ensure we are creating new instance by clearing the id
+        transformerDTO.clearIds();
+
+        transformerDTO.schemaId = schemaId;
+        return addOrUpdateTransformer(transformerDTO);
+    }
+
+    @RolesAllowed(Roles.TESTER)
+    @WithRoles
+    @Transactional
+    @Override
+    public int updateTransformer(int schemaId, Transformer transformerDTO) {
+        if (transformerDTO == null) {
+            throw ServiceException.badRequest("No transformer?");
+        }
+
+        if (transformerDTO.id == null || TransformerDAO.findById(transformerDTO.id) == null) {
+            throw ServiceException
+                    .notFound("Missing transformer id or transformer with id " + transformerDTO.id + " does not exist");
+        }
+
+        transformerDTO.schemaId = schemaId;
+        return addOrUpdateTransformer(transformerDTO);
+    }
+
+    private Integer addOrUpdateTransformer(Transformer transformerDTO) {
         if (!identity.hasRole(transformerDTO.owner)) {
             throw ServiceException.forbidden("This user is not a member of team " + transformerDTO.owner);
         }
+
+        // some validation logic on the transformer
         if (transformerDTO.extractors == null) {
             // Transformer without an extractor is an edge case, but replacing the schema with explicit null/undefined could make sense.
             transformerDTO.extractors = Collections.emptyList();
@@ -630,14 +666,13 @@ public class SchemaServiceImpl implements SchemaService {
             throw ServiceException.badRequest("Transformer must have a name!");
         }
         validateExtractors(transformerDTO.extractors);
+
         TransformerDAO transformer = TransformerMapper.to(transformerDTO);
-        if (transformer.id == null || transformer.id < 0) {
-            transformer.id = null;
-            transformer.schema = em.getReference(SchemaDAO.class, schemaId);
-            transformer.persistAndFlush();
-        } else {
+
+        if (transformer.id != null && transformer.id > 0) {
+            // update existing transformer
             TransformerDAO existing = TransformerDAO.findById(transformer.id);
-            if (!Objects.equals(existing.schema.id, schemaId)) {
+            if (!Objects.equals(existing.schema.id, transformerDTO.schemaId)) {
                 throw ServiceException.badRequest("Transformer id=" + transformer.id + ", name=" + existing.name +
                         " belongs to a different schema: " + existing.schema.id + "(" + existing.schema.uri + ")");
             }
@@ -654,7 +689,13 @@ public class SchemaServiceImpl implements SchemaService {
             existing.extractors.clear();
             existing.extractors.addAll(transformer.extractors);
             existing.persist();
+        } else {
+            // create new transformer
+            transformer.id = null;
+            transformer.schema = em.getReference(SchemaDAO.class, transformerDTO.schemaId);
+            transformer.persist();
         }
+
         return transformer.id;
     }
 

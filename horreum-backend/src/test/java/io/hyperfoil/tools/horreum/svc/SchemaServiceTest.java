@@ -420,7 +420,7 @@ class SchemaServiceTest extends BaseServiceTest {
 
         // add another extractor
         t.extractors.add(new Extractor("z", "$.z", false));
-        Integer id = jsonRequest().body(t).post("/api/schema/" + schema.id + "/transformers")
+        Integer id = jsonRequest().body(t).put("/api/schema/" + schema.id + "/transformers")
                 .then().statusCode(200).extract().as(Integer.class);
 
         TransformerDAO transformer = TransformerDAO.findById(id);
@@ -441,7 +441,7 @@ class SchemaServiceTest extends BaseServiceTest {
         t.extractors.add(new Extractor("z", "$.z", false));
         jsonRequest()
                 .auth().oauth2(getAdminToken())
-                .body(t).post("/api/schema/" + schema.id + "/transformers")
+                .body(t).put("/api/schema/" + schema.id + "/transformers")
                 .then().statusCode(403);
     }
 

@@ -760,7 +760,7 @@ public class BaseServiceTest {
         transformer.function = function;
         transformer.targetSchemaUri = postFunctionSchemaUri(schema);
         Integer id = jsonRequest().body(transformer).post("/api/schema/" + schema.id + "/transformers")
-                .then().statusCode(200).extract().as(Integer.class);
+                .then().statusCode(201).extract().as(Integer.class);
         transformer.id = id;
         return transformer;
     }
