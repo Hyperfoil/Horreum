@@ -93,10 +93,11 @@ export default function Transformers(props: TransformersProps) {
                 ...transformers
                     .filter(t => t.modified)
                     .map(t =>
-                        schemaApi.addOrUpdateTransformer(t.schemaId, t).then(id => {
-                            t.id = id
-                            t.modified = false
-                        })
+                        (t.id > 0 ? schemaApi.updateTransformer(t.schemaId, t) : schemaApi.addTransformer(t.schemaId, t))
+                            .then(id => {
+                                t.id = id
+                                t.modified = false
+                            })
                     ),
                 ...deleted.map(t =>
                     schemaApi.deleteTransformer(t.schemaId, t.id).catch(e => {

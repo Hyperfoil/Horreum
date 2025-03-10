@@ -1283,6 +1283,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SchemaQueryResult"
+    put:
+      tags:
+      - Schema
+      description: Update an existing Schema
+      operationId: update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Schema"
+      responses:
+        "200":
+          description: Schema updated successfully
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+              example: 103
     post:
       tags:
       - Schema
@@ -1294,8 +1313,8 @@ paths:
             schema:
               $ref: "#/components/schemas/Schema"
       responses:
-        "200":
-          description: Import a new Schema
+        "201":
+          description: New schema created successfully
           content:
             application/json:
               schema:
@@ -1548,12 +1567,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Label"
-    post:
+    put:
       tags:
       - Schema
-      description: Save new or update existing Label for a Schema (Label id only required
-        when updating existing one)
-      operationId: addOrUpdateLabel
+      description: Update existing Label for a Schema (Label id only required when
+        updating existing one)
+      operationId: updateLabel
       parameters:
       - name: schemaId
         in: path
@@ -1571,7 +1590,36 @@ paths:
         required: true
       responses:
         "200":
-          description: OK
+          description: Schema updated successfully
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+    post:
+      tags:
+      - Schema
+      description: Save new or update existing Label for a Schema (Label id only required
+        when updating existing one)
+      operationId: addLabel
+      parameters:
+      - name: schemaId
+        in: path
+        description: Schema ID
+        required: true
+        schema:
+          format: int32
+          type: integer
+        example: 101
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Label"
+        required: true
+      responses:
+        "201":
+          description: New schema created successfully
           content:
             application/json:
               schema:
@@ -1627,11 +1675,11 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Transformer"
-    post:
+    put:
       tags:
       - Schema
-      description: Save new or update existing Transformer defintion
-      operationId: addOrUpdateTransformer
+      description: Save new or update existing Transformer definition
+      operationId: updateTransformer
       parameters:
       - name: schemaId
         in: path
@@ -1649,7 +1697,35 @@ paths:
         required: true
       responses:
         "200":
-          description: OK
+          description: Transformer updated successfully
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
+    post:
+      tags:
+      - Schema
+      description: Save new or update existing Transformer definition
+      operationId: addTransformer
+      parameters:
+      - name: schemaId
+        in: path
+        description: Schema ID
+        required: true
+        schema:
+          format: int32
+          type: integer
+        example: 101
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Transformer"
+        required: true
+      responses:
+        "201":
+          description: New transformer created successfully
           content:
             application/json:
               schema:

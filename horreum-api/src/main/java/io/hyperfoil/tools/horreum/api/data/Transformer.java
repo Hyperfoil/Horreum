@@ -69,7 +69,7 @@ public class Transformer extends ProtectedType {
                 '}';
     }
 
-    public void clearId() {
+    public void clearIds() {
         id = null;
     }
 }
