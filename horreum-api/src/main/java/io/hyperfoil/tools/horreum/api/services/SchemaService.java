@@ -146,12 +146,28 @@ public interface SchemaService {
     @Path("{schemaId}/transformers")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(description = "Save new or update existing Transformer defintion")
+    @Operation(description = "Save new or update existing Transformer definition")
+    @ResponseStatus(201)
     @Parameters(value = {
             @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
     })
-    int addOrUpdateTransformer(@PathParam("schemaId") int schemaId,
-            @RequestBody(required = true) Transformer transformer);
+    @APIResponses(value = {
+            @APIResponse(responseCode = "201", description = "New transformer created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+    })
+    int addTransformer(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Transformer transformer);
+
+    @PUT
+    @Path("{schemaId}/transformers")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(description = "Save new or update existing Transformer definition")
+    @Parameters(value = {
+            @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
+    })
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "Transformer updated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+    })
+    int updateTransformer(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Transformer transformer);
 
     @DELETE
     @Path("{schemaId}/transformers/{transformerId}")

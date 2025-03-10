@@ -301,7 +301,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Transformer t = createSampleTransformer("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateTransformer(s.id, t);
+        int id = schemaService.addTransformer(s.id, t);
 
         TransformerDAO transformer = TransformerDAO.findById(id);
         assertNotNull(transformer);
@@ -315,11 +315,11 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Transformer t = createSampleTransformer("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id1 = schemaService.addOrUpdateTransformer(s.id, t);
+        int id1 = schemaService.addTransformer(s.id, t);
         // create another transformer with different name and additional extractor
         t.name = "Albalb";
         t.extractors.add(new Extractor("z", "$.z", false));
-        int id2 = schemaService.addOrUpdateTransformer(s.id, t);
+        int id2 = schemaService.addTransformer(s.id, t);
 
         TransformerDAO transformer1 = TransformerDAO.findById(id1);
         assertNotNull(transformer1);
@@ -343,7 +343,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Transformer t = createSampleTransformer("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateTransformer(s.id, t);
+        int id = schemaService.addTransformer(s.id, t);
 
         TransformerDAO transformer = TransformerDAO.findById(id);
         assertNotNull(transformer);
@@ -352,7 +352,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         t.id = id;
         t.extractors.add(new Extractor("z", "$.z", false));
 
-        id = schemaService.addOrUpdateTransformer(s.id, t);
+        id = schemaService.updateTransformer(s.id, t);
         transformer = TransformerDAO.findById(id);
         assertNotNull(transformer);
         assertEquals(3, transformer.extractors.size());
@@ -365,7 +365,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Transformer t = createSampleTransformer("Blabla", s, "another-team", "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateTransformer(s.id, t));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addTransformer(s.id, t));
         assertEquals("This user is not a member of team another-team", thrown.getMessage());
         assertEquals(Response.Status.FORBIDDEN.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -377,13 +377,13 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         // empty name
         Transformer t = createSampleTransformer("", s, null, "({x, y}) => ({ z: 1 })");
 
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateTransformer(s.id, t));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addTransformer(s.id, t));
         assertEquals("Transformer must have a name!", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
 
         // null name
         t.name = null;
-        thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateTransformer(s.id, t));
+        thrown = assertThrows(ServiceException.class, () -> schemaService.addTransformer(s.id, t));
         assertEquals("Transformer must have a name!", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -395,7 +395,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Transformer t = createSampleTransformer("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateTransformer(s.id, t);
+        int id = schemaService.addTransformer(s.id, t);
 
         TransformerDAO transformer = TransformerDAO.findById(id);
         assertNotNull(transformer);
@@ -404,7 +404,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         t.id = id;
         t.extractors.add(new Extractor("z", "$.z", false));
 
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addOrUpdateTransformer(999, t));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.updateTransformer(999, t));
         assertTrue(
                 thrown.getMessage().contains(String.format("Transformer id=%d, name=%s belongs to a different schema: %d(%s)",
                         t.id, t.name, s.id, s.uri)));
@@ -418,7 +418,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Transformer t = createSampleTransformer("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateTransformer(s.id, t);
+        int id = schemaService.addTransformer(s.id, t);
         assertEquals(1, TransformerDAO.count());
 
         schemaService.deleteTransformer(s.id, id);
@@ -432,7 +432,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Transformer t = createSampleTransformer("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateTransformer(s.id, t);
+        int id = schemaService.addTransformer(s.id, t);
         assertEquals(1, TransformerDAO.count());
 
         // wrong transformer id, not found
@@ -454,7 +454,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Transformer t = createSampleTransformer("Blabla", s, null, "({x, y}) => ({ z: 1 })",
                 new Extractor("x", "$.x", true), new Extractor("y", "$.y", false));
 
-        int id = schemaService.addOrUpdateTransformer(s.id, t);
+        int id = schemaService.addTransformer(s.id, t);
         assertEquals(1, TransformerDAO.count());
 
         // TODO: create a Test that references this transformer and try to remove it
