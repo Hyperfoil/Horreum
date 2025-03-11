@@ -35,6 +35,7 @@ import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.ActionLog;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
+import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import io.hyperfoil.tools.horreum.api.data.Extractor;
 import io.hyperfoil.tools.horreum.api.data.FingerprintValue;
@@ -284,9 +285,9 @@ class TestServiceTest extends BaseServiceTest {
             });
         }
 
-        //wipeing and inserting with the same ids just results in too much foobar
+        //wiping and inserting with the same ids just results in too much foobar
         if (!wipe) {
-            jsonRequest().body(testExport).post("/api/test/import").then().statusCode(204);
+            jsonRequest().body(testExport).put("/api/test/import").then().statusCode(200);
             //if we wipe, we actually import a new test and there is no use validating the db
             validateDatabaseContents(db);
             //clean up after us
@@ -300,10 +301,10 @@ class TestServiceTest extends BaseServiceTest {
         p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
 
         String s = readFile(p.resolve("quarkus_sb_schema.json").toFile());
-        jsonRequest().body(s).post("/api/schema/import").then().statusCode(204);
+        jsonRequest().body(s).post("/api/schema/import").then().statusCode(201);
 
         String t = readFile(p.resolve("quarkus_sb_test.json").toFile());
-        jsonRequest().body(t).post("/api/test/import").then().statusCode(204);
+        jsonRequest().body(t).post("/api/test/import").then().statusCode(201);
         TestDAO test = TestDAO.<TestDAO> find("name", "quarkus-spring-boot-comparison").firstResult();
         assertEquals(1, test.transformers.size());
 
@@ -335,7 +336,7 @@ class TestServiceTest extends BaseServiceTest {
         // re-import the test as new one
         export.id = null;
         export.name = "imported-test";
-        jsonRequest().body(export).post("/api/test/import").then().statusCode(204);
+        jsonRequest().body(export).post("/api/test/import").then().statusCode(201);
 
         assertEquals(2, TestDAO.count());
 
@@ -374,7 +375,7 @@ class TestServiceTest extends BaseServiceTest {
         export.datastore.id = null;
         String datastoreName2 = "My Datastore 2";
         export.datastore.name = datastoreName2;
-        jsonRequest().body(export).post("/api/test/import").then().statusCode(204);
+        jsonRequest().body(export).post("/api/test/import").then().statusCode(201);
 
         assertEquals(2, TestDAO.count());
 
@@ -481,28 +482,60 @@ class TestServiceTest extends BaseServiceTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void testImportTestWithChangeDetectionVariableWithExperimentProfile() {
+    public void testImportTestWithChangeDetectionVariable() {
         String schema = resourceToString("data/acme_sb_schema.json");
-        jsonRequest().body(schema).post("/api/schema/import").then().statusCode(204);
+        jsonRequest().body(schema).post("/api/schema/import").then().statusCode(201);
         String test = resourceToString("data/acme_new_variable_test.json");
-        jsonRequest().body(test).post("/api/test/import").then().statusCode(204);
+        Integer importedId = jsonRequest().body(test).post("/api/test/import").then().statusCode(201).extract()
+                .as(Integer.class);
+        TestExport testExport = jsonRequest().get("/api/test/" + importedId + "/export").then()
+                .statusCode(200).extract().as(TestExport.class);
+        assertEquals(importedId, testExport.id);
+        assertNull(VariableDAO.<VariableDAO> find("name", "Max RSS (v2)").firstResult());
+
         VariableDAO maxRSS = VariableDAO.<VariableDAO> find("name", "Max RSS").firstResult();
         assertNotNull(maxRSS);
         assertEquals("Max RSS", maxRSS.name);
-        VariableDAO dao = new VariableDAO();
-        ArrayNode labels = JsonNodeFactory.instance.arrayNode();
-        labels.add("Quarkus - JVM - maxRss");
-        dao.labels = labels;
-        dao.changeDetection = new HashSet<>();
-        Variable mappedVariable = VariableMapper.from(dao);
-        assertNotNull(mappedVariable);
-        assertEquals(labels.size(), mappedVariable.labels.size());
-        TestDAO testDAO = TestDAO.<TestDAO> find("name", "new-variable").firstResult();
-        Response response = jsonRequest().get("/api/test/" + testDAO.id + "/export").then()
-                .statusCode(200).extract().response();
-        TestExport testExport = response.as(TestExport.class);
+        Variable var = VariableMapper.from(maxRSS);
+        var.id = null;
+        var.testId = testExport.id;
+        var.name = "Max RSS (v2)";
+        var.labels = List.of("Quarkus - JVM - maxRss");
+        var.changeDetection = new HashSet<>();
+
+        testExport.variables = List.of(var);
+
+        Integer updatedId = jsonRequest().body(testExport).put("/api/test/import").then().statusCode(200).extract()
+                .as(Integer.class);
+        assertEquals(importedId, updatedId);
+
+        VariableDAO varDAO = VariableDAO.<VariableDAO> find("name", "Max RSS (v2)").firstResult();
+        assertNotNull(varDAO);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testImportTestWithExperimentProfile() {
+        String schema = resourceToString("data/acme_sb_schema.json");
+        jsonRequest().body(schema).post("/api/schema/import").then().statusCode(201);
+        String test = resourceToString("data/acme_new_variable_test.json");
+        Integer importedId = jsonRequest().body(test).post("/api/test/import").then().statusCode(201).extract()
+                .as(Integer.class);
+        TestExport testExport = jsonRequest().get("/api/test/" + importedId + "/export").then()
+                .statusCode(200).extract().as(TestExport.class);
+        assertEquals(importedId, testExport.id);
+
+        VariableDAO maxRSS = VariableDAO.<VariableDAO> find("name", "Max RSS").firstResult();
+        assertNotNull(maxRSS);
+        assertEquals("Max RSS", maxRSS.name);
+        Variable var = VariableMapper.from(maxRSS);
+        var.id = null;
+        var.testId = testExport.id;
+        var.name = "Max RSS (v2)";
+        var.labels = List.of("Quarkus - JVM - maxRss");
+        var.changeDetection = new HashSet<>();
+        testExport.variables = List.of(var);
+
         ExperimentProfile ep = new ExperimentProfile();
-        testExport.experiments.add(ep);
         ep.testId = testExport.id;
         ep.name = "acme Quarkus experiment";
         ArrayNode labelsJSON = JSON_NODE_FACTORY.arrayNode();
@@ -511,17 +544,51 @@ class TestServiceTest extends BaseServiceTest {
         ep.selectorFilter = "value => {return true;}";
         ep.baselineLabels = JSON_NODE_FACTORY.arrayNode();
         ep.baselineFilter = "value => {return true;}";
-        ep.comparisons = new ArrayList<>();
+
+        ExperimentComparison ec = new ExperimentComparison();
+        ec.variableName = var.name;
+        ec.model = "relativeDifference";
+        ec.config = JSON_NODE_FACTORY.objectNode()
+                .put("threshold", 0.1)
+                .put("greaterBetter", false)
+                .put("maxBaselineDatasets", 0);
+        ep.comparisons = List.of(ec);
+
         ep.extraLabels = JSON_NODE_FACTORY.arrayNode();
+        testExport.experiments.add(ep);
+
+        Integer updatedId = jsonRequest().body(testExport).put("/api/test/import").then().statusCode(200).extract()
+                .as(Integer.class);
+        assertEquals(importedId, updatedId);
+
+        ExperimentProfileDAO epDAO = ExperimentProfileDAO.<ExperimentProfileDAO> find("name", "acme Quarkus experiment")
+                .firstResult();
+        assertNotNull(epDAO);
+        assertEquals(1, epDAO.comparisons.size());
+        assertEquals(var.name, epDAO.comparisons.get(0).variable.name);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testImportTestWithMissingDataRules() {
+        String schema = resourceToString("data/acme_sb_schema.json");
+        jsonRequest().body(schema).post("/api/schema/import").then().statusCode(201);
+        String test = resourceToString("data/acme_new_variable_test.json");
+        Integer importedId = jsonRequest().body(test).post("/api/test/import").then().statusCode(201).extract()
+                .as(Integer.class);
+        TestExport testExport = jsonRequest().get("/api/test/" + importedId + "/export").then()
+                .statusCode(200).extract().as(TestExport.class);
+        assertEquals(importedId, testExport.id);
+
         var msdr = new MissingDataRule();
         msdr.testId = testExport.id;
         msdr.name = "imported missing rule";
         msdr.maxStaleness = 42;
         testExport.missingDataRules = Collections.singletonList(msdr);
-        jsonRequest().body(testExport).post("/api/test/import").then().statusCode(204);
-        ExperimentProfileDAO epDAO = ExperimentProfileDAO.<ExperimentProfileDAO> find("name", "acme Quarkus experiment")
-                .firstResult();
-        assertNotNull(epDAO);
+
+        Integer updatedId = jsonRequest().body(testExport).put("/api/test/import").then().statusCode(200).extract()
+                .as(Integer.class);
+        assertEquals(importedId, updatedId);
+
         MissingDataRuleDAO mdr = MissingDataRuleDAO.find("name", "imported missing rule").firstResult();
         assertEquals(42, mdr.maxStaleness);
     }

@@ -85,7 +85,7 @@ public class AlertingServiceImpl implements AlertingService {
     private static final Logger log = Logger.getLogger(AlertingServiceImpl.class);
 
     //@formatter:off
-   private static final String LOOKUP_TIMESTAMP =
+    private static final String LOOKUP_TIMESTAMP =
          """
             SELECT timeline_function,
                (CASE
@@ -102,7 +102,7 @@ public class AlertingServiceImpl implements AlertingService {
             GROUP BY timeline_function, timeline_labels
          """;
 
-   private static final String LOOKUP_VARIABLES =
+    private static final String LOOKUP_VARIABLES =
          """
             SELECT
                var.id as variableId,
@@ -122,7 +122,7 @@ public class AlertingServiceImpl implements AlertingService {
             GROUP BY var.id, var.name, var.\"group\", var.calculation
          """;
 
-   private static final String LOOKUP_RULE_LABEL_VALUES =
+    private static final String LOOKUP_RULE_LABEL_VALUES =
          """
          SELECT
             mdr.id AS rule_id,
@@ -139,7 +139,7 @@ public class AlertingServiceImpl implements AlertingService {
          GROUP BY rule_id, mdr.condition
          """;
 
-   private static final String LOOKUP_LABEL_VALUE_FOR_RULE =
+    private static final String LOOKUP_LABEL_VALUE_FOR_RULE =
          """
             SELECT
              (CASE
@@ -154,7 +154,7 @@ public class AlertingServiceImpl implements AlertingService {
          GROUP BY mdr.labels
          """;
 
-   private static final String LOOKUP_RECENT =
+    private static final String LOOKUP_RECENT =
          """
          SELECT
             DISTINCT ON(mdr.id) mdr.id,
@@ -169,7 +169,7 @@ public class AlertingServiceImpl implements AlertingService {
          ORDER BY mdr.id, timestamp DESC
          """;
 
-   private static final String FIND_LAST_DATAPOINTS =
+    private static final String FIND_LAST_DATAPOINTS =
          """
          SELECT
             DISTINCT ON(variable_id) variable_id AS variable,
@@ -181,7 +181,7 @@ public class AlertingServiceImpl implements AlertingService {
             AND variable_id = ANY(?2)
          ORDER BY variable_id, timestamp DESC
          """;
-   //@formatter:on
+    //@formatter:on
     private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
     private static final Instant VERY_DISTANT_FUTURE = Instant.parse("2666-06-06T06:06:06.00Z");
 
@@ -373,11 +373,11 @@ public class AlertingServiceImpl implements AlertingService {
         for (var v : test.variables) {
             VariableDAO variable = VariableMapper.to(v);
             variable.ensureLinked();
-            if (variable.id != null && VariableDAO.findById(variable.id) == null) {
-                int prevId = variable.id;
+            if (variable.id == null || VariableDAO.findById(variable.id) == null) {
+                // ensure ids are cleaned up
                 variable.flushIds();
                 variable.persist();
-                test.updateExperimentsVariableId(prevId, variable.id);
+                test.updateExperimentsVariableId(v.name, variable.id);
             } else
                 em.merge(variable);
         }

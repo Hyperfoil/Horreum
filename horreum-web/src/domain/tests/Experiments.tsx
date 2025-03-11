@@ -120,7 +120,7 @@ export default function Experiments(props: ExperimentsProps) {
                             )}
                         </Flex>
                     </FormGroup>
-                    <FormGroup label="Varibles" fieldId="variables">
+                    <FormGroup label="Variables" fieldId="variables">
                         <SimpleSelect
                             initialOptions={variables.map(v => ({value: v.id, content: v.name, selected: v.id === c.variableId}))}
                             onSelect={(_, item) => {

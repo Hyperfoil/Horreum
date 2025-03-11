@@ -266,10 +266,19 @@ public interface TestService {
     @POST
     @Path("import")
     @Consumes(MediaType.APPLICATION_JSON)
-    @APIResponse(responseCode = "201", description = "Import a new Test or update an existing Test")
     @RequestBody(required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = TestExport.class)))
-    @Operation(description = "Import a previously exported Test either as a new Test or to update an existing Test")
-    void importTest(ObjectNode test);
+    @Operation(description = "Import a previously exported Test as new Test")
+    @ResponseStatus(201)
+    @APIResponse(responseCode = "201", description = "New Test created successfully from a previously exported one", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.INTEGER)))
+    Integer importTest(TestExport test);
+
+    @PUT
+    @Path("import")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RequestBody(required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = TestExport.class)))
+    @Operation(description = "Update an existing Test using its exported version")
+    @APIResponse(responseCode = "200", description = "Test updated successfully using its exported version", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.INTEGER)))
+    Integer updateTest(TestExport test);
 
     class TestListing {
         public TestListing() {

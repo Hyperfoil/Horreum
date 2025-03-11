@@ -676,46 +676,8 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
                 }              """;
 
         ObjectNode schemaJson = (ObjectNode) objectMapper.readTree(schemaImport.replaceAll("TEAM_NAME", FOO_TEAM));
-        schemaService.importSchema(schemaJson);
-
-    }
-
-    @org.junit.jupiter.api.Test
-    void testImportSchemaWithInvalidStructure() throws JsonProcessingException {
-        String schemaImport = """
-                {
-                  "labels" : [ {
-                    "name" : "kb_report_results_podLatencyQuantilesMeasurement_quantiles_Ready_P99",
-                    "filtering" : true,
-                    "metrics" : true,
-                    "schemaId" : "221",
-                    "acccess" : "PUBLIC",
-                    "owner" : "TEAM_NAME",
-                    "extractors" : [ {
-                      "name" : "P99",
-                      "path" : "$.results.podLatencyQuantilesMeasurement.quantiles.Ready.P99",
-                      "isarray" : false
-                    } ]
-                  } ],
-                  "transformers": [],
-                  "id": 221,
-                  "uri": "urn:kube-burner-report:0.2",
-                  "name": "kube-burner-report",
-                  "description": "Kube Burner test for the report variant of results",
-                  "schema": {
-                    "$id": "urn:kube-burner-report:0.2",
-                    "type": "object",
-                    "$schema": "http://json-schema.org/draft-07/schema#"
-                  },
-                  "acccess": "PUBLIC",
-                  "owner": "TEAM_NAME"
-                }
-                """;
-
-        ObjectNode schemaJson = (ObjectNode) objectMapper.readTree(schemaImport.replaceAll("TEAM_NAME", FOO_TEAM));
-
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.importSchema(schemaJson));
-        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
+        SchemaExport schemaExport = objectMapper.readValue(schemaJson.toString(), SchemaExport.class);
+        schemaService.importSchema(schemaExport);
 
     }
 

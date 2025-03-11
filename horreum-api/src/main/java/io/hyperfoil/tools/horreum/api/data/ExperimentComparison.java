@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotNull;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -26,7 +25,7 @@ public class ExperimentComparison {
     @Schema(description = "Variable ID to run experiment against", example = "101")
     public Integer variableId;
 
-    @JsonIgnore
+    @JsonProperty(value = "variableName")
     @Schema(description = "Variable Name to run experiment against", example = "Throughput")
     public String variableName;
 

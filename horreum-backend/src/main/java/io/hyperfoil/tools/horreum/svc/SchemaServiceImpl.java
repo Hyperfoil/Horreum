@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -40,7 +41,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.networknt.schema.AbsoluteIri;
 import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.JsonSchemaFactory;
@@ -200,11 +200,11 @@ public class SchemaServiceImpl implements SchemaService {
             // update existing Schema
             SchemaDAO existing = (SchemaDAO) SchemaDAO.findByIdOptional(schema.id)
                     .orElseThrow(() -> ServiceException.badRequest("Cannot find schema with id " + schemaDTO.id));
-            em.merge(schema);
-            em.flush();
-            if (!Objects.equals(schema.uri, existing.uri) || Objects.equals(schema.schema, existing.schema)) {
+            if (!Objects.equals(schema.uri, existing.uri) || !Objects.equals(schema.schema, existing.schema)) {
                 syncSchemas = true;
             }
+            em.merge(schema);
+            em.flush();
         } else {
             // persist new Schema
             syncSchemas = true;
@@ -971,48 +971,74 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public void importSchema(ObjectNode node) {
-        SchemaExport importSchema;
+    public Integer importSchema(SchemaExport schemaExport) {
+        log.debugf("Importing new test: %s", schemaExport.toString());
 
-        try {
-            importSchema = mapper.convertValue(node, SchemaExport.class);
-        } catch (IllegalArgumentException e) {
-            throw ServiceException.badRequest("Failed to parse Schema definition: " + e.getMessage());
+        // we are creating a new test, clear all ids to be sure we are not updating any existing
+        schemaExport.clearIds();
+
+        return importAddOrUpdateSchema(schemaExport);
+    }
+
+    @RolesAllowed({ Roles.TESTER, Roles.ADMIN })
+    @WithRoles
+    @Transactional
+    @Override
+    public Integer updateSchema(SchemaExport schemaExport) {
+        if (schemaExport.id == null || SchemaDAO.findById(schemaExport.id) == null) {
+            throw ServiceException.notFound("Missing schema id or schema with id " + schemaExport.id + " does not exist");
         }
 
-        boolean newSchema = true;
+        log.debugf("Updating test using the import: %s", schemaExport.toString());
+
+        return importAddOrUpdateSchema(schemaExport);
+    }
+
+    private Integer importAddOrUpdateSchema(SchemaExport importSchema) {
+        // whether we should trigger a schema synchronization
+        // this happens when creating new schemas or, updating uri or JSON schema
+        boolean syncSchemas = false;
+
+        Optional<SchemaDAO> schemaOpt = importSchema.id != null ? SchemaDAO.findByIdOptional(importSchema.id)
+                : Optional.empty();
+        boolean isNewSchema = schemaOpt.isEmpty();
         SchemaDAO schema;
-        if (importSchema.id != null) {
-            //first check if this schema exists
-            schema = SchemaDAO.findById(importSchema.id);
-            if (schema != null) {
-                em.merge(SchemaMapper.to(importSchema));
-                newSchema = false;
-            } else {
-                validateSchema(importSchema);
-                schema = SchemaMapper.to(importSchema);
-                schema.id = null;
-                schema.persist();
+
+        validateSchema(importSchema);
+
+        if (!isNewSchema) {
+            // updating an existing schema
+            schema = schemaOpt.get();
+            if (!Objects.equals(schema.uri, importSchema.uri) || Objects.equals(schema.schema, importSchema.schema)) {
+                syncSchemas = true;
             }
+            em.merge(SchemaMapper.to(importSchema));
         } else {
-            validateSchema(importSchema);
+            // creating new schema
+            syncSchemas = true;
+            importSchema.id = null;
             schema = SchemaMapper.to(importSchema);
-            em.persist(schema);
+            schema.persist();
         }
+
         if (importSchema.labels != null && !importSchema.labels.isEmpty()) {
+            // something might have changed here, to be safe let's trigger schema synchronization
+            syncSchemas = true;
             for (Label l : importSchema.labels) {
                 LabelDAO label = LabelMapper.to(l);
                 label.schema = schema;
-                if (label.id != null && !newSchema) {
+                if (label.id != null && !isNewSchema) {
                     em.merge(label);
                 } else {
                     label.id = null;
-                    label.schema = schema;
                     em.persist(label);
                 }
             }
         }
+
         if (importSchema.transformers != null && !importSchema.transformers.isEmpty()) {
+            // something might have changed here, to be safe let's trigger schema synchronization
+            syncSchemas = true;
             for (Transformer t : importSchema.transformers) {
                 TransformerDAO transformer = TransformerMapper.to(t);
                 transformer.schema = schema;
@@ -1020,11 +1046,9 @@ public class SchemaServiceImpl implements SchemaService {
                     em.persist(transformer);
                 } else {
                     if (TransformerDAO.findById(transformer.id) != null) {
-                        transformer.schema = schema;
                         em.merge(transformer);
                     } else {
                         transformer.id = null;
-                        transformer.schema = schema;
                         em.persist(transformer);
                     }
                 }
@@ -1033,10 +1057,14 @@ public class SchemaServiceImpl implements SchemaService {
         //let's wrap flush in a try/catch, if we get any role issues at commit we can give a sane msg
         try {
             em.flush();
-            newOrUpdatedSchema(schema);
+            if (syncSchemas) {
+                newOrUpdatedSchema(schema);
+            }
         } catch (Exception e) {
             throw ServiceException.serverError("Failed to persist Schema: " + e.getMessage());
         }
+
+        return schema.id;
     }
 
     private void addPart(StringBuilder where, ArrayNode column, String label, String type) {

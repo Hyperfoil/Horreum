@@ -181,7 +181,9 @@ export default function SchemaList() {
                                             </>
                                         ) : null
                                     }}
-                                    onImport={config => schemaApi.importSchema(config as SchemaExport)}
+                                    onImport={config => {
+                                        return config.id > 0 ? schemaApi.updateSchema(config as SchemaExport) : schemaApi.importSchema(config as SchemaExport)
+                                    }}
                                     onImported={ reloadSchemas }
                                 />
                             </ToolbarItem>

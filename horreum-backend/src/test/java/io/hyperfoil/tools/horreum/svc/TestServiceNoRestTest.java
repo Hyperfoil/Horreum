@@ -28,6 +28,7 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
@@ -769,8 +770,8 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
                 """;
 
         ObjectNode testJson = (ObjectNode) objectMapper.readTree(testImport.replaceAll("TEAM_NAME", FOO_TEAM));
-        testService.importTest(testJson);
-
+        TestExport testExport = objectMapper.convertValue(testJson, TestExport.class);
+        testService.importTest(testExport);
     }
 
     @org.junit.jupiter.api.Test
@@ -803,45 +804,10 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
                 """;
 
         ObjectNode testJson = (ObjectNode) objectMapper.readTree(testImport);
-
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.importTest(testJson));
+        TestExport testExport = objectMapper.convertValue(testJson, TestExport.class);
+        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.importTest(testExport));
         assertEquals(Response.Status.FORBIDDEN.getStatusCode(), thrown.getResponse().getStatus());
         assertEquals("This user does not have the perf-team role!", thrown.getMessage());
-
-    }
-
-    @org.junit.jupiter.api.Test
-    void testImporttestWithInvalidStructure() throws JsonProcessingException {
-        String testImport = """
-                {
-                  "accccess": "PUBLIC",
-                  "ownerrr": "TEAM_NAME",
-                  "name": "Quarkus - config-quickstart - JVM",
-                  "folder": "quarkus",
-                  "description": "",
-                  "datastoreId": null,
-                  "timelineLabels": [],
-                  "timelineFunction": null,
-                  "fingerprintLabels": [
-                    "buildType"
-                  ],
-                  "fingerprintFilter": null,
-                  "compareUrl": null,
-                  "transformers": [],
-                  "notificationsEnabled": true,
-                  "variables": [],
-                  "missingDataRules": [],
-                  "experiments": [],
-                  "actions": [],
-                  "subscriptions": null,
-                  "datastore": null
-                }
-                """;
-
-        ObjectNode testJson = (ObjectNode) objectMapper.readTree(testImport.replaceAll("TEAM_NAME", FOO_TEAM));
-
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.importTest(testJson));
-        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
 
     }
 

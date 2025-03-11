@@ -105,7 +105,7 @@ const CopyVarsModal = ({ isOpen, onClose, onConfirm  }: TestSelectModalProps) =>
                         />
                     </FormGroup>
                     {test && groups.length > 0 && (
-                        <FormGroup label="Variable(s)" fieldId="varibles">
+                        <FormGroup label="Variable(s)" fieldId="variables">
                             <SimpleSelect
                                 initialOptions={
                                     ["<all groups>"].concat(groups).map(g => ({value: g, content: g, selected: g === group}))

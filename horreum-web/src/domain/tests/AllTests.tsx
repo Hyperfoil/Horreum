@@ -499,7 +499,11 @@ export default function AllTests() {
                                             </>
                                         ) : null
                                     }}
-                                    onImport={config => testApi.importTest(config as TestExport)}
+                                    onImport={config => {
+                                        return config.id != null && config.id > 0 ?
+                                            testApi.updateTest(config as TestExport) :
+                                            testApi.importTest(config as TestExport)
+                                    }}
                                     onImported={() => loadTests()}
                                 />
                             </ToolbarItem>
