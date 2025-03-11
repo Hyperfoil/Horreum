@@ -738,16 +738,29 @@ public class TestServiceImpl implements TestService {
     @WithRoles
     @Transactional
     @Override
-    public void importTest(ObjectNode node) {
+    public Integer importTest(TestExport testExport) {
+        log.debugf("Importing new test: %s", testExport.toString());
 
-        TestExport testExport;
+        // we are creating a new test, clear all ids to be sure we are not updating any existing
+        testExport.clearIds();
 
-        try {
-            testExport = mapper.convertValue(node, TestExport.class);
-        } catch (IllegalArgumentException e) {
-            throw ServiceException.badRequest("Failed to parse Test definition: " + e.getMessage());
+        return importAddOrUpdateTest(testExport);
+    }
+
+    @RolesAllowed({ Roles.ADMIN, Roles.TESTER })
+    @WithRoles
+    @Transactional
+    @Override
+    public Integer updateTest(TestExport testExport) {
+        if (testExport.id == null || TestDAO.findById(testExport.id) == null) {
+            throw ServiceException.notFound("Missing test id or test with id " + testExport.id + " does not exist");
         }
 
+        log.debugf("Updating test using the import: %s", testExport.toString());
+        return importAddOrUpdateTest(testExport);
+    }
+
+    private Integer importAddOrUpdateTest(TestExport testExport) {
         // if the datastore does NOT exist in our db then create it
         if (testExport.datastore != null
                 && (testExport.datastore.id == null || (DatastoreConfigDAO.findById(testExport.datastore.id) == null))) {
@@ -763,12 +776,13 @@ public class TestServiceImpl implements TestService {
         }
 
         Test t = (testExport.id == null || TestDAO.findById(testExport.id) == null) ? add(testExport) : update(testExport);
-
         if (!Objects.equals(t.id, testExport.id)) {
             testExport.id = t.id;
-            testExport.updateRefs();
+            testExport.resetRefs();
         }
         mediator.importTestToAll(testExport);
+
+        return t.id;
     }
 
     protected TestDAO getTestForUpdate(int testId) {

@@ -273,7 +273,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.maven.compiler}</version>
                 <configuration>
-                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                    <forceLegacyJavacApi>true</forceLegacyJavacApi>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>io.quarkus</groupId>

@@ -1431,11 +1431,29 @@ paths:
                 type: integer
               example: 101
   /api/schema/import:
+    put:
+      tags:
+      - Schema
+      description: Update an existing Schema using its previously exported version
+      operationId: updateSchema
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaExport"
+        required: true
+      responses:
+        "200":
+          description: Schema updated successfully using previously exported one
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
     post:
       tags:
       - Schema
-      description: Import an previously exported Schema either as a new Schema or
-        to update an existing Schema
+      description: Import a previously exported Schema as a new Schema
       operationId: importSchema
       requestBody:
         content:
@@ -1445,7 +1463,12 @@ paths:
         required: true
       responses:
         "201":
-          description: Import a new Schema or update an existing Schema
+          description: New Schema created successfully using previously exported one
+          content:
+            application/json:
+              schema:
+                format: int32
+                type: integer
   /api/schema/{id}:
     get:
       tags:
@@ -1889,11 +1912,28 @@ paths:
               - quarkus
               - ocp-perf-team
   /api/test/import:
+    put:
+      tags:
+      - Test
+      description: Update an existing Test using its exported version
+      operationId: updateTest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestExport"
+        required: true
+      responses:
+        "200":
+          description: Test updated successfully using its exported version
+          content:
+            application/json:
+              schema:
+                type: integer
     post:
       tags:
       - Test
-      description: Import a previously exported Test either as a new Test or to update
-        an existing Test
+      description: Import a previously exported Test as new Test
       operationId: importTest
       requestBody:
         content:
@@ -1903,7 +1943,11 @@ paths:
         required: true
       responses:
         "201":
-          description: Import a new Test or update an existing Test
+          description: New Test created successfully from a previously exported one
+          content:
+            application/json:
+              schema:
+                type: integer
   /api/test/summary:
     get:
       tags:

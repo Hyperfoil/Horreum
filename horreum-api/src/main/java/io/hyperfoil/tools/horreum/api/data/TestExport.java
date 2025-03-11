@@ -35,15 +35,20 @@ public class TestExport extends Test {
         super(t);
     }
 
-    //need to propagate the changes to newTest into the existing properties
-    public void update(Test newTest) {
-        id = newTest.id;
-    }
-
-    public void updateRefs() {
+    /**
+     * Reset the references for all entities associated to the test by
+     * setting the testId to the current one and resetting all ids to null
+     * so that new entities will be created
+     */
+    public void resetRefs() {
         //need to make sure the correct variables are used by experiments
-        if (variables != null && !variables.isEmpty())
-            variables.forEach(variable -> variable.testId = id);
+        if (variables != null && !variables.isEmpty()) {
+            for (Variable variable : variables) {
+                variable.testId = id;
+                variable.id = null;
+                variable.changeDetection.forEach(cd -> cd.id = null);
+            }
+        }
 
         if (experiments != null && !experiments.isEmpty()) {
             for (ExperimentProfile experiment : experiments) {
@@ -69,12 +74,12 @@ public class TestExport extends Test {
         }
     }
 
-    public void updateExperimentsVariableId(int oldVarId, int newVarId) {
+    public void updateExperimentsVariableId(String variableName, int newVarId) {
         if (experiments != null && !experiments.isEmpty()) {
             for (ExperimentProfile experiment : experiments) {
                 if (experiment.comparisons != null && !experiment.comparisons.isEmpty()) {
                     experiment.comparisons.forEach(c -> {
-                        if (c.variableId == oldVarId)
+                        if (c.variableName.equals(variableName))
                             c.variableId = newVarId;
                     });
                 }

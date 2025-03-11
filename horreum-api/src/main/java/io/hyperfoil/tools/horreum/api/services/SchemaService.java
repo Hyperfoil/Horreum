@@ -30,7 +30,6 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.ResponseStatus;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.data.Access;
@@ -249,10 +248,19 @@ public interface SchemaService {
     @POST
     @Path("import")
     @Consumes(MediaType.APPLICATION_JSON)
-    @APIResponse(responseCode = "201", description = "Import a new Schema or update an existing Schema")
+    @ResponseStatus(201)
+    @APIResponse(responseCode = "201", description = "New Schema created successfully using previously exported one", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
     @RequestBody(required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = SchemaExport.class)))
-    @Operation(description = "Import an previously exported Schema either as a new Schema or to update an existing Schema")
-    void importSchema(ObjectNode config);
+    @Operation(description = "Import a previously exported Schema as a new Schema")
+    Integer importSchema(SchemaExport config);
+
+    @PUT
+    @Path("import")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @APIResponse(responseCode = "200", description = "Schema updated successfully using previously exported one", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+    @RequestBody(required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = SchemaExport.class)))
+    @Operation(description = "Update an existing Schema using its previously exported version")
+    Integer updateSchema(SchemaExport config);
 
     class SchemaQueryResult {
         @NotNull

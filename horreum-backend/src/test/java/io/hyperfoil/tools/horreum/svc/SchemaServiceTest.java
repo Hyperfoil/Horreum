@@ -353,7 +353,7 @@ class SchemaServiceTest extends BaseServiceTest {
         p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
         String s1 = readFile(p.resolve("quarkus_sb_schema.json").toFile());
 
-        jsonRequest().body(s1).post("/api/schema/import").then().statusCode(204);
+        jsonRequest().body(s1).post("/api/schema/import").then().statusCode(201);
 
         SchemaDAO s = SchemaDAO.find("uri", "urn:quarkus-sb-compare:0.1").firstResult();
         assertNotNull(s);
@@ -400,9 +400,11 @@ class SchemaServiceTest extends BaseServiceTest {
                     return null;
                 });
             });
+            jsonRequest().body(exportJson).post("/api/schema/import").then().statusCode(201);
+        } else {
+            jsonRequest().body(exportJson).put("/api/schema/import").then().statusCode(200);
         }
 
-        jsonRequest().body(exportJson).post("/api/schema/import").then().statusCode(204);
         SchemaDAO s = SchemaDAO.find("uri", "urn:xxx:1.0").firstResult();
         assertNotNull(s);
         assertEquals(2, LabelDAO.find("schema.id", s.id).count());

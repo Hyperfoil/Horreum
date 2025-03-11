@@ -161,7 +161,8 @@
             "greaterBetter": false,
             "maxBaselineDatasets": 0
           },
-          "variableId": 3523654
+          "variableId": 3523654,
+          "variableName": "Average Time to First Request"
         }
       ],
       "extraLabels": ["avThroughput", "rssStartup"]
