@@ -22,6 +22,7 @@ import {AppContextType} from "../../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
 import ImportButton from "../../components/ImportButton";
 import CustomTable from "../../components/CustomTable"
+import FilterSearchInput from "../../components/FilterSearchInput";
 
 type C = CellProps<Schema>
 
@@ -42,7 +43,7 @@ export default function SchemaList() {
     const [reloadCounter, setReloadCounter] = useState(0)
     const rolesFilterFromQuery = params.get("filter")
     const [rolesFilter, setRolesFilter] = useState<Team>(rolesFilterFromQuery !== null ? createTeam(rolesFilterFromQuery) : ONLY_MY_OWN)
-
+    const [nameFilter, setNameFilter] = useState<string>("")
 
     const isTester = useTester()
 
@@ -57,7 +58,7 @@ export default function SchemaList() {
     const reloadSchemas = () => {
         setLoading(true)
         schemaApi
-            .list(pagination.perPage, pagination.page - 1, "", SortDirection.Ascending, rolesFilter.key)
+            .list(pagination.perPage, pagination.page - 1, "", SortDirection.Ascending, rolesFilter.key, nameFilter)
             .then((result) => {
                 setSchemas(result.schemas)
                 setSchemaCount(result.count)
@@ -68,7 +69,7 @@ export default function SchemaList() {
 
     useEffect(() => {
         reloadSchemas()
-    }, [pagination, reloadCounter, teams, rolesFilter])
+    }, [pagination, reloadCounter, teams, rolesFilter, nameFilter])
 
     useEffect(() => {
         // set query param in the url
@@ -154,9 +155,9 @@ export default function SchemaList() {
 
     return (
         <PageSection>
-            {isTester && (
-                <Toolbar>
-                    <ToolbarContent>
+            <Toolbar>
+                <ToolbarContent>
+                    {isTester && (
                         <ToolbarItem>
                             <TeamSelect
                                 includeGeneral={true}
@@ -166,6 +167,15 @@ export default function SchemaList() {
                                 }}
                             />
                         </ToolbarItem>
+                    )}
+                    <ToolbarItem>
+                        <FilterSearchInput
+                            placeholder="Filter by name"
+                            onSearchBy={setNameFilter}
+                            onClearBy={() => setNameFilter("")}
+                        />
+                    </ToolbarItem>
+                    {isTester && (
                         <ToolbarGroup variant="button-group" align={{ default: 'alignRight' }}>
                             <ToolbarItem>
                                 <ImportButton
@@ -192,9 +202,9 @@ export default function SchemaList() {
                                     Schema</ButtonLink>
                             </ToolbarItem>
                         </ToolbarGroup>
-                    </ToolbarContent>
-                </Toolbar>
-            )}
+                    )}
+                </ToolbarContent>
+            </Toolbar>
             <CustomTable<Schema> columns={columns}
                            data={schemas || []}
                            sortBy={[{id: "name", desc: false}]}

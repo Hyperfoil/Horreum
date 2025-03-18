@@ -243,7 +243,7 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Override
     public SchemaQueryResult list(String roles, Integer limit, Integer page, String sort,
-            @DefaultValue("Ascending") SortDirection direction) {
+            @DefaultValue("Ascending") SortDirection direction, String name) {
         PanacheQuery<SchemaDAO> query;
         Set<String> actualRoles = null;
         if (Roles.hasRolesParam(roles)) {
@@ -262,10 +262,20 @@ public class SchemaServiceImpl implements SchemaService {
         Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
         Sort sortOpts = Sort.by(sort).direction(sortDirection);
 
-        if (actualRoles == null) {
+        StringBuilder whereClause = new StringBuilder();
+        if ((name == null || name.isBlank()) && actualRoles == null) {
             query = SchemaDAO.findAll(sortOpts);
         } else {
-            query = SchemaDAO.find("owner IN ?1", sortOpts, actualRoles);
+            Map<String, Object> params = new HashMap<>();
+            if (actualRoles != null) {
+                whereClause.append("owner IN :roles ");
+                params.put("roles", actualRoles);
+            }
+            if (name != null && !name.isBlank()) {
+                whereClause.append(whereClause.isEmpty() ? "" : "AND ").append("LOWER(name) LIKE :name");
+                params.put("name", "%" + name.toLowerCase() + "%");
+            }
+            query = SchemaDAO.find(whereClause.toString(), sortOpts, params);
         }
 
         if (limit != null && page != null) {

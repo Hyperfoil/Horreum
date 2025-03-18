@@ -1276,6 +1276,10 @@ paths:
         schema:
           type: string
         example: __my
+      - name: name
+        in: query
+        schema:
+          type: string
       responses:
         "200":
           description: OK

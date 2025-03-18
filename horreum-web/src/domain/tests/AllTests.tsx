@@ -14,11 +14,9 @@ import {
     MenuToggleElement,
     Modal,
     PageSection,
-    SearchInput,
     Spinner,
     Toolbar,
     ToolbarContent,
-    ToolbarFilter,
     ToolbarGroup,
     ToolbarItem
 } from '@patternfly/react-core';
