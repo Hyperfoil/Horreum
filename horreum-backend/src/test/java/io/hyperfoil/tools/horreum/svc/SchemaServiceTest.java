@@ -121,34 +121,76 @@ class SchemaServiceTest extends BaseServiceTest {
         createSchema("Def", "urn:schema:3");
 
         // by default order by name and with descending direction
-        SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null, null, null);
+        SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null, null, null, null);
         assertEquals(3, res.schemas.size());
         assertEquals(3, res.count);
         assertEquals("Ghi", res.schemas.get(0).name);
 
         // order by uri with descending direction
-        res = listSchemas(null, null, null, null, "uri", null);
+        res = listSchemas(null, null, null, null, "uri", null, null);
         assertEquals(3, res.schemas.size());
         assertEquals(3, res.count);
         assertEquals("Def", res.schemas.get(0).name);
 
         // order by uri with ascending direction
-        res = listSchemas(null, null, null, null, "uri", SortDirection.Ascending);
+        res = listSchemas(null, null, null, null, "uri", SortDirection.Ascending, null);
         assertEquals(3, res.schemas.size());
         assertEquals(3, res.count);
         assertEquals("Ghi", res.schemas.get(0).name);
 
         // order by name with ascending direction
-        res = listSchemas(null, null, null, null, "name", SortDirection.Ascending);
+        res = listSchemas(null, null, null, null, "name", SortDirection.Ascending, null);
         assertEquals(3, res.schemas.size());
         assertEquals(3, res.count);
         assertEquals("Abc", res.schemas.get(0).name);
 
         // limit the list to 2 results
-        res = listSchemas(null, null, 2, 0, null, null);
+        res = listSchemas(null, null, 2, 0, null, null, null);
         assertEquals(2, res.schemas.size());
         // total number of records
         assertEquals(3, res.count);
+    }
+
+    @org.junit.jupiter.api.Test
+    void testListSchemasByName() {
+        // create some schemas
+        createSchema("Ghi", "urn:schema:1");
+        createSchema("Abc", "urn:schema:2");
+        createSchema("Def", "urn:schema:3");
+        createSchema("Ghi2", "urn:schema:4");
+        createSchema("Def2", "urn:schema:5");
+        createSchema("Def3", "urn:schema:6");
+
+        // exact match case-insensitive
+        SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null, null, null, "ghi2");
+        assertEquals(1, res.schemas.size());
+        assertEquals(6, res.count);
+        assertEquals("Ghi2", res.schemas.get(0).name);
+
+        // partial match case-insensitive
+        res = listSchemas(null, null, null, null, "name", SortDirection.Ascending, "ghi");
+        assertEquals(2, res.schemas.size());
+        assertEquals(6, res.count);
+        assertEquals("Ghi", res.schemas.get(0).name);
+        assertEquals("Ghi2", res.schemas.get(1).name);
+
+        // partial match case-insensitive with paging 1
+        res = listSchemas(null, null, 1, 0, "name", SortDirection.Ascending, "ghi");
+        assertEquals(1, res.schemas.size());
+        assertEquals(6, res.count);
+        assertEquals("Ghi", res.schemas.get(0).name);
+
+        // partial match case-insensitive with paging 2
+        res = listSchemas(null, null, 1, 1, "name", SortDirection.Ascending, "ghi");
+        assertEquals(1, res.schemas.size());
+        assertEquals(6, res.count);
+        assertEquals("Ghi2", res.schemas.get(0).name);
+
+        // partial match case-insensitive with paging 2
+        res = listSchemas(null, null, 2, 1, "name", SortDirection.Ascending, "ef");
+        assertEquals(1, res.schemas.size());
+        assertEquals(6, res.count);
+        assertEquals("Def3", res.schemas.get(0).name);
     }
 
     @org.junit.jupiter.api.Test
@@ -160,15 +202,15 @@ class SchemaServiceTest extends BaseServiceTest {
         createSchema("jkl", "urn:schema:jkl");
 
         // by default order by name and with ascending direction
-        SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null, null, null);
+        SchemaService.SchemaQueryResult res = listSchemas(null, null, null, null, null, null, null);
         assertEquals(4, res.schemas.size());
         assertEquals(4, res.count);
 
-        res = listSchemas(getAdminToken(), Roles.MY_ROLES, null, null, null, null);
+        res = listSchemas(getAdminToken(), Roles.MY_ROLES, null, null, null, null, null);
         assertEquals(0, res.schemas.size());
         assertEquals(4, res.count);
 
-        res = listSchemas(getAdminToken(), Roles.ALL_ROLES, null, null, null, null);
+        res = listSchemas(getAdminToken(), Roles.ALL_ROLES, null, null, null, null, null);
         assertEquals(4, res.schemas.size());
         assertEquals(4, res.count);
     }
@@ -715,9 +757,9 @@ class SchemaServiceTest extends BaseServiceTest {
 
     // utility to get list of schemas
     private SchemaService.SchemaQueryResult listSchemas(String token, String roles, Integer limit, Integer page, String sort,
-            SortDirection direction) {
+            SortDirection direction, String name) {
         StringBuilder query = new StringBuilder("/api/schema/");
-        if (roles != null || limit != null || page != null || sort != null || direction != null) {
+        if (roles != null || limit != null || page != null || sort != null || direction != null || name != null) {
             query.append("?");
 
             if (roles != null) {
@@ -737,7 +779,11 @@ class SchemaServiceTest extends BaseServiceTest {
             }
 
             if (direction != null) {
-                query.append("direction=").append(direction);
+                query.append("direction=").append(direction).append("&");
+            }
+
+            if (name != null) {
+                query.append("name=").append(name);
             }
         }
         return jsonRequest()

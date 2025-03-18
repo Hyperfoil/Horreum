@@ -91,7 +91,8 @@ public interface SchemaService {
             @QueryParam("limit") Integer limit,
             @QueryParam("page") Integer page,
             @QueryParam("sort") String sort,
-            @QueryParam("direction") SortDirection direction);
+            @QueryParam("direction") SortDirection direction,
+            @QueryParam("name") String name);
 
     @GET
     @Path("descriptors")
