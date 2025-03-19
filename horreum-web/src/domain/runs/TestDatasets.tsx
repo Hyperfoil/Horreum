@@ -119,7 +119,7 @@ export default function TestDatasets() {
     const pagination = useMemo(() => ({ page, perPage, sortBy }), [page, perPage, sortBy])
     const [loading, setLoading] = useState(false)
     const [datasets, setDatasets] = useState<DatasetList>()
-    const [comparedDatasets, setComparedDatasets] = useState<DatasetSummary[]>()
+    const [comparedDatasets, setComparedDatasets] = useState<DatasetSummary[]>([])
     const teams = useSelector(teamsSelector)
     const token = useSelector(tokenSelector)
 
@@ -158,33 +158,32 @@ export default function TestDatasets() {
 
     const columns = useMemo(() => {
         const allColumns = [...staticColumns]
-        if (comparedDatasets) {
-            allColumns.unshift({
-                Header: "",
-                accessor: "id",
-                disableSortBy: true,
-                Cell: (arg: CellProps<DatasetSummary>) => {
-                    if (comparedDatasets.some(ds => ds.id === arg.cell.value)) {
-                        return (
-                            <Button
-                                variant="secondary"
-                                onClick={() =>
-                                    setComparedDatasets(comparedDatasets.filter(ds => ds.id !== arg.cell.value))
-                                }
-                            >
-                                Remove
-                            </Button>
-                        )
-                    } else {
-                        return (
-                            <Button onClick={() => setComparedDatasets([...comparedDatasets, arg.row.original])}>
-                                Add to comparison
-                            </Button>
-                        )
-                    }
-                },
-            })
-        }
+        allColumns.unshift({
+            Header: "",
+            accessor: "id",
+            disableSortBy: true,
+            Cell: (arg: CellProps<DatasetSummary>) => {
+                if (comparedDatasets.some(ds => ds.id === arg.cell.value)) {
+                    return (
+                        <Button
+                            variant="secondary"
+                            onClick={() =>
+                                setComparedDatasets(comparedDatasets.filter(ds => ds.id !== arg.cell.value))
+                            }
+                        >
+                            Remove
+                        </Button>
+                    )
+                } else {
+                    return (
+                        <Button onClick={() => setComparedDatasets([...comparedDatasets, arg.row.original])}>
+                            Compare
+                        </Button>
+                    )
+                }
+            },
+        })
+
         const view = views?.find(v => v.id === viewId) || views?.at(0)
         const components = view?.components || []
         components.forEach(vc => {
@@ -248,20 +247,18 @@ export default function TestDatasets() {
                         </Flex>
                     </ToolbarItem>
 
-                    <ToolbarItem>
-                        <Button
-                            variant="secondary"
-                            onClick={() => {
-                                if (comparedDatasets) {
-                                    setComparedDatasets(undefined)
-                                } else {
+                    {comparedDatasets.length > 0 && (
+                        <ToolbarItem>
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
                                     setComparedDatasets([])
-                                }
-                            }}
-                        >
-                            {comparedDatasets ? "Cancel comparison" : "Select for comparison"}
-                        </Button>
-                    </ToolbarItem>
+                                }}
+                            >
+                                Clear comparison
+                            </Button>
+                        </ToolbarItem>
+                    )}
                 </ToolbarGroup>
             </ToolbarContent>
         </Toolbar>
@@ -271,7 +268,7 @@ export default function TestDatasets() {
         <>
             {toolbar}
 
-            {(comparedDatasets) && (
+            {(comparedDatasets.length > 0) && (
                 <PageSection variant="default" isCenterAligned>
 
                 {comparedDatasets && comparedDatasets.length > 0 && (

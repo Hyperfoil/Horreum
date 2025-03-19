@@ -142,7 +142,6 @@ export default function TestView() {
                             >
                                 <TestDatasets/>
                             </SavedTab>
-
                             <SavedTab
                                 title="Changes"
                                 fragment="changes"
@@ -152,9 +151,7 @@ export default function TestView() {
                                 onSave={() => Promise.resolve()}
                                 onReset={() => Promise.resolve()}
                             >
-
                                 <Changes testID={testIdVal}/>
-
                             </SavedTab>
 
                             <SavedTab
