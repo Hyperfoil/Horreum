@@ -164,14 +164,16 @@ export default function PanelChart({
                     }
                 }
                 if (value != undefined) {
+                    // this is a trick to see whether the change has been confirmed or not
+                    const isConfirmed = a.text?.includes("Confirmed: true") || false
                     return (
                         <ReferenceDot
                             key={a.changeId}
                             x={a.time}
                             y={value}
                             r={8}
-                            stroke="red"
-                            fill="red"
+                            stroke={isConfirmed ? "green" : "red"}
+                            fill={isConfirmed ? "green" : "red"}
                             fillOpacity={0.3}
                             onClick={() => onChangeSelected(a.changeId || 0, a.variableId || 0, a.runId || 0)}
                         />
