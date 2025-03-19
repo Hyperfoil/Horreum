@@ -2,13 +2,15 @@ import { SetStateAction, useContext, useEffect, useMemo, useRef, useState } from
 import { useSelector } from "react-redux"
 import {
     ActionGroup,
+    Breadcrumb,
+    BreadcrumbItem,
     Bullseye,
     Card,
     CardBody,
     EmptyState,
     EmptyStateBody,
     PageSection,
-    Spinner,
+    Spinner, Toolbar, ToolbarContent,
 } from "@patternfly/react-core"
 import {
     Caption,
@@ -25,7 +27,7 @@ import {
     Thead,
     Tr,
 } from '@patternfly/react-table';
-import { NavLink } from "react-router-dom"
+import { Link, NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
 import {datasetApi, fetchTest, fetchViews, Test, View} from "../../api"
@@ -105,6 +107,24 @@ export default function DatasetComparison() {
 
     return (
         <PageSection>
+            <Toolbar>
+                <ToolbarContent>
+                    <Breadcrumb>
+                        <BreadcrumbItem>
+                            <Link to="/test">Tests</Link>
+                        </BreadcrumbItem>
+                        {test?.folder && (
+                            <BreadcrumbItem>
+                                <Link to={`/test?folder=${test.folder!}`}>{test.folder}</Link>
+                            </BreadcrumbItem>
+                        )}
+                        <BreadcrumbItem>
+                            <Link to={`/test/${test?.id}#data`}>{test?.name || "undefined"}</Link>
+                        </BreadcrumbItem>
+                        <BreadcrumbItem>Datasets comparison</BreadcrumbItem>
+                    </Breadcrumb>
+                </ToolbarContent>
+            </Toolbar>
             <Card>
                 <CardBody>
                     {headers.length <= 1 ? (
