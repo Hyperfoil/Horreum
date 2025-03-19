@@ -21,7 +21,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 /**
  * This marks certain run as following a change (regression) in tested criterion.
  * Change is not necessarily a negative one - e.g. improvement in throughput is still
- * a change to faciliate correct testing of subsequent runs.
+ * a change to facilitate correct testing of subsequent runs.
  * Eventually the change should be manually confirmed (approved) with an explanatory description.
  */
 @Entity(name = "Change")
