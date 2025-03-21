@@ -109,7 +109,7 @@ export default function ApiKeys() {
     }
 
     const performRenameApiKey = () => {
-        if (renameKeyId) {
+        if (renameKeyId && renameKeyName) {
             userApi.renameApiKey(renameKeyId, renameKeyName)
                 .then(() => void alerting.dispatchInfo("API_KEY_RENAMED", "API key renamed", "API key was successfully renamed", 3000))
                 .catch(error => alerting.dispatchError(error, "API_KEY_NOT_RENAMED", "Failed to rename API key"))

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.hyperfoil.tools.horreum.svc.Roles;
-import io.quarkus.keycloak.admin.client.common.KeycloakAdminClientConfig;
+import io.quarkus.keycloak.admin.client.common.runtime.KeycloakAdminClientConfig;
 
 public class KeycloakTestProfile extends HorreumTestProfile {
 
