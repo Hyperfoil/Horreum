@@ -18,7 +18,9 @@ import {teamsSelector} from "../auth";
 
 export interface SelectedTest {
     id: number
+    name: string
     owner?: string
+    folder?: string
     toString: () => string
 }
 
@@ -67,7 +69,7 @@ export default function TestSelect(props: TestSelectProps) {
             const initialTest = testList.find(t => t.name === props.initialTestName)
             if (initialTest) {
                 props.onSelect(
-                    { id: initialTest.id, owner: initialTest.owner, toString: () => initialTest.name },
+                    { id: initialTest.id, name: initialTest.name, owner: initialTest.owner, folder: initialTest.folder, toString: () => initialTest.name },
                     initialTest.folder,
                     true
                 )

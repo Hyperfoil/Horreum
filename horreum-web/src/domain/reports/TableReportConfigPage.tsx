@@ -19,7 +19,7 @@ import {
     FormSection,
     HelperText,
     HelperTextItem,
-    FormHelperText,    
+    FormHelperText,
     List,
     ListItem,
     Modal,
@@ -27,11 +27,11 @@ import {
     Popover,
     Spinner,
     TextInput,
-    Title,
+    Title, Toolbar, ToolbarContent,
 } from "@patternfly/react-core"
 import { Link, NavLink } from "react-router-dom"
 
-import {TableReport, TableReportConfig, ReportComponent, reportApi, Access } from "../../api"
+import {TableReport, TableReportConfig, ReportComponent, reportApi, Access, testApi, Test} from "../../api"
 import TableReportView from "./TableReportView"
 import ReportLogModal from "./ReportLogModal"
 
@@ -124,8 +124,9 @@ function ReportConfigComponent({ component, onChange, onDelete, readOnly }: Repo
 
 export default function TableReportConfigPage() {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const { configId } = useParams<string>()
+    const { testId, configId } = useParams<string>()
     const id = parseInt(configId ?? "-1")
+    const currentTestId = parseInt(testId ?? "-1")
     const history = useNavigate()
     const location = useLocation()
     const queryParams = new URLSearchParams(location.search)
@@ -154,6 +155,7 @@ export default function TableReportConfigPage() {
     useEffect(() => {
         if (!configId || configId === "__new") {
             document.title = "New report | Horreum"
+            testApi.get(currentTestId).then(updateTest)
             return
         }
         setLoading(true)
@@ -162,11 +164,7 @@ export default function TableReportConfigPage() {
             .getTableReportConfig(id)
             .then((config: TableReportConfig) => {
                 setConfig(config)
-                setTest({
-                    id: config.test?.id !== undefined ? config.test.id : -1,
-                    owner: config.test?.owner,
-                    toString: () => config.test?.name || "<deleted test>",
-                })
+                updateTest(config.test)
                 document.title = "Report " + config.title + " | Horreum"
             })
             .catch(error => {
@@ -175,6 +173,34 @@ export default function TableReportConfigPage() {
             })
             .finally(() => setLoading(false))
     }, [id, configId])
+
+    useEffect(() => {
+        // update the config every time the test is changed (it should happen only once)
+        setConfig({
+            ...config,
+            test: {
+                id: test?.id || -1,
+                name: "",
+                owner: "",
+                access: Access.Public,
+                datastoreId: 1,
+                notificationsEnabled: false,
+            },
+        })
+    }, [test])
+
+    const updateTest = (t: Test | undefined) => {
+        if (t !== undefined) {
+            setTest({
+                id: t?.id !== undefined ? t.id : -1,
+                name: t?.name || "undefined",
+                owner: t?.owner,
+                folder: t?.folder,
+                toString: () => t?.name || "<deleted test>",
+            })
+        }
+    }
+
     const addComponent = () =>
         setConfig({
             ...config,
@@ -202,7 +228,7 @@ export default function TableReportConfigPage() {
                     reportApi
                         .updateTableReportConfig(reportId, config)
                         .then(
-                            report => history(`/test/${test?.id}/reports/table/` + report.id),
+                            report => history(`/test/${testId}/reports/table/` + report.id),
                             error => alerting.dispatchError(error,"SAVE_CONFIG", "Failed to save report configuration.")
                         )
                         .finally(() => setSaving(false))
@@ -223,19 +249,30 @@ export default function TableReportConfigPage() {
     }
     return (
         <PageSection>
+            <Toolbar>
+                <ToolbarContent>
+                    <Breadcrumb>
+                        <BreadcrumbItem>
+                            <Link to="/test">Tests</Link>
+                        </BreadcrumbItem>
+                        {test?.folder && (
+                            <BreadcrumbItem>
+                                <Link to={`/test?folder=${test?.folder}`}>{test?.folder}</Link>
+                            </BreadcrumbItem>
+                        )}
+                        <BreadcrumbItem isActive>
+                            <Link to={`/test/${testId}`}>{test?.name || "undefined"}</Link>
+                        </BreadcrumbItem>
+                        <BreadcrumbItem isActive>
+                            <Link to={`/test/${testId}/#reports-tab`}>Reports</Link>
+                        </BreadcrumbItem>
+                        <BreadcrumbItem>{config.id >= 0 ? config.title : "New report configuration"}</BreadcrumbItem>
+                    </Breadcrumb>
+                </ToolbarContent>
+            </Toolbar>
             <Card>
                 <CardHeader>
                     <Flex style={{ width: "100%" }} justifyContent={{ default: "justifyContentSpaceBetween" }}>
-                        <FlexItem>
-                            <Breadcrumb>
-                                <BreadcrumbItem>
-                                    <Link to={`/test/${test?.id}/#reports-tab`}>Reports</Link>
-                                </BreadcrumbItem>
-                                <BreadcrumbItem isActive>
-                                    {config.id >= 0 ? config.title : "New report configuration"}
-                                </BreadcrumbItem>
-                            </Breadcrumb>
-                        </FlexItem>
                         <FlexItem>
                             <ExportButton
                                 name={config?.title || "tablereport"}
@@ -271,26 +308,6 @@ export default function TableReportConfigPage() {
                                     </HelperTextItem>
                                 </HelperText>
                             </FormHelperText>
-                        </FormGroup>
-                        <FormGroup label="Test" isRequired={true} fieldId="test">
-                            <TestSelect
-                                selection={test}
-                                onSelect={test => {
-                                    setTest(test)
-                                    setConfig({
-                                        ...config,
-                                        test: {
-                                            id: test?.id || -1,
-                                            name: "",
-                                            owner: "",
-                                            access: Access.Public,
-                                            datastoreId: 1,
-                                            notificationsEnabled: false,
-                                        },
-                                    })
-                                }}
-                                isDisabled={!isTester}
-                            />
                         </FormGroup>
                         <FormSection
                             title={

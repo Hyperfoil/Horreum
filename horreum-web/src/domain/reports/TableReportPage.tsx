@@ -13,12 +13,14 @@ import {
     EmptyState,
     Spinner,
     PageSection,
+    Toolbar,
+    ToolbarContent,
 } from "@patternfly/react-core"
 import { Link } from "react-router-dom"
 
 import { useTester } from "../../auth"
 
-import {reportApi, TableReport} from "../../api"
+import {reportApi, TableReport, Test} from "../../api"
 import TableReportView from "./TableReportView"
 import ButtonLink from "../../components/ButtonLink"
 import PrintButton from "../../components/PrintButton"
@@ -54,7 +56,7 @@ export default function TableReportPage() {
     }, [idVal])
     const componentRef = useRef<HTMLDivElement>(null)
     const isTester = useTester(report?.config?.test?.owner)
-    const selectedTest = {id: report?.config?.test?.id} as SelectedTest
+    const selectedTest = report?.config?.test as SelectedTest
     if (loading) {
         return (
             <Bullseye>
@@ -71,15 +73,29 @@ export default function TableReportPage() {
     }
     return (
         <PageSection>
-            <Card>
-                <CardHeader>
-                    <Breadcrumb style={{ flexGrow: 100 }}>
+            <Toolbar>
+                <ToolbarContent>
+                    <Breadcrumb>
                         <BreadcrumbItem>
+                            <Link to="/test">Tests</Link>
+                        </BreadcrumbItem>
+                        {selectedTest?.folder && (
+                            <BreadcrumbItem>
+                                <Link to={`/test?folder=${selectedTest?.folder}`}>{selectedTest?.folder}</Link>
+                            </BreadcrumbItem>
+                        )}
+                        <BreadcrumbItem isActive>
+                            <Link to={`/test/${selectedTest.id}`}>{selectedTest?.name || "undefined"}</Link>
+                        </BreadcrumbItem>
+                        <BreadcrumbItem isActive>
                             <Link to={`/test/${selectedTest.id}/#reports-tab`}>Reports</Link>
                         </BreadcrumbItem>
                         <BreadcrumbItem>{report.config.title}</BreadcrumbItem>
-                        <BreadcrumbItem isActive>{report.id}</BreadcrumbItem>
                     </Breadcrumb>
+                </ToolbarContent>
+            </Toolbar>
+            <Card>
+                <CardHeader>
                     <ActionGroup>
                         <PrintButton printRef={componentRef} />
                         {isTester && (
