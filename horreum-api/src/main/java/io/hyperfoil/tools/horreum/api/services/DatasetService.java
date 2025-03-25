@@ -78,7 +78,7 @@ public interface DatasetService {
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
     })
-    DatasetList listBySchema(@QueryParam("uri") String uri,
+    DatasetList listDatasetsBySchema(@QueryParam("uri") String uri,
             @QueryParam("limit") Integer limit,
             @QueryParam("page") Integer page,
             @QueryParam("sort") @DefaultValue("start") String sort,
@@ -86,7 +86,7 @@ public interface DatasetService {
 
     @GET
     @Path("{datasetId}/labelValues")
-    List<LabelValue> labelValues(@PathParam("datasetId") int datasetId);
+    List<LabelValue> getDatasetLabelValues(@PathParam("datasetId") int datasetId);
 
     @POST
     @Path("{datasetId}/previewLabel")
@@ -94,9 +94,9 @@ public interface DatasetService {
 
     @GET
     @Path("{datasetId}/summary")
-    DatasetSummary getSummary(@PathParam("datasetId") int datasetId, @QueryParam("viewId") int viewId);
+    DatasetSummary getDatasetSummary(@PathParam("datasetId") int datasetId, @QueryParam("viewId") int viewId);
 
-    @Schema(type = SchemaType.OBJECT, allOf = ProtectedTimeType.class)
+    @Schema(type = SchemaType.OBJECT)
     class DatasetSummary extends ProtectedTimeType {
         @JsonProperty(required = true)
         @Schema(description = "Unique Dataset ID", example = "101")

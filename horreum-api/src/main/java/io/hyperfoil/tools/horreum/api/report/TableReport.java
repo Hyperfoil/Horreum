@@ -17,7 +17,7 @@ public class TableReport {
     public Integer id;
     @NotNull
     @JsonProperty(required = true)
-    @Schema(type = SchemaType.OBJECT, implementation = TableReportConfig.class, description = "Table Report Config", allOf = TableReportConfig.class)
+    @Schema(type = SchemaType.OBJECT, description = "Table Report Config")
     public TableReportConfig config;
     @NotNull
     @Schema(type = SchemaType.STRING, implementation = Instant.class, description = "Created timestamp", example = "2019-09-26T07:58:30.996+0200")

@@ -58,7 +58,7 @@ export default function SchemaList() {
     const reloadSchemas = () => {
         setLoading(true)
         schemaApi
-            .list(pagination.perPage, pagination.page - 1, "", SortDirection.Ascending, rolesFilter.key, nameFilter)
+            .listSchemas(pagination.perPage, pagination.page - 1, "", SortDirection.Ascending, rolesFilter.key, nameFilter)
             .then((result) => {
                 setSchemas(result.schemas)
                 setSchemaCount(result.count)
@@ -123,7 +123,7 @@ export default function SchemaList() {
                 Cell: arg => {
                     const changeAccess = useChangeAccess({
                         onAccessUpdate: (id, owner, access) => {
-                            return schemaApi.updateAccess(id, owner, access).then(
+                            return schemaApi.updateSchemaAccess(id, owner, access).then(
                                 () => noop(),
                                 error => alerting.dispatchError(error, "SCHEMA_UPDATE", "Failed to update schema access.")
                             ).then(() => reloadSchemas)
@@ -131,7 +131,7 @@ export default function SchemaList() {
                     })
                     const del = useDelete({
                         onDelete: id => {
-                            return schemaApi._delete(id)
+                            return schemaApi.deleteSchema(id)
                                 .then(() => id,
                                     error => alerting.dispatchError(error, "SCHEMA_DELETE", "Failed to delete schema " + id)
                                 ).then(id => removeSchema(id))
@@ -192,7 +192,7 @@ export default function SchemaList() {
                                         ) : null
                                     }}
                                     onImport={config => {
-                                        return config.id > 0 ? schemaApi.updateSchema(config as SchemaExport) : schemaApi.importSchema(config as SchemaExport)
+                                        return config.id > 0 ? schemaApi.updateSchemaWithImport(config as SchemaExport) : schemaApi.addSchemaWithImport(config as SchemaExport)
                                     }}
                                     onImported={ reloadSchemas }
                                 />

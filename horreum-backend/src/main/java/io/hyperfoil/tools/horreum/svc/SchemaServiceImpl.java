@@ -156,7 +156,7 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public Integer add(Schema schemaDTO) {
+    public Integer addSchema(Schema schemaDTO) {
         // we are creating a new schema, ensure all ids are cleaned up
         schemaDTO.clearIds();
 
@@ -168,7 +168,7 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public Integer update(Schema schemaDTO) {
+    public Integer updateSchema(Schema schemaDTO) {
         // check the schema already exists in the db
         if (schemaDTO.id == null || SchemaDAO.findById(schemaDTO.id) == null) {
             throw ServiceException.notFound("Missing schema id or schema with id " + schemaDTO.id + " does not exist");
@@ -242,7 +242,7 @@ public class SchemaServiceImpl implements SchemaService {
     @PermitAll
     @WithRoles
     @Override
-    public SchemaQueryResult list(String roles, Integer limit, Integer page, String sort,
+    public SchemaQueryResult listSchemas(String roles, Integer limit, Integer page, String sort,
             @DefaultValue("Ascending") SortDirection direction, String name) {
         PanacheQuery<SchemaDAO> query;
         Set<String> actualRoles = null;
@@ -311,7 +311,7 @@ public class SchemaServiceImpl implements SchemaService {
     @Transactional
     @Override
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-    public void updateAccess(int id, String owner, Access access) {
+    public void updateSchemaAccess(int id, String owner, Access access) {
         SchemaDAO schema = SchemaDAO.findById(id);
         if (schema == null) {
             throw ServiceException.notFound("Schema not found");
@@ -502,7 +502,7 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public void delete(int id) {
+    public void deleteSchema(int id) {
         SchemaDAO schema = SchemaDAO.find("id", id).firstResult();
         if (schema == null) {
             throw ServiceException.notFound("Schema not found");
@@ -981,7 +981,7 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public Integer importSchema(SchemaExport schemaExport) {
+    public Integer addSchemaWithImport(SchemaExport schemaExport) {
         log.debugf("Importing new test: %s", schemaExport.toString());
 
         // we are creating a new test, clear all ids to be sure we are not updating any existing
@@ -994,7 +994,7 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public Integer updateSchema(SchemaExport schemaExport) {
+    public Integer updateSchemaWithImport(SchemaExport schemaExport) {
         if (schemaExport.id == null || SchemaDAO.findById(schemaExport.id) == null) {
             throw ServiceException.notFound("Missing schema id or schema with id " + schemaExport.id + " does not exist");
         }

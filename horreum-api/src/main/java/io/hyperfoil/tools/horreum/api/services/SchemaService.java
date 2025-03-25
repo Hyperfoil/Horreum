@@ -71,12 +71,12 @@ public interface SchemaService {
     @Operation(description = "Save a new Schema")
     @ResponseStatus(201)
     @APIResponse(responseCode = "201", description = "New schema created successfully", content = @Content(schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.INTEGER, implementation = Integer.class), example = "103"))
-    Integer add(Schema schema);
+    Integer addSchema(Schema schema);
 
     @PUT
     @Operation(description = "Update an existing Schema")
     @APIResponse(responseCode = "200", description = "Schema updated successfully", content = @Content(schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.INTEGER, implementation = Integer.class), example = "103"))
-    Integer update(Schema schema);
+    Integer updateSchema(Schema schema);
 
     @GET
     @Operation(description = "Retrieve a paginated list of Schemas with available count")
@@ -87,7 +87,7 @@ public interface SchemaService {
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
             @Parameter(name = "roles", description = "__my, __all or a comma delimited  list of roles", example = "__my"),
     })
-    SchemaQueryResult list(@QueryParam("roles") String roles,
+    SchemaQueryResult listSchemas(@QueryParam("roles") String roles,
             @QueryParam("limit") Integer limit,
             @QueryParam("page") Integer page,
             @QueryParam("sort") String sort,
@@ -112,7 +112,7 @@ public interface SchemaService {
             @Parameter(name = "owner", required = true, description = "Name of the new owner", example = "perf-team"),
             @Parameter(name = "access", required = true, description = "New Access level", example = "0")
     })
-    void updateAccess(@PathParam("id") int id,
+    void updateSchemaAccess(@PathParam("id") int id,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access);
 
@@ -122,7 +122,7 @@ public interface SchemaService {
     @Parameters(value = {
             @Parameter(name = "id", description = "Schema ID to delete", example = "101"),
     })
-    void delete(@PathParam("id") int id);
+    void deleteSchema(@PathParam("id") int id);
 
     @GET
     @Path("findUsages")
@@ -253,7 +253,7 @@ public interface SchemaService {
     @APIResponse(responseCode = "201", description = "New Schema created successfully using previously exported one", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
     @RequestBody(required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = SchemaExport.class)))
     @Operation(description = "Import a previously exported Schema as a new Schema")
-    Integer importSchema(SchemaExport config);
+    Integer addSchemaWithImport(SchemaExport config);
 
     @PUT
     @Path("import")
@@ -261,7 +261,7 @@ public interface SchemaService {
     @APIResponse(responseCode = "200", description = "Schema updated successfully using previously exported one", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
     @RequestBody(required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = SchemaExport.class)))
     @Operation(description = "Update an existing Schema using its previously exported version")
-    Integer updateSchema(SchemaExport config);
+    Integer updateSchemaWithImport(SchemaExport config);
 
     class SchemaQueryResult {
         @NotNull
@@ -309,16 +309,14 @@ public interface SchemaService {
 
     }
 
-    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInFingerprint", type = SchemaType.OBJECT, allOf = {
-            LabelLocation.class })
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInFingerprint", type = SchemaType.OBJECT)
     class LabelInFingerprint extends LabelLocation {
         public LabelInFingerprint(int testId, String testName) {
             super(LabelFoundLocation.FINGERPRINT, testId, testName);
         }
     }
 
-    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInRule", type = SchemaType.OBJECT, allOf = {
-            LabelLocation.class })
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInRule", type = SchemaType.OBJECT)
     class LabelInRule extends LabelLocation {
         public int ruleId;
         public String ruleName;
@@ -330,8 +328,7 @@ public interface SchemaService {
         }
     }
 
-    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInVariable", type = SchemaType.OBJECT, allOf = {
-            LabelLocation.class })
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInVariable", type = SchemaType.OBJECT)
     class LabelInVariable extends LabelLocation {
         public int variableId;
         public String variableName;
@@ -343,8 +340,7 @@ public interface SchemaService {
         }
     }
 
-    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInView", type = SchemaType.OBJECT, allOf = {
-            LabelLocation.class })
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInView", type = SchemaType.OBJECT)
     class LabelInView extends LabelLocation {
         public int viewId;
         public String viewName;
@@ -360,8 +356,7 @@ public interface SchemaService {
         }
     }
 
-    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInReport", type = SchemaType.OBJECT, allOf = {
-            LabelLocation.class })
+    @org.eclipse.microprofile.openapi.annotations.media.Schema(name = "LabelInReport", type = SchemaType.OBJECT)
     class LabelInReport extends LabelLocation {
         public int configId;
         public String title;

@@ -218,10 +218,10 @@ export function addUserOrTeam(id: number, userOrTeam: string, alerting: AlertCon
 }
 
 export function deleteTest(id: number, alerting: AlertContextType) : Promise<void>{
-    return apiCall(testApi._delete(id), alerting, "DELETE_TEST", "Failed to delete test " + id);
+    return apiCall(testApi.deleteTest(id), alerting, "DELETE_TEST", "Failed to delete test " + id);
 }
 export function fetchTestsSummariesByFolder(alertingContext: AlertContextType, direction?: SortDirection, folder?: string, limit?: number, page?: number, roles?: string, name?: string): Promise<TestListing> {
-    return apiCall(testApi.summary(roles, folder, limit, page, direction, name), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
+    return apiCall(testApi.getTestSummary(roles, folder, limit, page, direction, name), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
 }
 export function fetchFolders(alerting: AlertContextType): Promise<string[]> {
     return apiCall(testApi.folders(), alerting, "FETCH_FOLDERS", "Failed to fetch folders.");
@@ -229,28 +229,28 @@ export function fetchFolders(alerting: AlertContextType): Promise<string[]> {
 
 export function fetchTestsSummary(alertingContext: AlertContextType, roles?: string, folder?: string,
                                   limit?: number, page?: number, direction?: SortDirection) : Promise<TestListing> {
-    return apiCall(testApi.summary(roles, folder, limit, page, direction), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
+    return apiCall(testApi.getTestSummary(roles, folder, limit, page, direction), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.");
 }
 
 export function fetchTests(alertingContext: AlertContextType,roles?: string, folder?: string) : Promise<Test[]> {
-    return apiCall(testApi.summary( roles, folder, -1, -1, undefined), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
+    return apiCall(testApi.getTestSummary( roles, folder, -1, -1, undefined), alertingContext, "FETCH_TEST_SUMMARY", "Failed to fetch test summary.")
         .then(summary => summary.tests?.map(t => mapTestSummaryToTest(t)) || [])
 }
 
 
 export function fetchTest(id: number, alerting: AlertContextType): Promise<Test> {
-    return apiCall(testApi.get(id), alerting, "FETCH_TEST", "Failed to fetch test; the test may not exist or you don't have sufficient permissions to access it.");
+    return apiCall(testApi.getTest(id), alerting, "FETCH_TEST", "Failed to fetch test; the test may not exist or you don't have sufficient permissions to access it.");
 }
 export function removeUserOrTeam(id: number, userOrTeam: string, alerting: AlertContextType) {
     return apiCall(subscriptionsApi.removeUserOrTeam(id, userOrTeam), alerting, "REMOVE_SUBSCRIPTION", "Failed to remove test subscriptions");
 }
 
 export function addTest(test: Test, alerting: AlertContextType): Promise<Test> {
-    return apiCall(testApi.add(test), alerting, "SEND_TEST", "Failed to send test");
+    return apiCall(testApi.addTest(test), alerting, "SEND_TEST", "Failed to send test");
 }
 
 export function updateTest(test: Test, alerting: AlertContextType): Promise<Test> {
-    return apiCall(testApi.update(test), alerting, "UPDATE_TEST", "Failed to update test");
+    return apiCall(testApi.updateTest(test), alerting, "UPDATE_TEST", "Failed to update test");
 }
 
 
@@ -259,7 +259,7 @@ export function fetchViews(testId: number, alerting: AlertContextType): Promise<
 }
 
 export function updateAccess(id: number, owner: string, access: Access, alerting: AlertContextType) : Promise<void> {
-    return apiCall(testApi.updateAccess(id, owner, access), alerting, "UPDATE_ACCESS", "Failed to update test access");
+    return apiCall(testApi.updateTestAccess(id, owner, access), alerting, "UPDATE_ACCESS", "Failed to update test access");
 }
 export function updateView(alerting: AlertContextType, testId: number, view: View): Promise<View> {
     for (const c of view.components) {
@@ -303,11 +303,11 @@ function watchToList(watch: Watch) {
 */
 
 export function getSubscription(testId: number, alerting: AlertContextType) : Promise<Watch> {
-    return apiCall(subscriptionsApi.get(testId), alerting, "SUBSCRIPTION_LOOKUP", "Subscription lookup failed");
+    return apiCall(subscriptionsApi.getSubscription(testId), alerting, "SUBSCRIPTION_LOOKUP", "Subscription lookup failed");
 }
 
 export function updateSubscription(watch: Watch, alerting: AlertContextType) : Promise<void> {
-    return apiCall(subscriptionsApi.update(watch.testId, watch), alerting, "SUBSCRIPTION_UPDATE", "Failed to update subscription");
+    return apiCall(subscriptionsApi.updateSubscription(watch.testId, watch), alerting, "SUBSCRIPTION_UPDATE", "Failed to update subscription");
 }
 
 
@@ -342,7 +342,7 @@ export function fetchRunSummary(id: number, alerting: AlertContextType): Promise
 }
 
 export function recalculateDatasets(id: number, testid: number, alerting: AlertContextType) : Promise<number[]> {
-    return apiCall(runApi.recalculateDatasets(id), alerting, "RECALCULATE_DATASETS", "Failed to recalculate datasets");
+    return apiCall(runApi.recalculateRunDatasets(id), alerting, "RECALCULATE_DATASETS", "Failed to recalculate datasets");
 }
 
 export function trash(alerting: AlertContextType, id: number, testid: number, isTrashed = true) : Promise<void> {
@@ -350,7 +350,7 @@ export function trash(alerting: AlertContextType, id: number, testid: number, is
 }
 
 export function updateRunAccess (id: number, testid: number, owner: string, access: Access, alerting: AlertContextType) : Promise<void> {
-    return apiCall(runApi.updateAccess(id, owner, access), alerting, "UPDATE_RUN_ACCESS", "Failed to update run access");
+    return apiCall(runApi.updateRunAccess(id, owner, access), alerting, "UPDATE_RUN_ACCESS", "Failed to update run access");
 }
 export function updateDescription(id: number, testid: number, description: string, alerting: AlertContextType) : Promise<void> {
     return apiCall(runApi.updateDescription(id, description), alerting, "RUN_UPDATE", "Failed to update description for run ID " + id);

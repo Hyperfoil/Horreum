@@ -53,12 +53,12 @@ public interface TestService {
     @DELETE
     @Path("{id}")
     @Operation(description = "Delete a Test by id")
-    void delete(@PathParam("id") int id);
+    void deleteTest(@PathParam("id") int id);
 
     @GET
     @Path("{id}")
     @Operation(description = "Retrieve a test by id")
-    Test get(@PathParam("id") int id);
+    Test getTest(@PathParam("id") int id);
 
     @GET
     @Path("byName/{name}")
@@ -74,14 +74,14 @@ public interface TestService {
     @APIResponses(value = {
             @APIResponse(responseCode = "201", description = "New test created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Test.class)))
     })
-    Test add(@RequestBody(required = true) Test test);
+    Test addTest(@RequestBody(required = true) Test test);
 
     @PUT
     @Operation(description = "Update an existing test")
     @APIResponses(value = {
             @APIResponse(responseCode = "200", description = "Test updated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Test.class)))
     })
-    Test update(@RequestBody(required = true) Test test);
+    Test updateTest(@RequestBody(required = true) Test test);
 
     @GET
     @Operation(description = "Retrieve a paginated list of Tests with available count")
@@ -92,7 +92,7 @@ public interface TestService {
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending")
     })
-    TestQueryResult list(@QueryParam("roles") String roles,
+    TestQueryResult listTests(@QueryParam("roles") String roles,
             @QueryParam("limit") Integer limit,
             @QueryParam("page") Integer page,
             @QueryParam("sort") @DefaultValue("name") String sort,
@@ -112,7 +112,7 @@ public interface TestService {
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
             @Parameter(name = "name", description = "Filter by test name", example = "MyTest"),
     })
-    TestListing summary(@QueryParam("roles") String roles, @QueryParam("folder") String folder,
+    TestListing getTestSummary(@QueryParam("roles") String roles, @QueryParam("folder") String folder,
             @DefaultValue(DEFAULT_LIMIT) @QueryParam("limit") Integer limit,
             @DefaultValue(DEFAULT_PAGE) @QueryParam("page") Integer page,
             @DefaultValue("Ascending") @QueryParam("direction") SortDirection direction,
@@ -140,7 +140,7 @@ public interface TestService {
             @Parameter(name = "owner", required = true, description = "Name of the new owner", example = "perf-team"),
             @Parameter(name = "access", required = true, description = "New Access level for the Test", example = "0")
     })
-    void updateAccess(@PathParam("id") int id,
+    void updateTestAccess(@PathParam("id") int id,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access);
 
@@ -206,7 +206,7 @@ public interface TestService {
     })
     @APIResponses(value = { @APIResponse(responseCode = "200", content = {
             @Content(schema = @Schema(type = SchemaType.ARRAY, implementation = ExportedLabelValues.class)) }) })
-    List<ExportedLabelValues> labelValues(
+    List<ExportedLabelValues> getTestLabelValues(
             @PathParam("id") int testId,
             @QueryParam("filter") @DefaultValue("{}") String filter,
             @QueryParam("before") @DefaultValue("") String before,
@@ -247,7 +247,7 @@ public interface TestService {
     @Parameters(value = {
             @Parameter(name = "id", description = "Test ID to recalculate datasets for", example = "101"),
     })
-    void recalculateDatasets(@PathParam("id") int testId);
+    void recalculateTestDatasets(@PathParam("id") int testId);
 
     @GET
     @Path("{id}/recalculate")
@@ -255,13 +255,13 @@ public interface TestService {
     @Parameters(value = {
             @Parameter(name = "id", description = "Test ID to retrieve recalculation status for", example = "101"),
     })
-    RecalculationStatus getRecalculationStatus(@PathParam("id") int testId);
+    RecalculationStatus getTestRecalculationStatus(@PathParam("id") int testId);
 
     @GET
     @Path("{id}/export")
     @Produces(MediaType.APPLICATION_JSON)
     @APIResponseSchema(value = TestExport.class, responseDescription = "A Test definition formatted as json", responseCode = "200")
-    TestExport export(@PathParam("id") int testId);
+    TestExport exportTest(@PathParam("id") int testId);
 
     @POST
     @Path("import")
@@ -270,7 +270,7 @@ public interface TestService {
     @Operation(description = "Import a previously exported Test as new Test")
     @ResponseStatus(201)
     @APIResponse(responseCode = "201", description = "New Test created successfully from a previously exported one", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.INTEGER)))
-    Integer importTest(TestExport test);
+    Integer addTestWithImport(TestExport test);
 
     @PUT
     @Path("import")
@@ -278,7 +278,7 @@ public interface TestService {
     @RequestBody(required = true, content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = TestExport.class)))
     @Operation(description = "Update an existing Test using its exported version")
     @APIResponse(responseCode = "200", description = "Test updated successfully using its exported version", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.INTEGER)))
-    Integer updateTest(TestExport test);
+    Integer updateTestWithImport(TestExport test);
 
     class TestListing {
         public TestListing() {
@@ -293,7 +293,7 @@ public interface TestService {
         public Long count;
     }
 
-    @Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class)
+    @Schema(type = SchemaType.OBJECT)
     class TestSummary extends ProtectedType {
         @JsonProperty(required = true)
         @Schema(description = "ID of tests", example = "101")
@@ -316,6 +316,7 @@ public interface TestService {
         @Schema(description = "Datastore id", example = "1", required = true)
         public Integer datastoreId;
 
+        // required for serialization
         public TestSummary() {
         }
 
@@ -346,6 +347,7 @@ public interface TestService {
         @Schema(description = "Total number of generated datasets", example = "186")
         public long datasets;
 
+        // required for serialization
         public RecalculationStatus() {
         }
 

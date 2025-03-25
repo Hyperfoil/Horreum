@@ -127,7 +127,7 @@
                             <inputSpec>${project.build.directory}/generated/openapi-internal.yaml</inputSpec>
                             <output>${project.basedir}/../horreum-web/src/generated</output>
                             <generatorName>typescript-fetch</generatorName>
-                            <skipValidateSpec>true</skipValidateSpec>
+                            <skipValidateSpec>false</skipValidateSpec>
                             <typeMappings>Array=any</typeMappings>
                             <globalProperties>
                                 <skipFormModel>false</skipFormModel>
@@ -141,45 +141,6 @@
                                 <typescriptThreePlus>true</typescriptThreePlus>
                                 <prefixParameterInterfaces>true</prefixParameterInterfaces>
                             </configOptions>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>python</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                        <configuration>
-                            <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
-                            <output>${project.build.directory}/generated/python</output>
-                            <generatorName>python</generatorName>
-                            <skipValidateSpec>true</skipValidateSpec>
-                            <globalProperties>
-                                <skipFormModel>false</skipFormModel>
-                            </globalProperties>
-                            <modelNameMappings>
-                                <modelNameMapping>Tag=Label</modelNameMapping>
-                            </modelNameMappings>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>go</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                        <configuration>
-                            <inputSpec>${project.build.directory}/generated/openapi.yaml</inputSpec>
-                            <output>${project.build.directory}/generated/go</output>
-                            <generatorName>go</generatorName>
-                            <skipValidateSpec>true</skipValidateSpec>
-                            <typeMappings>Array=any</typeMappings>
-                            <globalProperties>
-                                <skipFormModel>false</skipFormModel>
-                            </globalProperties>
-                            <modelNameMappings>
-                                <modelNameMapping>Tag=Label</modelNameMapping>
-                            </modelNameMappings>
                         </configuration>
                     </execution>
                 </executions>

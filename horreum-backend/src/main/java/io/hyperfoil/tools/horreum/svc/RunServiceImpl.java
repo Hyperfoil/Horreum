@@ -328,7 +328,8 @@ public class RunServiceImpl implements RunService {
     //this is nearly identical to TestServiceImpl.labelValues (except the return object)
     //this reads from the dataset table but provides data specific to the run...
     @Override
-    public List<ExportedLabelValues> labelValues(int runId, String filter, String sort, String direction, int limit, int page,
+    public List<ExportedLabelValues> getRunLabelValues(int runId, String filter, String sort, String direction, int limit,
+            int page,
             List<String> include, List<String> exclude, boolean multiFilter) {
         Run run = getRun(runId);
         if (run == null) {
@@ -369,7 +370,7 @@ public class RunServiceImpl implements RunService {
     @Transactional
     @Override
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-    public void updateAccess(int id, String owner, Access access) {
+    public void updateRunAccess(int id, String owner, Access access) {
         int updatedRecords = RunDAO.update("owner = ?1, access = ?2 WHERE id = ?3", owner, access, id);
         if (updatedRecords != 1) {
             throw ServiceException.serverError("Access change failed (missing permissions?)");
@@ -382,7 +383,7 @@ public class RunServiceImpl implements RunService {
     @RolesAllowed(Roles.UPLOADER)
     @WithRoles
     @Override
-    public Response add(String testNameOrId, String owner, Access access, Run run) {
+    public Response addRun(String testNameOrId, String owner, Access access, Run run) {
         if (owner != null) {
             run.owner = owner;
         }
@@ -972,7 +973,7 @@ public class RunServiceImpl implements RunService {
     @PermitAll
     @WithRoles
     @Override
-    public RunsSummary listBySchema(String uri, Integer limit, Integer page, String sort, SortDirection direction) {
+    public RunsSummary listRunsBySchema(String uri, Integer limit, Integer page, String sort, SortDirection direction) {
         if (uri == null || uri.isEmpty()) {
             throw ServiceException.badRequest("No `uri` query parameter given.");
         }
@@ -1062,7 +1063,7 @@ public class RunServiceImpl implements RunService {
     @WithRoles
     @Transactional
     @Override
-    public Map<Integer, String> updateSchema(int id, String path, String schemaUri) {
+    public Map<Integer, String> updateRunSchema(int id, String path, String schemaUri) {
         // FIXME: fetchival stringifies the body into JSON string :-/
         RunDAO run = RunDAO.findById(id);
         if (run == null) {
@@ -1119,7 +1120,7 @@ public class RunServiceImpl implements RunService {
     @WithRoles
     @Transactional
     @Override
-    public List<Integer> recalculateDatasets(int runId) {
+    public List<Integer> recalculateRunDatasets(int runId) {
         log.infof("Transforming run id %d", runId);
         return transform(runId, true);
     }

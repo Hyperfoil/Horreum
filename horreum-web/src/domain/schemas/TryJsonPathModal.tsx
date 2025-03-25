@@ -37,7 +37,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             return
         }
         if (props.target === "run") {
-            runApi.listBySchema(
+            runApi.listRunsBySchema(
                 props.uri,
                 pagination.perPage,
                 pagination.page,
@@ -55,7 +55,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
             )
         } else {
             // target === dataset
-            datasetApi.listBySchema(
+            datasetApi.listDatasetsBySchema(
                 props.uri,
                 pagination.perPage,
                 pagination.page,

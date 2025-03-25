@@ -289,7 +289,7 @@ public class DatasetServiceImpl implements DatasetService {
 
     @WithRoles
     @Override
-    public DatasetService.DatasetList listBySchema(String uri, Integer limit, Integer page, String sort,
+    public DatasetService.DatasetList listDatasetsBySchema(String uri, Integer limit, Integer page, String sort,
             @DefaultValue("Descending") SortDirection direction) {
         StringBuilder sql = new StringBuilder(LIST_SCHEMA_DATASETS);
         // TODO: filtering by fingerprint
@@ -304,7 +304,7 @@ public class DatasetServiceImpl implements DatasetService {
     }
 
     @Override
-    public List<LabelValue> labelValues(int datasetId) {
+    public List<LabelValue> getDatasetLabelValues(int datasetId) {
         Stream<Object[]> stream = em.unwrap(Session.class).createNativeQuery("""
                 SELECT label_id, label.name AS label_name, schema.id AS schema_id, schema.name AS schema_name, schema.uri, value
                 FROM label_values
@@ -376,7 +376,7 @@ public class DatasetServiceImpl implements DatasetService {
 
     @WithRoles
     @Override
-    public DatasetSummary getSummary(int datasetId, int viewId) {
+    public DatasetSummary getDatasetSummary(int datasetId, int viewId) {
         try {
             NativeQuery<DatasetSummary> query = initTypes(
                     "WITH schema_agg AS (" + SCHEMAS_SELECT +

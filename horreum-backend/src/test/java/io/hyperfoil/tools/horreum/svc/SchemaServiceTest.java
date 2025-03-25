@@ -259,7 +259,7 @@ class SchemaServiceTest extends BaseServiceTest {
         // one error for extra "foo" and one for "$schema"
         assertEquals(2, runValidation.errors.size());
         runValidation.errors.forEach(e -> {
-            assertEquals(allowNoneSchema.id, e.getSchemaId());
+            assertEquals(allowNoneSchema.id, e.schemaId);
             assertNotNull(e.error);
         });
 
@@ -267,7 +267,7 @@ class SchemaServiceTest extends BaseServiceTest {
         assertNotNull(dsValidation);
         assertEquals(2, dsValidation.errors.size());
         dsValidation.errors.forEach(e -> {
-            assertEquals(allowNoneSchema.id, e.getSchemaId());
+            assertEquals(allowNoneSchema.id, e.schemaId);
             assertNotNull(e.error);
         });
         assertEquals(0, runValidations.drainTo(new ArrayList<>()));

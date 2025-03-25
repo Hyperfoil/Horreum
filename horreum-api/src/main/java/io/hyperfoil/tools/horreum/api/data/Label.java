@@ -12,7 +12,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
-@Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class, description = "A Label is a core component of Horreum, defining which components of the JSON document are part of a KPI and how the metric values are calculated")
+@Schema(type = SchemaType.OBJECT, description = "A Label is a core component of Horreum, defining which components of the JSON document are part of a KPI and how the metric values are calculated")
 public class Label extends ProtectedType {
     @JsonProperty(required = true)
     @Schema(description = "Unique ID for Label", example = "101")

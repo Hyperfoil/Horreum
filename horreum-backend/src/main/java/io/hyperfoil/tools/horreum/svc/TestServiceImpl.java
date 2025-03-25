@@ -106,7 +106,7 @@ public class TestServiceImpl implements TestService {
     @WithRoles
     @Transactional
     @Override
-    public void delete(int id) {
+    public void deleteTest(int id) {
         TestDAO test = TestDAO.findById(id);
         if (test == null) {
             throw ServiceException.notFound("No test with id " + id);
@@ -124,7 +124,7 @@ public class TestServiceImpl implements TestService {
     @Override
     @WithRoles
     @PermitAll
-    public Test get(int id) {
+    public Test getTest(int id) {
         TestDAO test = TestDAO.find("id", id).firstResult();
         if (test == null) {
             throw ServiceException.notFound("No test with name " + id);
@@ -194,7 +194,7 @@ public class TestServiceImpl implements TestService {
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
-    public Test add(Test dto) {
+    public Test addTest(Test dto) {
         if (!identity.hasRole(dto.owner)) {
             throw ServiceException.forbidden("This user does not have the " + dto.owner + " role!");
         }
@@ -210,7 +210,7 @@ public class TestServiceImpl implements TestService {
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
-    public Test update(Test dto) {
+    public Test updateTest(Test dto) {
         if (!identity.hasRole(dto.owner)) {
             throw ServiceException.forbidden("This user does not have the " + dto.owner + " role!");
         }
@@ -293,7 +293,7 @@ public class TestServiceImpl implements TestService {
     @Override
     @PermitAll
     @WithRoles
-    public TestQueryResult list(String roles, Integer limit, Integer page, String sort, SortDirection direction) {
+    public TestQueryResult listTests(String roles, Integer limit, Integer page, String sort, SortDirection direction) {
         PanacheQuery<TestDAO> query;
         StringBuilder whereClause = new StringBuilder();
         Map<String, Object> params = new HashMap<>();
@@ -336,7 +336,7 @@ public class TestServiceImpl implements TestService {
     @Override
     @PermitAll
     @WithRoles
-    public TestListing summary(String roles, String folder, Integer limit, Integer page, SortDirection direction,
+    public TestListing getTestSummary(String roles, String folder, Integer limit, Integer page, SortDirection direction,
             String name) {
         folder = normalizeFolderName(folder);
         StringBuilder testSql = new StringBuilder();
@@ -491,7 +491,7 @@ public class TestServiceImpl implements TestService {
     @WithRoles
     @Transactional
     // TODO: it would be nicer to use @FormParams but fetchival on client side doesn't support that
-    public void updateAccess(int testId, String owner, Access access) {
+    public void updateTestAccess(int testId, String owner, Access access) {
         TestDAO test = (TestDAO) TestDAO.findByIdOptional(testId)
                 .orElseThrow(() -> ServiceException.notFound("Test not found"));
 
@@ -600,7 +600,8 @@ public class TestServiceImpl implements TestService {
     @Transactional
     @WithRoles
     @Override
-    public List<ExportedLabelValues> labelValues(int testId, String filter, String before, String after, boolean filtering,
+    public List<ExportedLabelValues> getTestLabelValues(int testId, String filter, String before, String after,
+            boolean filtering,
             boolean metrics, String sort, String direction, Integer limit, int page, List<String> include, List<String> exclude,
             boolean multiFilter) {
         if (!checkTestExists(testId)) {
@@ -651,7 +652,7 @@ public class TestServiceImpl implements TestService {
     @Override
     @WithRoles
     @Transactional
-    public void recalculateDatasets(int testId) {
+    public void recalculateTestDatasets(int testId) {
         TestDAO test = getTestForUpdate(testId);
         RecalculationStatus status = new RecalculationStatus(RunDAO.count("testid = ?1 AND trashed = false", testId));
         // we don't have to care about races with new runs
@@ -701,7 +702,7 @@ public class TestServiceImpl implements TestService {
 
     @Override
     @WithRoles
-    public RecalculationStatus getRecalculationStatus(int testId) {
+    public RecalculationStatus getTestRecalculationStatus(int testId) {
         if (!checkTestExists(testId)) {
             throw ServiceException.serverError("Cannot find test " + testId);
         }
@@ -718,7 +719,7 @@ public class TestServiceImpl implements TestService {
     @WithRoles
     @Transactional
     @Override
-    public TestExport export(int testId) {
+    public TestExport exportTest(int testId) {
         TestDAO t = TestDAO.findById(testId);
         if (t == null) {
             throw ServiceException.notFound("Test " + testId + " was not found");
@@ -738,7 +739,7 @@ public class TestServiceImpl implements TestService {
     @WithRoles
     @Transactional
     @Override
-    public Integer importTest(TestExport testExport) {
+    public Integer addTestWithImport(TestExport testExport) {
         log.debugf("Importing new test: %s", testExport.toString());
 
         // we are creating a new test, clear all ids to be sure we are not updating any existing
@@ -751,7 +752,7 @@ public class TestServiceImpl implements TestService {
     @WithRoles
     @Transactional
     @Override
-    public Integer updateTest(TestExport testExport) {
+    public Integer updateTestWithImport(TestExport testExport) {
         if (testExport.id == null || TestDAO.findById(testExport.id) == null) {
             throw ServiceException.notFound("Missing test id or test with id " + testExport.id + " does not exist");
         }
@@ -775,7 +776,8 @@ public class TestServiceImpl implements TestService {
             testExport.datastoreId = testExport.datastore.id;
         }
 
-        Test t = (testExport.id == null || TestDAO.findById(testExport.id) == null) ? add(testExport) : update(testExport);
+        Test t = (testExport.id == null || TestDAO.findById(testExport.id) == null) ? addTest(testExport)
+                : updateTest(testExport);
         if (!Objects.equals(t.id, testExport.id)) {
             testExport.id = t.id;
             testExport.resetRefs();

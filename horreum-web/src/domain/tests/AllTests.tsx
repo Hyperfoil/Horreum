@@ -499,8 +499,8 @@ export default function AllTests() {
                                     }}
                                     onImport={config => {
                                         return config.id != null && config.id > 0 ?
-                                            testApi.updateTest(config as TestExport) :
-                                            testApi.importTest(config as TestExport)
+                                            testApi.updateTestWithImport(config as TestExport) :
+                                            testApi.addTestWithImport(config as TestExport)
                                     }}
                                     onImported={() => loadTests()}
                                 />

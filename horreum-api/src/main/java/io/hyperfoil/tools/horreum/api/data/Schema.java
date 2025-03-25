@@ -9,7 +9,7 @@ import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
-@org.eclipse.microprofile.openapi.annotations.media.Schema(name = "Schema", type = SchemaType.OBJECT, allOf = ProtectedType.class, description = "Data object that describes the schema definition for a test")
+@org.eclipse.microprofile.openapi.annotations.media.Schema(name = "Schema", type = SchemaType.OBJECT, description = "Data object that describes the schema definition for a test")
 public class Schema extends ProtectedType {
 
     @org.eclipse.microprofile.openapi.annotations.media.Schema(required = true, description = "Unique Schema ID", example = "101")

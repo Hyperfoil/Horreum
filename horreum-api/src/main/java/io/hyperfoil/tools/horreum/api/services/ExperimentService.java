@@ -162,7 +162,7 @@ public interface ExperimentService {
 
     @Schema(description = "Result of performing a Comparison", type = SchemaType.OBJECT)
     class ComparisonResult {
-        @Schema(description = "Was the Experiment dataset better or worse than the baseline dataset", type = SchemaType.STRING, implementation = BetterOrWorse.class, allOf = BetterOrWorse.class)
+        @Schema(description = "Was the Experiment dataset better or worse than the baseline dataset", type = SchemaType.STRING, implementation = BetterOrWorse.class)
         public BetterOrWorse overall;
         @Schema(description = "Experiment value")
         public double experimentValue;

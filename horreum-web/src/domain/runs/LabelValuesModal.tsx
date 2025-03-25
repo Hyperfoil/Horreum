@@ -31,7 +31,7 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
         }
         setLoading(true)
         setLabelValues([])
-        datasetApi.labelValues(props.datasetId)
+        datasetApi.getDatasetLabelValues(props.datasetId)
             .then(setLabelValues, error =>
                 alerting.dispatchError( error, "FETCH_LABEL_VALUES", "Cannot retrieve effective values for labels.")
             )

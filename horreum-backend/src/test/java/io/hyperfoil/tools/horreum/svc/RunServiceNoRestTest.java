@@ -51,7 +51,7 @@ class RunServiceNoRestTest extends BaseServiceNoRestTest {
     void testUploadRun() {
         Test t1 = createSampleTest("test", null, null, null);
 
-        Test created1 = testService.add(t1);
+        Test created1 = testService.addTest(t1);
         assertNotNull(created1.id);
         assertEquals(1, TestDAO.count());
 
@@ -64,7 +64,7 @@ class RunServiceNoRestTest extends BaseServiceNoRestTest {
     void testTrashRun() {
         Test t1 = createSampleTest("test", null, null, null);
 
-        Test created1 = testService.add(t1);
+        Test created1 = testService.addTest(t1);
         assertNotNull(created1.id);
         assertEquals(1, TestDAO.count());
 
@@ -81,7 +81,7 @@ class RunServiceNoRestTest extends BaseServiceNoRestTest {
     void testTrashAlreadyTrashedRun() {
         Test t1 = createSampleTest("test", null, null, null);
 
-        Test created1 = testService.add(t1);
+        Test created1 = testService.addTest(t1);
         assertNotNull(created1.id);
         assertEquals(1, TestDAO.count());
 
@@ -101,14 +101,14 @@ class RunServiceNoRestTest extends BaseServiceNoRestTest {
     // utility to create a sample test and add to Horreum
     private Test addTest(String name, String owner, String folder, Integer datastoreId) {
         Test test = createSampleTest(name, owner, folder, datastoreId);
-        return testService.add(test);
+        return testService.addTest(test);
     }
 
     // utility to create a sample test and add to Horreum
     private int uploadRun(int testId, String owner, JsonNode runData) {
         Run run = createSampleRun(testId, runData, owner);
 
-        try (Response resp = runService.add(String.valueOf(testId), owner, Access.PUBLIC, run)) {
+        try (Response resp = runService.addRun(String.valueOf(testId), owner, Access.PUBLIC, run)) {
             assertEquals(Response.Status.ACCEPTED.getStatusCode(), resp.getStatus());
             return Integer.parseInt(resp.getEntity().toString());
         }

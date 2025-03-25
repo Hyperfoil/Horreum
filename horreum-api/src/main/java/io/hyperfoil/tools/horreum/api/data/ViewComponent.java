@@ -4,12 +4,16 @@ import java.util.Objects;
 
 import jakarta.validation.constraints.NotNull;
 
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
+@Schema(type = SchemaType.OBJECT, description = "Single view component")
 public class ViewComponent {
     @JsonProperty(required = true)
     public Integer id;
@@ -21,6 +25,7 @@ public class ViewComponent {
     public String headerName;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(type = SchemaType.ARRAY, implementation = String.class)
     public JsonNode labels;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public String render;

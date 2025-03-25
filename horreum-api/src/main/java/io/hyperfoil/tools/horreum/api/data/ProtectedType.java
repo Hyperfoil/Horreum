@@ -12,7 +12,7 @@ public class ProtectedType {
 
     @NotNull
     @JsonProperty(required = true)
-    @Schema(description = "Access rights for the test. This defines the visibility of the Test in the UI", example = "PUBLIC", required = true, type = SchemaType.STRING, implementation = Access.class, allOf = Access.class)
+    @Schema(description = "Access rights for the test. This defines the visibility of the Test in the UI", example = "PUBLIC", implementation = Access.class, required = true, type = SchemaType.STRING)
     public Access access;
 
     @NotNull
