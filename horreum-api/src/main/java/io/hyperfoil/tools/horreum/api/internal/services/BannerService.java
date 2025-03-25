@@ -18,9 +18,9 @@ import io.hyperfoil.tools.horreum.api.data.Banner;
 @Tag(name = "banner", description = "Manage banner")
 public interface BannerService {
     @POST
-    void set(@RequestBody(required = true) Banner banner);
+    void setBanner(@RequestBody(required = true) Banner banner);
 
     @GET
-    Banner get();
+    Banner getBanner();
 
 }

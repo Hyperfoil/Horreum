@@ -50,9 +50,7 @@ public class Action {
 
     @NotNull
     @JsonIgnore
-    @Schema(type = SchemaType.OBJECT, allOf = {
-            Action.Secret.class
-    })
+    @Schema(type = SchemaType.OBJECT, implementation = Action.Secret.class)
     public ObjectNode secrets;
     @NotNull
     @JsonProperty(required = true)

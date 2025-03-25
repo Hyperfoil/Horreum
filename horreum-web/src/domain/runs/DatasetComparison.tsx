@@ -194,7 +194,7 @@ function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) 
 
     useEffect(() => {
         setLoading(true)
-        Promise.all(datasets.map(ds => datasetApi.labelValues(ds.id).then(values => ({ ...ds, values }))))
+        Promise.all(datasets.map(ds => datasetApi.getDatasetLabelValues(ds.id).then(values => ({ ...ds, values }))))
             .then(
                 labels => {
                     const rows: any[][] = []
@@ -287,7 +287,7 @@ function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps
 
     useEffect(() => {
         setLoading(true)
-        Promise.all(datasets.map(ds => datasetApi.getSummary(ds.id, view.id)))
+        Promise.all(datasets.map(ds => datasetApi.getDatasetSummary(ds.id, view.id)))
             .then(
                 summaries => {
                     const rowsData: any[][] = view.components.map(vc => [

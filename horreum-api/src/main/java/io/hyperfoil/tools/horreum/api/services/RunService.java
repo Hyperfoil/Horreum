@@ -116,7 +116,7 @@ public interface RunService {
             })
     })
 
-    List<ExportedLabelValues> labelValues(
+    List<ExportedLabelValues> getRunLabelValues(
             @PathParam("id") int runId,
             @QueryParam("filter") @DefaultValue("{}") String filter,
             @QueryParam("sort") @DefaultValue("") String sort,
@@ -152,7 +152,7 @@ public interface RunService {
             @Parameter(name = "owner", required = true, description = "Name of the new owner", example = "perf-team"),
             @Parameter(name = "access", required = true, description = "New Access level", example = "0")
     })
-    void updateAccess(@PathParam("id") int id,
+    void updateRunAccess(@PathParam("id") int id,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access);
 
@@ -172,7 +172,7 @@ public interface RunService {
                     "is performed asynchronously.", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.ARRAY, implementation = Integer.class, example = "[101, 102, 103]"), example = "[101, 102, 103]")),
             @APIResponse(responseCode = "400", description = "Some fields are missing or invalid", content = @Content(mediaType = MediaType.APPLICATION_JSON))
     })
-    Response add(@QueryParam("test") String testNameOrId,
+    Response addRun(@QueryParam("test") String testNameOrId,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
             Run run);
@@ -325,7 +325,7 @@ public interface RunService {
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending")
     })
-    RunsSummary listBySchema(@QueryParam("uri") String uri,
+    RunsSummary listRunsBySchema(@QueryParam("uri") String uri,
             @QueryParam("limit") Integer limit,
             @QueryParam("page") Integer page,
             @QueryParam("sort") String sort,
@@ -368,7 +368,7 @@ public interface RunService {
     //                   )
     //           }
     //   )
-    Map<Integer, String> updateSchema(@PathParam("id") int id,
+    Map<Integer, String> updateRunSchema(@PathParam("id") int id,
             @QueryParam("path") String path,
             @RequestBody(required = true) String schemaUri);
 
@@ -383,7 +383,7 @@ public interface RunService {
                     @Content(schema = @Schema(type = SchemaType.ARRAY, implementation = Integer.class), example = "[101, 102, 103]")
             })
     })
-    List<Integer> recalculateDatasets(@PathParam("id") int runId);
+    List<Integer> recalculateRunDatasets(@PathParam("id") int runId);
 
     @POST
     @Path("recalculateAll")
@@ -394,7 +394,7 @@ public interface RunService {
     })
     void recalculateAll(@QueryParam("from") String from, @QueryParam("to") String to);
 
-    @Schema(type = SchemaType.OBJECT, allOf = ProtectedTimeType.class)
+    @Schema(type = SchemaType.OBJECT)
     class RunSummary extends ProtectedTimeType {
         @JsonProperty(required = true)
         @Schema(required = true, description = "Run unique ID", example = "202")

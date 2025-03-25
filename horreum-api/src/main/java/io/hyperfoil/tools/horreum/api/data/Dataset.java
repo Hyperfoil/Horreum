@@ -12,8 +12,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
-@Schema(type = SchemaType.OBJECT, allOf = { ProtectedType.class,
-        ProtectedTimeType.class }, description = "A dataset is the JSON document used as the basis for all comparisons and reporting")
+@Schema(type = SchemaType.OBJECT, description = "A dataset is the JSON document used as the basis for all comparisons and reporting")
 public class Dataset extends ProtectedTimeType {
 
     @Schema(description = "Dataset Unique ID", example = "101")

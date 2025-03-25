@@ -48,7 +48,7 @@ export default function Banner() {
     const [updateCounter, setUpdateCounter] = useState(0)
     useEffect(() => {
         const timeoutId = setTimeout(() => setUpdateCounter(updateCounter + 1), 60000)
-        bannerApi.get().then(setBanner)
+        bannerApi.getBanner().then(setBanner)
 
         return () => clearTimeout(timeoutId)
     }, [updateCounter])

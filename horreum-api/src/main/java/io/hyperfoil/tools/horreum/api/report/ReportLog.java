@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.hyperfoil.tools.horreum.api.data.PersistentLog;
 
-@Schema(type = SchemaType.OBJECT, description = "Report Log", name = "ReportLog", allOf = PersistentLog.class)
+@Schema(type = SchemaType.OBJECT, description = "Report Log", name = "ReportLog")
 public class ReportLog extends PersistentLog {
     private int reportId;
 

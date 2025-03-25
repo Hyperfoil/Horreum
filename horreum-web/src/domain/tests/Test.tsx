@@ -313,7 +313,7 @@ export default function TestView() {
                             >
                                 <Form isHorizontal>
                                     <FormGroup label="Export" fieldId="export">
-                                        <ExportButton name={test?.name || "test"} export={() => testApi._export(testIdVal)} />
+                                        <ExportButton name={test?.name || "test"} export={() => testApi.exportTest(testIdVal)} />
                                     </FormGroup>
                                 </Form>
 

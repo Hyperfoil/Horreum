@@ -10,7 +10,7 @@ import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.api.data.datastore.Datastore;
 
-@Schema(type = SchemaType.OBJECT, allOf = Test.class, description = "Represents a Test with all associated data used for export/import operations.")
+@Schema(type = SchemaType.OBJECT, description = "Represents a Test with all associated data used for export/import operations.")
 public class TestExport extends Test {
 
     @Schema(description = "Array of Variables associated with test")

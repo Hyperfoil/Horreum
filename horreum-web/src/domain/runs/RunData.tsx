@@ -90,7 +90,7 @@ export default function RunData(props: RunDataProps) {
                     paths={getPaths(data)}
                     hasRoot={typeof data === "object" && !Array.isArray(data) && data}
                     update={(path, schemaUri, _) =>
-                        runApi.updateSchema(props.run.id, path, schemaUri).then(
+                        runApi.updateRunSchema(props.run.id, path, schemaUri).then(
                             () => props.onUpdate(),
                             error => alerting.dispatchError(error, "SCHEME_UPDATE_FAILED", "Failed to update run schema")
                         )

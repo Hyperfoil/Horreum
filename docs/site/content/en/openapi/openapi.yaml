@@ -172,7 +172,7 @@ paths:
       tags:
       - Dataset
       description: "Retrieve a paginated list of Datasets, with total count, by Schema"
-      operationId: listBySchema
+      operationId: listDatasetsBySchema
       parameters:
       - name: uri
         in: query
@@ -281,7 +281,7 @@ paths:
     get:
       tags:
       - Dataset
-      operationId: labelValues
+      operationId: getDatasetLabelValues
       parameters:
       - name: datasetId
         in: path
@@ -327,7 +327,7 @@ paths:
     get:
       tags:
       - Dataset
-      operationId: getSummary
+      operationId: getDatasetSummary
       parameters:
       - name: datasetId
         in: path
@@ -517,7 +517,7 @@ paths:
       - Run
       description: Retrieve a paginated list of Runs with available count for a given
         Schema URI
-      operationId: listBySchema
+      operationId: listRunsBySchema
       parameters:
       - name: uri
         in: query
@@ -829,7 +829,7 @@ paths:
       tags:
       - Run
       description: Upload a new Run
-      operationId: add
+      operationId: addRun
       parameters:
       - name: test
         in: query
@@ -963,7 +963,7 @@ paths:
       tags:
       - Run
       description: Get all the label values for the run
-      operationId: labelValues
+      operationId: getRunLabelValues
       parameters:
       - name: id
         in: path
@@ -1096,7 +1096,7 @@ paths:
       tags:
       - Run
       description: Recalculate Datasets for Run
-      operationId: recalculateDatasets
+      operationId: recalculateRunDatasets
       parameters:
       - name: id
         in: path
@@ -1125,7 +1125,7 @@ paths:
       tags:
       - Run
       description: Update Run schema for part of JSON data
-      operationId: updateSchema
+      operationId: updateRunSchema
       parameters:
       - name: id
         in: path
@@ -1210,7 +1210,7 @@ paths:
       tags:
       - Run
       description: Update the Access configuration for a Run
-      operationId: updateAccess
+      operationId: updateRunAccess
       parameters:
       - name: id
         in: path
@@ -1242,7 +1242,7 @@ paths:
       tags:
       - Schema
       description: Retrieve a paginated list of Schemas with available count
-      operationId: list
+      operationId: listSchemas
       parameters:
       - name: limit
         in: query
@@ -1291,7 +1291,7 @@ paths:
       tags:
       - Schema
       description: Update an existing Schema
-      operationId: update
+      operationId: updateSchema
       requestBody:
         content:
           application/json:
@@ -1310,7 +1310,7 @@ paths:
       tags:
       - Schema
       description: Save a new Schema
-      operationId: add
+      operationId: addSchema
       requestBody:
         content:
           application/json:
@@ -1439,7 +1439,7 @@ paths:
       tags:
       - Schema
       description: Update an existing Schema using its previously exported version
-      operationId: updateSchema
+      operationId: updateSchemaWithImport
       requestBody:
         content:
           application/json:
@@ -1458,7 +1458,7 @@ paths:
       tags:
       - Schema
       description: Import a previously exported Schema as a new Schema
-      operationId: importSchema
+      operationId: addSchemaWithImport
       requestBody:
         content:
           application/json:
@@ -1503,7 +1503,7 @@ paths:
       tags:
       - Schema
       description: Delete a Schema by id
-      operationId: delete
+      operationId: deleteSchema
       parameters:
       - name: id
         in: path
@@ -1543,7 +1543,7 @@ paths:
       tags:
       - Schema
       description: Update the Access configuration for a Schema
-      operationId: updateAccess
+      operationId: updateSchemaAccess
       parameters:
       - name: id
         in: path
@@ -1789,7 +1789,7 @@ paths:
       tags:
       - Test
       description: Retrieve a paginated list of Tests with available count
-      operationId: list
+      operationId: listTests
       parameters:
       - name: roles
         in: query
@@ -1837,7 +1837,7 @@ paths:
       tags:
       - Test
       description: Update an existing test
-      operationId: update
+      operationId: updateTest
       requestBody:
         content:
           application/json:
@@ -1855,7 +1855,7 @@ paths:
       tags:
       - Test
       description: Create a new test
-      operationId: add
+      operationId: addTest
       requestBody:
         content:
           application/json:
@@ -1920,7 +1920,7 @@ paths:
       tags:
       - Test
       description: Update an existing Test using its exported version
-      operationId: updateTest
+      operationId: updateTestWithImport
       requestBody:
         content:
           application/json:
@@ -1938,7 +1938,7 @@ paths:
       tags:
       - Test
       description: Import a previously exported Test as new Test
-      operationId: importTest
+      operationId: addTestWithImport
       requestBody:
         content:
           application/json:
@@ -1957,7 +1957,7 @@ paths:
       tags:
       - Test
       description: Retrieve a summary of Tests in a folder
-      operationId: summary
+      operationId: getTestSummary
       parameters:
       - name: roles
         in: query
@@ -2012,7 +2012,7 @@ paths:
       tags:
       - Test
       description: Retrieve a test by id
-      operationId: get
+      operationId: getTest
       parameters:
       - name: id
         in: path
@@ -2031,7 +2031,7 @@ paths:
       tags:
       - Test
       description: Delete a Test by id
-      operationId: delete
+      operationId: deleteTest
       parameters:
       - name: id
         in: path
@@ -2046,7 +2046,7 @@ paths:
     get:
       tags:
       - Test
-      operationId: export
+      operationId: exportTest
       parameters:
       - name: id
         in: path
@@ -2113,7 +2113,7 @@ paths:
       tags:
       - Test
       description: List all Label Values for a Test
-      operationId: labelValues
+      operationId: getTestLabelValues
       parameters:
       - name: id
         in: path
@@ -2293,7 +2293,7 @@ paths:
       tags:
       - Test
       description: Get recalculation status for Test
-      operationId: getRecalculationStatus
+      operationId: getTestRecalculationStatus
       parameters:
       - name: id
         in: path
@@ -2314,7 +2314,7 @@ paths:
       tags:
       - Test
       description: Recalculate Datasets for Test
-      operationId: recalculateDatasets
+      operationId: recalculateTestDatasets
       parameters:
       - name: id
         in: path
@@ -2359,7 +2359,7 @@ paths:
       tags:
       - Test
       description: Update the Access configuration for a Test
-      operationId: updateAccess
+      operationId: updateTestAccess
       parameters:
       - name: id
         in: path
@@ -2782,8 +2782,11 @@ components:
               slack-channel-message: "#/components/schemas/SlackChannelMessageActionConfig"
         secrets:
           type: object
-          allOf:
-          - $ref: "#/components/schemas/Secret"
+          properties:
+            token:
+              type: string
+            modified:
+              type: boolean
         testId:
           format: int32
           type: integer
@@ -2794,12 +2797,26 @@ components:
     ActionLog:
       description: Action Log
       required:
+      - id
+      - level
+      - timestamp
+      - message
       - testId
       - event
       type: object
-      allOf:
-      - $ref: "#/components/schemas/PersistentLog"
       properties:
+        id:
+          format: int64
+          type: integer
+        level:
+          format: int32
+          type: integer
+        timestamp:
+          format: date-time
+          type: string
+          example: 2022-03-10T16:15:50Z
+        message:
+          type: string
         testId:
           format: int32
           type: integer
@@ -2914,8 +2931,6 @@ components:
           - SAME
           - WORSE
           type: string
-          allOf:
-          - $ref: "#/components/schemas/BetterOrWorse"
         experimentValue:
           format: double
           description: Experiment value
@@ -2998,14 +3013,39 @@ components:
       description: A dataset is the JSON document used as the basis for all comparisons
         and reporting
       required:
+      - access
+      - owner
+      - start
+      - stop
       - testid
       - data
       - ordinal
       type: object
-      allOf:
-      - $ref: "#/components/schemas/ProtectedType"
-      - $ref: "#/components/schemas/ProtectedTimeType"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+        start:
+          format: int64
+          description: Run Start timestamp
+          type: integer
+          example: 1704965908267
+        stop:
+          format: int64
+          description: Run Stop timestamp
+          type: integer
+          example: 1704965908267
         id:
           format: int32
           description: Dataset Unique ID
@@ -3089,15 +3129,29 @@ components:
     DatasetLog:
       description: Dataset Log
       required:
+      - id
+      - level
+      - timestamp
+      - message
       - source
       - testId
       - runId
       - datasetId
       - datasetOrdinal
       type: object
-      allOf:
-      - $ref: "#/components/schemas/PersistentLog"
       properties:
+        id:
+          format: int64
+          type: integer
+        level:
+          format: int32
+          type: integer
+        timestamp:
+          format: date-time
+          type: string
+          example: 2022-03-10T16:15:50Z
+        message:
+          type: string
         source:
           type: string
         testId:
@@ -3114,6 +3168,10 @@ components:
           type: integer
     DatasetSummary:
       required:
+      - access
+      - owner
+      - start
+      - stop
       - id
       - runId
       - ordinal
@@ -3121,9 +3179,31 @@ components:
       - testname
       - schemas
       type: object
-      allOf:
-      - $ref: "#/components/schemas/ProtectedTimeType"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+        start:
+          format: int64
+          description: Run Start timestamp
+          type: integer
+          example: 1704965908267
+        stop:
+          format: int64
+          description: Run Stop timestamp
+          type: integer
+          example: 1704965908267
         id:
           format: int32
           description: Unique Dataset ID
@@ -3188,8 +3268,6 @@ components:
           - PROTECTED
           - PRIVATE
           type: string
-          allOf:
-          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -3275,6 +3353,7 @@ components:
           description: Elasticsearch url
           type: string
     ErrorDetails:
+      description: Validation Error Details
       required:
       - type
       - message
@@ -3638,6 +3717,8 @@ components:
       description: "A Label is a core component of Horreum, defining which components\
         \ of the JSON document are part of a KPI and how the metric values are calculated"
       required:
+      - access
+      - owner
       - id
       - name
       - extractors
@@ -3645,9 +3726,21 @@ components:
       - metrics
       - schemaId
       type: object
-      allOf:
-      - $ref: "#/components/schemas/ProtectedType"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
         id:
           format: int32
           description: Unique ID for Label
@@ -3687,13 +3780,36 @@ components:
           example: 101
     LabelInFingerprint:
       type: object
-      allOf:
-      - $ref: "#/components/schemas/LabelLocation"
+      properties:
+        type:
+          description: Location of Label usage
+          type: string
+          example: VIEW
+        testId:
+          format: int32
+          description: Unique ID for location that references Schema
+          type: integer
+          example: 101
+        testName:
+          description: Test name that references Schema
+          type: string
+          example: My Benchmark
     LabelInReport:
       type: object
-      allOf:
-      - $ref: "#/components/schemas/LabelLocation"
       properties:
+        type:
+          description: Location of Label usage
+          type: string
+          example: VIEW
+        testId:
+          format: int32
+          description: Unique ID for location that references Schema
+          type: integer
+          example: 101
+        testName:
+          description: Test name that references Schema
+          type: string
+          example: My Benchmark
         configId:
           format: int32
           type: integer
@@ -3705,9 +3821,20 @@ components:
           type: string
     LabelInRule:
       type: object
-      allOf:
-      - $ref: "#/components/schemas/LabelLocation"
       properties:
+        type:
+          description: Location of Label usage
+          type: string
+          example: VIEW
+        testId:
+          format: int32
+          description: Unique ID for location that references Schema
+          type: integer
+          example: 101
+        testName:
+          description: Test name that references Schema
+          type: string
+          example: My Benchmark
         ruleId:
           format: int32
           type: integer
@@ -3715,9 +3842,20 @@ components:
           type: string
     LabelInVariable:
       type: object
-      allOf:
-      - $ref: "#/components/schemas/LabelLocation"
       properties:
+        type:
+          description: Location of Label usage
+          type: string
+          example: VIEW
+        testId:
+          format: int32
+          description: Unique ID for location that references Schema
+          type: integer
+          example: 101
+        testName:
+          description: Test name that references Schema
+          type: string
+          example: My Benchmark
         variableId:
           format: int32
           type: integer
@@ -3725,9 +3863,20 @@ components:
           type: string
     LabelInView:
       type: object
-      allOf:
-      - $ref: "#/components/schemas/LabelLocation"
       properties:
+        type:
+          description: Location of Label usage
+          type: string
+          example: VIEW
+        testId:
+          format: int32
+          description: Unique ID for location that references Schema
+          type: integer
+          example: 101
+        testName:
+          description: Test name that references Schema
+          type: string
+          example: My Benchmark
         viewId:
           format: int32
           type: integer
@@ -3917,8 +4066,6 @@ components:
           - PROTECTED
           - PRIVATE
           type: string
-          allOf:
-          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -3949,8 +4096,6 @@ components:
           - PROTECTED
           - PRIVATE
           type: string
-          allOf:
-          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -4056,11 +4201,25 @@ components:
     ReportLog:
       description: Report Log
       required:
+      - id
+      - level
+      - timestamp
+      - message
       - reportId
       type: object
-      allOf:
-      - $ref: "#/components/schemas/PersistentLog"
       properties:
+        id:
+          format: int64
+          type: integer
+        level:
+          format: int32
+          type: integer
+        timestamp:
+          format: date-time
+          type: string
+          example: 2022-03-10T16:15:50Z
+        message:
+          type: string
         reportId:
           format: int32
           type: integer
@@ -4084,8 +4243,6 @@ components:
           - PROTECTED
           - PRIVATE
           type: string
-          allOf:
-          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -4181,8 +4338,6 @@ components:
           - PROTECTED
           - PRIVATE
           type: string
-          allOf:
-          - $ref: "#/components/schemas/Access"
           example: PUBLIC
         owner:
           description: Name of the team that owns the test. Users must belong to the
@@ -4250,6 +4405,10 @@ components:
           - 106
     RunSummary:
       required:
+      - access
+      - owner
+      - start
+      - stop
       - id
       - testid
       - testname
@@ -4257,9 +4416,31 @@ components:
       - hasMetadata
       - datasets
       type: object
-      allOf:
-      - $ref: "#/components/schemas/ProtectedTimeType"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+        start:
+          format: int64
+          description: Run Start timestamp
+          type: integer
+          example: 1704965908267
+        stop:
+          format: int64
+          description: Run Stop timestamp
+          type: integer
+          example: 1704965908267
         id:
           format: int32
           description: Run unique ID
@@ -4325,13 +4506,27 @@ components:
     Schema:
       description: Data object that describes the schema definition for a test
       required:
+      - access
+      - owner
       - id
       - uri
       - name
       type: object
-      allOf:
-      - $ref: "#/components/schemas/ProtectedType"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
         id:
           format: int32
           description: Unique Schema ID
@@ -4379,10 +4574,52 @@ components:
     SchemaExport:
       description: Represents a Schema with all associated data used for export/import
         operations.
+      required:
+      - access
+      - owner
+      - id
+      - uri
+      - name
       type: object
-      allOf:
-      - $ref: "#/components/schemas/Schema"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+        id:
+          format: int32
+          description: Unique Schema ID
+          type: integer
+          example: 101
+        uri:
+          description: "Unique, versioned schema URI"
+          type: string
+          example: uri:my-schema:0.1
+        name:
+          description: Schema name
+          type: string
+          example: My benchmark schema
+        description:
+          description: Schema Description
+          type: string
+          example: Schema for processing my benchmark
+        schema:
+          description: JSON validation schema. Used to validate uploaded JSON documents
+          type: string
+          example: "{  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\"\
+            ,  \"$id\": \"https://example.com/product.schema.json\",  \"title\": \"\
+            Product\",  \"description\": \"A product in the catalog\",  \"type\":\
+            \ \"object\"}"
         labels:
           description: Array of Labels associated with schema
           type: array
@@ -4452,13 +4689,6 @@ components:
           description: Does schema have a JSON validation schema defined?
           type: boolean
           example: false
-    Secret:
-      type: object
-      properties:
-        token:
-          type: string
-        modified:
-          type: boolean
     SlackChannelMessageActionConfig:
       required:
       - type
@@ -4496,91 +4726,9 @@ components:
           type: integer
         config:
           description: Table Report Config
-          required:
-          - id
-          - title
-          - seriesLabels
-          - components
           type: object
           allOf:
           - $ref: "#/components/schemas/TableReportConfig"
-          properties:
-            id:
-              format: int32
-              type: integer
-            title:
-              type: string
-            test:
-              $ref: "#/components/schemas/Test"
-            filterLabels:
-              description: ArrayNode of filter labels
-              type: array
-              items:
-                type: string
-            filterFunction:
-              type: string
-            categoryLabels:
-              description: ArrayNode of category labels
-              type: array
-              items:
-                type: string
-            categoryFunction:
-              type: string
-            categoryFormatter:
-              type: string
-            seriesLabels:
-              description: ArrayNode of series labels
-              type: array
-              items:
-                type: string
-            seriesFunction:
-              type: string
-            seriesFormatter:
-              type: string
-            scaleLabels:
-              description: ArrayNode of filter labels
-              type: array
-              items:
-                type: string
-            scaleFunction:
-              type: string
-            scaleFormatter:
-              type: string
-            scaleDescription:
-              type: string
-            components:
-              description: List of ReportComponents
-              type: array
-              items:
-                description: Report Component
-                required:
-                - name
-                - order
-                - labels
-                type: object
-                properties:
-                  id:
-                    format: int32
-                    type: integer
-                  name:
-                    type: string
-                  order:
-                    format: int32
-                    type: integer
-                  labels:
-                    description: Array of labels
-                    type: array
-                    items:
-                      type: string
-                    example:
-                    - Framework
-                  function:
-                    type: string
-                  unit:
-                    type: string
-                  reportId:
-                    format: int32
-                    type: integer
         created:
           format: date-time
           description: Created timestamp
@@ -4649,11 +4797,25 @@ components:
           items:
             description: Report Log
             required:
+            - id
+            - level
+            - timestamp
+            - message
             - reportId
             type: object
-            allOf:
-            - $ref: "#/components/schemas/PersistentLog"
             properties:
+              id:
+                format: int64
+                type: integer
+              level:
+                format: int32
+                type: integer
+              timestamp:
+                format: date-time
+                type: string
+                example: 2022-03-10T16:15:50Z
+              message:
+                type: string
               reportId:
                 format: int32
                 type: integer
@@ -4774,18 +4936,47 @@ components:
           type: array
           items:
             type: number
+    Target:
+      description: Change's target
+      type: object
+      properties:
+        target:
+          description: "concatenated simicolons varibleID;{fingeprintJson}"
+          type: string
+        type:
+          type: string
+        refId:
+          type: string
+        data:
+          type: string
+        payload:
+          type: object
     Test:
       description: Represents a Test. Tests are typically equivalent to a particular
         benchmark
       required:
+      - access
+      - owner
       - id
       - name
       - datastoreId
       - notificationsEnabled
       type: object
-      allOf:
-      - $ref: "#/components/schemas/ProtectedType"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
         id:
           format: int32
           description: Unique Test id
@@ -4852,10 +5043,92 @@ components:
     TestExport:
       description: Represents a Test with all associated data used for export/import
         operations.
+      required:
+      - access
+      - owner
+      - id
+      - name
+      - datastoreId
+      - notificationsEnabled
       type: object
-      allOf:
-      - $ref: "#/components/schemas/Test"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
+        id:
+          format: int32
+          description: Unique Test id
+          type: integer
+          example: 101
+        name:
+          description: Test name
+          type: string
+          example: my-comprehensive-benchmark
+        folder:
+          description: Name of folder that the test is stored in. Folders allow tests
+            to be organised in the UI
+          type: string
+          example: My Team Folder
+        description:
+          description: Description of the test
+          type: string
+          example: Comprehensive benchmark to tests the limits of any system it is
+            run against
+        datastoreId:
+          format: int32
+          description: backend ID for backing datastore
+          type: integer
+        timelineLabels:
+          description: List of label names that are used for determining metric to
+            use as the time series
+          type: array
+          items:
+            type: string
+          example:
+          - timestamp
+        timelineFunction:
+          description: Label function to modify timeline labels to a produce a value
+            used for ordering datapoints
+          type: string
+          example: timestamp => timestamp
+        fingerprintLabels:
+          description: 'Array of Label names that are used to create a fingerprint '
+          type: array
+          items:
+            type: string
+          example:
+          - build_tag
+        fingerprintFilter:
+          description: Filter function to filter out datasets that are comparable
+            for the purpose of change detection
+          type: string
+          example: value => value === "true"
+        compareUrl:
+          description: URL to external service that can be called to compare runs.  This
+            is typically an external reporting/visulization service
+          type: string
+          example: "(ids, token) => 'http://repoting.example.com/report/specj?q='\
+            \ + ids.join('&q=') + \"&token=\"+token"
+        transformers:
+          description: Array for transformers defined for the Test
+          type: array
+          items:
+            $ref: "#/components/schemas/Transformer"
+        notificationsEnabled:
+          description: Are notifications enabled for the test
+          type: boolean
+          example: true
         variables:
           description: Array of Variables associated with test
           type: array
@@ -4920,13 +5193,27 @@ components:
           example: 64
     TestSummary:
       required:
+      - access
+      - owner
       - id
       - name
       - datastoreId
       type: object
-      allOf:
-      - $ref: "#/components/schemas/ProtectedType"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
         id:
           format: int32
           description: ID of tests
@@ -4997,6 +5284,8 @@ components:
       description: A transformer extracts labals and applies a Function to convert
         a Run into one or more Datasets
       required:
+      - access
+      - owner
       - id
       - name
       - extractors
@@ -5004,9 +5293,21 @@ components:
       - schemaUri
       - schemaName
       type: object
-      allOf:
-      - $ref: "#/components/schemas/ProtectedType"
       properties:
+        access:
+          description: Access rights for the test. This defines the visibility of
+            the Test in the UI
+          enum:
+          - PUBLIC
+          - PROTECTED
+          - PRIVATE
+          type: string
+          example: PUBLIC
+        owner:
+          description: Name of the team that owns the test. Users must belong to the
+            team that owns a test to make modifications
+          type: string
+          example: performance-team
         id:
           format: int32
           description: Unique Transformer id
@@ -5123,6 +5424,7 @@ components:
           description: Password
           type: string
     ValidationError:
+      description: Schema validation error
       required:
       - schemaId
       - error
@@ -5135,9 +5437,41 @@ components:
           example: 101
         error:
           description: Validation Error Details
+          required:
+          - type
+          - message
           type: object
-          allOf:
-          - $ref: "#/components/schemas/ErrorDetails"
+          properties:
+            type:
+              description: Validation Error type
+              type: string
+            code:
+              type: string
+            path:
+              type: string
+            evaluationPath:
+              type: string
+            schemaPath:
+              type: string
+              deprecated: true
+            schemaLocation:
+              type: string
+            instanceLocation:
+              type: string
+            property:
+              type: string
+            arguments:
+              type: array
+              items:
+                type: string
+            details:
+              type: string
+            messageKey:
+              type: string
+            valid:
+              type: boolean
+            message:
+              type: string
     Variable:
       required:
       - id
@@ -5190,6 +5524,29 @@ components:
           description: Privacy statement
           type: string
           example: link/to/external/privacy/statement
+    ViewComponent:
+      description: Single view component
+      required:
+      - id
+      - headerOrder
+      - headerName
+      - labels
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        headerOrder:
+          format: int32
+          type: integer
+        headerName:
+          type: string
+        labels:
+          type: array
+          items:
+            type: string
+        render:
+          type: string
     Watch:
       required:
       - users

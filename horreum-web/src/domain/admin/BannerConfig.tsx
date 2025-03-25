@@ -22,7 +22,7 @@ import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 function setBanner(severity: string, title: string, message: string) {
-    return bannerApi.set({ severity, title, message, active: true })
+    return bannerApi.setBanner({ severity, title, message, active: true })
 }
 
 export default function BannerConfig() {
@@ -33,7 +33,7 @@ export default function BannerConfig() {
     const [saving, setSaving] = useState(false)
     const isAdmin = useSelector(isAdminSelector)
     useEffect(() => {
-        bannerApi.get().then(
+        bannerApi.getBanner().then(
             banner => {
                 if (banner) {
                     setSeverity(banner.severity)

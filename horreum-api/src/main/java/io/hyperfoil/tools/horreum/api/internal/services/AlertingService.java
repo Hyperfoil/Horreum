@@ -69,7 +69,7 @@ public interface AlertingService {
 
     @GET
     @Path("recalculate")
-    DatapointRecalculationStatus getRecalculationStatus(@Parameter(required = true) @QueryParam("test") int testId);
+    DatapointRecalculationStatus getDatapointRecalculationStatus(@Parameter(required = true) @QueryParam("test") int testId);
 
     @POST
     @Path("/datapoint/last")

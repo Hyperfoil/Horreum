@@ -33,7 +33,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
             return
         }
         setLoading(true)
-        datasetApi.listBySchema(
+        datasetApi.listDatasetsBySchema(
             props.uri,
             pagination.perPage,
             pagination.page,

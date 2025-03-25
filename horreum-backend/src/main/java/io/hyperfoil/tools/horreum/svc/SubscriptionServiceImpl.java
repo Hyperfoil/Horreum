@@ -46,7 +46,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @RolesAllowed({ Roles.VIEWER, Roles.TESTER, Roles.ADMIN })
     @WithRoles
     @Override
-    public Watch get(int testId) {
+    public Watch getSubscription(int testId) {
         WatchDAO watch = WatchDAO.find("test.id = ?1", testId).firstResult();
         if (watch == null) {
             watch = new WatchDAO();
@@ -160,7 +160,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @WithRoles
     @Transactional
     @Override
-    public void update(int testId, Watch dto) {
+    public void updateSubscription(int testId, Watch dto) {
         WatchDAO watch = WatchMapper.to(dto);
         WatchDAO existing = WatchDAO.find("test.id", testId).firstResult();
         if (existing == null) {
@@ -213,7 +213,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     void exportSubscriptions(TestExport test) {
-        test.subscriptions = get(test.id);
+        test.subscriptions = getSubscription(test.id);
     }
 
     void importSubscriptions(TestExport test) {

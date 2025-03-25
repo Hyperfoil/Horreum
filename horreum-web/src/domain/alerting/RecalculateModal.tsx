@@ -62,7 +62,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
         onClose()
     }
     const fetchProgress = () => {
-        alertingApi.getRecalculationStatus(testId).then(
+        alertingApi.getDatapointRecalculationStatus(testId).then(
             response => {
                 if (response.done) {
                     close()

@@ -46,7 +46,7 @@ export default function DatasetData(props: DatasetDataProps) {
 
     }, [props.datasetId])
     useEffect(() => {
-        datasetApi.getSummary(props.datasetId).then(
+        datasetApi.getDatasetSummary(props.datasetId).then(
             ds => setSchemas(ds.schemas),
             e => alerting.dispatchError( e, "FETCH_DATASET_SUMMARY", "Failed to fetch dataset schemas")
         )

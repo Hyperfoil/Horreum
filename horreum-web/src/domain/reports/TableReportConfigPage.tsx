@@ -155,7 +155,7 @@ export default function TableReportConfigPage() {
     useEffect(() => {
         if (!configId || configId === "__new") {
             document.title = "New report | Horreum"
-            testApi.get(currentTestId).then(updateTest)
+            testApi.getTest(currentTestId).then(updateTest)
             return
         }
         setLoading(true)

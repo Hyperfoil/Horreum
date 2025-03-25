@@ -10,7 +10,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
-@Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class, description = "Represents a Test. Tests are typically equivalent to a particular benchmark")
+@Schema(type = SchemaType.OBJECT, description = "Represents a Test. Tests are typically equivalent to a particular benchmark")
 public class Test extends ProtectedType {
     @JsonProperty(required = true)
     @Schema(description = "Unique Test id", example = "101")

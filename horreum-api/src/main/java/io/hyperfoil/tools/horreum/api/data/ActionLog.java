@@ -7,7 +7,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Schema(type = SchemaType.OBJECT, description = "Action Log", name = "ActionLog", allOf = PersistentLog.class)
+@Schema(type = SchemaType.OBJECT, description = "Action Log", name = "ActionLog")
 public class ActionLog extends PersistentLog {
     @NotNull
     @JsonProperty(required = true)

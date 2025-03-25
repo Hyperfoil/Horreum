@@ -23,11 +23,11 @@ public interface SubscriptionService {
 
     @GET
     @Path("/{testId}")
-    Watch get(@PathParam("testId") int testId);
+    Watch getSubscription(@PathParam("testId") int testId);
 
     @POST
     @Path("/{testid}")
-    void update(@PathParam("testid") int testId, @RequestBody(required = true) Watch watch);
+    void updateSubscription(@PathParam("testid") int testId, @RequestBody(required = true) Watch watch);
 
     @POST
     @Path("/{testid}/add")

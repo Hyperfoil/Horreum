@@ -42,9 +42,9 @@ public class BannerServiceImpl implements BannerService {
     @WithRoles
     @Transactional
     @Override
-    public void set(Banner dto) {
+    public void setBanner(Banner dto) {
         BannerDAO banner = BannerMapper.to(dto);
-        BannerDAO previous = getBanner();
+        BannerDAO previous = getBannerDAO();
         if (previous != null) {
             previous.active = false;
             em.merge(previous);
@@ -71,12 +71,12 @@ public class BannerServiceImpl implements BannerService {
 
     @PermitAll
     @Override
-    public Banner get() {
-        BannerDAO bannerDAO = getBanner();
+    public Banner getBanner() {
+        BannerDAO bannerDAO = getBannerDAO();
         return bannerDAO == null ? null : BannerMapper.from(bannerDAO);
     }
 
-    private BannerDAO getBanner() {
+    private BannerDAO getBannerDAO() {
         List<BannerDAO> banners = BannerDAO.list("active=?1 ORDER BY created DESC", true);
         return banners != null && !banners.isEmpty() ? banners.get(0) : null;
     }

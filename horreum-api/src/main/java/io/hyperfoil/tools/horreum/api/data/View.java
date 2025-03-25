@@ -4,6 +4,9 @@ import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
 
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class View {
@@ -18,6 +21,7 @@ public class View {
     public Integer testId;
     @NotNull
     @JsonProperty(required = true)
+    @Schema(type = SchemaType.ARRAY, description = "List of components for this view")
     public List<ViewComponent> components;
 
     public View() {

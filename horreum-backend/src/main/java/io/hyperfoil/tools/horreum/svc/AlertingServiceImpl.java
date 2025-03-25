@@ -1100,7 +1100,7 @@ public class AlertingServiceImpl implements AlertingService {
 
     @Override
     @RolesAllowed(Roles.TESTER)
-    public DatapointRecalculationStatus getRecalculationStatus(int testId) {
+    public DatapointRecalculationStatus getDatapointRecalculationStatus(int testId) {
         Recalculation recalculation = recalcProgress.get(testId);
         DatapointRecalculationStatus status = new DatapointRecalculationStatus();
         status.percentage = recalculation == null ? 100 : recalculation.progress;

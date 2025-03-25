@@ -56,7 +56,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
-        int id = schemaService.add(schema);
+        int id = schemaService.addSchema(schema);
         assertTrue(id > 0);
 
         SchemaDAO savedSchema = SchemaDAO.findById(id);
@@ -71,7 +71,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         String schemaUri = "urn:dummy:schema";
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
-        assertThrows(ForbiddenException.class, () -> schemaService.add(schema));
+        assertThrows(ForbiddenException.class, () -> schemaService.addSchema(schema));
     }
 
     @TestSecurity()
@@ -80,7 +80,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         String schemaUri = "urn:dummy:schema";
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
-        assertThrows(UnauthorizedException.class, () -> schemaService.add(schema));
+        assertThrows(UnauthorizedException.class, () -> schemaService.addSchema(schema));
     }
 
     @TestSecurity(user = DEFAULT_USER, roles = { Roles.TESTER })
@@ -89,7 +89,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         String schemaUri = "urn:dummy:schema";
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
-        assertThrows(SQLGrammarException.class, () -> schemaService.add(schema));
+        assertThrows(SQLGrammarException.class, () -> schemaService.addSchema(schema));
     }
 
     @org.junit.jupiter.api.Test
@@ -97,7 +97,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         String schemaUri = "dummy:schema";
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.add(schema));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addSchema(schema));
         assertEquals("Please use URI starting with one of these schemes: [urn, uri, http, https, ftp, file, jar]",
                 thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
@@ -109,14 +109,14 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
-        int id = schemaService.add(schema);
+        int id = schemaService.addSchema(schema);
         assertTrue(id > 0);
 
         // update the schema
         schema.id = id;
         schema.name = "urn:dummy:schema:v1";
 
-        int afterUpdateId = schemaService.update(schema);
+        int afterUpdateId = schemaService.updateSchema(schema);
         assertEquals(id, afterUpdateId);
 
         SchemaDAO savedSchema = SchemaDAO.findById(id);
@@ -133,7 +133,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         schema.id = 9999;
 
         // try to update a not existing schema
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.update(schema));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.updateSchema(schema));
         assertEquals("Missing schema id or schema with id 9999 does not exist", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -144,11 +144,11 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
-        int id = schemaService.add(schema);
+        int id = schemaService.addSchema(schema);
         assertTrue(id > 0);
 
         // try to create another schema with same name
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.add(schema));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addSchema(schema));
         assertEquals("Name already used", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -159,12 +159,12 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
-        int id = schemaService.add(schema);
+        int id = schemaService.addSchema(schema);
         assertTrue(id > 0);
 
         // try to create another schema with same uri
         schema.name = "urn:different-name";
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.add(schema));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.addSchema(schema));
         assertEquals("URI already used", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -175,19 +175,19 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
         // create the schema
-        int id = schemaService.add(schema);
+        int id = schemaService.addSchema(schema);
         assertTrue(id > 0);
         assertEquals(1, SchemaDAO.count());
 
         // delete schema
-        schemaService.delete(id);
+        schemaService.deleteSchema(id);
 
         assertEquals(0, SchemaDAO.count());
     }
 
     @org.junit.jupiter.api.Test
     void testDeleteSchemaNotFound() {
-        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.delete(999));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> schemaService.deleteSchema(999));
         assertEquals("Schema not found", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -218,31 +218,31 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         createSchema("Def", "urn:schema:3");
 
         // by default order by name and with descending direction
-        SchemaService.SchemaQueryResult res = schemaService.list(null, null, null, null, null, null);
+        SchemaService.SchemaQueryResult res = schemaService.listSchemas(null, null, null, null, null, null);
         assertEquals(3, res.schemas.size());
         assertEquals(3, res.count);
         assertEquals("Ghi", res.schemas.get(0).name);
 
         // order by uri with descending direction
-        res = schemaService.list(null, null, null, "uri", null, null);
+        res = schemaService.listSchemas(null, null, null, "uri", null, null);
         assertEquals(3, res.schemas.size());
         assertEquals(3, res.count);
         assertEquals("Def", res.schemas.get(0).name);
 
         // order by uri with ascending direction
-        res = schemaService.list(null, null, null, "uri", SortDirection.Ascending, null);
+        res = schemaService.listSchemas(null, null, null, "uri", SortDirection.Ascending, null);
         assertEquals(3, res.schemas.size());
         assertEquals(3, res.count);
         assertEquals("Ghi", res.schemas.get(0).name);
 
         // order by name with ascending direction
-        res = schemaService.list(null, null, null, "name", SortDirection.Ascending, null);
+        res = schemaService.listSchemas(null, null, null, "name", SortDirection.Ascending, null);
         assertEquals(3, res.schemas.size());
         assertEquals(3, res.count);
         assertEquals("Abc", res.schemas.get(0).name);
 
         // limit the list to 2 results
-        res = schemaService.list(Roles.MY_ROLES, 2, 0, null, null, null);
+        res = schemaService.listSchemas(Roles.MY_ROLES, 2, 0, null, null, null);
         assertEquals(2, res.schemas.size());
         // total number of records
         assertEquals(3, res.count);
@@ -259,32 +259,32 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         createSchema("Def3", "urn:schema:6");
 
         // exact match case-insensitive
-        SchemaService.SchemaQueryResult res = schemaService.list(null, null, null, null, null, "ghi2");
+        SchemaService.SchemaQueryResult res = schemaService.listSchemas(null, null, null, null, null, "ghi2");
         assertEquals(1, res.schemas.size());
         assertEquals(6, res.count);
         assertEquals("Ghi2", res.schemas.get(0).name);
 
         // partial match case-insensitive
-        res = schemaService.list(null, null, null, "name", SortDirection.Ascending, "ghi");
+        res = schemaService.listSchemas(null, null, null, "name", SortDirection.Ascending, "ghi");
         assertEquals(2, res.schemas.size());
         assertEquals(6, res.count);
         assertEquals("Ghi", res.schemas.get(0).name);
         assertEquals("Ghi2", res.schemas.get(1).name);
 
         // partial match case-insensitive with paging 1
-        res = schemaService.list(null, 1, 0, "name", SortDirection.Ascending, "ghi");
+        res = schemaService.listSchemas(null, 1, 0, "name", SortDirection.Ascending, "ghi");
         assertEquals(1, res.schemas.size());
         assertEquals(6, res.count);
         assertEquals("Ghi", res.schemas.get(0).name);
 
         // partial match case-insensitive with paging 2
-        res = schemaService.list(null, 1, 1, "name", SortDirection.Ascending, "ghi");
+        res = schemaService.listSchemas(null, 1, 1, "name", SortDirection.Ascending, "ghi");
         assertEquals(1, res.schemas.size());
         assertEquals(6, res.count);
         assertEquals("Ghi2", res.schemas.get(0).name);
 
         // partial match case-insensitive with paging 2
-        res = schemaService.list(Roles.MY_ROLES, 2, 1, "name", SortDirection.Ascending, "ef");
+        res = schemaService.listSchemas(Roles.MY_ROLES, 2, 1, "name", SortDirection.Ascending, "ef");
         assertEquals(1, res.schemas.size());
         assertEquals(6, res.count);
         assertEquals("Def3", res.schemas.get(0).name);
@@ -309,7 +309,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(FOO_TEAM, savedSchema.owner);
         assertEquals(Access.PUBLIC, savedSchema.access);
 
-        schemaService.updateAccess(s.id, FOO_TEAM, Access.PROTECTED);
+        schemaService.updateSchemaAccess(s.id, FOO_TEAM, Access.PROTECTED);
 
         savedSchema = SchemaDAO.findById(s.id);
         assertEquals(Access.PROTECTED, savedSchema.access);
@@ -323,7 +323,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(Access.PUBLIC, savedSchema.access);
 
         ServiceException thrown = assertThrows(ServiceException.class,
-                () -> schemaService.updateAccess(s.id, FOO_TESTER, Access.PROTECTED));
+                () -> schemaService.updateSchemaAccess(s.id, FOO_TESTER, Access.PROTECTED));
         assertEquals("Access change failed (missing permissions?)", thrown.getMessage());
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -331,7 +331,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testUpdateSchemaAccessWithInvalidSchema() {
         ServiceException thrown = assertThrows(ServiceException.class,
-                () -> schemaService.updateAccess(999, FOO_TESTER, Access.PROTECTED));
+                () -> schemaService.updateSchemaAccess(999, FOO_TESTER, Access.PROTECTED));
         assertEquals("Schema not found", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -719,14 +719,14 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
 
         ObjectNode schemaJson = (ObjectNode) objectMapper.readTree(schemaImport.replaceAll("TEAM_NAME", FOO_TEAM));
         SchemaExport schemaExport = objectMapper.readValue(schemaJson.toString(), SchemaExport.class);
-        schemaService.importSchema(schemaExport);
+        schemaService.addSchemaWithImport(schemaExport);
 
     }
 
     // utility to create a schema in the db, tested with testCreateSchema
     private Schema createSchema(String name, String uri) {
         Schema schema = createSampleSchema(name, uri, FOO_TEAM);
-        schema.id = schemaService.add(schema);
+        schema.id = schemaService.addSchema(schema);
         return schema;
     }
 }

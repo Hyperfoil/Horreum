@@ -3,7 +3,6 @@ package io.hyperfoil.tools.horreum.svc;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.DEFAULT_USER;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TEAM;
 import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_TESTER;
-import static io.hyperfoil.tools.horreum.svc.BaseServiceNoRestTest.FOO_UPLOADER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -64,7 +63,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         Test t1 = createSampleTest("test", null, null, null);
         Test t2 = createSampleTest("1234", null, null, null);
 
-        Test created1 = testService.add(t1);
+        Test created1 = testService.addTest(t1);
         assertNotNull(created1.id);
         assertEquals(1, TestDAO.count());
         TestDAO test1 = TestDAO.findById(created1.id);
@@ -74,7 +73,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(true, test1.notificationsEnabled);
         assertNull(test1.folder);
 
-        Test created2 = testService.add(t2);
+        Test created2 = testService.addTest(t2);
         assertNotNull(created2.id);
         assertEquals(2, TestDAO.count());
         TestDAO test2 = TestDAO.findById(created2.id);
@@ -92,19 +91,19 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         Test t3 = createSampleTest("another-test", null, " folder/with/spaces/trailing/slash  /  ", null);
         Test t4 = createSampleTest("single-slash", null, "  /  ", null);
 
-        TestDAO test1 = TestDAO.findById(testService.add(t1).id);
+        TestDAO test1 = TestDAO.findById(testService.addTest(t1).id);
         assertEquals(1, TestDAO.count());
         assertEquals("folder/trailing/slash", test1.folder);
 
-        TestDAO test2 = TestDAO.findById(testService.add(t2).id);
+        TestDAO test2 = TestDAO.findById(testService.addTest(t2).id);
         assertEquals(2, TestDAO.count());
         assertEquals("folder/with/spaces", test2.folder);
 
-        TestDAO test3 = TestDAO.findById(testService.add(t3).id);
+        TestDAO test3 = TestDAO.findById(testService.addTest(t3).id);
         assertEquals(3, TestDAO.count());
         assertEquals("folder/with/spaces/trailing/slash", test3.folder);
 
-        TestDAO test4 = TestDAO.findById(testService.add(t4).id);
+        TestDAO test4 = TestDAO.findById(testService.addTest(t4).id);
         assertEquals(4, TestDAO.count());
         assertNull(test4.folder);
     }
@@ -114,13 +113,13 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         Test t = createSampleTest("", null, null, null);
 
         // empty test name
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.add(t));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.addTest(t));
         assertEquals("Test name can not be empty", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
 
         // null test name
         t.name = null;
-        thrown = assertThrows(ServiceException.class, () -> testService.add(t));
+        thrown = assertThrows(ServiceException.class, () -> testService.addTest(t));
         assertEquals("Test name can not be empty", thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -129,7 +128,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     void testCreateTestWithMissingRole() {
         Test t = createSampleTest("test", "missing-role", null, null);
 
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.add(t));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.addTest(t));
         assertEquals(String.format("This user does not have the %s role!", t.owner), thrown.getMessage());
         assertEquals(Response.Status.FORBIDDEN.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -138,21 +137,21 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testCreateTestForbidden() {
         Test t = createSampleTest("test", null, null, null);
-        assertThrows(ForbiddenException.class, () -> testService.add(t));
+        assertThrows(ForbiddenException.class, () -> testService.addTest(t));
     }
 
     @TestSecurity()
     @org.junit.jupiter.api.Test
     void testCreateTestUnauthorized() {
         Test t = createSampleTest("test", null, null, null);
-        assertThrows(UnauthorizedException.class, () -> testService.add(t));
+        assertThrows(UnauthorizedException.class, () -> testService.addTest(t));
     }
 
     @org.junit.jupiter.api.Test
     void testCreateTestWithWildcardFolder() {
         Test t = createSampleTest("test", null, null, null);
         t.folder = "*";
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> testService.add(t));
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> testService.addTest(t));
         assertEquals("Illegal folder name '*': this is used as wildcard.", thrown.getMessage());
     }
 
@@ -160,12 +159,12 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     void testCreateTestWithExistingName() {
         Test t = createSampleTest("test", null, null, null);
 
-        Test created = testService.add(t);
+        Test created = testService.addTest(t);
         assertNotNull(created.id);
         assertEquals(1, TestDAO.count());
 
         // try to create the same test without id, it will try to create a different test
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.add(t));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.addTest(t));
         assertEquals("Could not persist test due to another test.", thrown.getMessage());
         assertEquals(Response.Status.CONFLICT.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -175,9 +174,9 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         Test t1 = createSampleTest("test", null, null, null);
         Test t2 = createSampleTest("1234", null, null, null);
 
-        Test created1 = testService.add(t1);
+        Test created1 = testService.addTest(t1);
         assertNotNull(created1.id);
-        Test created2 = testService.add(t2);
+        Test created2 = testService.addTest(t2);
         assertNotNull(created2.id);
 
         assertTrue(((TestServiceImpl) testService).checkTestExists(created1.id));
@@ -189,7 +188,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     void testUpdateTest() {
         Test t = createSampleTest("test", null, null, null);
 
-        Test created = testService.add(t);
+        Test created = testService.addTest(t);
         assertNotNull(created.id);
         assertEquals(1, TestDAO.count());
         TestDAO test = TestDAO.findById(created.id);
@@ -201,7 +200,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         created.name = "differentName";
         created.notificationsEnabled = false;
 
-        Test updated = testService.update(created);
+        Test updated = testService.updateTest(created);
         assertEquals(1, TestDAO.count());
         test = TestDAO.findById(updated.id);
         assertEquals(created.name, test.name);
@@ -214,7 +213,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     void testUpdateNotExistingTest() {
         Test t = createSampleTest("test", null, null, null);
 
-        Test created = testService.add(t);
+        Test created = testService.addTest(t);
         assertNotNull(created.id);
         assertEquals(1, TestDAO.count());
         TestDAO test = TestDAO.findById(created.id);
@@ -225,13 +224,13 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
         // change to a non-existing id
         created.id = 999;
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.update(created));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.updateTest(created));
         assertEquals("Missing test id or test with id 999 does not exist", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
 
         // change to a null id
         created.id = null;
-        thrown = assertThrows(ServiceException.class, () -> testService.update(created));
+        thrown = assertThrows(ServiceException.class, () -> testService.updateTest(created));
         assertEquals("Missing test id or test with id null does not exist", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -305,23 +304,23 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
         assertEquals(5, TestDAO.count());
 
-        TestService.TestQueryResult result = testService.list(null, null, null, "name",
+        TestService.TestQueryResult result = testService.listTests(null, null, null, "name",
                 SortDirection.Ascending);
         assertEquals(5, result.count);
         assertEquals(5, result.tests.size());
 
         // page 0 limited to 3 results
-        result = testService.list(null, 3, 0, null, SortDirection.Ascending);
+        result = testService.listTests(null, 3, 0, null, SortDirection.Ascending);
         assertEquals(5, result.count);
         assertEquals(3, result.tests.size());
 
         // page 1 limited to 3 results -> only 2 left
-        result = testService.list(null, 3, 1, null, SortDirection.Ascending);
+        result = testService.listTests(null, 3, 1, null, SortDirection.Ascending);
         assertEquals(5, result.count);
         assertEquals(2, result.tests.size());
 
         // page 2 limited to 3 results -> no more left
-        result = testService.list(null, 3, 2, null, SortDirection.Ascending);
+        result = testService.listTests(null, 3, 2, null, SortDirection.Ascending);
         assertEquals(5, result.count);
         assertEquals(0, result.tests.size());
     }
@@ -337,21 +336,21 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(5, TestDAO.count());
 
         // name ascending
-        TestService.TestQueryResult result = testService.list(null, null, null, "name", SortDirection.Ascending);
+        TestService.TestQueryResult result = testService.listTests(null, null, null, "name", SortDirection.Ascending);
         assertEquals(5, result.count);
         assertEquals(5, result.tests.size());
         assertEquals("test1", result.tests.get(0).name);
         assertEquals("test5", result.tests.get(4).name);
 
         // name descending
-        result = testService.list(null, null, null, "name", SortDirection.Descending);
+        result = testService.listTests(null, null, null, "name", SortDirection.Descending);
         assertEquals(5, result.count);
         assertEquals(5, result.tests.size());
         assertEquals("test5", result.tests.get(0).name);
         assertEquals("test1", result.tests.get(4).name);
 
         // folder descending
-        result = testService.list(null, null, null, "folder", SortDirection.Descending);
+        result = testService.listTests(null, null, null, "folder", SortDirection.Descending);
         assertEquals(5, result.count);
         assertEquals(5, result.tests.size());
         assertEquals("folder3/folder31", result.tests.get(0).folder);
@@ -372,27 +371,27 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(8, TestDAO.count());
 
         // 2 tests in the root folder
-        TestService.TestListing result = testService.summary(null, null, 20, 0, null, null);
+        TestService.TestListing result = testService.getTestSummary(null, null, 20, 0, null, null);
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
 
         // page set to 0, always return all
-        result = testService.summary(null, null, 2, 0, null, null);
+        result = testService.getTestSummary(null, null, 2, 0, null, null);
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
 
         // page 1 limited to 2 results
-        result = testService.summary(null, null, 2, 1, null, null);
+        result = testService.getTestSummary(null, null, 2, 1, null, null);
         assertEquals(3, result.count);
         assertEquals(2, result.tests.size());
 
         // page 2 limited to 2 results -> only 1 left
-        result = testService.summary(null, null, 2, 2, null, null);
+        result = testService.getTestSummary(null, null, 2, 2, null, null);
         assertEquals(3, result.count);
         assertEquals(1, result.tests.size());
 
         // page 3 limited to 2 results -> no more left
-        result = testService.summary(null, null, 2, 3, null, null);
+        result = testService.getTestSummary(null, null, 2, 3, null, null);
         assertEquals(3, result.count);
         assertEquals(0, result.tests.size());
     }
@@ -411,17 +410,17 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(8, TestDAO.count());
 
         // 2 tests in the root folder
-        TestService.TestListing result = testService.summary(null, null, 20, 0, null, null);
+        TestService.TestListing result = testService.getTestSummary(null, null, 20, 0, null, null);
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
 
         // folder folder1
-        result = testService.summary(null, "folder1", 20, 0, null, null);
+        result = testService.getTestSummary(null, "folder1", 20, 0, null, null);
         assertEquals(2, result.count);
         assertEquals(2, result.tests.size());
 
         // folder folder3/folder31
-        result = testService.summary(null, "folder3/folder31", 20, 0, null, null);
+        result = testService.getTestSummary(null, "folder3/folder31", 20, 0, null, null);
         assertEquals(1, result.count);
         assertEquals(1, result.tests.size());
     }
@@ -440,25 +439,25 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(8, TestDAO.count());
 
         // default is descending order
-        TestService.TestListing result = testService.summary(null, null, 20, 1, null, null);
+        TestService.TestListing result = testService.getTestSummary(null, null, 20, 1, null, null);
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
         assertEquals("test8", result.tests.get(0).name);
 
         // explicitly setting descending order
-        result = testService.summary(null, null, 20, 1, SortDirection.Descending, null);
+        result = testService.getTestSummary(null, null, 20, 1, SortDirection.Descending, null);
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
         assertEquals("test8", result.tests.get(0).name);
 
         // changing to ascending order
-        result = testService.summary(null, null, 20, 1, SortDirection.Ascending, null);
+        result = testService.getTestSummary(null, null, 20, 1, SortDirection.Ascending, null);
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
         assertEquals("test6", result.tests.get(0).name);
 
         // ordering ignored when page is set to 0
-        result = testService.summary(null, null, 20, 0, SortDirection.Descending, null);
+        result = testService.getTestSummary(null, null, 20, 0, SortDirection.Descending, null);
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
         assertEquals("test6", result.tests.get(0).name);
@@ -478,34 +477,34 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         assertEquals(8, TestDAO.count());
 
         // name filter null -> return all under that folder
-        TestService.TestListing result = testService.summary(null, null, 20, 1, null, null);
+        TestService.TestListing result = testService.getTestSummary(null, null, 20, 1, null, null);
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
 
         // filter by exact match
-        result = testService.summary(null, null, 20, 1, null, "test6");
+        result = testService.getTestSummary(null, null, 20, 1, null, "test6");
         assertEquals(3, result.count);
         assertEquals(1, result.tests.size());
         assertEquals("test6", result.tests.get(0).name);
 
         // filter by exact match with no results as in different folder
-        result = testService.summary(null, null, 20, 1, null, "test1");
+        result = testService.getTestSummary(null, null, 20, 1, null, "test1");
         assertEquals(3, result.count);
         assertEquals(0, result.tests.size());
 
         // filter by exact match in different folder
-        result = testService.summary(null, "folder1", 20, 1, null, "test1");
+        result = testService.getTestSummary(null, "folder1", 20, 1, null, "test1");
         assertEquals(2, result.count);
         assertEquals(1, result.tests.size());
         assertEquals("test1", result.tests.get(0).name);
 
         // filter by partial match
-        result = testService.summary(null, null, 20, 1, null, "est");
+        result = testService.getTestSummary(null, null, 20, 1, null, "est");
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
 
         // filter by partial match case insesitive
-        result = testService.summary(null, null, 20, 1, null, "EsT");
+        result = testService.getTestSummary(null, null, 20, 1, null, "EsT");
         assertEquals(3, result.count);
         assertEquals(3, result.tests.size());
     }
@@ -519,7 +518,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         assertNotNull(created2.id);
         assertEquals(2, TestDAO.count());
 
-        testService.delete(created1.id);
+        testService.deleteTest(created1.id);
 
         assertEquals(1, TestDAO.count());
         assertNull(TestDAO.findById(created1.id));
@@ -528,7 +527,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
     @org.junit.jupiter.api.Test
     void testDeleteTestNotFound() {
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.delete(999));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.deleteTest(999));
         assertEquals("No test with id 999", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -543,7 +542,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
         Run run1 = createSampleRun(created1.id, JsonNodeFactory.instance.objectNode(), FOO_TEAM);
         int runId;
-        try (Response resp = runService.add(created1.name, FOO_TEAM, Access.PUBLIC, run1)) {
+        try (Response resp = runService.addRun(created1.name, FOO_TEAM, Access.PUBLIC, run1)) {
             assertEquals(Response.Status.ACCEPTED.getStatusCode(), resp.getStatus());
             runId = Integer.parseInt(resp.getEntity().toString());
         }
@@ -552,7 +551,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         // flush data
         em.clear();
 
-        testService.delete(created1.id);
+        testService.deleteTest(created1.id);
         assertEquals(0, TestDAO.count());
 
         // atm when a test is deleted, its runs are simply trashed
@@ -572,7 +571,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
         Run run1 = createSampleRun(created1.id, JsonNodeFactory.instance.objectNode(), FOO_TEAM);
         int runId;
-        try (Response resp = runService.add(created1.name, FOO_TEAM, Access.PUBLIC, run1)) {
+        try (Response resp = runService.addRun(created1.name, FOO_TEAM, Access.PUBLIC, run1)) {
             assertEquals(Response.Status.ACCEPTED.getStatusCode(), resp.getStatus());
             runId = Integer.parseInt(resp.getEntity().toString());
         }
@@ -584,7 +583,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         // trash the run
         runService.trash(runId, true);
 
-        testService.delete(created1.id);
+        testService.deleteTest(created1.id);
         assertEquals(0, TestDAO.count());
 
         // atm when a test is deleted, its runs are simply trashed
@@ -619,7 +618,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     void testEnsureTestExistsMissingUploaderRoleAndWrongToken() {
         String testName = "MyTest";
         Test test = createSampleTest(testName, null, null, null);
-        testService.add(test);
+        testService.addTest(test);
 
         ServiceException thrown = assertThrows(ServiceException.class,
                 () -> ((TestServiceImpl) testService).ensureTestExists(testName));
@@ -673,7 +672,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         TestDAO test = TestDAO.findById(t.id);
         assertEquals(Access.PUBLIC, test.access);
 
-        testService.updateAccess(test.id, test.owner, Access.PRIVATE);
+        testService.updateTestAccess(test.id, test.owner, Access.PRIVATE);
 
         test = TestDAO.findById(t.id);
         assertEquals(Access.PRIVATE, test.access);
@@ -682,7 +681,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     @org.junit.jupiter.api.Test
     void testUpdateAccessWithTestNotFound() {
         ServiceException thrown = assertThrows(ServiceException.class,
-                () -> testService.updateAccess(999, FOO_TEAM, Access.PRIVATE));
+                () -> testService.updateTestAccess(999, FOO_TEAM, Access.PRIVATE));
         assertEquals("Test not found", thrown.getMessage());
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -691,7 +690,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     void testUpdateTestAccessWithWrongOwner() {
         Test t = addTest("testName", null, null, null);
         ServiceException thrown = assertThrows(ServiceException.class,
-                () -> testService.updateAccess(t.id, BAR_TEAM, Access.PRIVATE));
+                () -> testService.updateTestAccess(t.id, BAR_TEAM, Access.PRIVATE));
         assertEquals("Access change failed (missing permissions?)", thrown.getMessage());
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), thrown.getResponse().getStatus());
     }
@@ -771,7 +770,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
         ObjectNode testJson = (ObjectNode) objectMapper.readTree(testImport.replaceAll("TEAM_NAME", FOO_TEAM));
         TestExport testExport = objectMapper.convertValue(testJson, TestExport.class);
-        testService.importTest(testExport);
+        testService.addTestWithImport(testExport);
     }
 
     @org.junit.jupiter.api.Test
@@ -805,7 +804,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
         ObjectNode testJson = (ObjectNode) objectMapper.readTree(testImport);
         TestExport testExport = objectMapper.convertValue(testJson, TestExport.class);
-        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.importTest(testExport));
+        ServiceException thrown = assertThrows(ServiceException.class, () -> testService.addTestWithImport(testExport));
         assertEquals(Response.Status.FORBIDDEN.getStatusCode(), thrown.getResponse().getStatus());
         assertEquals("This user does not have the perf-team role!", thrown.getMessage());
 
@@ -814,6 +813,6 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     // utility to create a sample test and add to Horreum
     private Test addTest(String name, String owner, String folder, Integer datastoreId) {
         Test test = createSampleTest(name, owner, folder, datastoreId);
-        return testService.add(test);
+        return testService.addTest(test);
     }
 }

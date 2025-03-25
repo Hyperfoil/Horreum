@@ -9,7 +9,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Schema(type = SchemaType.OBJECT, allOf = ProtectedType.class, description = "A transformer extracts labals and applies a Function to convert a Run into one or more Datasets")
+@Schema(type = SchemaType.OBJECT, description = "A transformer extracts labals and applies a Function to convert a Run into one or more Datasets")
 public class Transformer extends ProtectedType {
     @JsonProperty(required = true)
     @Schema(description = "Unique Transformer id", example = "101")

@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.hyperfoil.tools.horreum.api.data.PersistentLog;
 
-@Schema(type = SchemaType.OBJECT, description = "Dataset Log", name = "DatasetLog", allOf = PersistentLog.class)
+@Schema(type = SchemaType.OBJECT, description = "Dataset Log", name = "DatasetLog")
 public class DatasetLog extends PersistentLog {
     @NotNull
     @JsonProperty(required = true)

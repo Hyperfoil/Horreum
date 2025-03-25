@@ -108,7 +108,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
     public void testApiKeysPrivateUpload() throws JsonProcessingException {
         String theKey = horreumClient.userService.newApiKey(new UserService.ApiKeyRequest("private upload key", USER));
 
-        horreumClient.testService.updateAccess(dummyTest.id, dummyTest.owner, Access.PRIVATE);
+        horreumClient.testService.updateTestAccess(dummyTest.id, dummyTest.owner, Access.PRIVATE);
         try (HorreumClient apiClient = new HorreumClient.Builder()
                 .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
                 .horreumApiKey(theKey)
@@ -124,7 +124,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
                 assertEquals(202, response.getStatus());
             }
         } finally {
-            horreumClient.testService.updateAccess(dummyTest.id, dummyTest.owner, Access.PUBLIC);
+            horreumClient.testService.updateTestAccess(dummyTest.id, dummyTest.owner, Access.PUBLIC);
         }
     }
 
@@ -176,7 +176,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         schema.name = "Dummy";
         schema.owner = dummyTest.owner;
         schema.access = Access.PUBLIC;
-        schema.id = horreumClient.schemaService.add(schema);
+        schema.id = horreumClient.schemaService.addSchema(schema);
 
         long now = System.currentTimeMillis();
         String ts = String.valueOf(now);
@@ -216,7 +216,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         schema.name = "DummyArray";
         schema.owner = dummyTest.owner;
         schema.access = Access.PUBLIC;
-        schema.id = horreumClient.schemaService.add(schema);
+        schema.id = horreumClient.schemaService.addSchema(schema);
 
         long now = System.currentTimeMillis();
         String ts = String.valueOf(now);
@@ -267,7 +267,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             schema.name = "test";
             schema.owner = dummyTest.owner;
             schema.access = Access.PUBLIC;
-            schema.id = horreumClient.schemaService.add(schema);
+            schema.id = horreumClient.schemaService.addSchema(schema);
 
             //2. Define schema labels
             Label lblCpu = new Label();
@@ -417,7 +417,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             instantiateClient();
         }
         if (dummyTest != null) {
-            horreumClient.testService.delete(dummyTest.id);
+            horreumClient.testService.deleteTest(dummyTest.id);
             dummyTest = null;
         }
         Assertions.assertNull(dummyTest);
@@ -425,7 +425,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         test.name = "test";
         test.owner = "dev-team";
         test.description = "This is a dummy test";
-        dummyTest = horreumClient.testService.add(test);
+        dummyTest = horreumClient.testService.addTest(test);
         Assertions.assertNotNull(dummyTest);
     }
 
@@ -435,7 +435,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             instantiateClient();
         }
         if (dummyTest != null) {
-            horreumClient.testService.delete(dummyTest.id);
+            horreumClient.testService.deleteTest(dummyTest.id);
         }
         dummyTest = null;
     }

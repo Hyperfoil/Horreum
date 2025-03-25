@@ -38,7 +38,7 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
 
         // fetch the latest recalculation status
         if (test?.runs === undefined) {
-            testApi.getRecalculationStatus(props.testId).then(setStatus)
+            testApi.getTestRecalculationStatus(props.testId).then(setStatus)
         }
     }, [props.isOpen]);
 
@@ -56,10 +56,10 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
                               key="recalculate"
                               onClick={() => {
                                   setProgress(0)
-                                  testApi.recalculateDatasets(props.testId)
+                                  testApi.recalculateTestDatasets(props.testId)
                                       .then(() => {
                                           timerId.current = window.setInterval(() => {
-                                              testApi.getRecalculationStatus(props.testId)
+                                              testApi.getTestRecalculationStatus(props.testId)
                                                   .then(status => {
                                                       setStatus(status)
                                                       setProgress(status.finished)
