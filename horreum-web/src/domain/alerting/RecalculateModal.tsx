@@ -143,7 +143,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
                         <FormGroup label="Runs from:" fieldId="timeRange">
                             <TimeRangeSelect selection={timeRange ?? timeRangeOptions[0]} onSelect={setTimeRange} options={timeRangeOptions} />
                         </FormGroup>
-                        <FormGroup label="Recalculate Datpoints:" fieldId="recalcDatapoints">
+                        <FormGroup label="Recalculate Datapoints:" fieldId="recalcDatapoints">
                             <Checkbox id="recalcDatapoints" isChecked={clearDatapoints} onChange={(_event, val) => setClearDatapoints(val)} />
                         </FormGroup>
                         <FormGroup label="Save Debug logs:" fieldId="debug">
