@@ -24,9 +24,15 @@ function tsToDate(timestamp: number) {
 }
 
 function formatValue(value: number | string) {
+    // string version of the value
+    let valueAsString
     if (typeof value === "string") {
+        valueAsString = value;
         value = parseInt(value)
+    } else {
+        valueAsString = value.toString()
     }
+
     let suffix = ""
     if (value > 10000000) {
         value /= 1000000
@@ -36,7 +42,22 @@ function formatValue(value: number | string) {
         value /= 1000
         suffix = " k"
     }
-    return Number(value).toFixed(2) + suffix
+
+    value = Number(value)
+
+    const [_, decPart] = valueAsString.split(".")
+    let nonZeroIdx = 0
+    if (decPart) {
+        // set a limit to 10 decimal digits
+        for (nonZeroIdx; nonZeroIdx < 10; nonZeroIdx++) {
+            if (decPart[nonZeroIdx] != "0") {
+                // exit at the first non-zero digit
+                break;
+            }
+        }
+    }
+
+    return value.toFixed(nonZeroIdx+2) + suffix
 }
 
 function ellipsis(str: string) {
