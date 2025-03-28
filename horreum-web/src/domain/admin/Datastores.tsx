@@ -164,7 +164,7 @@ export default function Datastores() {
     };
 
     const fetchDataStores = (): Promise<void> => {
-        return apiCall(configApi.datastores(curTeam.key), alerting, "FETCH_DATASTORES", "Cannot fetch datastores")
+        return apiCall(configApi.getDatastoresByTeam(curTeam.key), alerting, "FETCH_DATASTORES", "Cannot fetch datastores")
             .then(setDatastores)
     }
 
