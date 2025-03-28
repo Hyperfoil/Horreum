@@ -9,8 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+
 import jakarta.inject.Inject;
-import jakarta.ws.rs.core.Response;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -108,9 +109,8 @@ class RunServiceNoRestTest extends BaseServiceNoRestTest {
     private int uploadRun(int testId, String owner, JsonNode runData) {
         Run run = createSampleRun(testId, runData, owner);
 
-        try (Response resp = runService.add(String.valueOf(testId), owner, Access.PUBLIC, run)) {
-            assertEquals(Response.Status.ACCEPTED.getStatusCode(), resp.getStatus());
-            return Integer.parseInt(resp.getEntity().toString());
-        }
+        List<Integer> runIds = runService.add(String.valueOf(testId), owner, Access.PUBLIC, run);
+        assertEquals(1, runIds.size());
+        return runIds.get(0);
     }
 }

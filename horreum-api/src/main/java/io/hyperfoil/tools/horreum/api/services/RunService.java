@@ -29,6 +29,7 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponseSchema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.jboss.resteasy.reactive.ResponseStatus;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.Separator;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
@@ -166,13 +167,14 @@ public interface RunService {
             @Parameter(name = "access", description = "New Access level", example = "0"),
     })
     @RequestBody(name = "runBody", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Run.class)), required = true)
+    @ResponseStatus(202) // ACCEPTED
     @APIResponses(value = {
             @APIResponse(responseCode = "202", description = "The request has been accepted for processing. Returns a list of created run IDs if available, "
                     + "or an empty list if processing is still ongoing. Label values and change detection processing " +
                     "is performed asynchronously.", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(type = SchemaType.ARRAY, implementation = Integer.class, example = "[101, 102, 103]"), example = "[101, 102, 103]")),
             @APIResponse(responseCode = "400", description = "Some fields are missing or invalid", content = @Content(mediaType = MediaType.APPLICATION_JSON))
     })
-    Response add(@QueryParam("test") String testNameOrId,
+    List<Integer> add(@QueryParam("test") String testNameOrId,
             @QueryParam("owner") String owner,
             @QueryParam("access") Access access,
             Run run);
