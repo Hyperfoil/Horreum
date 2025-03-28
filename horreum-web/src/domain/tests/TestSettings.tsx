@@ -64,7 +64,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
     const [access, setAccess] = useState<Access>(test?.access || Access.Public)
 
     useEffect( () => {
-        apiCall(configApi.datastores(owner), alerting, "DATASTORE", "Error occurred fetching datastores")
+        apiCall(configApi.getDatastoresByTeam(owner), alerting, "DATASTORE", "Error occurred fetching datastores")
             .then(ds => setDatastores(ds))
     }, [test, owner])
 

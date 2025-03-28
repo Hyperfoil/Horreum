@@ -43,12 +43,12 @@ public interface ConfigService {
     VersionInfo version();
 
     @GET
-    @Path("datastore/{team}")
+    @Path("datastore")
     @Operation(description = "Obtain list of configured datastores for particular team")
     @Parameters(value = {
             @Parameter(name = "team", description = "name of the team to search for defined datastores", example = "perf-team")
     })
-    List<Datastore> datastores(@PathParam("team") String team);
+    List<Datastore> getDatastoresByTeam(@QueryParam("team") String team);
 
     @GET
     @Path("datastore/types")
