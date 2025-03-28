@@ -3123,6 +3123,27 @@ paths:
               schema:
                 type: integer
                 format: int32
+    get:
+      description: Obtain list of configured datastores for particular team
+      operationId: getDatastoresByTeam
+      tags:
+      - Config
+      parameters:
+      - description: name of the team to search for defined datastores
+        example: perf-team
+        name: team
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Datastore"
   /api/config/datastore/types:
     get:
       description: Obtain list of available datastore types
@@ -3174,29 +3195,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DatastoreTestResponse"
-  /api/config/datastore/{team}:
-    get:
-      description: Obtain list of configured datastores for particular team
-      operationId: datastores
-      tags:
-      - Config
-      parameters:
-      - description: name of the team to search for defined datastores
-        example: perf-team
-        name: team
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Datastore"
   /api/config/keycloak:
     get:
       description: Obtain configuration information about keycloak server securing
