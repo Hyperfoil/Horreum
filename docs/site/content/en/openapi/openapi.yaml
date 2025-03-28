@@ -30,6 +30,27 @@ tags:
   x-smallrye-profile-external: ""
 paths:
   /api/config/datastore:
+    get:
+      tags:
+      - Config
+      description: Obtain list of configured datastores for particular team
+      operationId: getDatastoresByTeam
+      parameters:
+      - name: team
+        in: query
+        description: name of the team to search for defined datastores
+        schema:
+          type: string
+        example: perf-team
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Datastore"
     put:
       tags:
       - Config
@@ -117,29 +138,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DatastoreTestResponse"
-  /api/config/datastore/{team}:
-    get:
-      tags:
-      - Config
-      description: Obtain list of configured datastores for particular team
-      operationId: datastores
-      parameters:
-      - name: team
-        in: path
-        description: name of the team to search for defined datastores
-        required: true
-        schema:
-          type: string
-        example: perf-team
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Datastore"
   /api/config/keycloak:
     get:
       tags:
