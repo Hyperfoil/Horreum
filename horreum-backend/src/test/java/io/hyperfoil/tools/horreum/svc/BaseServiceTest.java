@@ -676,7 +676,7 @@ public class BaseServiceTest {
                         .oauth2(getUploaderToken())
                         .body(run)
                         .post("/api/run/test");
-                run.id = response.body().as(Integer.class);
+                run.id = (int) response.body().as(List.class).get(0);
                 log.debugf("Run ID: %d, for test ID: %d", run.id, run.testid);
             } finally {
                 if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
@@ -1005,7 +1005,7 @@ public class BaseServiceTest {
                 .body(r)
                 .post("/api/run/test");
         assertEquals(202, response.statusCode());
-
+        assertEquals(1, response.getBody().as(List.class).size());
     }
 
     String readFile(File file) {

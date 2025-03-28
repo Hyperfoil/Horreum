@@ -35,7 +35,6 @@ import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -383,7 +382,7 @@ public class RunServiceImpl implements RunService {
     @RolesAllowed(Roles.UPLOADER)
     @WithRoles
     @Override
-    public Response addRun(String testNameOrId, String owner, Access access, Run run) {
+    public List<Integer> addRun(String testNameOrId, String owner, Access access, Run run) {
         if (owner != null) {
             run.owner = owner;
         }
@@ -393,7 +392,7 @@ public class RunServiceImpl implements RunService {
         log.debugf("About to add new run to test %s using owner", testNameOrId, owner);
         if (testNameOrId == null || testNameOrId.isEmpty()) {
             if (run.testid == null || run.testid == 0) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("No test name or id provided").build();
+                throw ServiceException.badRequest("No test name or id provided");
             } else
                 testNameOrId = run.testid.toString();
         }
@@ -409,9 +408,7 @@ public class RunServiceImpl implements RunService {
                 Log.warnf("Dataset with id %d not found, cannot process it", dsId);
             }
         });
-        return Response.status(Response.Status.ACCEPTED).entity(String.valueOf(runPersistence.runId))
-                .header(HttpHeaders.LOCATION, "/run/" + runPersistence.runId)
-                .build();
+        return Collections.singletonList(runPersistence.runId);
     }
 
     @Override
