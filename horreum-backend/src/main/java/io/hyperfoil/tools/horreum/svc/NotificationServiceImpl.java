@@ -21,7 +21,6 @@ import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 
 import org.hibernate.Session;
-import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.alerting.NotificationSettings;
 import io.hyperfoil.tools.horreum.api.internal.services.NotificationService;
@@ -34,12 +33,13 @@ import io.hyperfoil.tools.horreum.mapper.NotificationSettingsMapper;
 import io.hyperfoil.tools.horreum.notification.Notification;
 import io.hyperfoil.tools.horreum.notification.NotificationPlugin;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
 
 @ApplicationScoped
 @Startup
 public class NotificationServiceImpl implements NotificationService {
-    private static final Logger log = Logger.getLogger(NotificationServiceImpl.class);
+
     //@formatter:off
     private static final String GET_NOTIFICATIONS = """
          WITH ens AS (
@@ -81,10 +81,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void onNewChanges(DatasetChanges event) {
         if (!event.isNotify()) {
-            log.debug("Notification skipped");
+            Log.debug("Notification skipped");
             return;
         }
-        log.debugf("Received new changes in test %d (%s), dataset %d/%d (fingerprint: %s)",
+        Log.debugf("Received new changes in test %d (%s), dataset %d/%d (fingerprint: %s)",
                 event.dataset.testId, event.testName, event.dataset.runId, event.dataset.ordinal, event.fingerprint);
         notifyAll(event.dataset.testId, n -> n.notifyChanges(event));
     }
@@ -93,14 +93,14 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void onMissingValues(MissingValuesEvent event) {
         if (!event.notify) {
-            log.debugf("Skipping notification for missing run values on test %d, run %d", event.dataset.testId,
+            Log.debugf("Skipping notification for missing run values on test %d, run %d", event.dataset.testId,
                     event.dataset.id);
             return;
         }
         // TODO: breaks storage/alerting separation!
         TestDAO test = TestDAO.findById(event.dataset.testId);
         String testName = test == null ? "unknown" : test.name;
-        log.debugf("Received missing values event in test %d (%s), run %d, variables %s", event.dataset.testId, testName,
+        Log.debugf("Received missing values event in test %d (%s), run %d, variables %s", event.dataset.testId, testName,
                 event.dataset.id, event.variables);
 
         String fingerprint = em.getReference(DatasetDAO.class, event.dataset.id).getFingerprint();
@@ -111,18 +111,18 @@ public class NotificationServiceImpl implements NotificationService {
         List<Object[]> results = em.unwrap(Session.class).createNativeQuery(GET_NOTIFICATIONS, Object[].class)
                 .setParameter(1, testId).getResultList();
         if (results.isEmpty()) {
-            log.infof("There are no subscribers for notification on test %d!", testId);
+            Log.infof("There are no subscribers for notification on test %d!", testId);
         }
         for (Object[] pair : results) {
             if (pair.length != 3) {
-                log.errorf("Unexpected result %s", Arrays.toString(pair));
+                Log.errorf("Unexpected result %s", Arrays.toString(pair));
             }
             String method = String.valueOf(pair[0]);
             String data = String.valueOf(pair[1]);
             String userName = String.valueOf(pair[2]);
             NotificationPlugin plugin = plugins.get(method);
             if (plugin == null) {
-                log.errorf("Cannot notify %s; no plugin for method %s with data %s", userName, method, data);
+                Log.errorf("Cannot notify %s; no plugin for method %s with data %s", userName, method, data);
             } else {
                 consumer.accept(plugin.create(userName, data));
             }
@@ -155,7 +155,7 @@ public class NotificationServiceImpl implements NotificationService {
                 try {
                     tm.setRollbackOnly();
                 } catch (SystemException e) {
-                    log.error("Cannot rollback", e);
+                    Log.error("Cannot rollback", e);
                 }
                 throw ServiceException.badRequest("Invalid method " + ns.method);
             }
@@ -200,7 +200,7 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationSettingsDAO.<NotificationSettingsDAO> stream("name", key.user.username).forEach(notification -> {
             NotificationPlugin plugin = plugins.get(notification.method);
             if (plugin == null) {
-                log.errorf("Cannot notify %s of API key \"%s\" expiration: no plugin for method %s",
+                Log.errorf("Cannot notify %s of API key '%s' expiration: no plugin for method %s",
                         notification.name, key.name, notification.method);
             } else {
                 plugin.create(notification.name, notification.data)

@@ -36,7 +36,7 @@ public class ConfigServiceTest extends BaseServiceTest {
     @org.junit.jupiter.api.Test
     public void getBackends(TestInfo testInfo) {
         List<?> backends = RestAssured.given().auth().oauth2(getTesterToken())
-                .get("/api/config/datastore/".concat(TESTER_ROLES[0]))
+                .get("/api/config/datastore/" + TESTER_ROLES[0])
                 .then()
                 .statusCode(200)
                 .extract().as(List.class);

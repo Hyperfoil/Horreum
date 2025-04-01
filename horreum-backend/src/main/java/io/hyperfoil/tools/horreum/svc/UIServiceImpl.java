@@ -105,7 +105,7 @@ public class UIServiceImpl implements UIService {
         TestDAO test = TestDAO.findById(testId);
 
         if (test == null) {
-            throw ServiceException.badRequest("Test not found with id: ".concat(Integer.toString(testId)));
+            throw ServiceException.badRequest("Test not found with id: " + testId);
         }
 
         return ViewDAO.<ViewDAO> find("test.id", testId)

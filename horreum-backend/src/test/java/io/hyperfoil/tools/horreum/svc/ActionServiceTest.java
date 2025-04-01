@@ -50,8 +50,8 @@ public class ActionServiceTest extends BaseServiceTest {
     public void testFailingHttp(TestInfo testInfo) {
         Test test = createTest(createExampleTest(getTestName(testInfo)));
 
-        addAllowedSite("http://localhost:".concat(port));
-        addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "http://localhost:".concat(port));
+        addAllowedSite("http://localhost:" + port);
+        addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "http://localhost:" + port);
 
         uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
 

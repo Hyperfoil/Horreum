@@ -129,7 +129,7 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
         Test t = createSampleTest("test", "missing-role", null, null);
 
         ServiceException thrown = assertThrows(ServiceException.class, () -> testService.addTest(t));
-        assertEquals(String.format("This user does not have the %s role!", t.owner), thrown.getMessage());
+        assertEquals("This user does not have the %s role!".formatted(t.owner), thrown.getMessage());
         assertEquals(Response.Status.FORBIDDEN.getStatusCode(), thrown.getResponse().getStatus());
     }
 

@@ -12,8 +12,6 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
-import org.jboss.logging.Logger;
-
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.internal.services.SubscriptionService;
@@ -21,13 +19,13 @@ import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.mapper.WatchMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 @Startup
 public class SubscriptionServiceImpl implements SubscriptionService {
-    private static final Logger log = Logger.getLogger(SubscriptionService.class);
 
     @Inject
     EntityManager em;
@@ -206,7 +204,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Transactional
     public void onTestDelete(int testId) {
         var subscriptions = WatchDAO.list("test.id = ?1", testId);
-        log.infof("Deleting %d subscriptions for test (%d)", subscriptions.size(), testId);
+        Log.infof("Deleting %d subscriptions for test %d", subscriptions.size(), testId);
         for (var subscription : subscriptions) {
             subscription.delete();
         }

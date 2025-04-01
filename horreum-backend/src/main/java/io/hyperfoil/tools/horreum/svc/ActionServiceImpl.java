@@ -15,8 +15,6 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
-import org.jboss.logging.Logger;
-
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -38,6 +36,7 @@ import io.hyperfoil.tools.horreum.mapper.ActionMapper;
 import io.hyperfoil.tools.horreum.mapper.AllowedSiteMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.runtime.Startup;
@@ -47,7 +46,6 @@ import io.vertx.mutiny.core.Vertx;
 @ApplicationScoped
 @Startup
 public class ActionServiceImpl implements ActionService {
-    private static final Logger log = Logger.getLogger(ActionServiceImpl.class);
 
     @Inject
     Instance<ActionPlugin> actionPlugins;
@@ -75,14 +73,14 @@ public class ActionServiceImpl implements ActionService {
         }
         for (ActionDAO action : actions) {
             if (!notify && !action.runAlways) {
-                log.debugf("Ignoring action for event %s in test %d, type %s as this event should not notfiy", event, testId,
+                Log.debugf("Ignoring action for event %s in test %d, type %s as this event should not notfiy", event, testId,
                         action.type);
                 continue;
             }
             try {
                 ActionPlugin plugin = plugins.get(action.type);
                 if (plugin == null) {
-                    log.errorf("No plugin for action type %s", action.type);
+                    Log.errorf("No plugin for action type %s", action.type);
                     new ActionLogDAO(PersistentLogDAO.ERROR, testId, event.name(), action.type,
                             "No plugin for action type " + action.type).persist();
                     continue;
@@ -91,7 +89,7 @@ public class ActionServiceImpl implements ActionService {
                         .with(item -> {
                         }, throwable -> logActionError(testId, event.name(), action.type, throwable));
             } catch (Exception e) {
-                log.errorf(e, "Failed to invoke action %d", action.id);
+                Log.errorf(e, "Failed to invoke action %d", action.id);
                 new ActionLogDAO(PersistentLogDAO.ERROR, testId, event.name(), action.type,
                         "Failed to invoke: " + e.getMessage()).persist();
                 new ActionLogDAO(PersistentLogDAO.DEBUG, testId, event.name(), action.type,
@@ -105,15 +103,15 @@ public class ActionServiceImpl implements ActionService {
     }
 
     void logActionError(int testId, String event, String type, Throwable throwable) {
-        log.errorf("Error executing action '%s' for event %s on test %d: %s: %s",
+        Log.errorf("Error executing action '%s' for event %s on test %d: %s: %s",
                 type, event, testId, throwable.getClass().getName(), throwable.getMessage());
         Util.executeBlocking(vertx, CachedSecurityIdentity.ANONYMOUS, Uni.createFrom().item(() -> {
             doLogActionError(testId, event, type, throwable);
             return null;
         })).subscribe().with(item -> {
         }, t -> {
-            log.error("Cannot log error in action!", t);
-            log.error("Logged error: ", throwable);
+            Log.error("Cannot log error in action!", t);
+            Log.error("Logged error: ", throwable);
         });
     }
 

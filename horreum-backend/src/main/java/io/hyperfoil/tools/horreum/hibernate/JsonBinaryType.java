@@ -1,7 +1,5 @@
 package io.hyperfoil.tools.horreum.hibernate;
 
-import static java.lang.String.format;
-
 import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -69,7 +67,7 @@ public class JsonBinaryType implements UserType<JsonNode> {
         try {
             ps.setObject(index, value.toString(), Types.OTHER);
         } catch (final Exception ex) {
-            throw new RuntimeException(format("Failed to convert JSON to String: %s", ex.getMessage()), ex);
+            throw new RuntimeException("Failed to convert JSON to String: " + ex.getMessage(), ex);
         }
     }
 
@@ -96,7 +94,7 @@ public class JsonBinaryType implements UserType<JsonNode> {
         try {
             return mapper.readTree(cached.toString());
         } catch (JsonProcessingException ex) {
-            throw new RuntimeException(format("Failed to convert String to JSON: %s", ex.getMessage()), ex);
+            throw new RuntimeException("Failed to convert String to JSON: " + ex.getMessage(), ex);
         }
     }
 

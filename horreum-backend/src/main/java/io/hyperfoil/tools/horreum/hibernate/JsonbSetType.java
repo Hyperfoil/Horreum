@@ -1,7 +1,5 @@
 package io.hyperfoil.tools.horreum.hibernate;
 
-import static java.lang.String.format;
-
 import java.io.Serializable;
 import java.sql.*;
 import java.util.*;
@@ -78,7 +76,7 @@ public class JsonbSetType implements UserType<ArrayNode> {
             Array array = ps.getConnection().createArrayOf("jsonb", str.toArray());
             ps.setObject(index, array);
         } catch (final Exception ex) {
-            throw new RuntimeException(format("Failed to convert JSON to String: %s", ex.getMessage()), ex);
+            throw new RuntimeException("Failed to convert JSON to String: " + ex.getMessage(), ex);
         }
     }
 

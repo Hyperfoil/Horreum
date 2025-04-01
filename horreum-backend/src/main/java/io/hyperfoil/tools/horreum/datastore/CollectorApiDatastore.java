@@ -16,8 +16,6 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
 
-import org.jboss.logging.Logger;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,11 +26,10 @@ import io.hyperfoil.tools.horreum.api.data.datastore.DatastoreType;
 import io.hyperfoil.tools.horreum.api.data.datastore.auth.APIKeyAuth;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
+import io.quarkus.logging.Log;
 
 @ApplicationScoped
 public class CollectorApiDatastore implements Datastore {
-
-    protected static final Logger log = Logger.getLogger(CollectorApiDatastore.class);
 
     @Inject
     ObjectMapper mapper;
@@ -45,7 +42,7 @@ public class CollectorApiDatastore implements Datastore {
             throws BadRequestException {
 
         if (metaData != null) {
-            log.warn("Empty request: " + metaData);
+            Log.warnf("Empty request: %s", metaData);
             throw ServiceException.badRequest("Empty request: " + metaData);
         }
         metaData = payload;
@@ -74,7 +71,7 @@ public class CollectorApiDatastore implements Datastore {
             HttpRequest request = builder.build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != Response.Status.OK.getStatusCode()) {
-                log.error("Collector API returned " + response.statusCode() + " body : " + response.body());
+                Log.errorf("Collector API returned %d body : %s", response.statusCode(), response.body());
                 throw ServiceException
                         .serverError("Collector API returned " + response.statusCode() + " body : " + response.body());
             }
@@ -82,10 +79,10 @@ public class CollectorApiDatastore implements Datastore {
             payload = mapper.readTree(response.body());
             return new DatastoreResponse(payload, metaData);
         } catch (JsonProcessingException e) {
-            log.error("Error while parsing response from collector API ", e);
+            Log.error("Error while parsing response from collector API ", e);
             throw ServiceException.serverError("Error while parsing response from collector API");
         } catch (IOException | InterruptedException e) {
-            log.error("Error while sending request to collector API", e);
+            Log.error("Error while sending request to collector API", e);
             throw ServiceException.serverError("Error while sending request to collector API");
         }
     }
@@ -109,11 +106,11 @@ public class CollectorApiDatastore implements Datastore {
         try {
             distinctTags = mapper.readValue(response.body(), String[].class);
         } catch (JsonProcessingException e) {
-            log.error("Error while parsing response from collector API: " + response.body(), e);
+            Log.errorf("Error while parsing response from collector API: %s", response.body(), e);
             throw ServiceException.badRequest("Error while parsing response from collector API " + response.body());
         }
         if (distinctTags == null || distinctTags.length == 0) {
-            log.warn("No tags found in collector API");
+            Log.warn("No tags found in collector API");
             throw ServiceException.badRequest("No tags found in collector API");
         }
         if (Arrays.stream(distinctTags).noneMatch(tag::equals)) {
@@ -146,7 +143,7 @@ public class CollectorApiDatastore implements Datastore {
             throw new RuntimeException(e);
         }
         if (jsonDatastoreConfig == null) {
-            log.error("Could not find collector API datastore: " + configuration.name);
+            Log.errorf("Could not find collector API datastore: %s", configuration.name);
             throw ServiceException.serverError("Could not find CollectorAPI datastore: " + configuration.name);
         }
         if (jsonDatastoreConfig.authentication instanceof APIKeyAuth) {

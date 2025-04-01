@@ -162,7 +162,7 @@ public class HorreumClient implements Closeable {
 
             ConfigService.KeycloakConfig keycloakConfig;
             try {
-                URL url = new URL(this.horreumUrl.concat(KEYCLOAK_BOOTSTRAP_URL));
+                URL url = new URL(this.horreumUrl + KEYCLOAK_BOOTSTRAP_URL);
                 keycloakConfig = new ObjectMapper().readValue(url, ConfigService.KeycloakConfig.class);
             } catch (Exception e) {
                 throw new RuntimeException(e);

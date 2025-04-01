@@ -12,7 +12,6 @@ import jakarta.transaction.Transactional;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.Version;
 import io.hyperfoil.tools.horreum.api.data.Access;
@@ -23,12 +22,11 @@ import io.hyperfoil.tools.horreum.datastore.DatastoreResolver;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasourceMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 public class ConfigServiceImpl implements ConfigService {
-
-    private static final Logger log = Logger.getLogger(ConfigServiceImpl.class);
 
     //cache available dataStore configurations
     private static final List<DatastoreType.TypeConfig> datastoreTypes = Arrays.stream(DatastoreType.values())
@@ -72,7 +70,7 @@ public class ConfigServiceImpl implements ConfigService {
         Set<String> roles = identity.getRoles();
         long rolesCount = roles.stream().filter(role -> role.endsWith("-team")).count();
         if (rolesCount != 0) { //user has access to team, retrieve the team datastore as well
-            queryWhere = queryWhere.concat(" or owner in ('" + team + "')");
+            queryWhere = queryWhere + " or owner in ('" + team + "')";
         }
         List<DatastoreConfigDAO> backends = DatastoreConfigDAO.list(queryWhere);
         if (backends.size() != 0) {
@@ -99,7 +97,7 @@ public class ConfigServiceImpl implements ConfigService {
             List<String> uploaders = identity.getRoles().stream().filter(role -> role.endsWith("-uploader"))
                     .collect(Collectors.toList());
             if (uploaders.size() != 1) {
-                log.debugf("Failed to create datastore %s: no owner, available uploaders: %s", dao.name, uploaders);
+                Log.debugf("Failed to create datastore '%s': no owner, available uploaders: %s", dao.name, uploaders);
                 throw ServiceException.badRequest(
                         "Missing owner and cannot select single default owners; this user has these uploader roles: "
                                 + uploaders);
@@ -107,7 +105,7 @@ public class ConfigServiceImpl implements ConfigService {
             String uploader = uploaders.get(0);
             dao.owner = uploader.substring(0, uploader.length() - 9) + "-team";
         } else if (!identity.getRoles().contains(dao.owner)) {
-            log.debugf("Failed to create datastore %s: requested owner %s, available roles: %s", dao.name, dao.owner,
+            Log.debugf("Failed to create datastore '%s': requested owner %s, available roles: %s", dao.name, dao.owner,
                     identity.getRoles());
             throw ServiceException.badRequest("This user does not have permissions to create datastore for owner=" + dao.owner);
         }
@@ -117,16 +115,16 @@ public class ConfigServiceImpl implements ConfigService {
 
         backendResolver.validatedDatastoreConfig(datastore.type, datastore.config);
 
-        log.debugf("Creating new Datastore with owner=%s and access=%s", dao.owner, dao.access);
+        Log.debugf("Creating new Datastore with owner=%s and access=%s", dao.owner, dao.access);
 
         try {
             em.persist(dao);
             em.flush();
         } catch (Exception e) {
-            log.error("Failed to persist run.", e);
+            Log.error("Failed to persist run", e);
             throw ServiceException.serverError("Failed to persist backend configuration");
         }
-        log.debugf("Upload flushed, backendConfig ID %d", dao.id);
+        Log.debugf("Upload flushed, backendConfig ID %d", dao.id);
 
         return dao.id;
     }

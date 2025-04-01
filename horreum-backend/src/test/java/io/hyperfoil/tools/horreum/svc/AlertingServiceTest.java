@@ -167,11 +167,8 @@ public class AlertingServiceTest extends BaseServiceTest {
         cd.config.put("filter", "min");
         setTestVariables(test, "Value", new Label("value", schema.id), cd);
         // After changing the variable the past datapoints and changes are removed; we need to recalculate them again
-        String notifyPath = "/api/alerting/recalculate?test="
-                .concat(test.id.toString())
-                .concat("&notify=false&debug=false&recalc=true&from=")
-                .concat(Long.toString(Long.MIN_VALUE)).concat("&to=")
-                .concat(Long.toString(Long.MAX_VALUE));
+        String notifyPath = "/api/alerting/recalculate?test=" + test.id + "&notify=false&debug=false&recalc=true&from="
+                + Long.MIN_VALUE + "&to=" + Long.MAX_VALUE;
 
         jsonRequest().post(notifyPath).then().statusCode(204);
 

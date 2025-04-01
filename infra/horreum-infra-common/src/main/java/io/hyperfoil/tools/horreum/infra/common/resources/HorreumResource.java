@@ -54,13 +54,11 @@ public class HorreumResource implements ResourceLifecycleManager {
         String keycloakHostUrl = initArgs.get("keycloak.host");
         String jdbcUrl = initArgs.get("quarkus.datasource.jdbc.url");
         if (inContainer) {
-            String keycloakNetworkAlias = initArgs.get(HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS);
-            keycloakHostUrl = "http://".concat(keycloakNetworkAlias).concat(":8080/");
-            String postgresNetworkAlias = initArgs.get(HORREUM_DEV_POSTGRES_NETWORK_ALIAS);
-            jdbcUrl = "jdbc:postgresql://".concat(postgresNetworkAlias).concat(":5432/horreum?loggerLevel=OFF");
+            keycloakHostUrl = "http://" + initArgs.get(HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS) + ":8080/";
+            jdbcUrl = "jdbc:postgresql://" + initArgs.get(HORREUM_DEV_POSTGRES_NETWORK_ALIAS) + ":5432/horreum?loggerLevel=OFF";
         }
 
-        String keycloakUrl = String.format("%s/realms/horreum", keycloakHostUrl);
+        String keycloakUrl = keycloakHostUrl + "/realms/horreum";
         String horreumUrl = "http://" + networkAlias + ":8081";
 
         horreumContainer

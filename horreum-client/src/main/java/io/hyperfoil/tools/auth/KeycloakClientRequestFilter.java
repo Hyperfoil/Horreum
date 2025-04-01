@@ -61,7 +61,7 @@ public class KeycloakClientRequestFilter implements ClientRequestFilter {
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
         try {
-            requestContext.getHeaders().add(HttpHeaders.AUTHORIZATION, BEARER_SCHEME_WITH_SPACE.concat(getAccessToken()));
+            requestContext.getHeaders().add(HttpHeaders.AUTHORIZATION, BEARER_SCHEME_WITH_SPACE + getAccessToken());
             if (showAuthMethod) {
                 LOG.infov("Authentication with OIDC token");
                 showAuthMethod = false;

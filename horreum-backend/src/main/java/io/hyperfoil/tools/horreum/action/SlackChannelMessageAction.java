@@ -6,19 +6,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import org.apache.http.HttpStatus;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.svc.Util;
+import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
 @ApplicationScoped
 public class SlackChannelMessageAction extends SlackPluginBase implements ActionPlugin {
-    private static final Logger log = Logger.getLogger(SlackChannelMessageAction.class);
     public static final String TYPE_SLACK_MESSAGE = "slack-channel-message";
 
     @Override
@@ -28,7 +27,7 @@ public class SlackChannelMessageAction extends SlackPluginBase implements Action
 
     @Override
     public void validate(JsonNode config, JsonNode secrets) {
-        log.tracef("Validating config %s, secrets %s", config, secrets);
+        Log.tracef("Validating config %s, secrets %s", config, secrets);
         requireProperties(secrets, "token");
         requireProperties(config, "formatter", "channel");
     }
@@ -64,29 +63,27 @@ public class SlackChannelMessageAction extends SlackPluginBase implements Action
         text.put("text", comment);
         blocks.add(section);
 
-        log.debugf("Slack URL %s, token %s, body %s", url, token, body);
+        Log.debugf("Slack URL %s, token %s, body %s", url, token, body);
         return post(url, secrets, body)
                 .onItem().transformToUni(response -> {
                     if (response.statusCode() < 400) {
                         JsonObject status = response.bodyAsJsonObject();
                         if (!status.getBoolean("ok")) {
-                            return Uni.createFrom().failure(
-                                    new RuntimeException(
-                                            String.format("Failed to post to channel %s, response %s", channel,
-                                                    status.getString("error"))));
+                            return Uni.createFrom().failure(new RuntimeException(
+                                    "Failed to post to channel " + channel + ", response " + status.getString("error")));
                         }
                         return Uni.createFrom()
-                                .item(String.format("Successfully(%d) posted to channel %s", response.statusCode(), channel));
+                                .item("Successfully(" + response.statusCode() + ") posted to channel " + channel);
                     } else if (response.statusCode() == HttpStatus.SC_TOO_MANY_REQUESTS
                             && response.getHeader("Retry-After") != null) {
-                        log.debugf("Slack POST needs retry: %s (%s)", response.toString(), response.bodyAsString());
+                        Log.debugf("Slack POST needs retry: %s (%s)", response, response.bodyAsString());
                         return retry(response, config, secrets, payload);
-
                     } else {
-                        log.debugf("Slack POST failed: %s (%s)", response.statusCode(), response.bodyAsString());
-                        return Uni.createFrom().failure(new RuntimeException(
-                                String.format("Failed to post to channel %s, response %d: %s",
-                                        channel, response.statusCode(), response.bodyAsString())));
+                        Log.debugf("Slack POST failed: %s (%s)", response.statusCode(), response.bodyAsString());
+
+                        String message = "Failed to create issue in " + channel + ", response" + response.statusCode() + ":\n"
+                                + response.bodyAsString();
+                        return Uni.createFrom().failure(new RuntimeException(message));
                     }
                 }).onFailure()
                 .transform(t -> new RuntimeException("Failed to post message to " + channel + ": " + t.getMessage()));

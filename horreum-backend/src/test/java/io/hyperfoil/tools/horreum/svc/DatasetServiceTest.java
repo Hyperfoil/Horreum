@@ -38,6 +38,7 @@ import io.hyperfoil.tools.horreum.mapper.ViewMapper;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
+import io.quarkus.logging.Log;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -324,13 +325,13 @@ public class DatasetServiceTest extends BaseServiceTest {
     @org.junit.jupiter.api.Test
     public void testDatasetView() {
         String testname = "dummy";
-        log.debugf("Creating new test: %s", testname);
+        Log.debugf("Creating new test: %s", testname);
         Test test = createTest(createExampleTest(testname));
-        log.debugf("New test created: %s", test.toString());
+        Log.debugf("New test created: %s", test);
         Util.withTx(tm, () -> {
             try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
                 ViewDAO view = ViewDAO.find("test.id", test.id).firstResult();
-                log.debugf("view is null: %b", view == null);
+                Log.debugf("view is null: %b", view == null);
                 view.components.clear();
                 ViewComponentDAO vc1 = new ViewComponentDAO();
                 vc1.view = view;
@@ -352,7 +353,7 @@ public class DatasetServiceTest extends BaseServiceTest {
             int labelA = addLabel(schemas[0], "a", null, valuePath);
             int labelB = addLabel(schemas[1], "b", null, valuePath);
             // view update should happen in the same transaction as labels update so we can use the event
-            log.debugf("Waiting for  MessageBusChannels.DATASET_UPDATED_LABELS");
+            Log.debugf("Waiting for MessageBusChannels.DATASET_UPDATED_LABELS");
             BlockingQueue<Dataset.LabelsUpdatedEvent> updateQueue = serviceMediator
                     .getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
             withExampleDataset(test, createABData(), ds -> {

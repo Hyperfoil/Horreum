@@ -13,18 +13,17 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.data.Banner;
 import io.hyperfoil.tools.horreum.api.internal.services.BannerService;
 import io.hyperfoil.tools.horreum.entity.BannerDAO;
 import io.hyperfoil.tools.horreum.mapper.BannerMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 
 public class BannerServiceImpl implements BannerService {
-    private static final Logger log = Logger.getLogger(BannerServiceImpl.class);
 
     @ConfigProperty(name = "horreum.downtime.response")
     Optional<String> downtimeResponse;
@@ -64,7 +63,7 @@ public class BannerServiceImpl implements BannerService {
             try {
                 Files.writeString(Path.of(downtimeResponse.get()), response);
             } catch (IOException e) {
-                log.error("Failed to write response file " + downtimeResponse.get(), e);
+                Log.errorf(e, "Failed to write response file %s", downtimeResponse.get());
             }
         }
     }

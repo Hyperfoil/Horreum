@@ -71,7 +71,7 @@ public class PostgresResource implements ResourceLifecycleManager {
                 throw new RuntimeException(e);
             }
 
-            props.forEach((key, val) -> postgresContainer.withParameter(key.toString().concat("=").concat(val.toString())));
+            props.forEach((key, val) -> postgresContainer.withParameter(key + "=" + val));
 
             // SSL configuration from https://www.postgresql.org/docs/current/ssl-tcp.html
             if (initArgs.containsKey(HORREUM_DEV_POSTGRES_SSL_CERTIFICATE)

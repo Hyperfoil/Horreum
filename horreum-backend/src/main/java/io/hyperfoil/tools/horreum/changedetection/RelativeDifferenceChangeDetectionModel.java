@@ -7,7 +7,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,11 +18,10 @@ import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelT
 import io.hyperfoil.tools.horreum.api.data.changeDetection.RelativeDifferenceDetectionConfig;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
+import io.quarkus.logging.Log;
 
 @ApplicationScoped
 public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionModel {
-
-    private static final Logger log = Logger.getLogger(RelativeDifferenceChangeDetectionModel.class);
 
     @Inject
     ObjectMapper mapper;
@@ -74,7 +72,7 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
             int minPrevious = Math.max(window, config.minPrevious);
 
             if (dataPoints.size() < minPrevious + window) {
-                log.debugf("Too few (%d) previous datapoints for variable %d, skipping analysis", dataPoints.size() - window,
+                Log.debugf("Too few (%d) previous datapoints for variable %d, skipping analysis", dataPoints.size() - window,
                         dataPoint.variable.id);
                 return;
             }
@@ -97,14 +95,14 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
                     filteredValue = windowStats.getMean();
                     break;
                 default:
-                    String errMsg = String.format("Unsupported option 'filter'='%s' for variable %d, skipping analysis.",
-                            config.filter, dataPoint.variable.id);
-                    log.error(errMsg);
+                    String errMsg = "Unsupported option 'filter'='%s' for variable %d, skipping analysis"
+                            .formatted(config.filter, dataPoint.variable.id);
+                    Log.error(errMsg);
                     throw new ChangeDetectionException(errMsg);
             }
 
             double ratio = filteredValue / previousStats.getMean();
-            log.tracef("Previous mean %f, filtered value %f, ratio %f", previousStats.getMean(), filteredValue, ratio);
+            Log.tracef("Previous mean %f, filtered value %f, ratio %f", previousStats.getMean(), filteredValue, ratio);
             if (ratio < 1 - config.threshold || ratio > 1 + config.threshold) {
                 DataPointDAO dp = null;
                 // We cannot know which datapoint is first with the regression; as a heuristic approach
@@ -122,20 +120,19 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
                 ChangeDAO change = ChangeDAO.fromDatapoint(dp);
                 DataPointDAO prevDataPoint = dataPoints.get(window - 1);
                 DataPointDAO lastDataPoint = dataPoints.get(0);
-                change.description = String.format(
-                        "Datasets %d/%d (%s) - %d/%d (%s): %s %f, previous mean %f (stddev %f), relative change %.2f%%",
-                        prevDataPoint.dataset.run.id, prevDataPoint.dataset.ordinal, prevDataPoint.timestamp,
-                        lastDataPoint.dataset.run.id, lastDataPoint.dataset.ordinal, lastDataPoint.timestamp,
-                        config.filter, filteredValue, previousStats.getMean(), previousStats.getStandardDeviation(),
-                        100 * (ratio - 1));
+                change.description = "Datasets %d/%d (%s) - %d/%d (%s): %s %f, previous mean %f (stddev %f), relative change %.2f%%"
+                        .formatted(prevDataPoint.dataset.run.id, prevDataPoint.dataset.ordinal, prevDataPoint.timestamp,
+                                lastDataPoint.dataset.run.id, lastDataPoint.dataset.ordinal, lastDataPoint.timestamp,
+                                config.filter, filteredValue, previousStats.getMean(), previousStats.getStandardDeviation(),
+                                100 * (ratio - 1));
 
-                log.debug(change.description);
+                Log.debug(change.description);
                 changeConsumer.accept(change);
             }
 
         } catch (JsonProcessingException e) {
-            String errMsg = String.format("Failed to parse configuration for variable %d", dataPoint.variable.id);
-            log.error(errMsg, e);
+            String errMsg = "Failed to parse configuration for variable %d".formatted(dataPoint.variable.id);
+            Log.error(errMsg, e);
             throw new ChangeDetectionException(errMsg, e);
         }
 

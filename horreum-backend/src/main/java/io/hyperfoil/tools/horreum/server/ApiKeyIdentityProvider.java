@@ -39,7 +39,7 @@ public class ApiKeyIdentityProvider implements IdentityProvider<ApiKeyAuthentica
         return UserApiKey.findOptional(key)
                 .filter(k -> !k.revoked)
                 .map((userKey) -> {
-                    Log.debugv("Authentication of user {0} with key \"{1}\" {2}", userKey.user.username, userKey.name, key);
+                    Log.debugf("Authentication of user %s with key '%s'", userKey.user.username, userKey.name);
 
                     // update last access
                     userKey.access = timeService.now();
