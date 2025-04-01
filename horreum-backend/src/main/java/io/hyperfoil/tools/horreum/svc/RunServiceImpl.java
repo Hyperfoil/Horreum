@@ -43,7 +43,6 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
-import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -90,7 +89,6 @@ import io.quarkus.security.identity.SecurityIdentity;
 @ApplicationScoped
 @Startup
 public class RunServiceImpl implements RunService {
-    private static final Logger log = Logger.getLogger(RunServiceImpl.class);
 
     //@formatter:off
     private static final String FIND_AUTOCOMPLETE = """
@@ -166,7 +164,7 @@ public class RunServiceImpl implements RunService {
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void onTestDeleted(int testId) {
-        log.debugf("Trashing runs for test (%d)", testId);
+        Log.debugf("Trashing runs for test %d", testId);
         ScrollableResults<Integer> results = session.createNativeQuery("SELECT id FROM run WHERE testid = ?1", Integer.class)
                 .setParameter(1, testId)
                 .setReadOnly(true)
@@ -193,12 +191,12 @@ public class RunServiceImpl implements RunService {
     void onNewOrUpdatedSchema(int schemaId) {
         SchemaDAO schema = SchemaDAO.findById(schemaId);
         if (schema == null) {
-            log.errorf("Cannot process schema add/update: cannot load schema %d", schemaId);
+            Log.errorf("Cannot process schema add/update: cannot load schema %d", schemaId);
             return;
         }
         clearRunAndDatasetSchemas(schemaId);
         findRunsWithUri(schema.uri, (runId, testId) -> {
-            log.debugf("Recalculate Datasets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
+            Log.debugf("Recalculate Datasets for run %d - schema %d (%s) changed", runId, schema.id, schema.uri);
             onNewOrUpdatedSchemaForRun(runId, schema.id);
         });
     }
@@ -389,7 +387,7 @@ public class RunServiceImpl implements RunService {
         if (access != null) {
             run.access = access;
         }
-        log.debugf("About to add new run to test %s using owner", testNameOrId, owner);
+        Log.debugf("About to add new run to test %s using owner %s", testNameOrId, owner);
         if (testNameOrId == null || testNameOrId.isEmpty()) {
             if (run.testid == null || run.testid == 0) {
                 throw ServiceException.badRequest("No test name or id provided");
@@ -421,16 +419,16 @@ public class RunServiceImpl implements RunService {
     public Response addRunFromData(String start, String stop, String test, String owner, Access access, String schemaUri,
             String description, FileUpload data, FileUpload metadata) {
         if (data == null) {
-            log.debugf("Failed to upload for test %s with description %s because of missing data.", test, description);
+            Log.debugf("Failed to upload for test %s with description %s because of missing data", test, description);
             throw ServiceException.badRequest("No data!");
         } else if (!MediaType.APPLICATION_JSON.equals(data.contentType())) {
-            log.debugf("Failed to upload for test %s with description %s because of wrong data content type: %s.", test,
+            Log.debugf("Failed to upload for test %s with description %s because of wrong data content type: %s", test,
                     description, data.contentType());
             throw ServiceException
                     .badRequest("Part 'data' must use content-type: application/json, currently: " + data.contentType());
         }
         if (metadata != null && !MediaType.APPLICATION_JSON.equals(metadata.contentType())) {
-            log.debugf("Failed to upload for test %s with description %s because of wrong metadata content type: %s.", test,
+            Log.debugf("Failed to upload for test %s with description %s because of wrong metadata content type: %s", test,
                     description, metadata.contentType());
             throw ServiceException.badRequest(
                     "Part 'metadata' must use content-type: application/json, currently: " + metadata.contentType());
@@ -444,20 +442,20 @@ public class RunServiceImpl implements RunService {
                 if (metadataNode.isArray()) {
                     for (JsonNode item : metadataNode) {
                         if (!item.isObject()) {
-                            log.debugf(
-                                    "Failed to upload for test %s with description %s because of wrong item in metadata: %s.",
+                            Log.debugf(
+                                    "Failed to upload for test %s with description %s because of wrong item in metadata: %s",
                                     test, description, item);
                             throw ServiceException.badRequest("One of metadata elements is not an object!");
                         } else if (!item.has("$schema")) {
-                            log.debugf(
-                                    "Failed to upload for test %s with description %s because of missing schema in metadata: %s.",
+                            Log.debugf(
+                                    "Failed to upload for test %s with description %s because of missing schema in metadata: %s",
                                     test, description, item);
                             throw ServiceException.badRequest("One of metadata elements is missing a schema!");
                         }
                     }
                 } else if (metadataNode.isObject()) {
                     if (!metadataNode.has("$schema")) {
-                        log.debugf("Failed to upload for test %s with description %s because of missing schema in metadata.",
+                        Log.debugf("Failed to upload for test %s with description %s because of missing schema in metadata",
                                 test, description);
                         throw ServiceException.badRequest("Metadata is missing schema!");
                     }
@@ -465,7 +463,7 @@ public class RunServiceImpl implements RunService {
                 }
             }
         } catch (IOException e) {
-            log.error("Failed to read data/metadata from upload file", e);
+            Log.error("Failed to read data/metadata from upload file", e);
             throw ServiceException.badRequest("Provided data/metadata can't be read (JSON encoding problem?)");
         }
         return addRunFromData(start, stop, test, owner, access, schemaUri, description, dataNode.toString(), metadataNode);
@@ -499,7 +497,7 @@ public class RunServiceImpl implements RunService {
             String schemaUri, String description,
             String stringData, JsonNode metadata) {
         if (stringData == null) {
-            log.debugf("Failed to upload for test %s with description %s because of missing data.", test, description);
+            Log.debugf("Failed to upload for test %s with description %s because of missing data", test, description);
             throw ServiceException.badRequest("No data!");
         }
         JsonNode data = null;
@@ -512,7 +510,7 @@ public class RunServiceImpl implements RunService {
         Object foundTest = findIfNotSet(test, data);
         String testNameOrId = foundTest == null ? null : foundTest.toString().trim();
         if (testNameOrId == null || testNameOrId.isEmpty()) {
-            log.debugf("Failed to upload for test %s with description %s as the test cannot be identified.", test, description);
+            Log.debugf("Failed to upload for test %s with description %s as the test cannot be identified", test, description);
             throw ServiceException.badRequest("Cannot identify test name.");
         }
 
@@ -573,7 +571,7 @@ public class RunServiceImpl implements RunService {
         roleManager.setRoles(String.join(",", runUpload.roles));
         TestDAO testEntity = TestDAO.findById(runUpload.testId);
         if (testEntity == null) {
-            log.errorf("Could not find Test (%d) for Run Upload", runUpload.testId);
+            Log.errorf("Could not find Test (%d) for Run Upload", runUpload.testId);
             return;
         }
         try {
@@ -582,11 +580,10 @@ public class RunServiceImpl implements RunService {
                     runUpload.description, runUpload.metaData, runUpload.payload, testEntity);
 
             if (run.getRunId() == null) {
-                log.errorf("Could not persist Run for Test:  %d", testEntity.name);
+                Log.errorf("Could not persist Run for Test:  %d", testEntity.name);
             }
         } catch (ServiceException serviceException) {
-            log.errorf("Could not persist Run for Test:  %d", testEntity.name, serviceException);
-
+            Log.errorf("Could not persist Run for Test: %d", testEntity.name, serviceException);
         }
     }
 
@@ -600,11 +597,11 @@ public class RunServiceImpl implements RunService {
         Instant stopInstant = Util.toInstant(foundStop);
 
         if (startInstant == null) {
-            log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description,
+            Log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description,
                     foundStart, start);
             throw ServiceException.badRequest("Cannot parse start time from " + foundStart + " (" + start + ")");
         } else if (stopInstant == null) {
-            log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description,
+            Log.debugf("Failed to upload for test %s with description %s; cannot parse start time %s (%s)", test, description,
                     foundStop, stop);
             throw ServiceException.badRequest("Cannot parse stop time from " + foundStop + " (" + stop + ")");
         }
@@ -621,7 +618,7 @@ public class RunServiceImpl implements RunService {
             }
         }
 
-        log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
+        Log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
 
         RunDAO run = new RunDAO();
         run.testid = testEntity.id;
@@ -672,7 +669,7 @@ public class RunServiceImpl implements RunService {
             List<String> uploaders = identity.getRoles().stream().filter(role -> role.endsWith("-uploader"))
                     .collect(Collectors.toList());
             if (uploaders.size() != 1) {
-                log.debugf("Failed to upload for test %s: no owner, available uploaders: %s", test.name, uploaders);
+                Log.debugf("Failed to upload for test %s: no owner, available uploaders: %s", test.name, uploaders);
                 throw ServiceException.badRequest(
                         "Missing owner and cannot select single default owners; this user has these uploader roles: "
                                 + uploaders);
@@ -680,14 +677,14 @@ public class RunServiceImpl implements RunService {
             String uploader = uploaders.get(0);
             run.owner = uploader.substring(0, uploader.length() - 9) + "-team";
         } else if (!Objects.equals(test.owner, run.owner) && !identity.getRoles().contains(run.owner)) {
-            log.debugf("Failed to upload for test %s: requested owner %s, available roles: %s", test.name, run.owner,
+            Log.debugf("Failed to upload for test %s: requested owner %s, available roles: %s", test.name, run.owner,
                     identity.getRoles());
             throw ServiceException.badRequest("This user does not have permissions to upload run for owner=" + run.owner);
         }
         if (run.access == null) {
             run.access = Access.PRIVATE;
         }
-        log.debugf("Uploading with owner=%s and access=%s", run.owner, run.access);
+        Log.debugf("Uploading with owner=%s and access=%s", run.owner, run.access);
 
         try {
             if (run.id == null) {
@@ -698,10 +695,10 @@ public class RunServiceImpl implements RunService {
             }
             em.flush();
         } catch (Exception e) {
-            log.error("Failed to persist run.", e);
+            Log.error("Failed to persist run", e);
             throw ServiceException.serverError("Failed to persist run");
         }
-        log.debugf("Upload flushed, run ID %d", run.id);
+        Log.debugf("Upload flushed, run ID %d", run.id);
 
         updateRunSchemas(run.id);
         mediator.newRun(RunMapper.from(run));
@@ -901,7 +898,7 @@ public class RunServiceImpl implements RunService {
             try {
                 run.datasets = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[11]), Integer[].class);
             } catch (JsonProcessingException e) {
-                log.warnf("Could not map datasets to array");
+                Log.warnf("Could not map datasets to array");
             }
         }
         //if we send over an empty JsonNode object it will be a NullNode, that can be cast to a string
@@ -909,7 +906,7 @@ public class RunServiceImpl implements RunService {
             try {
                 run.validationErrors = Util.OBJECT_MAPPER.treeToValue(((ArrayNode) row[12]), ValidationError[].class);
             } catch (JsonProcessingException e) {
-                log.warnf("Could not map validation errors to array");
+                Log.warnf("Could not map validation errors to array");
             }
         }
         return run;
@@ -1007,7 +1004,7 @@ public class RunServiceImpl implements RunService {
             throw ServiceException.notFound("Run not found: " + id);
         }
         if (run.trashed == trashed && trashed) {
-            log.infof("The run %s has already been trashed, doing nothing.", id);
+            Log.infof("The run %s has already been trashed, doing nothing.", id);
             return;
         }
         if (trashed) {
@@ -1035,7 +1032,7 @@ public class RunServiceImpl implements RunService {
         //Make sure to remove run_schemas as we've trashed the run
         em.createNativeQuery("DELETE FROM run_schemas WHERE runid = ?1").setParameter(1, runId).executeUpdate();
         List<DatasetDAO> datasets = DatasetDAO.list("run.id", runId);
-        log.debugf("Trashing run %d (test %d, %d datasets)", runId, testId, datasets.size());
+        Log.debugf("Trashing run %d (test %d, %d datasets)", runId, testId, datasets.size());
         for (var dataset : datasets) {
             mediator.propagatedDatasetDelete(dataset.id);
         }
@@ -1118,7 +1115,7 @@ public class RunServiceImpl implements RunService {
     @Transactional
     @Override
     public List<Integer> recalculateRunDatasets(int runId) {
-        log.infof("Transforming run id %d", runId);
+        Log.infof("Transforming run id %d", runId);
         return transform(runId, true);
     }
 
@@ -1139,7 +1136,7 @@ public class RunServiceImpl implements RunService {
                 "DELETE FROM dataset USING run WHERE run.id = dataset.runid AND run.trashed AND run.start BETWEEN ?1 AND ?2")
                 .setParameter(1, from).setParameter(2, to).executeUpdate();
         if (deleted > 0) {
-            log.debugf("Deleted %d datasets for trashed runs between %s and %s", deleted, from, to);
+            Log.debugf("Deleted %d datasets for trashed runs between %s and %s", deleted, from, to);
         }
 
         ScrollableResults<Recalculate> results = session
@@ -1156,7 +1153,7 @@ public class RunServiceImpl implements RunService {
                 .scroll(ScrollMode.FORWARD_ONLY);
         while (results.next()) {
             Recalculate r = results.get();
-            log.debugf("Recalculate Datasets for run %d - forcing recalculation of all between %s and %s", r.runId, from, to);
+            Log.debugf("Recalculate Datasets for run %d - forcing recalculation of all between %s and %s", r.runId, from, to);
             // transform will add proper roles anyway
             //         messageBus.executeForTest(r.testId, () -> datasetService.withRecalculationLock(() -> transform(r.runId, true)));
             Util.registerTxSynchronization(tm, txStatus -> mediator.queueRunRecalculation(r.runId));
@@ -1179,11 +1176,11 @@ public class RunServiceImpl implements RunService {
     List<Integer> transform(int runId, boolean isRecalculation) {
         List<Integer> datasetIds = new ArrayList<>();
         if (runId < 1) {
-            log.errorf("Transformation parameters error: run %s", runId);
+            Log.errorf("Transformation parameters error: run %s", runId);
             return datasetIds;
         }
 
-        log.debugf("Transforming run ID %d, recalculation? %s", runId, Boolean.toString(isRecalculation));
+        Log.debugf("Transforming run ID %d, recalculation? %s", runId, Boolean.toString(isRecalculation));
 
         // check whether there is an ongoing transformation on the same runId
         TestService.RecalculationStatus status = new TestService.RecalculationStatus(1);
@@ -1193,7 +1190,7 @@ public class RunServiceImpl implements RunService {
         Util.registerTxSynchronization(tm, txStatus -> transformations.remove(runId, status));
         if (prev != null) {
             // there is an ongoing transformation that has recently been initiated
-            log.warnf("Transformation for run %d already in progress", runId);
+            Log.warnf("Transformation for run %d already in progress", runId);
             return datasetIds;
         }
 
@@ -1208,7 +1205,7 @@ public class RunServiceImpl implements RunService {
 
         RunDAO run = RunDAO.findById(runId);
         if (run == null) {
-            log.errorf("Cannot load run ID %d for transformation", runId);
+            Log.errorf("Cannot load run ID %d for transformation", runId);
             return datasetIds; // this is still empty
         }
         Map<Integer, JsonNode> transformerResults = new TreeMap<>();
@@ -1237,7 +1234,7 @@ public class RunServiceImpl implements RunService {
             if (transformerId != null) {
                 t = TransformerDAO.findById(transformerId);
                 if (t == null) {
-                    log.errorf("Missing transformer with ID %d", transformerId);
+                    Log.errorf("Missing transformer with ID %d", transformerId);
                 }
             } else {
                 t = null;
@@ -1279,7 +1276,7 @@ public class RunServiceImpl implements RunService {
                 if (t.extractors != null && t.extractors.size() == 1) {
                     if (root.size() != 1) {
                         // missing results should be null nodes
-                        log.errorf("Unexpected result for single extractor: %s", root.toPrettyString());
+                        Log.errorf("Unexpected result for single extractor: %s", root.toPrettyString());
                     } else {
                         root = root.iterator().next();
                     }
@@ -1375,17 +1372,20 @@ public class RunServiceImpl implements RunService {
                         if (position < node.size()) {
                             all.add(node.get(position));
                         } else {
-                            String message = String.format(
-                                    "Transformer %d produced an array of %d elements but other transformer " +
-                                            "produced %d elements; dataset %d/%d might be missing some data.",
-                                    entry.getKey(), node.size(), max, run.id, datasetIds.size());
+                            String message = """
+                                    Transformer %d produced an array of %d elements but other transformer produced %d elements; dataset %d/%d might be missing some data.
+                                    """
+                                    .formatted(entry.getKey(), node.size(), max, run.id, datasetIds.size());
                             logMessage(run, PersistentLogDAO.WARN, "%s", message);
-                            log.warnf(message);
+                            Log.warnf(message);
                         }
                     } else {
-                        logMessage(run, PersistentLogDAO.WARN, "Unexpected result provided by one of the transformers: %s",
-                                node);
-                        log.warnf("Unexpected result provided by one of the transformers: %s", node);
+                        String message = """
+                                Unexpected result provided by transformer %d: %s
+                                """
+                                .formatted(entry.getKey(), node);
+                        logMessage(run, PersistentLogDAO.WARN, "%s", message);
+                        Log.warnf(message);
                     }
                 }
                 nakedNodes.forEach(all::add);
@@ -1425,7 +1425,7 @@ public class RunServiceImpl implements RunService {
                             txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_NEW, ds.testid,
                                     event));
             } catch (TransactionRequiredException tre) {
-                log.error(
+                Log.error(
                         "Failed attempt to persist and send Dataset event during inactive Transaction. Likely due to prior error.",
                         tre);
             }
@@ -1448,7 +1448,7 @@ public class RunServiceImpl implements RunService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     protected void logMessage(RunDAO run, int level, String format, Object... args) {
-        String msg = args.length > 0 ? String.format(format, args) : format;
+        String msg = args.length == 0 ? format : format.formatted(args);
         new TransformationLogDAO(em.getReference(TestDAO.class, run.testid), run, level, msg).persist();
     }
 

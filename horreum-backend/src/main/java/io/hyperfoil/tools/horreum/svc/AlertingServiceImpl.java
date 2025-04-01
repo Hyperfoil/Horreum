@@ -43,7 +43,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -73,6 +72,7 @@ import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.*;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Parameters;
 import io.quarkus.runtime.Startup;
 import io.quarkus.scheduler.Scheduled;
@@ -82,7 +82,6 @@ import io.vertx.core.Vertx;
 @ApplicationScoped
 @Startup
 public class AlertingServiceImpl implements AlertingService {
-    private static final Logger log = Logger.getLogger(AlertingServiceImpl.class);
 
     //@formatter:off
     private static final String LOOKUP_TIMESTAMP =
@@ -246,7 +245,7 @@ public class AlertingServiceImpl implements AlertingService {
             retryCounterSet.putIfAbsent(event.datasetId, new AtomicInteger(0));
             int retryCounter = retryCounterSet.get(event.datasetId).getAndIncrement();
             if (retryCounter < labelCalcRetries) {
-                log.infof("Retrying labels update for dataset %d, attempt %d/%d", event.datasetId, retryCounter,
+                Log.infof("Retrying labels update for dataset %d, attempt %d/%d", event.datasetId, retryCounter,
                         this.labelCalcRetries);
                 vertx.setTimer(1000, timerId -> messageBus.executeForTest(event.datasetId, () -> Util.withTx(tm, () -> {
                     onLabelsUpdated(event);
@@ -255,7 +254,7 @@ public class AlertingServiceImpl implements AlertingService {
                 return;
             } else {
                 //we have retried `horreum.alerting.updateLabel.retries` number of times, log a warning and stop retrying
-                log.warnf("Unsuccessfully retried updating labels %d times for dataset %d. Stopping", this.labelCalcRetries,
+                Log.warnf("Unsuccessfully retried updating labels %d times for dataset %d. Stopping", this.labelCalcRetries,
                         event.datasetId);
                 retryCounterSet.remove(event.datasetId);
                 return;
@@ -315,10 +314,10 @@ public class AlertingServiceImpl implements AlertingService {
 
     private void recalculateDatapointsForDataset(DatasetDAO dataset, boolean notify, boolean debug,
             Recalculation recalculation) {
-        log.debugf("Analyzing dataset %d (%d/%d)", (long) dataset.id, (long) dataset.run.id, dataset.ordinal);
+        Log.debugf("Analyzing dataset %d (%d/%d)", (long) dataset.id, (long) dataset.run.id, dataset.ordinal);
         TestDAO test = TestDAO.findById(dataset.testid);
         if (test == null) {
-            log.errorf("Cannot load test ID %d", dataset.testid);
+            Log.errorf("Cannot load test ID %d", dataset.testid);
             return;
         }
         if (!testFingerprint(dataset, test.fingerprintFilter)) {
@@ -558,7 +557,7 @@ public class AlertingServiceImpl implements AlertingService {
                 Util.registerTxSynchronization(tm,
                         txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_NEW, dataset.testid, event));
         } else {
-            log.debugf("DataPoint for dataset %d, variable %d, timestamp %s, value %f not found", dataset.id, variableId,
+            Log.debugf("DataPoint for dataset %d, variable %d, timestamp %s, value %f not found", dataset.id, variableId,
                     timestamp, value);
         }
     }
@@ -568,8 +567,8 @@ public class AlertingServiceImpl implements AlertingService {
     }
 
     private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
-        String msg = args.length == 0 ? format : String.format(format, args);
-        log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
+        String msg = args.length == 0 ? format : format.formatted(args);
+        Log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
         new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DatasetDAO.class, datasetId),
                 level, "variables", msg).persist();
     }
@@ -579,15 +578,15 @@ public class AlertingServiceImpl implements AlertingService {
     }
 
     private void logMissingDataMessage(int testId, int datasetId, int level, String format, Object... args) {
-        String msg = args.length == 0 ? format : String.format(format, args);
-        log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
+        String msg = args.length == 0 ? format : format.formatted(args);
+        Log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
         new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DatasetDAO.class, datasetId),
                 level, "missingdata", msg).persist();
     }
 
     private void logChangeDetectionMessage(int testId, int datasetId, int level, String format, Object... args) {
-        String msg = args.length == 0 ? format : String.format(format, args);
-        log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
+        String msg = args.length == 0 ? format : format.formatted(args);
+        Log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
         new DatasetLogDAO(em.getReference(TestDAO.class, testId), em.getReference(DatasetDAO.class, datasetId),
                 level, "changes", msg).persist();
     }
@@ -599,14 +598,14 @@ public class AlertingServiceImpl implements AlertingService {
         if (dataPoint.variable != null && dataPoint.variable.id != null) {
             VariableDAO variable = VariableDAO.findById(dataPoint.variable.id);
             if (variable != null) {
-                log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
+                Log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
                         dataPoint.datasetId, dataPoint.timestamp,
                         variable.id, variable.name, dataPoint.value);
                 JsonNode fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(dataPoint.datasetId)
                         .map(fp -> fp.fingerprint).orElse(null);
 
                 VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
-                log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint,
+                Log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint,
                         dataPoint.timestamp, validUpTo.get(key));
                 validUpTo.compute(key, (ignored, current) -> {
                     if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
@@ -617,11 +616,11 @@ public class AlertingServiceImpl implements AlertingService {
                 });
                 runChangeDetection(VariableDAO.findById(variable.id), fingerprint, event.notify, true, lastDatapoint);
             } else {
-                log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
+                Log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
                         dataPoint.datasetId, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
             }
         } else {
-            log.warnf("Could not process new datapoint for dataset %d when the supplied variable or id reference is null ",
+            Log.warnf("Could not process new datapoint for dataset %d when the supplied variable or id reference is null ",
                     dataPoint.datasetId);
         }
     }
@@ -645,7 +644,7 @@ public class AlertingServiceImpl implements AlertingService {
                 .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
                 .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
         if (nextTimestamp == null) {
-            log.debugf("No further datapoints for change detection");
+            Log.debugf("No further datapoints for change detection");
             return;
         }
 
@@ -660,7 +659,7 @@ public class AlertingServiceImpl implements AlertingService {
                     .setParameter(3, !valid.inclusive)
                     .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
                     .executeUpdate();
-            log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=",
+            Log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=",
                     valid.timestamp, variable.id, fingerprint);
         }
 
@@ -678,7 +677,7 @@ public class AlertingServiceImpl implements AlertingService {
 
         Instant changeTimestamp = LONG_TIME_AGO;
         if (lastChange != null) {
-            log.debugf("Filtering DP between %s (change %d) and %s", lastChange.timestamp, lastChange.id, nextTimestamp);
+            Log.debugf("Filtering DP between %s (change %d) and %s", lastChange.timestamp, lastChange.id, nextTimestamp);
             changeTimestamp = lastChange.timestamp;
         }
 
@@ -697,7 +696,7 @@ public class AlertingServiceImpl implements AlertingService {
         // Last datapoint is already in the list
         if (dataPoints.isEmpty()) {
             if (expectExists) {
-                log.warn("The published datapoint should be already in the list");
+                Log.warn("The published datapoint should be already in the list");
             }
         } else {
             int datasetId = dataPoints.get(0).getDatasetId();
@@ -741,7 +740,7 @@ public class AlertingServiceImpl implements AlertingService {
                     } catch (ChangeDetectionException e) {
                         new ChangeDetectionLogDAO(variable, fingerprint, PersistentLogDAO.ERROR, e.getLocalizedMessage())
                                 .persist();
-                        log.error("An error occurred while running change detection!", e);
+                        Log.error("An error occurred while running change detection!", e);
                     }
                 }
             }
@@ -755,7 +754,7 @@ public class AlertingServiceImpl implements AlertingService {
 
     private void validateUpTo(VariableDAO variable, JsonNode fingerprint, Instant timestamp) {
         validUpTo.compute(new VarAndFingerprint(variable.id, fingerprint), (ignored, current) -> {
-            log.debugf("Attempt %s, valid up to %s, ", timestamp, current);
+            Log.debugf("Attempt %s, valid up to %s", timestamp, current);
             if (current == null || !current.timestamp.isAfter(timestamp)) {
                 return new UpTo(timestamp, true);
             } else {
@@ -843,10 +842,10 @@ public class AlertingServiceImpl implements AlertingService {
 
             em.flush();
         } catch (PersistenceException e) {
-            log.error("Failed to update variables", e);
+            Log.error("Failed to update variables", e);
             throw new WebApplicationException(e, Response.serverError().build());
         }
-        log.debug("Variables updated, everything is fine, returning");
+        Log.debug("Variables updated, everything is fine, returning");
     }
 
     private void ensureDefaults(Set<ChangeDetectionDAO> rds) {
@@ -1010,7 +1009,7 @@ public class AlertingServiceImpl implements AlertingService {
         Recalculation previous = recalcProgress.putIfAbsent(testId, recalculation);
         while (previous != null) {
             if (!previous.done) {
-                log.debugf("Already started recalculation on test %d, ignoring.", testId);
+                Log.debugf("Already started recalculation on test %d, ignoring.", testId);
                 return;
             }
             if (recalcProgress.replace(testId, previous, recalculation)) {
@@ -1021,15 +1020,15 @@ public class AlertingServiceImpl implements AlertingService {
         recalculation.clearDatapoints = clearDatapoints;
 
         try {
-            log.debugf("Updating fingerprints for test %d", testId);
+            Log.debugf("Updating fingerprints for test %d", testId);
             //update fingerprints before starting recalculation
             //TODO: check if we need to update fingerprints for all tests
             mediator.updateFingerprints(testId);
-            log.debugf("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
+            Log.debugf("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
             //TODO:: determine if we should clear datapoints
             recalculation.datasets = getDatasetsForRecalculation(testId, from, to, clearDatapoints);
             int numRuns = recalculation.datasets.size();
-            log.debugf("Starting recalculation of test %d, %d runs", testId, numRuns);
+            Log.debugf("Starting recalculation of test %d, %d runs", testId, numRuns);
             int completed = 0;
             recalcProgress.put(testId, recalculation);
             //TODO:: this could be more streamlined
@@ -1049,7 +1048,7 @@ public class AlertingServiceImpl implements AlertingService {
             }
 
         } catch (Throwable t) {
-            log.error("Recalculation failed", t);
+            Log.error("Recalculation failed", t);
             throw t;
         } finally {
             recalculation.done = true;
@@ -1094,7 +1093,7 @@ public class AlertingServiceImpl implements AlertingService {
         if (dataset != null) {
             recalculateDatapointsForDataset(dataset, notify, debug, recalculation);
         } else {
-            log.debugf("Could not find dataset with id: %d", datasetId);
+            Log.debugf("Could not find dataset with id: %d", datasetId);
         }
     }
 
@@ -1133,7 +1132,7 @@ public class AlertingServiceImpl implements AlertingService {
                 int numUpdated = em.createNativeQuery("UPDATE missingdata_rule SET last_notification = ?1 WHERE id = ?2")
                         .setParameter(1, timeService.now()).setParameter(2, ruleId).executeUpdate();
                 if (numUpdated != 1) {
-                    log.errorf("Missing data rules update for rule %d (test %d) didn't work: updated: %d", ruleId, testId,
+                    Log.errorf("Missing data rules update for rule %d (test %d) didn't work: updated: %d", ruleId, testId,
                             numUpdated);
                 }
             }
@@ -1341,14 +1340,14 @@ public class AlertingServiceImpl implements AlertingService {
         query.setParameter(1, run.id);
         int updated = query.executeUpdate();
         if (updated > 0) {
-            log.debugf("Removed %d run expectations as run %d was added.", updated, run.id);
+            Log.debugf("Removed %d run expectations as run %d was added", updated, run.id);
         }
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     void onDatasetDeleted(int datasetId) {
-        log.debugf("Removing changes for dataset %d", datasetId);
+        Log.debugf("Removing changes for dataset %d", datasetId);
         ChangeDAO.delete("dataset.id = ?1 AND confirmed = false", datasetId);
         DataPointDAO.delete("dataset.id", datasetId);
         //Need to make sure we delete MissingDataRuleResults when datasets are removed
@@ -1360,7 +1359,7 @@ public class AlertingServiceImpl implements AlertingService {
     void onTestDeleted(int testId) {
         // We need to delete in a loop to cascade this to ChangeDetection
         List<VariableDAO> variables = VariableDAO.list("testId", testId);
-        log.debugf("Deleting %d variables for test (%d)", variables.size(), testId);
+        Log.debugf("Deleting %d variables for test (%d)", variables.size(), testId);
         for (var variable : variables) {
             variable.delete();
         }
@@ -1381,7 +1380,7 @@ public class AlertingServiceImpl implements AlertingService {
                 Util.doAfterCommit(tm, () -> notificationService.notifyExpectedRun(expectation.testId,
                         expectation.expectedBefore.toEpochMilli(), expectation.expectedBy, expectation.backlink));
             } else {
-                log.debugf("Skipping expected run notification on test %d since it is disabled.", expectation.testId);
+                Log.debugf("Skipping expected run notification on test %d since it is disabled", expectation.testId);
             }
             expectation.delete();
         }

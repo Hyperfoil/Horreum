@@ -28,7 +28,6 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 
 import org.hibernate.query.NativeQuery;
-import org.jboss.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
@@ -74,6 +73,7 @@ import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.server.RoleManager;
 import io.quarkus.arc.impl.ParameterizedTypeImpl;
+import io.quarkus.logging.Log;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -90,8 +90,6 @@ public class BaseServiceTest {
     protected static JsonNodeFactory JSON_NODE_FACTORY = JsonNodeFactory.instance;
 
     int lastAddedLabelId;
-
-    protected final Logger log = Logger.getLogger(getClass());
 
     @Inject
     protected EntityManager em;
@@ -172,18 +170,18 @@ public class BaseServiceTest {
 
     @BeforeEach
     public void beforeMethod(TestInfo info) {
-        log.debugf("Starting test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"),
+        Log.debugf("Starting test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"),
                 info.getDisplayName());
     }
 
     @AfterEach
     public void afterMethod(TestInfo info) {
-        log.debugf("Completed test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"),
+        Log.debugf("Completed test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"),
                 info.getDisplayName());
         dropAllViewsAndTests();
         afterMethodCleanup.forEach(Runnable::run);
         afterMethodCleanup.clear();
-        log.debugf("Finished cleanup of test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"),
+        Log.debugf("Finished cleanup of test %s.%s", info.getTestClass().map(Class::getSimpleName).orElse("<unknown>"),
                 info.getDisplayName());
     }
 
@@ -424,7 +422,7 @@ public class BaseServiceTest {
     }
 
     protected Test createTest(Test test) {
-        log.debugf("Creating new test via /api/test: %s", test.toString());
+        Log.debugf("Creating new test via /api/test: %s", test);
 
         test = jsonRequest()
                 .body(test)
@@ -433,13 +431,13 @@ public class BaseServiceTest {
                 .statusCode(201)
                 .extract().body().as(Test.class);
 
-        log.debugf("New test created via /api/test: %s", test.toString());
+        Log.debugf("New test created via /api/test: %s", test);
 
         return test;
     }
 
     protected Test updateTest(Test test) {
-        log.debugf("Updating test via /api/test: %s", test.toString());
+        Log.debugf("Updating test via /api/test: %s", test);
 
         test = jsonRequest()
                 .body(test)
@@ -448,7 +446,7 @@ public class BaseServiceTest {
                 .statusCode(200)
                 .extract().body().as(Test.class);
 
-        log.debugf("Test updated via /api/test: %s", test.toString());
+        Log.debugf("Test updated via /api/test: %s", test);
 
         return test;
     }
@@ -669,7 +667,7 @@ public class BaseServiceTest {
                 run.testid = test.id;
                 run.start = run.stop = Instant.now();
                 run.owner = UPLOADER_ROLES[0];
-                log.debugf("Creating new Run via API: %s", run.toString());
+                Log.debugf("Creating new Run via API: %s", run.toString());
 
                 Response response = jsonRequest()
                         .auth()
@@ -677,7 +675,7 @@ public class BaseServiceTest {
                         .body(run)
                         .post("/api/run/test");
                 run.id = (int) response.body().as(List.class).get(0);
-                log.debugf("Run ID: %d, for test ID: %d", run.id, run.testid);
+                Log.debugf("Run ID: %d, for test ID: %d", run.id, run.testid);
             } finally {
                 if (tm.getTransaction().getStatus() == Status.STATUS_ACTIVE) {
                     tm.commit();
@@ -1109,7 +1107,7 @@ public class BaseServiceTest {
 
     protected void createTests(int count, String prefix) {
         for (int i = 0; i < count; i += 1) {
-            createTest(new Test(createExampleTest(String.format("%1$s_%2$02d", prefix, i))));
+            createTest(new Test(createExampleTest("%1$s_%2$02d".formatted(prefix, i))));
         }
     }
 

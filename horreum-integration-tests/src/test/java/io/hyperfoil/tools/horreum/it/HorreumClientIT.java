@@ -78,7 +78,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         List<String> existingRoles = horreumClient.userService.getRoles();
 
         try (HorreumClient apiClient = new HorreumClient.Builder()
-                .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
+                .horreumUrl("http://localhost:" + System.getProperty("quarkus.http.test-port"))
                 .horreumApiKey(theKey)
                 .build()) {
 
@@ -110,7 +110,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
 
         horreumClient.testService.updateTestAccess(dummyTest.id, dummyTest.owner, Access.PRIVATE);
         try (HorreumClient apiClient = new HorreumClient.Builder()
-                .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
+                .horreumUrl("http://localhost:" + System.getProperty("quarkus.http.test-port"))
                 .horreumApiKey(theKey)
                 .build()) {
 
@@ -448,7 +448,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
     private void instantiateClient() {
         if (horreumClient == null) {
             horreumClient = new HorreumClient.Builder()
-                    .horreumUrl("http://localhost:".concat(System.getProperty("quarkus.http.test-port")))
+                    .horreumUrl("http://localhost:" + System.getProperty("quarkus.http.test-port"))
                     .horreumUser("horreum.bootstrap")
                     .horreumPassword(ItResource.HORREUM_BOOTSTRAP_PASSWORD)
                     .build();

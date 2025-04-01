@@ -8,13 +8,13 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.data.AllowedSiteDAO;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
 import io.hyperfoil.tools.horreum.svc.Util;
+import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpVersion;
@@ -26,7 +26,6 @@ import io.vertx.mutiny.ext.web.client.WebClient;
 
 @ApplicationScoped
 public class HttpAction implements ActionPlugin {
-    private static final Logger log = Logger.getLogger(HttpAction.class);
 
     public static final String TYPE_HTTP = "http";
 
@@ -89,13 +88,13 @@ public class HttpAction implements ActionPlugin {
                 .setPort(url.getPort() >= 0 ? url.getPort() : url.getDefaultPort())
                 .setURI(url.getFile())
                 .setSsl("https".equalsIgnoreCase(url.getProtocol()));
-        log.infof("Sending event to %s", url);
+        Log.infof("Sending event to %s", url);
         return http1xClient.request(HttpMethod.POST, options)
                 .putHeader("Content-Type", "application/json")
                 .sendBuffer(Buffer.buffer(body.toString()))
                 .onItem().transform(response -> {
                     if (response.statusCode() < 400) {
-                        return String.format("Successfully(%d) notified hook: %s", response.statusCode(), url);
+                        return "Successfully(" + response.statusCode() + ") notified hook: " + url;
                     } else {
                         throw new IllegalArgumentException("Failed to POST " + url + ", response " + response.statusCode()
                                 + ": " + response.bodyAsString());

@@ -11,7 +11,6 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
 
 import io.hyperfoil.tools.horreum.api.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.api.alerting.TransformationLog;
@@ -25,6 +24,7 @@ import io.hyperfoil.tools.horreum.mapper.DatasetLogMapper;
 import io.hyperfoil.tools.horreum.mapper.TransformationLogMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.quarkus.logging.Log;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.runtime.Startup;
@@ -33,7 +33,7 @@ import io.quarkus.scheduler.Scheduled;
 @ApplicationScoped
 @Startup
 public class LogServiceImpl implements LogService {
-    private static final Logger log = Logger.getLogger(LogServiceImpl.class);
+
     private static final Instant EPOCH_START = Instant.ofEpochMilli(0);
     private static final Instant FAR_FUTURE = Instant.ofEpochSecond(4 * (long) Integer.MAX_VALUE);
 
@@ -93,7 +93,7 @@ public class LogServiceImpl implements LogService {
                     "test.id = ?1 AND source = ?2 AND timestamp >= ?3 AND timestamp < ?4 AND dataset.id = ?5", testId, source,
                     fromTs, toTs, datasetId);
         }
-        log.debugf("Deleted %d logs for test %s", deleted, testId);
+        Log.debugf("Deleted %d logs for test %s", deleted, testId);
     }
 
     @RolesAllowed(Roles.TESTER)
@@ -141,7 +141,7 @@ public class LogServiceImpl implements LogService {
             deleted = TransformationLogDAO.delete("test.id = ?1 AND run.id = ?2 AND timestamp >= ?3 AND timestamp < ?4", testId,
                     runId, fromTs, toTs);
         }
-        log.debugf("Deleted %d logs for test %d, run %d", deleted, testId, runId == null ? -1 : 0);
+        Log.debugf("Deleted %d logs for test %d, run %d", deleted, testId, runId == null ? -1 : 0);
     }
 
     @Override
@@ -170,7 +170,7 @@ public class LogServiceImpl implements LogService {
         Instant fromTs = from == null ? EPOCH_START : Instant.ofEpochMilli(from);
         Instant toTs = to == null ? FAR_FUTURE : Instant.ofEpochMilli(to);
         long deleted = ActionLogDAO.delete("testId = ?1 AND timestamp >= ?2 AND timestamp < ?3", testId, fromTs, toTs);
-        log.debugf("Deleted %d logs for test %d", deleted, testId);
+        Log.debugf("Deleted %d logs for test %d", deleted, testId);
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -186,6 +186,6 @@ public class LogServiceImpl implements LogService {
     void checkExpiredTransformationLogs() {
         Duration maxLifespan = Duration.parse(transformationLogMaxLifespan);
         long logsDeleted = TransformationLogDAO.delete("timestamp < ?1", timeService.now().minus(maxLifespan));
-        log.debugf("Deleted %d expired transformation log messages", logsDeleted);
+        Log.debugf("Deleted %d expired transformation log messages", logsDeleted);
     }
 }

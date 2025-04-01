@@ -520,7 +520,7 @@ class SchemaServiceTest extends BaseServiceTest {
 
         assertNotEquals(0, report.data.size());
 
-        List<SchemaService.LabelLocation> usages = jsonRequest().get("/api/schema/findUsages?label=".concat("category"))
+        List<SchemaService.LabelLocation> usages = jsonRequest().get("/api/schema/findUsages?label=category")
                 .then().statusCode(200).extract().body().as(List.class);
 
         assertNotNull(usages);

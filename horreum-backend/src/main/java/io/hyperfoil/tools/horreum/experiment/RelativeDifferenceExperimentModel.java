@@ -47,6 +47,6 @@ public class RelativeDifferenceExperimentModel implements ExperimentConditionMod
             overall = greaterBetter ? ExperimentService.BetterOrWorse.WORSE : ExperimentService.BetterOrWorse.BETTER;
         }
         return new ExperimentService.ComparisonResult(overall, newDatapoint.value, mean.getAsDouble(),
-                String.format("%+.2f%%", 100 * diff));
+                "%+.2f%%".formatted(100 * diff));
     }
 }

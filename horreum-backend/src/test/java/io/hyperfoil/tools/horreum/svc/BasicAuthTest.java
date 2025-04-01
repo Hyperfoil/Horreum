@@ -35,7 +35,7 @@ public class BasicAuthTest {
         newUser.user = new UserService.UserData("", USERNAME, "Bot", "Account", "bot@horreum.io");
         newUser.password = PASSWORD;
         userService.createUser(newUser);
-        Log.infov("Created test user {0} with password {1}", USERNAME, PASSWORD);
+        Log.infof("Created test user %s with password %s", USERNAME, PASSWORD);
 
         // user should be able to authenticate now
         given().auth().preemptive().basic(USERNAME, PASSWORD).get("api/user/roles").then().statusCode(SC_OK);

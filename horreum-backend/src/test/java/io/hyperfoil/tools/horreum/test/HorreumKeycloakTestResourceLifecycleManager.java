@@ -54,7 +54,7 @@ public class HorreumKeycloakTestResourceLifecycleManager extends KeycloakTestRes
             managementRolesResource.add(
                     managementRolesResource.listAvailable().stream().filter(r -> "realm-admin".equals(r.getName())).toList());
 
-            Log.infov("realm-admin role added to {0} client", KEYCLOAK_SERVICE_CLIENT);
+            Log.infof("realm-admin role added to %s client", KEYCLOAK_SERVICE_CLIENT);
         }
 
         return properties;

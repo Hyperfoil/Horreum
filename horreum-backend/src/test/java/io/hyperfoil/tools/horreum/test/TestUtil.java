@@ -7,12 +7,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
-import org.jboss.logging.Logger;
-
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.quarkus.logging.Log;
+
 public final class TestUtil {
-    private static final Logger log = Logger.getLogger(TestUtil.class);
 
     private TestUtil() {
     }
@@ -31,7 +30,7 @@ public final class TestUtil {
                 test.run();
                 return;
             } catch (AssertionError e) {
-                log.debug("Ignoring failed assertion", e);
+                Log.debug("Ignoring failed assertion", e);
             }
             try {
                 Thread.sleep(10);

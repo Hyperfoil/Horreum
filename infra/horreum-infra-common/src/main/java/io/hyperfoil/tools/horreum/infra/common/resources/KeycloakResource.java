@@ -147,8 +147,8 @@ public class KeycloakResource implements ResourceLifecycleManager {
 
         return Map.of(
                 "keycloak.host", keycloakHost,
-                "keycloak.admin.url", keycloakHost.concat("/realms/master/protocol/openid-connect/token"),
-                "quarkus.oidc.auth-server-url", keycloakHost.concat("/auth/realms/horreum"));
+                "keycloak.admin.url", keycloakHost + "/realms/master/protocol/openid-connect/token",
+                "quarkus.oidc.auth-server-url", keycloakHost + "/auth/realms/horreum");
     }
 
     @Override

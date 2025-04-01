@@ -200,29 +200,26 @@ public class DatasourceTest extends BaseServiceTest {
         DatastoreConfigDAO newDatastore = DatastoreConfigDAO.findById(testConfig.datastore.id);
         assertNotNull(newDatastore);
 
-        jsonRequest().delete("/api/config/datastore/".concat(testConfig.datastore.id.toString()))
-                .then().statusCode(204);
-
+        jsonRequest().delete("/api/config/datastore/" + testConfig.datastore.id).then().statusCode(204);
     }
 
     @org.junit.jupiter.api.Test
     public void testDatastorePermissions(TestInfo info) throws InterruptedException {
 
         DatastoreConfigDAO.<DatastoreConfigDAO> list("owner = ?1 and type = ?2", TESTER_ROLES[0], DatastoreType.ELASTICSEARCH)
-                .stream()
-                .forEach(store -> jsonRequest().delete("/api/config/datastore/".concat(store.id.toString())));
+                .forEach(store -> jsonRequest().delete("/api/config/datastore/" + store.id));
 
         TestConfig testConfig = createNewTestAndDatastores(info);
         DatastoreConfigDAO newDatastore = DatastoreConfigDAO.findById(testConfig.datastore.id);
         assertNotNull(newDatastore);
 
-        List<Object> datastores = unauthenticatedJsonRequest().get("/api/config/datastore/".concat(TESTER_ROLES[0]))
+        List<Object> datastores = unauthenticatedJsonRequest().get("/api/config/datastore/" + TESTER_ROLES[0])
                 .then().statusCode(200).extract().body().as(List.class);
 
         assertNotNull(datastores);
         assertSame(1, datastores.size());
 
-        datastores = jsonRequest().get("/api/config/datastore/".concat(TESTER_ROLES[0]))
+        datastores = jsonRequest().get("/api/config/datastore/" + TESTER_ROLES[0])
                 .then().statusCode(200).extract().body().as(List.class);
 
         assertNotNull(datastores);

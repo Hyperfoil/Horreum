@@ -27,8 +27,6 @@ import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import org.jboss.logging.Logger;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
@@ -36,10 +34,10 @@ import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.entity.alerting.ChangeDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
+import io.quarkus.logging.Log;
 
 @ApplicationScoped
 public class HunterEDivisiveModel implements ChangeDetectionModel {
-    private static final Logger log = Logger.getLogger(HunterEDivisiveModel.class);
     public static final String HUNTER_CONFIG = "HUNTER_CONFIG";
     private static String[] HEADERS = { "kpi", "timestamp", "datasetid" };
 
@@ -71,7 +69,7 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
                 tmpFiles = TmpFiles.instance();
             } catch (IOException e) {
                 String errMsg = "Could not create temporary file for Hunter eDivisive algorithm";
-                log.error(errMsg, e);
+                Log.error(errMsg, e);
                 throw new ChangeDetectionException(errMsg, e);
             }
 
@@ -81,21 +79,21 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
                 Collections.reverse(dataPoints);
 
                 //write out csv fields
-                pw.println(Arrays.stream(HEADERS).collect(Collectors.joining(",")));
+                pw.println(String.join(",", HEADERS));
                 dataPoints.forEach(dataPointDAO -> pw.println(
-                        String.format("%.2f,%s,%d", dataPointDAO.value, dataPointDAO.timestamp.toString(), dataPointDAO.id)));
+                        "%.2f,%s,%d".formatted(dataPointDAO.value, dataPointDAO.timestamp, dataPointDAO.id)));
 
             } catch (IOException e) {
                 String errMsg = "Could not create file writer for Hunter eDivisive algorithm";
-                log.error(errMsg, e);
+                Log.error(errMsg, e);
                 throw new ChangeDetectionException(errMsg, e);
             }
 
-            log.debugf("created csv output : %s", tmpFiles.inputFile.getAbsolutePath());
+            Log.debugf("Created .csv output: %s", tmpFiles.inputFile.getAbsolutePath());
 
             if (!validateInputCsv(tmpFiles)) {
-                String errMsg = String.format("could not validate: %s", tmpFiles.inputFile);
-                log.error(errMsg);
+                String errMsg = "Could not validate:" + tmpFiles.inputFile;
+                Log.error(errMsg);
                 throw new ChangeDetectionException(errMsg);
             }
 
@@ -116,7 +114,7 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
     protected void processChangePoints(Function<Integer, Optional<DataPointDAO>> changePointSupplier,
             Consumer<ChangeDAO> changeConsumer, TmpFiles tmpFiles, Instant sinceInstance) {
         String command = "hunter analyze horreum --since '" + sinceInstance.toString() + "'";
-        log.debugf("Running command: %s", command);
+        Log.debugf("Running command: %s", command);
 
         List<String> results = executeProcess(tmpFiles, false, "bash", "-l", "-c", command);
 
@@ -153,29 +151,29 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
                         String timestamp = foundChange.group("timestamp");
                         Integer datapointID = Integer.parseInt(foundChange.group("dataPointId"));
 
-                        log.debugf("Found change point `%s` at `%s` for dataset: %d", change, timestamp, datapointID);
+                        Log.debugf("Found change point `%s` at `%s` for dataset: %d", change, timestamp, datapointID);
 
                         Optional<DataPointDAO> foundDataPoint = changePointSupplier.apply(datapointID);
 
                         if (foundDataPoint.isPresent()) {
                             ChangeDAO changePoint = ChangeDAO.fromDatapoint(foundDataPoint.get());
 
-                            changePoint.description = String.format("eDivisive change `%s` at `%s` for dataset: %d", change,
-                                    timestamp, datapointID);
+                            changePoint.description = "eDivisive change `%s` at `%s` for dataset: %d".formatted(
+                                    change, timestamp, datapointID);
 
-                            log.trace(changePoint.description);
+                            Log.trace(changePoint.description);
                             changeConsumer.accept(changePoint);
                         } else {
-                            log.errorf("Could not find datapoint (%d) in set!", datapointID);
+                            Log.errorf("Could not find datapoint (%d) in set!", datapointID);
                         }
                     } else {
-                        log.errorf("Could not parse hunter line: '%s'", changeDetails);
+                        Log.errorf("Could not parse hunter line: '%s'", changeDetails);
                     }
                 }
             }
 
         } else {
-            log.debugf("No change points were detected in : %s", tmpFiles.tmpdir.getAbsolutePath());
+            Log.debugf("No change points were detected in : %s", tmpFiles.tmpdir.getAbsolutePath());
         }
     }
 
@@ -187,11 +185,11 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
 
             Optional<String> optLine = reader.lines().filter(line -> line.contains("Validation finished")).findFirst();
             if (optLine.isEmpty()) {
-                log.errorf("Could not validate: %s", tmpFiles.tmpdir.getAbsolutePath());
+                Log.errorf("Could not validate: %s", tmpFiles.tmpdir.getAbsolutePath());
                 return false;
             }
             if (optLine.get().contains("INVALID")) {
-                log.errorf("Invalid format for: %s; see log for details: %s", tmpFiles.tmpdir.getAbsolutePath(),
+                Log.errorf("Invalid format for: %s; see log for details: %s", tmpFiles.tmpdir.getAbsolutePath(),
                         tmpFiles.logFile.getAbsolutePath());
                 return false;
             }
@@ -230,18 +228,18 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
                     .getResourceAsStream("changeDetection/hunter.yaml")) {
 
                 if (confInputStream == null) {
-                    log.error("Could not extract Hunter configuration from archive");
+                    Log.error("Could not extract Hunter configuration from archive");
                     return;
                 }
 
                 try (OutputStream confOut = new FileOutputStream(confFile)) {
                     confOut.write(confInputStream.readAllBytes());
                 } catch (IOException e) {
-                    log.error("Could not extract Hunter configuration from archive");
+                    Log.error("Could not extract Hunter configuration from archive");
                 }
 
             } catch (IOException e) {
-                log.error("Could not create temporary file for Hunter eDivisive algorithm", e);
+                Log.error("Could not create temporary file for Hunter eDivisive algorithm", e);
             }
 
         }
@@ -250,7 +248,7 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
             if (tmpdir.exists()) {
                 clearDir(tmpdir);
             } else {
-                log.debugf("Trying to cleanup temp files, but they do not exist!");
+                Log.debugf("Trying to cleanup temp files, but they do not exist!");
             }
         }
 
@@ -262,7 +260,7 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
                 file.delete();
             });
             if (!dir.delete()) {
-                log.errorf("Failed to cleanup up temporary files: %s", dir.getAbsolutePath());
+                Log.errorf("Failed to cleanup up temporary files: %s", dir.getAbsolutePath());
             }
         }
     }
@@ -285,8 +283,8 @@ public class HunterEDivisiveModel implements ChangeDetectionModel {
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {
-                log.errorf("Hunter process failed with exit code: %d", exitCode);
-                log.errorf("See error log for details: %s", tmpFiles.logFile.getAbsolutePath());
+                Log.errorf("Hunter process failed with exit code: %d", exitCode);
+                Log.errorf("See error log for details: %s", tmpFiles.logFile.getAbsolutePath());
                 return null;
             }
 

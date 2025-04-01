@@ -5,10 +5,9 @@ import java.util.concurrent.TimeUnit;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
-import org.jboss.logging.Logger;
-
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.RequestOptions;
@@ -17,7 +16,6 @@ import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
 
 public abstract class GitHubPluginBase {
-    protected static final Logger log = Logger.getLogger(GitHubPluginBase.class);
 
     @Inject
     Vertx vertx;
@@ -62,7 +60,7 @@ public abstract class GitHubPluginBase {
 
     protected Uni<String> retry(HttpResponse<Buffer> response, JsonNode config, JsonNode secrets, Object payload) {
         int retryAfter = Integer.parseInt(response.getHeader("Retry-After"));
-        log.warnf("Exceeded Github request limits, retrying after %d seconds", retryAfter);
+        Log.warnf("Exceeded Github request limits, retrying after %d seconds", retryAfter);
         return Uni.createFrom()
                 .emitter(em -> vertx.setTimer(TimeUnit.SECONDS.toMillis(retryAfter), id -> execute(config, secrets, payload)
                         .subscribe().with(em::complete, em::fail)));

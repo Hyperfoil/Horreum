@@ -132,8 +132,7 @@ public class HorreumResources {
 
             envVariables.put("keycloak.host", keycloakEnv.get("keycloak.host"));
             envVariables.put("horreum.keycloak.url", keycloakEnv.get("keycloak.host"));
-            envVariables.put("quarkus.oidc.auth-server-url",
-                    keycloakEnv.get("keycloak.host").concat("/realms/").concat(HORREUM_REALM));
+            envVariables.put("quarkus.oidc.auth-server-url", keycloakEnv.get("keycloak.host") + "/realms/" + HORREUM_REALM);
             envVariables.putAll(oidcTruststoreProperties(initArgs));
 
             keycloak = KeycloakBuilder.builder()
@@ -151,16 +150,17 @@ public class HorreumResources {
                 String httpHost = initArgs.get("quarkus.http.host");
 
                 ClientRepresentation uiClient = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum-ui").get(0);
-                uiClient.getWebOrigins().add("http://".concat(httpHost).concat(":").concat(httpPort));
-                uiClient.getRedirectUris().add("http://".concat(httpHost).concat(":").concat(httpPort).concat("/*"));
+                uiClient.getWebOrigins().add("http://" + httpHost + ":" + httpPort);
+                uiClient.getRedirectUris().add("http://" + httpHost + ":" + httpPort + "/*");
                 keycloak.realm(HORREUM_REALM).clients().get(uiClient.getId()).update(uiClient);
 
                 ClientRepresentation mainClient = keycloak.realm(HORREUM_REALM).clients().findByClientId("horreum").get(0);
                 envVariables.put("quarkus.oidc.credentials.secret",
                         keycloak.realm(HORREUM_REALM).clients().get(mainClient.getId()).getSecret().getValue());
             } catch (Exception e) {
-                log.error("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
-                throw new RuntimeException("Unable to re-configure keycloak instance: ".concat(e.getLocalizedMessage()));
+                String msg = "Unable to re-configure keycloak instance: " + e.getLocalizedMessage();
+                log.error(msg);
+                throw new RuntimeException(msg);
             }
         }
 

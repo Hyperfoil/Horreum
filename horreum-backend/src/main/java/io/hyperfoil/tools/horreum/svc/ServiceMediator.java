@@ -17,7 +17,6 @@ import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.eclipse.microprofile.reactive.messaging.OnOverflow;
-import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -29,13 +28,13 @@ import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.server.WithRoles;
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.reactive.messaging.annotations.Blocking;
 import io.vertx.core.Vertx;
 
 @ApplicationScoped
 public class ServiceMediator {
-    private static final Logger log = Logger.getLogger(ServiceMediator.class);
 
     @Inject
     TestServiceImpl testService;
@@ -196,7 +195,7 @@ public class ServiceMediator {
     @Blocking(ordered = false, value = "horreum.run.pool")
     @ActivateRequestContext
     public void processRunUpload(RunUpload runUpload) {
-        log.debugf("Run Upload: %d", runUpload.testId);
+        Log.debugf("Run Upload: %d", runUpload.testId);
         runService.persistRun(runUpload);
     }
 
@@ -268,7 +267,7 @@ public class ServiceMediator {
 
     public <T> void publishEvent(AsyncEventChannels channel, int testId, T payload) {
         if (testMode) {
-            log.debugf("Publishing test %d on %s: %s", testId, channel, payload);
+            Log.debugf("Publishing test %d on %s: %s", testId, channel, payload);
             //        eventBus.publish(channel.name(), new MessageBus.Message(BigInteger.ZERO.longValue(), testId, 0, payload));
             events.putIfAbsent(channel, new HashMap<>());
             BlockingQueue<Object> queue = events.get(channel).computeIfAbsent(testId, k -> new LinkedBlockingQueue<>());

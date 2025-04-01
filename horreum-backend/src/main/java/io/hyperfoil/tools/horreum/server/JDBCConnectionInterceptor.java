@@ -18,7 +18,7 @@ public class JDBCConnectionInterceptor implements AgroalPoolInterceptor {
         try (Statement statement = connection.createStatement()) {
             statement.execute("SELECT set_config('horreum.userroles', '" + Roles.HORREUM_SYSTEM + "', false)");
         } catch (SQLException e) {
-            Log.warnv(e, "Unable to set default role " + Roles.HORREUM_SYSTEM + " on the JDBC connection.");
+            Log.warnf(e, "Unable to set default role '%s' on the JDBC connection", Roles.HORREUM_SYSTEM);
         }
     }
 }
