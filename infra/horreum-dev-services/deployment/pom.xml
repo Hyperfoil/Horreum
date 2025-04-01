@@ -42,7 +42,6 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-keycloak-admin-resteasy-client-deployment</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>

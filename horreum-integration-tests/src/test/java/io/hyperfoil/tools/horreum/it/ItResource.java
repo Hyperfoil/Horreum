@@ -1,23 +1,6 @@
 package io.hyperfoil.tools.horreum.it;
 
-import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_ADMIN_PASSWORD;
-import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_ADMIN_USERNAME;
-import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_DB_PASSWORD;
-import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KC_DB_USERNAME;
-import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_KEYCLOAK_NETWORK_ALIAS;
-import static io.hyperfoil.tools.horreum.infra.common.Const.DEFAULT_POSTGRES_NETWORK_ALIAS;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_ADMIN_PASSWORD;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_ADMIN_USERNAME;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_DB_PASSWORD;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_DB_USERNAME;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_ENABLED;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_IMAGE;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_KEYCLOAK_NETWORK_ALIAS;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_ENABLED;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_IMAGE;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_NETWORK_ALIAS;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_SSL_CERTIFICATE;
-import static io.hyperfoil.tools.horreum.infra.common.Const.HORREUM_DEV_POSTGRES_SSL_CERTIFICATE_KEY;
+import static io.hyperfoil.tools.horreum.infra.common.Const.*;
 import static io.hyperfoil.tools.horreum.infra.common.HorreumResources.startContainers;
 import static io.hyperfoil.tools.horreum.infra.common.HorreumResources.stopContainers;
 import static java.lang.System.getProperty;

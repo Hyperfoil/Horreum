@@ -83,20 +83,19 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <commons.math3.version>3.6.1</commons.math3.version>
         <graalvm.version>23.1.2</graalvm.version>
-        <quarkus.version>3.19.4</quarkus.version>
+        <quarkus.version>3.21.0</quarkus.version>
+        <quarkus-test-keycloak.version>${quarkus.version}</quarkus-test-keycloak.version>
         <quinoa.version>2.5.3</quinoa.version>
         <surefire-plugin.version>3.5.3</surefire-plugin.version>
         <failsafe-plugin.version>3.5.2</failsafe-plugin.version>
-        <keycloak-admin-client.version>23.0.3</keycloak-admin-client.version>
         <validator.version>1.5.6</validator.version>
         <jayway.jsonpath.version>2.9.0</jayway.jsonpath.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
 
         <!--  dev services configuration -->
-        <keycloak.version>23.0.7</keycloak.version>
         <dev.images.postgres>postgres:16</dev.images.postgres>
-        <dev.images.keycloak>quay.io/keycloak/keycloak:${keycloak.version}</dev.images.keycloak>
+        <dev.images.keycloak>quay.io/keycloak/keycloak:26.1.4</dev.images.keycloak>
         <dev.images.horreum>quay.io/hyperfoil/horreum:${project.version}</dev.images.horreum>
         <!-- this is copied from the quarkus dev services impl -->
         <dev.images.amq>quay.io/artemiscloud/activemq-artemis-broker:1.0.25</dev.images.amq>
@@ -204,38 +203,8 @@
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-keycloak-admin-resteasy-client</artifactId>
                 <version>${quarkus.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.keycloak</groupId>
-                        <artifactId>keycloak-admin-client</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.keycloak</groupId>
-                        <artifactId>keycloak-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.keycloak</groupId>
-                        <artifactId>keycloak-common</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
 
-            <!-- Force keycloak admin client version -->
-            <dependency>
-                <groupId>org.keycloak</groupId>
-                <artifactId>keycloak-admin-client</artifactId>
-                <version>${keycloak.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.keycloak</groupId>
-                <artifactId>keycloak-core</artifactId>
-                <version>${keycloak.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.keycloak</groupId>
-                <artifactId>keycloak-common</artifactId>
-                <version>${keycloak.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
