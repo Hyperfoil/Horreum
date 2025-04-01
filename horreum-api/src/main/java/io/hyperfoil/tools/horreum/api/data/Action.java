@@ -78,6 +78,12 @@ public class Action {
 
     @JsonProperty("secrets")
     @Schema(type = SchemaType.OBJECT, implementation = Secret.class)
+    public void setSecrets(ObjectNode secrets) {
+        this.secrets = secrets;
+    }
+
+    @JsonProperty("secrets")
+    @Schema(type = SchemaType.OBJECT, implementation = Secret.class)
     public ObjectNode getSecrets() {
         if (this.secrets != null && this.secrets.isObject()) {
             ObjectNode masked = JsonNodeFactory.instance.objectNode();
