@@ -17,6 +17,8 @@
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <inputSpec.original>${project.build.directory}/generated/openapi-internal.yaml</inputSpec.original>
     </properties>
     <dependencies>
         <dependency>
@@ -47,6 +49,28 @@
     </dependencies>
     <build>
         <plugins>
+           <!-- Workaround for https://github.com/OpenAPITools/openapi-generator/issues/15202
+                the issue is affecting windows only build -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${version.maven.helper}</version>
+                <executions>
+                    <execution>
+                        <id>fix-path-for-swagger</id>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <failIfNoMatch>false</failIfNoMatch>
+                            <name>inputSpec-fixed</name>
+                            <value>${inputSpec.original}</value>
+                            <regex>\\</regex>
+                            <replacement>/</replacement>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -124,7 +148,8 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <inputSpec>${project.build.directory}/generated/openapi-internal.yaml</inputSpec>
+                            <!-- Workaround for https://github.com/OpenAPITools/openapi-generator/issues/15202 -->
+                            <inputSpec>${inputSpec-fixed}</inputSpec>
                             <output>${project.basedir}/../horreum-web/src/generated</output>
                             <generatorName>typescript-fetch</generatorName>
                             <skipValidateSpec>false</skipValidateSpec>

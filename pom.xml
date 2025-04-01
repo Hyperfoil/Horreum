@@ -75,9 +75,11 @@
         <version.maven.install>3.1.4</version.maven.install>
         <version.maven.jar>3.4.2</version.maven.jar>
         <version.maven.javadoc>3.11.2</version.maven.javadoc>
+        <version.maven.helper>3.6.0</version.maven.helper>
         <version.maven.project-info-reports>3.9.0</version.maven.project-info-reports>
         <version.maven.resources>3.3.1</version.maven.resources>
         <version.maven.source>3.3.1</version.maven.source>
+
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
