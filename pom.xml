@@ -87,14 +87,14 @@
         <quinoa.version>2.5.3</quinoa.version>
         <surefire-plugin.version>3.5.3</surefire-plugin.version>
         <failsafe-plugin.version>3.5.2</failsafe-plugin.version>
-        <keycloak-admin-client.version>26.0.4</keycloak-admin-client.version>
+        <quarkus-test-keycloak.version>3.14.4</quarkus-test-keycloak.version>
         <validator.version>1.5.6</validator.version>
         <jayway.jsonpath.version>2.9.0</jayway.jsonpath.version>
 
         <module.skipCopyDependencies>false</module.skipCopyDependencies>
 
         <!--  dev services configuration -->
-        <keycloak.version>26.0.4</keycloak.version>
+        <keycloak.version>23.0.7</keycloak.version>
         <dev.images.postgres>postgres:16</dev.images.postgres>
         <dev.images.keycloak>quay.io/keycloak/keycloak:${keycloak.version}</dev.images.keycloak>
         <dev.images.horreum>quay.io/hyperfoil/horreum:${project.version}</dev.images.horreum>
@@ -217,6 +217,10 @@
                         <groupId>org.keycloak</groupId>
                         <artifactId>keycloak-common</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>org.keycloak</groupId>
+                        <artifactId>keycloak-authz-client</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
 
@@ -235,6 +239,20 @@
                 <groupId>org.keycloak</groupId>
                 <artifactId>keycloak-common</artifactId>
                 <version>${keycloak.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-authz-client</artifactId>
+                <version>${keycloak.version}</version>
+            </dependency>
+
+            <!-- Force quarkus test keycloak server -->
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-test-keycloak-server</artifactId>
+                <version>${quarkus-test-keycloak.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

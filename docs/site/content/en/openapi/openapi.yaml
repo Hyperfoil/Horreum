@@ -54,9 +54,12 @@ components:
               http: "#/components/schemas/HttpActionConfig"
               slack-channel-message: "#/components/schemas/SlackChannelMessageActionConfig"
         secrets:
-          type:
-          - array
-          - object
+          type: object
+          properties:
+            token:
+              type: string
+            modified:
+              type: boolean
         testId:
           type: integer
           format: int32

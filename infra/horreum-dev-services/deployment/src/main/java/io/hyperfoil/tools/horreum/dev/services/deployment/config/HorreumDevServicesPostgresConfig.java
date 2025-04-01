@@ -34,6 +34,16 @@ public interface HorreumDevServicesPostgresConfig {
     boolean sslEnabled();
 
     /**
+     * SSL certificate path
+     */
+    Optional<String> sslCertificate();
+
+    /**
+     * SSL certificate key path
+     */
+    Optional<String> sslCertificateKey();
+
+    /**
      * Container name for postgres container
      */
     @WithDefault(DEFAULT_POSTGRES_NETWORK_ALIAS)
