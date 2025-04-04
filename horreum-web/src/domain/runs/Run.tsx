@@ -7,6 +7,7 @@ import { teamsSelector, useTester } from "../../auth"
 
 import { Bullseye, Button, Card, CardHeader, CardBody, PageSection, Spinner, Toolbar, ToolbarContent, Breadcrumb, BreadcrumbItem } from "@patternfly/react-core"
 import { Table /* data-codemods */, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table"
+import { TrashIcon } from "@patternfly/react-icons"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 import OwnerAccess from "../../components/OwnerAccess"
 import { NavLink } from "react-router-dom"
@@ -15,9 +16,18 @@ import DatasetData from "./DatasetData"
 import MetaData from "./MetaData"
 import RunData from "./RunData"
 import TransformationLogModal from "../tests/TransformationLogModal"
-import {Access, fetchRunSummary, recalculateDatasets, RunExtended, updateAccess, updateRunAccess} from "../../api"
+import {
+    Access,
+    fetchRunSummary,
+    recalculateDatasets,
+    RunExtended,
+    trash,
+    updateRunAccess
+} from "../../api"
 import {AppContext} from "../../context/appContext";
 import { AppContextType} from "../../context/@types/appContextTypes";
+import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
+import ConfirmRestoreModal from "../../components/ConfirmRestoreModal";
 
 export default function Run() {
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -30,6 +40,9 @@ export default function Run() {
     const [recalculating, setRecalculating] = useState(false)
     const [transformationLogOpen, setTransformationLogOpen] = useState(false)
     const [updateCounter, setUpdateCounter] = useState(0)
+    const [confirmTrashRunModalOpen, setConfirmTrashRunModalOpen] = useState(false)
+    const [confirmRestoreRunModalOpen, setConfirmRestoreRunModalOpen] = useState(false)
+    const [isTrashed, setIsTrashed] = useState(run?.trashed || false)
 
     const teams = useSelector(teamsSelector)
     const isTester = useTester(run?.owner)
@@ -44,16 +57,18 @@ export default function Run() {
     }
 
     const getRunSummary = () => {
-        const urlParams = new URLSearchParams(window.location.search)
         setLoading(true)
         fetchRunSummary(idVal, alerting).then(
-            response =>setRun({data: "",schemas: [],metadata: response.hasMetadata ? "" : undefined,...response})
+            response => {
+                setRun({data: "", schemas: [], metadata: response.hasMetadata ? "" : undefined, ...response})
+                setIsTrashed(response.trashed)
+            }
         ).finally(() => setLoading(false))
     }
 
     useEffect(() => {
         getRunSummary()
-    }, [idVal, teams, updateCounter])
+    }, [idVal, teams, updateCounter, isTrashed])
 
     const accessUpdate = (owner : string, access : Access) => {
         if( run !== undefined) {
@@ -119,26 +134,77 @@ export default function Run() {
                                         <Td>
                                             {isTester && (
                                                 <>
-                                                    <Button
-                                                        isDisabled={recalculating}
-                                                        onClick={retransformClick}
-                                                    >
-                                                        Re-transform datasets {recalculating && <Spinner size="md" />}
-                                                    </Button>
-                                                    <Button
-                                                        variant="secondary"
-                                                        style={{ marginRight: "16px" }}
-                                                        onClick={() => setTransformationLogOpen(true)}
-                                                    >
-                                                        Transformation log
-                                                    </Button>
-                                                    <TransformationLogModal
-                                                        testId={run.testid}
-                                                        runId={run.id}
-                                                        title="Transformation log"
-                                                        emptyMessage="There are no messages"
-                                                        isOpen={transformationLogOpen}
-                                                        onClose={() => setTransformationLogOpen(false)}
+                                                    {!isTrashed && (
+                                                        <>
+                                                            <Button
+                                                                isDisabled={recalculating}
+                                                                onClick={retransformClick}
+                                                            >
+                                                                Re-transform datasets {recalculating && <Spinner size="md" />}
+                                                            </Button>
+                                                            <Button
+                                                                variant="secondary"
+                                                                style={{ marginRight: "16px" }}
+                                                                onClick={() => setTransformationLogOpen(true)}
+                                                            >
+                                                                Transformation log
+                                                            </Button>
+                                                            <TransformationLogModal
+                                                                testId={run.testid}
+                                                                runId={run.id}
+                                                                title="Transformation log"
+                                                                emptyMessage="There are no messages"
+                                                                isOpen={transformationLogOpen}
+                                                                onClose={() => setTransformationLogOpen(false)}
+                                                            />
+                                                            <Button
+                                                                variant={"danger"}
+                                                                isDisabled={isTrashed && confirmTrashRunModalOpen}
+                                                                onClick={() => {
+                                                                    setConfirmTrashRunModalOpen(true)
+                                                                }}>
+                                                                Delete
+                                                            </Button>
+                                                        </>
+                                                    ) || (
+                                                        <Button
+                                                            variant={"primary"}
+                                                            isDisabled={!isTrashed && confirmRestoreRunModalOpen}
+                                                            onClick={() => {
+                                                                setConfirmRestoreRunModalOpen(true)
+                                                        }}>
+                                                            Restore
+                                                        </Button>
+                                                    )}
+                                                    <ConfirmDeleteModal
+                                                        key="confirmDelete"
+                                                        description={"Run " + run.id}
+                                                        isOpen={confirmTrashRunModalOpen}
+                                                        onClose={() => setConfirmTrashRunModalOpen(false)}
+                                                        onDelete={async () => {
+                                                            if (run?.id) {
+                                                                await trash(alerting, run?.id)
+                                                                setIsTrashed(true)
+                                                            } else {
+                                                                console.warn("cannot trash run as run object is null")
+                                                                return Promise.resolve();
+                                                            }
+                                                        }}
+                                                    />
+                                                    <ConfirmRestoreModal
+                                                        key="confirmRestore"
+                                                        description={"Run " + run.id}
+                                                        isOpen={confirmRestoreRunModalOpen}
+                                                        onClose={() => setConfirmRestoreRunModalOpen(false)}
+                                                        onRestore={async () => {
+                                                            if (run?.id) {
+                                                                await trash(alerting, run?.id, false)
+                                                                setIsTrashed(false)
+                                                            } else {
+                                                                console.warn("cannot restore run as run object is null")
+                                                                return Promise.resolve();
+                                                            }
+                                                        }}
                                                     />
                                                 </>
                                             )}
