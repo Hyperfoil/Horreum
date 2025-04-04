@@ -65,7 +65,11 @@ public class ConfigServiceImpl implements ConfigService {
     @Override
     @PermitAll
     @Transactional
-    public List<Datastore> datastores(String team) {
+    public List<Datastore> getDatastoresByTeam(String team) {
+        if (team == null || team.isBlank()) {
+            throw ServiceException.badRequest("Team cannot be null or blank");
+        }
+
         String queryWhere = "where access = 0";
         Set<String> roles = identity.getRoles();
         long rolesCount = roles.stream().filter(role -> role.endsWith("-team")).count();
@@ -73,7 +77,7 @@ public class ConfigServiceImpl implements ConfigService {
             queryWhere = queryWhere + " or owner in ('" + team + "')";
         }
         List<DatastoreConfigDAO> backends = DatastoreConfigDAO.list(queryWhere);
-        if (backends.size() != 0) {
+        if (!backends.isEmpty()) {
             return backends.stream().map(DatasourceMapper::from).collect(Collectors.toList());
         } else {
             return Collections.emptyList();
