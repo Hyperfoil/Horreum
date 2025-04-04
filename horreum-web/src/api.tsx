@@ -345,7 +345,7 @@ export function recalculateDatasets(id: number, testid: number, alerting: AlertC
     return apiCall(runApi.recalculateRunDatasets(id), alerting, "RECALCULATE_DATASETS", "Failed to recalculate datasets");
 }
 
-export function trash(alerting: AlertContextType, id: number, testid: number, isTrashed = true) : Promise<void> {
+export function trash(alerting: AlertContextType, id: number, isTrashed = true) : Promise<void> {
     return apiCall(runApi.trash(id, isTrashed), alerting, "RUN_TRASH", "Failed to trash run ID " + id);
 }
 
