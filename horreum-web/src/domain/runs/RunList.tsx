@@ -16,7 +16,7 @@ import { NavLink } from "react-router-dom"
 import { Duration } from "luxon"
 import { toEpochMillis, noop } from "../../utils"
 
-import { teamsSelector, teamToName } from "../../auth"
+import {isAuthenticatedSelector, teamsSelector, teamToName} from "../../auth"
 
 import { fetchTest } from "../../api"
 
@@ -46,6 +46,7 @@ export default function RunList() {
     const { alerting } = useContext(AppContext) as AppContextType;
     const { testId } = useParams()
     const testIdInt = parseInt(testId ?? "-1")
+    const isAuthenticated = useSelector(isAuthenticatedSelector)
 
     const [test, setTest] = useState<Test | undefined>(undefined)
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
@@ -241,18 +242,20 @@ export default function RunList() {
                             onChange={(_event, val) => setShowTrashed(!showTrashed)}
                         />
                     </ToolbarItem>
-                    <ToolbarItem>
-                        <Split hasGutter>
-                            <SplitItem>
-                                <Button
-                                    isDisabled={false}
-                                    variant="primary"
-                                    onClick={toggleNewRunModal}
-                                >
-                                    Import Data
-                                </Button></SplitItem>
-                        </Split>
-                    </ToolbarItem>
+                    {isAuthenticated &&
+                        <ToolbarItem>
+                            <Split hasGutter>
+                                <SplitItem>
+                                    <Button
+                                        isDisabled={false}
+                                        variant="primary"
+                                        onClick={toggleNewRunModal}
+                                    >
+                                        Import Data
+                                    </Button></SplitItem>
+                            </Split>
+                        </ToolbarItem>
+                    }
                     {test && test.compareUrl && (
                         <ToolbarItem>
                             <Button

@@ -86,7 +86,7 @@ function useRestore(run: RunSummary): MenuItem<RunSummary> {
                         key="restore"
                         onClick={() => {
                             close()
-                            trash(alerting, run.id, run.testid, false).then()
+                            trash(alerting, run.id, false).then()
                         }}
                     >
                         Restore
@@ -165,7 +165,7 @@ export function Menu(run: RunSummary, refreshCallback: () => void, clearSelected
         onAccessUpdate: (id, owner, access) => updateRunAccess(id, run.testid, owner, access, alerting).then(refreshCallback),
     })
     const del = useDelete({
-        onDelete: id => trash(alerting, id, run.testid).then(refreshCallback)
+        onDelete: id => trash(alerting, id).then(refreshCallback)
             .then(clearSelected),
     })
     const recalculate = useRecalculateDatasets(run)
