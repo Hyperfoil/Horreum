@@ -89,8 +89,6 @@
         <quinoa.version>2.5.3</quinoa.version>
         <surefire-plugin.version>3.5.3</surefire-plugin.version>
         <failsafe-plugin.version>3.5.3</failsafe-plugin.version>
-        <keycloak-admin-client.version>23.0.3</keycloak-admin-client.version>
-        <quarkus-test-keycloak.version>3.14.4</quarkus-test-keycloak.version>
         <validator.version>1.5.6</validator.version>
         <jayway.jsonpath.version>2.9.0</jayway.jsonpath.version>
 
@@ -248,14 +246,6 @@
                 <groupId>org.keycloak</groupId>
                 <artifactId>keycloak-authz-client</artifactId>
                 <version>${keycloak.version}</version>
-            </dependency>
-
-            <!-- Force quarkus test keycloak server -->
-            <dependency>
-                <groupId>io.quarkus</groupId>
-                <artifactId>quarkus-test-keycloak-server</artifactId>
-                <version>${quarkus-test-keycloak.version}</version>
-                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
