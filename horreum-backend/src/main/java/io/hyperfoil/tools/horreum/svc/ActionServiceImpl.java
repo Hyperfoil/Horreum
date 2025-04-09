@@ -31,7 +31,8 @@ import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
-import io.hyperfoil.tools.horreum.entity.data.*;
+import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
+import io.hyperfoil.tools.horreum.entity.data.AllowedSiteDAO;
 import io.hyperfoil.tools.horreum.mapper.ActionMapper;
 import io.hyperfoil.tools.horreum.mapper.AllowedSiteMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
@@ -160,27 +161,52 @@ public class ActionServiceImpl implements ActionService {
     @WithRoles
     @Transactional
     @Override
-    public Action add(Action action) {
+    public Action addGlobalAction(Action action) {
         if (action == null) {
-            throw ServiceException.badRequest("Send action as request body.");
+            throw ServiceException.badRequest("Send action as request body");
         }
-        if (action.id != null && action.id <= 0) {
-            action.id = null;
+        if (action.testId != null && action.testId > 0) {
+            throw ServiceException.badRequest("Global action cannot have a Test associated with it");
         }
-        if (action.testId == null) {
-            action.testId = -1;
+
+        // ensure the id is null as we are creating a new record
+        action.id = null;
+        action.testId = -1;
+        return createAction(action);
+    }
+
+    @RolesAllowed(Roles.TESTER)
+    @WithRoles
+    @Transactional
+    @Override
+    public Action addAction(Action action) {
+        if (action == null) {
+            throw ServiceException.badRequest("Send action as request body");
         }
+
+        // just ensure the test exists
+        if (action.testId == null || action.testId <= 0) {
+            throw ServiceException.badRequest("Missing test id");
+        }
+        testService.getTestForUpdate(action.testId);
+
+        // ensure the id is null as we are creating a new record
+        action.id = null;
+        return createAction(action);
+    }
+
+    Action createAction(Action action) {
         action.config = ensureNotNull(action.config);
         action.secrets = ensureNotNull(action.secrets);
         validate(action);
+        ActionDAO actionEntity = ActionMapper.to(action);
         if (action.id == null) {
-            ActionDAO actionEntity = ActionMapper.to(action);
             actionEntity.persist();
             action.id = actionEntity.id;
         } else {
-            ActionDAO actionEntity = ActionMapper.to(action);
             merge(actionEntity);
         }
+
         return action;
     }
 
@@ -201,45 +227,71 @@ public class ActionServiceImpl implements ActionService {
         em.merge(action);
     }
 
-    @RolesAllowed(Roles.ADMIN)
-    @WithRoles
-    @Override
-    public Action get(int id) {
-        ActionDAO action = ActionDAO.find("id", id).firstResult();
-        return ActionMapper.from(action);
-    }
-
     @Override
     @RolesAllowed(Roles.TESTER)
     @WithRoles
     @Transactional
-    public Action update(Action dto) {
-        if (dto.testId <= 0) {
+    public Action updateAction(Action dto) {
+        if (dto.id == null || dto.id <= 0) {
+            throw ServiceException.badRequest("Cannot update an action with no id");
+        }
+        if (dto.testId == null || dto.testId <= 0) {
             throw ServiceException.badRequest("Missing test id");
         }
+
         // just ensure the test exists
         testService.getTestForUpdate(dto.testId);
         validate(dto);
 
         ActionDAO action = ActionMapper.to(dto);
-        if (action.id == null) {
-            action.persist();
+        if (!action.active) {
+            ActionDAO.deleteById(action.id);
+            return null;
         } else {
-            if (!action.active) {
-                ActionDAO.deleteById(action.id);
-                return null;
-            } else {
-                merge(action);
-            }
+            merge(action);
         }
+
         return ActionMapper.from(action);
+    }
+
+    @RolesAllowed(Roles.ADMIN)
+    @WithRoles
+    @Override
+    public Action getAction(int id) {
+        ActionDAO action = ActionDAO.find("id", id).firstResult();
+        return ActionMapper.from(action);
+    }
+
+    @WithRoles
+    @RolesAllowed(Roles.TESTER)
+    @Transactional
+    @Override
+    public void deleteAction(int id) {
+        // check you have rights on that test
+        ActionDAO action = ActionDAO.<ActionDAO> findByIdOptional(id)
+                .orElseThrow(() -> ServiceException.notFound("Action with id " + id + " not found!"));
+
+        if (action.testId == null || action.testId <= 0) {
+            throw ServiceException.badRequest("Cannot delete global action: missing test id");
+        }
+
+        // just ensure the test exists
+        testService.getTestForUpdate(action.testId);
+        ActionDAO.deleteById(id);
     }
 
     @WithRoles
     @RolesAllowed(Roles.ADMIN)
     @Transactional
     @Override
-    public void delete(int id) {
+    public void deleteGlobalAction(int id) {
+        ActionDAO action = ActionDAO.<ActionDAO> findByIdOptional(id)
+                .orElseThrow(() -> ServiceException.notFound("Action with id " + id + " not found!"));
+
+        if (action.testId > 0) {
+            throw ServiceException.badRequest("Cannot delete test action");
+        }
+
         ActionDAO.delete("id", id);
     }
 
@@ -254,7 +306,7 @@ public class ActionServiceImpl implements ActionService {
     @RolesAllowed(Roles.ADMIN)
     @WithRoles
     @Override
-    public List<Action> list(Integer limit, Integer page, String sort, SortDirection direction) {
+    public List<Action> listActions(Integer limit, Integer page, String sort, SortDirection direction) {
         Sort.Direction sortDirection = direction == null ? null : Sort.Direction.valueOf(direction.name());
         PanacheQuery<ActionDAO> query = ActionDAO.find("testId < 0", Sort.by(sort).direction(sortDirection));
         if (limit != null && page != null) {

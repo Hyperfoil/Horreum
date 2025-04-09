@@ -196,7 +196,7 @@ class TestServiceTest extends BaseServiceTest {
         assertTrue(action.active);
         action.active = false;
         action.testId = test.id;
-        jsonRequest().body(action).post("/api/action/update").then().statusCode(204);
+        jsonRequest().body(action).put("/api/action").then().statusCode(204);
 
         deleteTest(test);
     }

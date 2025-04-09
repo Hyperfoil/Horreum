@@ -7,6 +7,7 @@ import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -26,23 +27,30 @@ import io.hyperfoil.tools.horreum.api.data.AllowedSite;
 @Tag(name = "action", description = "Manage Actions")
 public interface ActionService {
     @POST
-    Action add(Action action);
+    Action addAction(Action action);
+
+    @POST
+    @Path("global")
+    Action addGlobalAction(Action action);
+
+    @PUT
+    Action updateAction(@RequestBody(required = true) Action action);
 
     @GET
     @Path("{id}")
-    Action get(@PathParam("id") int id);
+    Action getAction(@PathParam("id") int id);
 
     @DELETE
     @Path("{id}")
-    void delete(@PathParam("id") int id);
+    void deleteAction(@PathParam("id") int id);
 
-    @POST
-    @Path("update")
-    Action update(@RequestBody(required = true) Action action);
+    @DELETE
+    @Path("global/{id}")
+    void deleteGlobalAction(@PathParam("id") int id);
 
     @GET
     @Path("list")
-    List<Action> list(@QueryParam("limit") Integer limit,
+    List<Action> listActions(@QueryParam("limit") Integer limit,
             @QueryParam("page") Integer page,
             @QueryParam("sort") @DefaultValue("id") String sort,
             @QueryParam("direction") @DefaultValue("Ascending") SortDirection direction);
