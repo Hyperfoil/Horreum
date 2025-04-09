@@ -803,7 +803,7 @@ public class BaseServiceTest {
         action.active = true;
         action.testId = test.id;
         action.config = JsonNodeFactory.instance.objectNode().put("url", url);
-        return jsonRequest().auth().oauth2(getAdminToken()).body(action).post("/api/action");
+        return jsonRequest().auth().oauth2(getTesterToken()).body(action).post("/api/action");
     }
 
     protected Response addTestGithubIssueCommentAction(Test test, AsyncEventChannels event, String formatter, String owner,
@@ -828,7 +828,7 @@ public class BaseServiceTest {
         action.active = true;
         action.config = JsonNodeFactory.instance.objectNode().put("url", url);
         return given().auth().oauth2(getAdminToken())
-                .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action");
+                .header(HttpHeaders.CONTENT_TYPE, "application/json").body(action).post("/api/action/global");
     }
 
     protected ChangeDetection addChangeDetectionVariable(Test test, int schemaId) {
@@ -988,9 +988,11 @@ public class BaseServiceTest {
 
         Action a = new ObjectMapper().readValue(
                 readFile(p.resolve("new_run_action.json").toFile()), Action.class);
+        a.testId = t.id;
         assertEquals("run/new", a.event);
+
         //This request should return a bad request as the url is not set
-        jsonRequest().auth().oauth2(getAdminToken()).body(a).post("/api/action").then().statusCode(400);
+        jsonRequest().auth().oauth2(getTesterToken()).body(a).post("/api/action").then().statusCode(400);
 
         Run r = mapper.readValue(
                 readFile(p.resolve("roadrunner_run.json").toFile()), Run.class);

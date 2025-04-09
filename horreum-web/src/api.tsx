@@ -178,7 +178,10 @@ export interface TestStorage extends Test {
 
 //Actions
 export function addAction(action: Action, alerting: AlertContextType): Promise<Action> {
-    return apiCall(actionApi.add(action), alerting, "ADD_ACTION", "Failed to add action");
+    return apiCall(actionApi.addAction(action), alerting, "ADD_ACTION", "Failed to add action");
+}
+export function addGlobalAction(action: Action, alerting: AlertContextType): Promise<Action> {
+    return apiCall(actionApi.addGlobalAction(action), alerting, "ADD_ACTION", "Failed to add action");
 }
 export function addSite(prefix: string, alerting: AlertContextType): Promise<AllowedSite> {
     return apiCall(actionApi.addSite(prefix), alerting, "ADD_ALLOWED_SITE", "Failed to add allowed site");
@@ -196,15 +199,15 @@ export function getAllowedSites(alerting: AlertContextType): Promise<AllowedSite
 }
 
 export function allActions(alerting: AlertContextType): Promise<Action[]> {
-    return apiCall(actionApi.list(), alerting, "GET_ACTIONS", "Failed to get actions");
+    return apiCall(actionApi.listActions(), alerting, "GET_ACTIONS", "Failed to get actions");
 }
 
-export function removeAction(id: number, alerting: AlertContextType): Promise<void> {
-    return apiCall(actionApi._delete(id), alerting, "REMOVE_ACTION", "Failed to remove action");
+export function deleteGlobalAction(id: number, alerting: AlertContextType): Promise<void> {
+    return apiCall(actionApi.deleteGlobalAction(id), alerting, "REMOVE_ACTION", "Failed to remove global action");
 }
 
 export function updateAction(action: Action, alerting: AlertContextType): Promise<Action> {
-    return apiCall(actionApi.update(action), alerting, "UPDATE_ACTION", "Failed to update action");
+    return apiCall(actionApi.updateAction(action), alerting, "UPDATE_ACTION", "Failed to update action");
 }
 
 //Schemas
@@ -284,12 +287,12 @@ export function updateFolder(testId: number, prevFolder: string, newFolder: stri
     return apiCall(testApi.updateFolder(testId, newFolder), alerting, "TEST_FOLDER_UPDATE", "Cannot update test folder");
 }
 
-export function updateActions(testId: number, actions: Action[], alerting: AlertContextType) {
+export function updateOrCreateActions(testId: number, actions: Action[], alerting: AlertContextType) {
     const promises: any[] = []
     actions.forEach(action => {
         promises.push(
             (action.testId = testId),
-            updateAction(action, alerting)
+            action.id > 0 ? updateAction(action, alerting) : addAction(action, alerting)
         )
     })
     return Promise.all(promises)

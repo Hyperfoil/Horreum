@@ -3,7 +3,7 @@ import { useSelector } from "react-redux"
 
 import { Button, Hint, HintBody, Switch, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 
-import { allActions, addAction, removeAction } from "../../api"
+import {allActions, addGlobalAction, deleteGlobalAction} from "../../api"
 import { isAdminSelector } from "../../auth"
 
 import AddActionModal from "./AddActionModal"
@@ -100,7 +100,7 @@ export default function ActionList() {
                         <div style={{ textAlign: "right" }}>
                             <Button
                                 variant="danger"
-                                onClick={() => removeAction(value, alerting).then(_ => fetchAllActions())}
+                                onClick={() => deleteGlobalAction(value, alerting).then(_ => fetchAllActions())}
                             >
                                 Delete
                             </Button>
@@ -143,7 +143,7 @@ export default function ActionList() {
             <AddActionModal
                 isOpen={isOpen}
                 onClose={() => setOpen(false)}
-                onSubmit={action => addAction(action, alerting).then(_ => fetchAllActions())}
+                onSubmit={action => addGlobalAction(action, alerting).then(_ => fetchAllActions())}
             />
             <CustomTable<Action> columns={columns} data={actions || []} />
         </>

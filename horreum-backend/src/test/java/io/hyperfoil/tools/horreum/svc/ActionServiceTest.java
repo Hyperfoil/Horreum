@@ -44,7 +44,7 @@ public class ActionServiceTest extends BaseServiceTest {
     String port;
 
     @Inject
-    private ActionServiceImpl actionService;
+    ActionServiceImpl actionService;
 
     @org.junit.jupiter.api.Test
     public void testFailingHttp(TestInfo testInfo) {
@@ -135,7 +135,7 @@ public class ActionServiceTest extends BaseServiceTest {
 
         // Iterate through the set of test cases.
         config.put("channel", channel);
-        Action action = jsonRequest().auth().oauth2(getAdminToken())
+        Action action = jsonRequest().auth().oauth2(getTesterToken())
                 .contentType(ContentType.JSON).body(action_json)
                 .post("/api/action")
                 .then().statusCode(200)

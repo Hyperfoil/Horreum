@@ -13,7 +13,7 @@ import {
 } from "@patternfly/react-core"
 
 import { useTester } from "../../auth"
-import {Action, getTestActions, updateActions, HttpActionConfig, ActionConfig} from "../../api"
+import {Action, getTestActions, updateOrCreateActions, HttpActionConfig, ActionConfig} from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { testEventTypes } from "../actions/reducers"
 import ActionComponentForm from "../actions/ActionComponentForm"
@@ -45,7 +45,7 @@ export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: A
     }, [testId, isTester])
 
     funcsRef.current = {
-        save: () => updateActions(testId, actions, alerting),
+        save: () => updateOrCreateActions(testId, actions, alerting),
         reset: () => {
             // Perform a deep copy of the view object to prevent modifying store
             setActions(JSON.parse(JSON.stringify(actions)) as Action[])
