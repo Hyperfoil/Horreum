@@ -25,7 +25,7 @@
     <groupId>io.hyperfoil.tools</groupId>
     <artifactId>horreum</artifactId>
     <packaging>pom</packaging>
-    <version>0.18-SNAPSHOT</version>
+    <version>0.19-SNAPSHOT</version>
     <modules>
         <module>horreum-api</module>
         <module>horreum-client</module>
@@ -103,7 +103,7 @@
         <dev.images.amq>quay.io/artemiscloud/activemq-artemis-broker:1.0.25</dev.images.amq>
 
         <horreum.version>${project.version}</horreum.version>
-        <major-version>0.18</major-version>
+        <major-version>0.19</major-version>
 
         <!-- code formatting -->
         <format.skip>false</format.skip>
