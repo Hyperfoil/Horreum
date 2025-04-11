@@ -1,11 +1,6 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -186,11 +181,11 @@ class TestServiceTest extends BaseServiceTest {
                 .get("/api/log/action/" + test.id).then().statusCode(200).extract().body().jsonPath().getList(".");
         assertFalse(actionLog.isEmpty());
 
-        addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "https://attacker.com").then().statusCode(400);
+        addTestHttpAction(test, ActionEvent.RUN_NEW, "https://attacker.com").then().statusCode(400);
 
         addAllowedSite("https://example.com");
 
-        Action action = addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "https://example.com/foo/bar").then()
+        Action action = addTestHttpAction(test, ActionEvent.RUN_NEW, "https://example.com/foo/bar").then()
                 .statusCode(200).extract().body().as(Action.class);
         assertNotNull(action.id);
         assertTrue(action.active);
@@ -244,8 +239,8 @@ class TestServiceTest extends BaseServiceTest {
         view.testId = test.id;
         updateView(view);
 
-        addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "http://example.com");
-        addTestGithubIssueCommentAction(test, AsyncEventChannels.EXPERIMENT_RESULT_NEW,
+        addTestHttpAction(test, ActionEvent.RUN_NEW, "http://example.com");
+        addTestGithubIssueCommentAction(test, ActionEvent.EXPERIMENT_RESULT_NEW,
                 ExperimentResultToMarkdown.NAME, "hyperfoil", "horreum", "123", "super-secret-github-token");
 
         addChangeDetectionVariable(test, schema.id);
