@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Transient;
@@ -10,8 +11,10 @@ import org.hibernate.annotations.Type;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.hyperfoil.tools.horreum.converter.ActionEventConverter;
 import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
+import io.hyperfoil.tools.horreum.svc.ActionEvent;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity(name = "Action")
@@ -22,7 +25,8 @@ public class ActionDAO extends PanacheEntityBase {
 
     @NotNull
     @Column(name = "event")
-    public String event;
+    @Convert(converter = ActionEventConverter.class)
+    public ActionEvent event;
 
     /*
      * The type options were found in horreum-web/src/domain/actions/ActionComponentForm.tsx#L73
@@ -68,7 +72,7 @@ public class ActionDAO extends PanacheEntityBase {
     public ActionDAO() {
     }
 
-    public ActionDAO(Integer id, String event, String type, ObjectNode config, ObjectNode secrets,
+    public ActionDAO(Integer id, ActionEvent event, String type, ObjectNode config, ObjectNode secrets,
             Integer testId, boolean active, boolean runAlways) {
         this.id = id;
         this.event = event;

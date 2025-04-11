@@ -28,7 +28,6 @@ import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.internal.services.ActionService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
-import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
@@ -66,8 +65,8 @@ public class ActionServiceImpl implements ActionService {
         plugins = actionPlugins.stream().collect(Collectors.toMap(ActionPlugin::type, Function.identity()));
     }
 
-    private void executeActions(AsyncEventChannels event, int testId, Object payload, boolean notify) {
-        List<ActionDAO> actions = getActions(event.name(), testId);
+    private void executeActions(ActionEvent event, int testId, Object payload, boolean notify) {
+        List<ActionDAO> actions = getActions(event, testId);
         if (actions.isEmpty()) {
             new ActionLogDAO(PersistentLogDAO.DEBUG, testId, event.name(), null, "No actions found.").persist();
             return;
@@ -125,7 +124,7 @@ public class ActionServiceImpl implements ActionService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     public void onNewTest(Test test) {
-        executeActions(AsyncEventChannels.TEST_NEW, test.id, test, true);
+        executeActions(ActionEvent.TEST_NEW, test.id, test, true);
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -138,7 +137,7 @@ public class ActionServiceImpl implements ActionService {
     @Transactional
     public void onNewRun(Run run) {
         Integer testId = run.testid;
-        executeActions(AsyncEventChannels.RUN_NEW, testId, run, true);
+        executeActions(ActionEvent.RUN_NEW, testId, run, true);
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
@@ -146,7 +145,7 @@ public class ActionServiceImpl implements ActionService {
     public void onNewChange(Change.Event changeEvent) {
         int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
                 .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
-        executeActions(AsyncEventChannels.CHANGE_NEW, testId, changeEvent, changeEvent.notify);
+        executeActions(ActionEvent.CHANGE_NEW, testId, changeEvent, changeEvent.notify);
     }
 
     void validate(Action action) {
@@ -295,7 +294,7 @@ public class ActionServiceImpl implements ActionService {
         ActionDAO.delete("id", id);
     }
 
-    public List<ActionDAO> getActions(String event, int testId) {
+    public List<ActionDAO> getActions(ActionEvent event, int testId) {
         if (testId < 0) {
             return ActionDAO.find("event = ?1", event).list();
         } else {
@@ -353,7 +352,7 @@ public class ActionServiceImpl implements ActionService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     public void onNewExperimentResult(ExperimentService.ExperimentResult result) {
-        executeActions(AsyncEventChannels.EXPERIMENT_RESULT_NEW, result.profile.testId, result, result.notify);
+        executeActions(ActionEvent.EXPERIMENT_RESULT_NEW, result.profile.testId, result, result.notify);
     }
 
     void exportTest(TestExport test) {

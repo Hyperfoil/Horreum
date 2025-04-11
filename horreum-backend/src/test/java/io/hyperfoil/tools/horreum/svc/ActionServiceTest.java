@@ -2,8 +2,7 @@ package io.hyperfoil.tools.horreum.svc;
 
 import static io.hyperfoil.tools.horreum.test.TestUtil.eventually;
 import static io.restassured.RestAssured.given;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,9 +21,9 @@ import io.hyperfoil.tools.horreum.action.SlackChannelMessageAction;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.ActionLog;
 import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
+import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
@@ -51,7 +50,7 @@ public class ActionServiceTest extends BaseServiceTest {
         Test test = createTest(createExampleTest(getTestName(testInfo)));
 
         addAllowedSite("http://localhost:" + port);
-        addTestHttpAction(test, AsyncEventChannels.RUN_NEW, "http://localhost:" + port);
+        addTestHttpAction(test, ActionEvent.RUN_NEW, "http://localhost:" + port);
 
         uploadRun(JsonNodeFactory.instance.objectNode(), test.name);
 
@@ -65,7 +64,7 @@ public class ActionServiceTest extends BaseServiceTest {
 
     @org.junit.jupiter.api.Test
     public void testAddGlobalAction() {
-        String responseType = addGlobalAction(AsyncEventChannels.TEST_NEW, "https://attacker.com")
+        String responseType = addGlobalAction(ActionEvent.TEST_NEW, "https://attacker.com")
                 .then().statusCode(400).extract().header(HttpHeaders.CONTENT_TYPE);
         // constraint violations are mapped to 400 + JSON response, we want explicit
         // error
@@ -73,43 +72,46 @@ public class ActionServiceTest extends BaseServiceTest {
 
         addAllowedSite("https://example.com");
 
-        Action action = addGlobalAction(AsyncEventChannels.TEST_NEW, "https://example.com/foo/bar").then().statusCode(200)
+        Action action = addGlobalAction(ActionEvent.TEST_NEW, "https://example.com/foo/bar").then().statusCode(200)
                 .extract().body().as(Action.class);
         assertNotNull(action.id);
         assertTrue(action.active);
         given().auth().oauth2(getAdminToken()).delete("/api/action/" + action.id);
     }
 
-    /**
-     * @param testInfo
-     */
     @org.junit.jupiter.api.Test
     public void testSlackGoodChannelAction(TestInfo testInfo) {
         executeTestCase(testInfo, "GOODCHANNEL", true);
     }
 
-    /**
-     * @param testInfo
-     */
     @org.junit.jupiter.api.Test
     public void testSlackBadChannelAction(TestInfo testInfo) {
         executeTestCase(testInfo, "BADCHANNEL", false);
     }
 
-    /**
-     * @param testInfo
-     */
     @org.junit.jupiter.api.Test
     public void testSlackBusyChannelAction(TestInfo testInfo) {
         executeTestCase(testInfo, "BUSYCHANNEL", true);
     }
 
-    /**
-     * @param testInfo
-     */
     @org.junit.jupiter.api.Test
     public void testSlackErrorChannelAction(TestInfo testInfo) {
         executeTestCase(testInfo, "ERRORCHANNEL", false);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testGetTestActions(TestInfo testInfo) {
+        Test test = createTest(createExampleTest(getTestName(testInfo)));
+
+        addAllowedSite("http://localhost:" + port);
+        addTestHttpAction(test, ActionEvent.RUN_NEW, "http://localhost:" + port);
+
+        assertEquals(ActionEvent.RUN_NEW, ActionDAO.<ActionDAO> listAll().get(0).event);
+
+        assertEquals(1, actionService.getActions(ActionEvent.RUN_NEW, test.id).size());
+        assertEquals(0, actionService.getActions(ActionEvent.TEST_NEW, test.id).size());
+        assertEquals(0, actionService.getActions(ActionEvent.CHANGE_NEW, test.id).size());
+        assertEquals(0, actionService.getActions(ActionEvent.EXPERIMENT_RESULT_NEW, test.id).size());
     }
 
     private void executeTestCase(TestInfo testInfo, String channel, Boolean expectError) {
@@ -125,7 +127,7 @@ public class ActionServiceTest extends BaseServiceTest {
         ObjectNode secrets = Util.OBJECT_MAPPER.createObjectNode().put("token", token);
         ObjectNode action_json = Util.OBJECT_MAPPER.createObjectNode()
                 .put("id", -1)
-                .put("event", AsyncEventChannels.TEST_NEW.name())
+                .put("event", ActionEvent.TEST_NEW.getValue())
                 .put("type", SlackChannelMessageAction.TYPE_SLACK_MESSAGE)
                 .put("testId", test.id)
                 .put("active", true)
