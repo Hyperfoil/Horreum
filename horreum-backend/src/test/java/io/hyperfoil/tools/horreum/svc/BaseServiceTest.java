@@ -796,9 +796,9 @@ public class BaseServiceTest {
                 .body(prefix).post("/api/action/allowedSites").then().statusCode(200);
     }
 
-    protected Response addTestHttpAction(Test test, AsyncEventChannels event, String url) {
+    protected Response addTestHttpAction(Test test, ActionEvent event, String url) {
         Action action = new Action();
-        action.event = event.name();
+        action.event = event.getValue();
         action.type = HttpAction.TYPE_HTTP;
         action.active = true;
         action.testId = test.id;
@@ -806,10 +806,10 @@ public class BaseServiceTest {
         return jsonRequest().auth().oauth2(getTesterToken()).body(action).post("/api/action");
     }
 
-    protected Response addTestGithubIssueCommentAction(Test test, AsyncEventChannels event, String formatter, String owner,
+    protected Response addTestGithubIssueCommentAction(Test test, ActionEvent event, String formatter, String owner,
             String repo, String issue, String secretToken) {
         Action action = new Action();
-        action.event = event.name();
+        action.event = event.getValue();
         action.type = GitHubIssueCommentAction.TYPE_GITHUB_ISSUE_COMMENT;
         action.active = true;
         action.config = JsonNodeFactory.instance.objectNode()
@@ -821,9 +821,9 @@ public class BaseServiceTest {
         return jsonRequest().body(action).post("/api/test/" + test.id + "/action");
     }
 
-    protected Response addGlobalAction(AsyncEventChannels event, String url) {
+    protected Response addGlobalAction(ActionEvent event, String url) {
         Action action = new Action();
-        action.event = event.name();
+        action.event = event.getValue();
         action.type = "http";
         action.active = true;
         action.config = JsonNodeFactory.instance.objectNode().put("url", url);
