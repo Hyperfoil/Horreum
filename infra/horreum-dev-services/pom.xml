@@ -4,7 +4,7 @@
   <parent>
     <artifactId>horreum</artifactId>
     <groupId>io.hyperfoil.tools</groupId>
-    <version>0.18.1-SNAPSHOT</version>
+    <version>0.18.1</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
