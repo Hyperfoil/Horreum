@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotAuthorizedException;
-import jakarta.ws.rs.core.Response;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -120,9 +119,9 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
             run.testid = -1; // should be ignored
             run.data = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
             run.description = "Test description";
-            try (Response response = apiClient.runService.add(dummyTest.name, dummyTest.owner, Access.PRIVATE, run)) {
-                assertEquals(202, response.getStatus());
-            }
+            List<Integer> ids = apiClient.runService.addRun(dummyTest.name, dummyTest.owner, Access.PRIVATE, run);
+            assertEquals(1, ids.size());
+            assertTrue(ids.get(0) > 0);
         } finally {
             horreumClient.testService.updateTestAccess(dummyTest.id, dummyTest.owner, Access.PUBLIC);
         }
@@ -164,7 +163,7 @@ public class HorreumClientIT implements QuarkusTestBeforeTestExecutionCallback, 
         run.testid = -1; // should be ignored
         run.data = new ObjectMapper().readTree(resourceToString("data/config-quickstart.jvm.json"));
         run.description = "Test description";
-        horreumClient.runService.add(dummyTest.name, dummyTest.owner, Access.PUBLIC, run);
+        horreumClient.runService.addRun(dummyTest.name, dummyTest.owner, Access.PUBLIC, run);
     }
 
     // Javascript execution gets often broken with new Quarkus releases, this should catch it
