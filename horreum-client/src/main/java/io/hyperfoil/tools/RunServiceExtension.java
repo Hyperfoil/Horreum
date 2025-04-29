@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.client.RunService;
 import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.ExportedLabelValues;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.services.RunService.RunCount;
 import io.hyperfoil.tools.horreum.api.services.RunService.RunSummary;
@@ -34,47 +35,19 @@ public class RunServiceExtension implements RunService {
         this.delegate = delegate;
     }
 
-    @Override
-    public io.hyperfoil.tools.horreum.api.services.RunService.RunExtended getRun(int id) {
-        return delegate.getRun(id);
+    /**
+     * Additional method provided to add Run from data using JsonNode as data and metadata object
+     * @return Response
+     */
+    public Response addRunFromData(String start, String stop, String test, String owner, Access access, String schemaUri,
+            String description, JsonNode data) {
+        return this.delegate.addRunFromData(start, stop, test, owner, access, schemaUri, description, data);
     }
 
-    @Override
-    public RunSummary getRunSummary(int id) {
-        return delegate.getRunSummary(id);
-    }
-
-    @Override
-    public Object getData(int id, String schemaUri) {
-        return delegate.getData(id, schemaUri);
-    }
-
-    @Override
-    public Object getMetadata(int id, String schemaUri) {
-        return delegate.getMetadata(id, schemaUri);
-    }
-
-    //   @Override
-    //   public QueryResult queryData(int id, String jsonpath, String schemaUri, boolean array) {
-    //      return delegate.queryData(id, jsonpath, schemaUri, array);
-    //   }
-
-    @Override
-    public void updateAccess(int id, String owner, Access access) {
-        delegate.updateAccess(id, owner, access);
-    }
-
-    @Override
-    public Response add(String testNameOrId, String owner, Access access, Run run) {
-        return delegate.add(testNameOrId, owner, access, run);
-    }
-
-    @Override
-    public Response addRunFromData(String start, String stop, String test, String owner, Access access,
-            String schemaUri, String description, JsonNode data) {
-        return delegate.addRunFromData(start, stop, test, owner, access, schemaUri, description, data);
-    }
-
+    /**
+     * Additional method provided to add Run from data using JsonNode as data and metadata object
+     * @return Response
+     */
     public Response addRunFromData(String start, String stop, String test, String owner, Access access,
             String schemaUri, String description, JsonNode data, JsonNode... metadata) {
         MultipartFormDataOutput multipart = new MultipartFormDataOutput();
@@ -104,54 +77,91 @@ public class RunServiceExtension implements RunService {
     }
 
     @Override
+    public io.hyperfoil.tools.horreum.api.services.RunService.RunExtended getRun(int id) {
+        return this.delegate.getRun(id);
+    }
+
+    @Override
+    public RunSummary getRunSummary(int id) {
+        return this.delegate.getRunSummary(id);
+    }
+
+    @Override
+    public Object getData(int id, String schemaUri) {
+        return this.delegate.getData(id, schemaUri);
+    }
+
+    @Override
+    public List<ExportedLabelValues> getRunLabelValues(int runId, String filter, String sort, String direction, int limit,
+            int page, List<String> include, List<String> exclude, boolean multiFilter) {
+        return this.delegate.getRunLabelValues(runId, filter, sort, direction, limit, page, include, exclude, multiFilter);
+    }
+
+    @Override
+    public Object getMetadata(int id, String schemaUri) {
+        return this.delegate.getMetadata(id, schemaUri);
+    }
+
+    @Override
+    public void updateRunAccess(int id, String owner, Access access) {
+        this.delegate.updateRunAccess(id, owner, access);
+    }
+
+    @Override
+    public List<Integer> addRun(String testNameOrId, String owner, Access access, Run run) {
+        return this.delegate.addRun(testNameOrId, owner, access, run);
+    }
+
+    @Override
     public List<String> autocomplete(String query) {
-        return delegate.autocomplete(query);
+        return this.delegate.autocomplete(query);
     }
 
     @Override
     public RunsSummary listAllRuns(String query, boolean matchAll, String roles, boolean trashed, Integer limit, Integer page,
             String sort, SortDirection direction) {
-        return delegate.listAllRuns(query, matchAll, roles, trashed, limit, page, sort, direction);
+        return this.delegate.listAllRuns(query, matchAll, roles, trashed, limit, page, sort, direction);
     }
 
     @Override
     public RunCount runCount(int testId) {
-        return delegate.runCount(testId);
+        return this.delegate.runCount(testId);
     }
 
     @Override
     public RunsSummary listTestRuns(int testId, boolean trashed, Integer limit, Integer page, String sort,
             SortDirection direction) {
-        return delegate.listTestRuns(testId, trashed, limit, page, sort, direction);
+        return this.delegate.listTestRuns(testId, trashed, limit, page, sort, direction);
     }
 
     @Override
-    public RunsSummary listBySchema(String uri, Integer limit, Integer page, String sort, String direction) {
-        return delegate.listBySchema(uri, limit, page, sort, direction);
+    public RunsSummary listRunsBySchema(String uri, Integer limit, Integer page, String sort, SortDirection direction) {
+        return this.delegate.listRunsBySchema(uri, limit, page, sort, direction);
     }
 
     @Override
     public void trash(int id, Boolean isTrashed) {
-        delegate.trash(id, isTrashed);
+        this.delegate.trash(id, isTrashed);
     }
 
     @Override
     public void updateDescription(int id, String description) {
-        delegate.updateDescription(id, description);
+        this.delegate.updateDescription(id, description);
     }
 
     @Override
-    public Map<Integer, String> updateSchema(int id, String path, String schemaUri) {
-        return delegate.updateSchema(id, path, schemaUri);
+    public Map<Integer, String> updateRunSchema(int id, String path, String schemaUri) {
+        return this.delegate.updateRunSchema(id, path, schemaUri);
     }
 
     @Override
-    public List<Integer> recalculateDatasets(int runId) {
-        return delegate.recalculateDatasets(runId);
+    public List<Integer> recalculateRunDatasets(int runId) {
+        return this.delegate.recalculateRunDatasets(runId);
     }
 
     @Override
     public void recalculateAll(String from, String to) {
-        delegate.recalculateAll(from, to);
+        this.delegate.recalculateAll(from, to);
     }
+
 }
