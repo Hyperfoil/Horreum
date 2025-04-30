@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
 import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
@@ -267,7 +266,7 @@ public class ExperimentServiceImpl implements ExperimentService {
                     .<DataPointDAO> find("dataset.id IN ?1 AND variable.id IN ?2", Sort.descending("timestamp", "dataset.id"),
                             entry.getValue(), variableIds)
                     .stream().forEach(dp -> byVar.computeIfAbsent(dp.variable.id, v -> new ArrayList<>()).add(dp));
-            Map<ExperimentComparison, ComparisonResult> results = new HashMap<>();
+            Map<String, ComparisonResult> results = new HashMap<>();
             for (var comparison : profile.comparisons) {
                 Hibernate.initialize(comparison.variable);
                 ExperimentConditionModel model = MODELS.get(comparison.model);
@@ -290,8 +289,7 @@ public class ExperimentServiceImpl implements ExperimentService {
                             "No datapoint for comparison of variable %s in profile %s", comparison.variable.name, profile.name);
                     continue;
                 }
-                results.put(ExperimentProfileMapper.fromExperimentComparison(comparison),
-                        model.compare(comparison.config, baseline, datapoint));
+                results.put(comparison.variable.name, model.compare(comparison.config, baseline, datapoint));
             }
 
             org.hibernate.query.Query<Dataset.Info> datasetQuery = em.unwrap(Session.class).createQuery(
