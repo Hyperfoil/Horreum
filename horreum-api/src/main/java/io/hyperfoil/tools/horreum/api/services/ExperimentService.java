@@ -1,6 +1,5 @@
 package io.hyperfoil.tools.horreum.api.services;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -27,19 +26,11 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.KeyDeserializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import io.hyperfoil.tools.horreum.api.alerting.DatasetLog;
 import io.hyperfoil.tools.horreum.api.data.ConditionConfig;
 import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
 import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
 
 @Consumes({ MediaType.APPLICATION_JSON })
@@ -134,10 +125,8 @@ public interface ExperimentService {
         @Schema(description = "A list of Dataset Info for experiment baseline(s)")
         public List<Dataset.Info> baseline;
 
-        @JsonSerialize(keyUsing = ExperimentComparisonSerializer.class)
-        @JsonDeserialize(keyUsing = ExperimentComparisonDeserializer.class)
         @Schema(description = "A Map of all comparisons and results evaluated during an Experiment")
-        public Map<ExperimentComparison, ComparisonResult> results;
+        public Map<String, ComparisonResult> results;
 
         @Schema(implementation = String.class)
         public JsonNode extraLabels;
@@ -148,7 +137,7 @@ public interface ExperimentService {
 
         public ExperimentResult(ExperimentProfile profile, List<DatasetLog> logs,
                 Dataset.Info datasetInfo, List<Dataset.Info> baseline,
-                Map<ExperimentComparison, ComparisonResult> results,
+                Map<String, ComparisonResult> results,
                 JsonNode extraLabels, boolean notify) {
             this.profile = profile;
             this.logs = logs;
@@ -179,21 +168,6 @@ public interface ExperimentService {
             this.experimentValue = experimentValue;
             this.baselineValue = baselineValue;
             this.result = result;
-        }
-    }
-
-    class ExperimentComparisonSerializer extends JsonSerializer<ExperimentComparison> {
-        @Override
-        public void serialize(ExperimentComparison value, JsonGenerator gen, SerializerProvider serializers)
-                throws IOException {
-            gen.writeFieldName(value.variableName);
-        }
-    }
-
-    class ExperimentComparisonDeserializer extends KeyDeserializer {
-        @Override
-        public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException {
-            return key;
         }
     }
 }
