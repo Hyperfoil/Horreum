@@ -368,7 +368,7 @@ public class ActionServiceImpl implements ActionService {
     void importTest(TestExport test) {
         for (Action a : test.actions) {
             ActionDAO action = ActionMapper.to(a);
-            if (ActionDAO.findById(action.id) == null) {
+            if (action.id == null || action.id <= 0 || ActionDAO.findById(action.id) == null) {
                 action.id = null;
                 action.persist();
             } else
