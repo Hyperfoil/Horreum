@@ -46,11 +46,10 @@
 
     <distributionManagement>
         <repository>
-            <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/content/repositories/releases</url>
+            <id>central</id>
+            <url>https://central.sonatype.com</url>
         </repository>
     </distributionManagement>
-
 
     <!-- Licenses -->
     <licenses>
@@ -68,7 +67,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <use.java11plus>true</use.java11plus>
 
-        <version.sonatype.nexus>1.7.0</version.sonatype.nexus>
+        <version.sonatype.central>0.7.0</version.sonatype.central>
         <version.maven.antrun>3.1.0</version.maven.antrun>
         <version.maven.compiler>3.14.0</version.maven.compiler>
         <version.maven.gpg>3.2.7</version.maven.gpg>
@@ -286,9 +285,9 @@
                     </executions>
                 </plugin>
                 <plugin>
-                    <groupId>org.sonatype.plugins</groupId>
-                    <artifactId>nexus-staging-maven-plugin</artifactId>
-                    <version>${version.sonatype.nexus}</version>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>${version.sonatype.central}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -446,13 +445,12 @@
                 <plugins>
                     <!-- To release to Nexus -->
                     <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
                         <extensions>true</extensions>
                         <configuration>
-                            <serverId>ossrh</serverId>
-                            <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
                         </configuration>
                     </plugin>
                     <!-- To generate javadoc -->
