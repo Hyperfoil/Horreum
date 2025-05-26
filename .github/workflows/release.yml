@@ -53,7 +53,7 @@ jobs:
           NEXT_VER=$(echo ${PROJECT_VERSION} | awk -F '-' '{ print $1}' | awk -F'.' '{print $1+0"."$2+0"."$3+1"-SNAPSHOT"}' | sed s/[.]$//)
           echo "CUR_VER=$CUR_VER" >> "$GITHUB_ENV"
           mvn -B -ntp -DskipTests clean javadoc:javadoc install
-          mvn -B -ntp -Darguments=-DskipTests -Dtag=$CUR_VER release:prepare release:perform -DreleaseVersion=$CUR_VER -DdevelopmentVersion=$NEXT_VER -Dresume=false
+          mvn -B -ntp -Darguments=-DskipTests -Dtag=$CUR_VER release:prepare release:perform -Prelease -DreleaseVersion=$CUR_VER -DdevelopmentVersion=$NEXT_VER -Dresume=false
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
