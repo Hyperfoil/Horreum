@@ -11,7 +11,7 @@ Open https://github.com/Hyperfoil/Horreum/actions/workflows/release.yml and run 
 
 This workflow will take care of releasing all artifacts and container images on the appropriate registries:
 * Create a new GitHub tag following the semantic versioning (e.g., 0.17.0-SNAPSHOT → 0.17.0)
-* Push the maven artifacts to [Sonatype](https://s01.oss.sonatype.org/#nexus-search;quick~horreum)
+* Push the maven artifacts to [Central Sonatype](https://central.sonatype.com/search?q=horreum)
 * Push the generated container image to [quay.io/hyperfoil/horreum](https://quay.io/repository/hyperfoil/horreum)
 
 The only missing step is the creation of the GitHub release, a step that at the moment needs to be done manually using the GitHub UI. Consider using the “Generate release notes” feature to pre-populate the release notes automatically after selecting the correct tags.
