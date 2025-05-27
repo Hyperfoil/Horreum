@@ -87,6 +87,10 @@ public class ServiceMediator {
     Emitter<Dataset.EventNew> dataSetEmitter;
 
     @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
+    @Channel("new-dataset-event-out")
+    Emitter<Dataset.EventNew> newDataSetEmitter;
+
+    @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
     @Channel("run-recalc-out")
     Emitter<Integer> runEmitter;
 
@@ -154,22 +158,38 @@ public class ServiceMediator {
         aggregator.onNewChange(event);
     }
 
-    @Incoming("dataset-event-in")
-    @Blocking(ordered = false, value = "horreum.dataset.pool")
-    @ActivateRequestContext
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    public void processDatasetEvents(Dataset.EventNew newEvent) {
-        onNewDataset(newEvent);
-        validateDataset(newEvent.datasetId);
-    }
-
     void onNewDataset(Dataset.EventNew eventNew) {
         datasetService.onNewDataset(eventNew);
     }
 
+    @Incoming("dataset-event-in")
+    @Blocking(ordered = false, value = "horreum.dataset.pool")
+    @ActivateRequestContext
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    public void processDatasetEventsForRecalculation(Dataset.EventNew newEvent) {
+        onNewDataset(newEvent);
+        validateDataset(newEvent.datasetId);
+    }
+
+    // This is meant to be used when we ask for dataset recalculation
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
-    void queueDatasetEvents(Dataset.EventNew event) {
+    void queueDatasetEventsForRecalculation(Dataset.EventNew event) {
         dataSetEmitter.send(event);
+    }
+
+    @Incoming("new-dataset-event-in")
+    @Blocking(ordered = false, value = "horreum.new-dataset.pool")
+    @ActivateRequestContext
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    public void processNewDatasetEvents(Dataset.EventNew newEvent) {
+        onNewDataset(newEvent);
+        validateDataset(newEvent.datasetId);
+    }
+
+    // This is meant to be used during the first dataset creation, i.e., on run upload
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
+    void queueNewDatasetEvents(Dataset.EventNew event) {
+        newDataSetEmitter.send(event);
     }
 
     @Incoming("run-recalc-in")
