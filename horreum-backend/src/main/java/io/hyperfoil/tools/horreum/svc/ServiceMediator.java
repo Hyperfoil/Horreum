@@ -16,13 +16,18 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.eclipse.microprofile.reactive.messaging.Message;
 import org.eclipse.microprofile.reactive.messaging.OnOverflow;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.alerting.DataPoint;
-import io.hyperfoil.tools.horreum.api.data.*;
+import io.hyperfoil.tools.horreum.api.data.Access;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
+import io.hyperfoil.tools.horreum.api.data.Run;
+import io.hyperfoil.tools.horreum.api.data.Test;
+import io.hyperfoil.tools.horreum.api.data.TestExport;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
@@ -30,6 +35,7 @@ import io.hyperfoil.tools.horreum.events.DatasetChanges;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.reactive.messaging.amqp.OutgoingAmqpMetadata;
 import io.smallrye.reactive.messaging.annotations.Blocking;
 import io.vertx.core.Vertx;
 
@@ -154,6 +160,10 @@ public class ServiceMediator {
         aggregator.onNewChange(event);
     }
 
+    void onNewDataset(Dataset.EventNew eventNew) {
+        datasetService.onNewDataset(eventNew);
+    }
+
     @Incoming("dataset-event-in")
     @Blocking(ordered = false, value = "horreum.dataset.pool")
     @ActivateRequestContext
@@ -163,13 +173,15 @@ public class ServiceMediator {
         validateDataset(newEvent.datasetId);
     }
 
-    void onNewDataset(Dataset.EventNew eventNew) {
-        datasetService.onNewDataset(eventNew);
-    }
-
+    // NEW_DATASET, i.e., when uploading new run, has higher priority than RECALC_DATASET, i.e., when updating label schema
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
     void queueDatasetEvents(Dataset.EventNew event) {
-        dataSetEmitter.send(event);
+        OutgoingAmqpMetadata meta = OutgoingAmqpMetadata.builder()
+                .withPriority(event.isRecalculation ? Dataset.EventNew.Priority.RECALC_DATASET.value
+                        : Dataset.EventNew.Priority.NEW_DATASET.value)
+                .build();
+        Message<Dataset.EventNew> msg = Message.of(event).addMetadata(meta);
+        dataSetEmitter.send(msg);
     }
 
     @Incoming("run-recalc-in")
