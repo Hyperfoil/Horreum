@@ -96,6 +96,14 @@ public class SchemaServiceImpl implements SchemaService {
          FROM schema
          INNER JOIN refs ON schema.uri = refs.uri
          """;
+
+    private static final String datasetIdQuery = """
+        SELECT ds.id, ds.testId
+        from dataset_schemas
+        LEFT JOIN dataset ds on ds.id = dataset_schemas.dataset_id
+        WHERE schema_id = ?1
+        ORDER BY dataset_id DESC;
+        """;
     //@formatter:on
 
     private static final JsonSchemaFactory JSON_SCHEMA_FACTORY = new JsonSchemaFactory.Builder()
@@ -768,6 +776,8 @@ public class SchemaServiceImpl implements SchemaService {
             throw ServiceException.badRequest("Label with id " + labelDTO.id + " already exists");
         }
 
+        Log.info("Adding label " + labelDTO.name + " for schema " + schemaId);
+
         // ensure we are creating new instance by clearing the id
         labelDTO.clearIds();
 
@@ -787,6 +797,7 @@ public class SchemaServiceImpl implements SchemaService {
             throw ServiceException.notFound("Missing label id or label with id " + labelDTO.id + " does not exist");
         }
 
+        Log.info("Updating label " + labelDTO.name + " with id " + labelDTO.id + " for schema " + schemaId);
         labelDTO.schemaId = schemaId;
         return addOrUpdateLabel(labelDTO);
     }
@@ -854,14 +865,6 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     private void emitLabelChanged(int labelId, int schemaId) {
-        String datasetIdQuery = """
-                SELECT ds.id, ds.testId
-                from dataset_schemas
-                LEFT JOIN dataset ds on ds.id = dataset_schemas.dataset_id
-                WHERE schema_id = ?1
-                ORDER BY dataset_id DESC;
-                """;
-
         try {
             List<Object[]> datasetIds = session
                     .createNativeQuery(datasetIdQuery, Object[].class)
