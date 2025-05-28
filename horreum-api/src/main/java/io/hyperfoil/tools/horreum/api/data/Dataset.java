@@ -167,5 +167,22 @@ public class Dataset extends ProtectedTimeType {
                     ", isRecalculation=" + isRecalculation +
                     '}';
         }
+
+        /**
+         * Define messages priorities based on the event type
+         * NEW_DATASET, i.e., when uploading new run, has higher priority than RECALC_DATASET, i.e.,
+         * when updating label schema.
+         * The default priority for AMQP messages is 4
+         */
+        public enum Priority {
+            NEW_DATASET((short) 5),
+            RECALC_DATASET((short) 4);
+
+            public final short value;
+
+            Priority(short priority) {
+                this.value = priority;
+            }
+        }
     }
 }
