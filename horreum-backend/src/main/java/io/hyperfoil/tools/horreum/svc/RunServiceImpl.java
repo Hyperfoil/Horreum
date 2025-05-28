@@ -1439,10 +1439,11 @@ public class RunServiceImpl implements RunService {
     }
 
     private void queueDatasetProcessing(DatasetDAO ds, boolean isRecalculation) {
-        mediator.queueDatasetEvents(new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation));
+        Dataset.EventNew event = new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation);
+        mediator.queueDatasetEvents(event);
         if (mediator.testMode())
             Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_NEW, ds.testid,
-                    new Dataset.EventNew(DatasetMapper.from(ds), isRecalculation)));
+                    event));
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
