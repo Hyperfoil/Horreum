@@ -38,6 +38,7 @@ import io.hyperfoil.tools.horreum.api.internal.services.NotificationService;
 import io.hyperfoil.tools.horreum.api.internal.services.ReportService;
 import io.hyperfoil.tools.horreum.api.internal.services.SqlService;
 import io.hyperfoil.tools.horreum.api.internal.services.SubscriptionService;
+import io.hyperfoil.tools.horreum.api.internal.services.UIService;
 import io.hyperfoil.tools.horreum.api.services.ConfigService;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
@@ -62,6 +63,7 @@ public class HorreumClient implements Closeable {
     public final SubscriptionService subscriptionService;
     public final TestService testService;
     public final UserService userService;
+    public final UIService uiService;
 
     private HorreumClient(ResteasyClient client,
             ActionService actionService, AlertingService alertingService, BannerService bannerService,
@@ -69,7 +71,7 @@ public class HorreumClient implements Closeable {
             DatasetService datasetService, ExperimentService experimentService, NotificationService notificationService,
             ReportService reportService, RunServiceExtension runServiceExtension, SchemaService schemaService,
             SqlService sqlService, SubscriptionService subscriptionService, TestService horreumTestService,
-            UserService userService) {
+            UserService userService, UIService uiService) {
         this.client = client;
         this.alertingService = alertingService;
         this.bannerService = bannerService;
@@ -86,6 +88,7 @@ public class HorreumClient implements Closeable {
         this.subscriptionService = subscriptionService;
         this.testService = horreumTestService;
         this.userService = userService;
+        this.uiService = uiService;
     }
 
     @Override
@@ -211,7 +214,8 @@ public class HorreumClient implements Closeable {
                     target.proxyBuilder(SqlService.class).build(),
                     target.proxyBuilder(SubscriptionService.class).build(),
                     target.proxyBuilder(TestService.class).build(),
-                    target.proxyBuilder(UserService.class).build());
+                    target.proxyBuilder(UserService.class).build(),
+                    target.proxyBuilder(UIService.class).build());
         }
     }
 
