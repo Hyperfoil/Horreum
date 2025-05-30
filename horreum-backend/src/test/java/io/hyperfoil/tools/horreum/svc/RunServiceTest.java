@@ -1012,7 +1012,8 @@ public class RunServiceTest extends BaseServiceTest {
 
         int datasetId = -1;
         while (System.currentTimeMillis() < now + 10000) {
-            DatasetService.DatasetList datasets = jsonRequest().get("/api/dataset/list/" + test.id).then().statusCode(200)
+            DatasetService.DatasetList datasets = jsonRequest().get("/api/dataset/list/byTest/" + test.id).then()
+                    .statusCode(200)
                     .extract().body().as(DatasetService.DatasetList.class);
             if (datasets.datasets.isEmpty()) {
                 //noinspection BusyWait

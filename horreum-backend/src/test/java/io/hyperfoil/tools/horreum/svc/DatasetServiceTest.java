@@ -412,8 +412,16 @@ public class DatasetServiceTest extends BaseServiceTest {
 
     private JsonNode fetchDatasetsByTest(int testId) {
         JsonNode datasets = Util.toJsonNode(
-                jsonRequest().get("/api/dataset/list/" + testId).then().statusCode(200).extract().body().asString());
+                jsonRequest().get("/api/dataset/list/byTest/" + testId).then().statusCode(200).extract().body().asString());
         assertNotNull(datasets);
+        return datasets;
+    }
+
+    private DatasetService.DatasetList fetchDatasetsByRun(int runId) {
+        DatasetService.DatasetList datasets = jsonRequest().get("/api/dataset/list/byRun/" + runId).then().statusCode(200)
+                .extract().body().as(DatasetService.DatasetList.class);
+        assertNotNull(datasets);
+        assertNotNull(datasets.datasets);
         return datasets;
     }
 
@@ -509,10 +517,33 @@ public class DatasetServiceTest extends BaseServiceTest {
         assertEquals(0, datasetsList.datasets.get(0).ordinal);
         assertEquals(initialRunID, datasetsList.datasets.get(1).runId);
         assertEquals(latterRunID, datasetsList.datasets.get(0).runId);
-        datasetsList = null;
         datasetsList = listTestDatasets(test.id, SortDirection.Ascending);
         assertEquals(2, datasetsList.datasets.size());
         assertEquals(initialRunID, datasetsList.datasets.get(0).runId);
         assertEquals(latterRunID, datasetsList.datasets.get(1).runId);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testDatasetListByRun() {
+        String testName = "road-runner";
+        Test test = createTest(createExampleTest(testName));
+        serviceMediator.getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
+        long timestamp = System.currentTimeMillis();
+        int initialRunID = uploadRun(timestamp, timestamp,
+                JsonNodeFactory.instance.objectNode(),
+                test.name);
+        timestamp = System.currentTimeMillis();
+        int latterRunID = uploadRun(timestamp, timestamp,
+                JsonNodeFactory.instance.objectNode(),
+                test.name);
+        DatasetService.DatasetList datasetsList = fetchDatasetsByRun(initialRunID);
+        assertEquals(1, datasetsList.datasets.size());
+        assertEquals(0, datasetsList.datasets.get(0).ordinal);
+        assertEquals(initialRunID, datasetsList.datasets.get(0).runId);
+
+        datasetsList = listTestDatasets(test.id, null);
+        assertEquals(2, datasetsList.datasets.size());
+        assertEquals(initialRunID, datasetsList.datasets.get(1).runId);
+        assertEquals(latterRunID, datasetsList.datasets.get(0).runId);
     }
 }
