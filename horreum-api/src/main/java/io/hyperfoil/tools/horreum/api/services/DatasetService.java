@@ -48,12 +48,12 @@ public interface DatasetService {
     @APIResponseSchema(value = Dataset.class, responseDescription = "JVM system properties of a particular host.", responseCode = "200")
     Dataset getDataset(@PathParam("id") int datasetId);
 
-    @Path("list/{testId}")
+    @Path("list/byTest/{testId}")
     @GET
     @Operation(description = "Retrieve a paginated list of Datasets, with total count, by Test")
     @Parameters(value = {
             @Parameter(name = "testId", description = "Test ID of test to retrieve list of Datasets", example = "101"),
-            @Parameter(name = "filter", description = "JOSN Filter expression to apply to query", example = "{\"buildID\":111111}"),
+            @Parameter(name = "filter", description = "JSON Filter expression to apply to query", example = "{\"buildID\":111111}"),
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
             @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
@@ -69,7 +69,27 @@ public interface DatasetService {
             @QueryParam("viewId") Integer viewId);
 
     @GET
-    @Path("bySchema")
+    @Path("list/byRun/{runId}")
+    @Operation(description = "Retrieve a paginated list of Datasets, with total count, by Run")
+    @Parameters(value = {
+            @Parameter(name = "runId", description = "Run ID of run to retrieve list of Datasets", example = "101"),
+            @Parameter(name = "filter", description = "JSON Filter expression to apply to query", example = "{\"buildID\":111111}"),
+            @Parameter(name = "limit", description = "limit the number of results", example = "20"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas", example = "2"),
+            @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
+            @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
+            @Parameter(name = "viewId", description = "Optional View ID to filter datasets by view", example = "202"),
+    })
+    DatasetList listByRun(@PathParam("runId") int runId,
+            @QueryParam("filter") String filter,
+            @QueryParam("limit") Integer limit,
+            @QueryParam("page") Integer page,
+            @QueryParam("sort") String sort,
+            @QueryParam("direction") SortDirection direction,
+            @QueryParam("viewId") Integer viewId);
+
+    @GET
+    @Path("list/bySchema")
     @Operation(description = "Retrieve a paginated list of Datasets, with total count, by Schema")
     @Parameters(value = {
             @Parameter(name = "uri", required = true, description = "Schema URI", example = "uri:techempower:0.1"),

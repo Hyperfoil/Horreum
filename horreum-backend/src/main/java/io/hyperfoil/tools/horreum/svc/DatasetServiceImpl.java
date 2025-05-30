@@ -227,9 +227,46 @@ public class DatasetServiceImpl implements DatasetService {
         return list;
     }
 
+    @PermitAll
+    @WithRoles
+    @Override
+    public DatasetService.DatasetList listByRun(int runId, String filter, Integer limit, Integer page, String sort,
+            SortDirection direction, Integer viewId) {
+        StringBuilder sql = new StringBuilder("WITH schema_agg AS (")
+                .append(SCHEMAS_SELECT).append(" WHERE runid = :runId GROUP BY dataset_id")
+                .append("), ").append(VALIDATION_SELECT);
+
+        JsonNode jsonFilter = null;
+        if (filter != null && !filter.isBlank() && !filter.equals("{}")) {
+            sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE runid = :runId GROUP BY dataset.id)");
+            sql.append(DATASET_SUMMARY_SELECT);
+            addViewIdCondition(sql, viewId);
+            sql.append(
+                    " JOIN all_labels ON all_labels.dataset_id = ds.id WHERE runid = :runId AND all_labels.values @> :jsonFilter");
+            jsonFilter = Util.parseFingerprint(filter);
+        } else {
+            sql.append(DATASET_SUMMARY_SELECT);
+            addViewIdCondition(sql, viewId);
+            sql.append(" WHERE runid = :runId");
+        }
+        addOrderAndPaging(limit, page, sort, direction, sql);
+        NativeQuery<DatasetSummary> query = initTypes(sql.toString());
+        query.setParameter("runId", runId);
+        if (jsonFilter != null) {
+            query.setParameter("jsonFilter", jsonFilter, JsonBinaryType.INSTANCE);
+        }
+        if (viewId != null) {
+            query.setParameter("viewId", viewId);
+        }
+        DatasetService.DatasetList list = new DatasetService.DatasetList();
+        list.datasets = query.getResultList();
+        list.total = DatasetDAO.count("run.id = ?1", runId);
+        return list;
+    }
+
     private void addViewIdCondition(StringBuilder sql, Integer viewId) {
         if (viewId == null) {
-            sql.append("(SELECT id FROM view WHERE test_id = :testId AND name = 'Default')");
+            sql.append("(SELECT id FROM view WHERE test_id = ds.testid AND name = 'Default')");
         } else {
             sql.append(":viewId");
         }

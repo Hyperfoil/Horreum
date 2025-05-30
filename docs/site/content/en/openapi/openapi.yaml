@@ -3222,7 +3222,68 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VersionInfo"
-  /api/dataset/bySchema:
+  /api/dataset/list/byRun/{runId}:
+    get:
+      description: "Retrieve a paginated list of Datasets, with total count, by Run"
+      operationId: listByRun
+      tags:
+      - Dataset
+      parameters:
+      - description: Run ID of run to retrieve list of Datasets
+        example: 101
+        name: runId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: JSON Filter expression to apply to query
+        example: "{\"buildID\":111111}"
+        name: filter
+        in: query
+        schema:
+          type: string
+      - description: limit the number of results
+        example: 20
+        name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - description: filter by page number of a paginated list of Schemas
+        example: 2
+        name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - description: Field name to sort results
+        example: name
+        name: sort
+        in: query
+        schema:
+          type: string
+      - description: Sort direction
+        example: Ascending
+        name: direction
+        in: query
+        schema:
+          $ref: "#/components/schemas/SortDirection"
+      - description: Optional View ID to filter datasets by view
+        example: 202
+        name: viewId
+        in: query
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetList"
+  /api/dataset/list/bySchema:
     get:
       description: "Retrieve a paginated list of Datasets, with total count, by Schema"
       operationId: listDatasetsBySchema
@@ -3270,7 +3331,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DatasetList"
-  /api/dataset/list/{testId}:
+  /api/dataset/list/byTest/{testId}:
     get:
       description: "Retrieve a paginated list of Datasets, with total count, by Test"
       operationId: listByTest
@@ -3285,7 +3346,7 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: JOSN Filter expression to apply to query
+      - description: JSON Filter expression to apply to query
         example: "{\"buildID\":111111}"
         name: filter
         in: query

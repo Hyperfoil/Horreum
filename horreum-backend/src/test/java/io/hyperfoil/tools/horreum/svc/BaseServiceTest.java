@@ -1145,7 +1145,7 @@ public class BaseServiceTest {
     }
 
     protected DatasetService.DatasetList listTestDatasets(long id, SortDirection direction) {
-        StringBuilder url = new StringBuilder("/api/dataset/list/" + id);
+        StringBuilder url = new StringBuilder("/api/dataset/list/byTest/" + id);
         if (direction != null) {
             url.append("?direction=").append(direction);
         }
