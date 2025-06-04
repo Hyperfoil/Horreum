@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>horreum-api</artifactId>
+    <name>Horreum API</name>
 
     <properties>
         <!-- Due to Jenkins plugin we will keep api and client on Java 11 -->
