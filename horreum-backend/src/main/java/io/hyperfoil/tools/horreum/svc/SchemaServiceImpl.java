@@ -875,6 +875,7 @@ public class SchemaServiceImpl implements SchemaService {
                 return;
             }
 
+            Log.infof("Queuing %s datasets for recalculation", datasetIds.size());
             for (var dataset : datasetIds) {
                 Util.registerTxSynchronization(tm, txStatus -> mediator.queueDatasetEvents(
                         new Dataset.EventNew((Integer) dataset[0], (Integer) dataset[1], 0, labelId, true)));

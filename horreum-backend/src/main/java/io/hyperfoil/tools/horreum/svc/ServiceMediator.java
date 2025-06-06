@@ -88,7 +88,8 @@ public class ServiceMediator {
     @ConfigProperty(name = "horreum.test-mode", defaultValue = "false")
     Boolean testMode;
 
-    @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
+    // configure buffer size through mp.messaging.emitter.default-buffer-size
+    @OnOverflow(value = OnOverflow.Strategy.BUFFER)
     @Channel("dataset-event-out")
     Emitter<Dataset.EventNew> dataSetEmitter;
 
