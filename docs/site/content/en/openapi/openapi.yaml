@@ -2201,66 +2201,12 @@ components:
           description: List of TableReportData
           type: array
           items:
-            description: Table Report Data
-            type: object
-            required:
-            - datasetId
-            - runId
-            - ordinal
-            - category
-            - series
-            - scale
-            - values
-            properties:
-              datasetId:
-                type: integer
-                format: int32
-              runId:
-                type: integer
-                format: int32
-              ordinal:
-                type: integer
-                format: int32
-              category:
-                type: string
-              series:
-                type: string
-              scale:
-                type: string
-              values:
-                description: Array of values
-                type: array
-                items:
-                  type: number
+            $ref: "#/components/schemas/TableReportData"
         logs:
           description: List of ReportLogs
           type: array
           items:
-            description: Report Log
-            type: object
-            required:
-            - id
-            - level
-            - timestamp
-            - message
-            - reportId
-            properties:
-              id:
-                type: integer
-                format: int64
-              level:
-                type: integer
-                format: int32
-              timestamp:
-                type: string
-                format: date-time
-                examples:
-                - 2022-03-10T16:15:50Z
-              message:
-                type: string
-              reportId:
-                type: integer
-                format: int32
+            $ref: "#/components/schemas/ReportLog"
     TableReportConfig:
       type: object
       description: Table Report Config
@@ -2317,35 +2263,7 @@ components:
           description: List of ReportComponents
           type: array
           items:
-            description: Report Component
-            type: object
-            properties:
-              id:
-                type: integer
-                format: int32
-              name:
-                type: string
-              order:
-                type: integer
-                format: int32
-              labels:
-                description: Array of labels
-                type: array
-                examples:
-                - - Framework
-                items:
-                  type: string
-              function:
-                type: string
-              unit:
-                type: string
-              reportId:
-                type: integer
-                format: int32
-            required:
-            - name
-            - order
-            - labels
+            $ref: "#/components/schemas/ReportComponent"
     TableReportData:
       description: Table Report Data
       type: object
