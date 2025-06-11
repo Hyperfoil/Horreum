@@ -80,7 +80,7 @@
             <plugin>
                 <artifactId>smallrye-open-api-maven-plugin</artifactId>
                 <groupId>io.smallrye</groupId>
-                <version>4.0.11</version>
+                <version>4.1.1</version>
                 <executions>
                     <!--Generate External Schema-->
                     <execution>
