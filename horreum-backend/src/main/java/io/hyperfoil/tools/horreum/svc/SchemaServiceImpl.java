@@ -876,10 +876,12 @@ public class SchemaServiceImpl implements SchemaService {
             }
 
             Log.infof("Queuing %s datasets for recalculation", datasetIds.size());
-            for (var dataset : datasetIds) {
-                Util.registerTxSynchronization(tm, txStatus -> mediator.queueDatasetEvents(
-                        new Dataset.EventNew((Integer) dataset[0], (Integer) dataset[1], 0, labelId, true)));
-            }
+            Util.registerTxSynchronization(tm, txStatus -> {
+                for (var dataset : datasetIds) {
+                    mediator.queueDatasetEvents(
+                            new Dataset.EventNew((Integer) dataset[0], (Integer) dataset[1], 0, labelId, true));
+                }
+            });
         } catch (NoResultException nre) {
             Log.debugf("Could not find datasetId/testId to recalculate labels: %s", nre.getMessage());
         }
