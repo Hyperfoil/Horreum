@@ -195,7 +195,8 @@ public class HorreumClient implements Closeable {
             // Other MessageBodyReaders/Writers that may not be found by ServiceLoader mechanism
             clientBuilder.register(new StringTextStar());
             clientBuilder.register(new DefaultTextPlain());
-
+            // Fix for: RESTEASY003292: Stream is closed
+            System.setProperty("org.jboss.resteasy.client.jaxrs.engines.fileUploadInMemoryThreshold", "100");
             ResteasyClient client = clientBuilder.build();
             ResteasyWebTarget target = client.target(horreumUrl);
 
