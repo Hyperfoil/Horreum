@@ -31,7 +31,7 @@ import {
     SlackChannelMessageActionConfigFromJSON,
 } from "../../api"
 import HttpActionUrlSelector from "../../components/HttpActionUrlSelector"
-import { CHANGE_NEW, EXPERIMENT_RESULT_NEW, TEST_NEW } from "./reducers"
+import { CHANGE_NEW, EXPERIMENT_RESULT_NEW, TEST_NEW, DATASET_LABELS_COMPUTED } from "./reducers"
 import {SimpleSelect} from "@patternfly/react-templates";
 
 function defaultConfig(type: string): ActionConfig {
