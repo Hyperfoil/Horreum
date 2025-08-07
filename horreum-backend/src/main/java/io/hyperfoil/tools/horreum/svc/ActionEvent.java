@@ -4,7 +4,8 @@ public enum ActionEvent {
     TEST_NEW("test/new"),
     RUN_NEW("run/new"),
     CHANGE_NEW("change/new"),
-    EXPERIMENT_RESULT_NEW("experiment_result/new"),;
+    EXPERIMENT_RESULT_NEW("experiment_result/new"),
+    DATASET_LABELS_COMPUTED("dataset_labels/computed");
 
     // this represents the value stored in the database
     private final String value;
