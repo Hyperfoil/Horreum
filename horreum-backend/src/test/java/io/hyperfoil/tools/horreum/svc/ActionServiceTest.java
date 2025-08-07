@@ -112,6 +112,23 @@ public class ActionServiceTest extends BaseServiceTest {
         assertEquals(0, actionService.getActions(ActionEvent.TEST_NEW, test.id).size());
         assertEquals(0, actionService.getActions(ActionEvent.CHANGE_NEW, test.id).size());
         assertEquals(0, actionService.getActions(ActionEvent.EXPERIMENT_RESULT_NEW, test.id).size());
+        assertEquals(0, actionService.getActions(ActionEvent.DATASET_LABELS_COMPUTED, test.id).size());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testGetTestActionsDatasetLabelsComputed(TestInfo testInfo) {
+        Test test = createTest(createExampleTest(getTestName(testInfo)));
+
+        addAllowedSite("http://localhost:" + port);
+        addTestHttpAction(test, ActionEvent.DATASET_LABELS_COMPUTED, "http://localhost:" + port);
+
+        assertEquals(ActionEvent.DATASET_LABELS_COMPUTED, ActionDAO.<ActionDAO> listAll().get(0).event);
+
+        assertEquals(1, actionService.getActions(ActionEvent.DATASET_LABELS_COMPUTED, test.id).size());
+        assertEquals(0, actionService.getActions(ActionEvent.TEST_NEW, test.id).size());
+        assertEquals(0, actionService.getActions(ActionEvent.CHANGE_NEW, test.id).size());
+        assertEquals(0, actionService.getActions(ActionEvent.EXPERIMENT_RESULT_NEW, test.id).size());
+        assertEquals(0, actionService.getActions(ActionEvent.RUN_NEW, test.id).size());
     }
 
     private void executeTestCase(TestInfo testInfo, String channel, Boolean expectError) {

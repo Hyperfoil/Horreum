@@ -57,6 +57,8 @@ import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
+import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
+import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.RunDAO;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
@@ -678,6 +680,11 @@ public class RunServiceTest extends BaseServiceTest {
     @org.junit.jupiter.api.Test
     public void testRecalculateDatasets() throws InterruptedException {
         withExampleDataset(createTest(createExampleTest("dummy")), JsonNodeFactory.instance.objectNode(), ds -> {
+            String fakeEndpoint = "http://localhost:99998";
+            addAllowedSite(fakeEndpoint);
+            Test testWithId = new Test();
+            testWithId.id = ds.testid;
+            addTestHttpAction(testWithId, ActionEvent.DATASET_LABELS_COMPUTED, fakeEndpoint);
             Util.withTx(tm, () -> {
                 try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
                     DatasetDAO dbDs = DatasetDAO.findById(ds.id);
@@ -702,6 +709,12 @@ public class RunServiceTest extends BaseServiceTest {
                 assertEquals(1, dataSets.size());
                 assertEquals(dsIds2.get(0), dataSets.get(0).id);
             }
+
+            // the call to "http://localhost:99998" will fail because there is no endpoint available
+            // there are 2 calls to recalculateDatasetForRun
+            long count = ActionLogDAO.find("testId = ?1 AND level = ?2 AND event = ?3",
+                    ds.testid, PersistentLogDAO.ERROR, ActionEvent.DATASET_LABELS_COMPUTED.name()).count();
+            assertEquals(2, count);
             return null;
         });
     }

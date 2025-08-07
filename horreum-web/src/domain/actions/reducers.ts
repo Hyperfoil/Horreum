@@ -2,6 +2,7 @@ export const TEST_NEW = "test/new"
 export const RUN_NEW = "run/new"
 export const EXPERIMENT_RESULT_NEW = "experiment_result/new"
 export const CHANGE_NEW = "change/new"
+export const DATASET_LABELS_COMPUTED = "dataset_labels/computed"
 export const testEventTypes = [
   [
     RUN_NEW,
@@ -85,6 +86,26 @@ export const testEventTypes = [
   }
 }`,
   ],
+  [
+      DATASET_LABELS_COMPUTED,
+      `{
+  "id": 123,
+  "description": "Run on ...",
+  "testid": 10,
+  "data": {
+    "key": "value"
+  },
+  "ordinal": 1,
+  "validationErrors": [],
+  "runId": 456,
+  "getInfo": {
+    "id": 123,
+    "runId": 456,
+    "ordinal": 1,
+    "testId": 10
+  }
+}`,
+    ],
 ]
 export const globalEventTypes = [
   ...testEventTypes,
