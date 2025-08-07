@@ -2,6 +2,7 @@ export const TEST_NEW = "test/new"
 export const RUN_NEW = "run/new"
 export const EXPERIMENT_RESULT_NEW = "experiment_result/new"
 export const CHANGE_NEW = "change/new"
+export const DATASET_LABELS_COMPUTED = "dataset_labels/computed"
 export const testEventTypes = [
   [
     RUN_NEW,

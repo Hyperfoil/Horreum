@@ -129,6 +129,12 @@ public class ActionServiceImpl implements ActionService {
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
+    public void onDatasetLabelsComputed(Integer testId, Object payload) {
+        executeActions(ActionEvent.DATASET_LABELS_COMPUTED, testId, payload, true);
+    }
+
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    @Transactional
     public void onTestDelete(int testId) {
         ActionDAO.delete("testId", testId);
     }
