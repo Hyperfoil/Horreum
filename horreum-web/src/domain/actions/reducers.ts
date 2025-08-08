@@ -89,19 +89,22 @@ export const testEventTypes = [
   [
       DATASET_LABELS_COMPUTED,
       `{
+  "id": 123,
+  "description": "Run on ...",
+  "testid": 10,
+  "data": {
+    "key": "value"
+  },
+  "ordinal": 1,
+  "validationErrors": [],
+  "runId": 456,
+  "getInfo": {
     "id": 123,
-    "data": ...,
-    "start": "2022-08-29T12:28:14+02:00",
-    "stop": "2022-08-29T12:28:14+02:00",
-    "owner": "dev-team",
-    "access": 0,
-    "schema": {
-      "1": "urn:my-schema:1.0"
-    },
-    "testid": 10,
-    "testname": "My test",
-    "description": null,
-  }`,
+    "runId": 456,
+    "ordinal": 1,
+    "testId": 10
+  }
+}`,
     ],
 ]
 export const globalEventTypes = [

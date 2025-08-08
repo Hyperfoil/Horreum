@@ -23,6 +23,7 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
@@ -129,7 +130,7 @@ public class ActionServiceImpl implements ActionService {
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
-    public void onDatasetLabelsComputed(Integer testId, Object payload) {
+    public void onDatasetLabelsComputed(Integer testId, Dataset.EventNew payload) {
         executeActions(ActionEvent.DATASET_LABELS_COMPUTED, testId, payload, true);
     }
 
