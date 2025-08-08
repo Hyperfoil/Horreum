@@ -1,14 +1,16 @@
 import { SetStateAction, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useSelector } from "react-redux"
 import {
-    ActionGroup,
     Breadcrumb,
     BreadcrumbItem,
     Bullseye,
+    Button,
     Card,
     CardBody,
     EmptyState,
     EmptyStateBody,
+    Flex,
+    FlexItem,
     PageSection,
     Spinner, Toolbar, ToolbarContent,
 } from "@patternfly/react-core"
@@ -47,6 +49,35 @@ type Ds = {
     runId: number
     ordinal: number
 }
+
+const exportCsvFile = (datasets: Ds[], rows: IRow[]) => {
+    const separatorChar = `,`
+    const sanitize = (s?: string) => {
+     const noSeparator = s?.trim()?.replaceAll(separatorChar, "_") ?? ""
+     return noSeparator.includes("\n") ? `"${noSeparator}"` : noSeparator
+    };
+
+    // remove rows that have empty title. these are rows that were added with BarValuesChart
+    const cells = rows.map(r => r.cells as IRowCell[]).filter(c => c[0].title !== "");
+
+    // "flip" the data because of the way this component presents data, with datasets on top
+    const headers = ["Dataset", ...cells.map(c => sanitize(c[0].title?.toString()))]
+    const content = datasets.map((ds, i) => [sanitize(`${ds.runId}/${ds.id}`), ...cells.map(c => sanitize(c[i + 1].title?.toString()))]);
+
+    // create CSV file content and URL with blob object
+    const csvString = `${headers.join(separatorChar)}\n${content.map(c => c.join(separatorChar)).join('\n')}`;
+    const url = URL.createObjectURL(new Blob([csvString], {type : 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+
+    // Set the default file name and download
+    link.setAttribute('download', 'horreum_data.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
 
 export default function DatasetComparison() {
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -257,9 +288,14 @@ function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) 
     }
     return (
         <>
-            <ActionGroup>
-                <PrintButton printRef={componentRef} />
-            </ActionGroup>
+            <Flex>
+                <FlexItem>
+                    <PrintButton printRef={componentRef} />
+                </FlexItem>
+                <FlexItem>
+                    <Button onClick={() => exportCsvFile(datasets, rows)}>Export to CSV</Button>
+                </FlexItem>
+            </Flex>
             <div ref={componentRef}>
                 <InnerScrollContainer>
                     <Table title="Label(s) Comparison" aria-label="Label comparison" variant="compact">
@@ -346,9 +382,14 @@ function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps
     }
     return (
         <>
-            <ActionGroup>
-                <PrintButton printRef={componentRef} />
-            </ActionGroup>
+            <Flex>
+                <FlexItem>
+                    <PrintButton printRef={componentRef} />
+                </FlexItem>
+                <FlexItem>
+                    <Button onClick={() => exportCsvFile(datasets, rows)}>Export to CSV</Button>
+                </FlexItem>
+            </Flex>
             <div ref={componentRef}>
                 <InnerScrollContainer>
                     <Table aria-label="View comparison" variant="compact">
