@@ -133,8 +133,13 @@ public class ActionServiceImpl implements ActionService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     public void onDatasetLabelsComputed(Integer testId, int datasetId) {
-        Dataset payload = DatasetMapper.from(DatasetDAO.findById(datasetId));
-        executeActions(ActionEvent.DATASET_LABELS_COMPUTED, testId, payload, true);
+        DatasetDAO datasetDAO = DatasetDAO.findById(datasetId);
+        if (datasetDAO != null) {
+            Dataset payload = DatasetMapper.from(datasetDAO);
+            executeActions(ActionEvent.DATASET_LABELS_COMPUTED, testId, payload, true);
+        } else {
+            throw new RuntimeException("Cannot find datasetId="+ datasetId);
+        }
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
