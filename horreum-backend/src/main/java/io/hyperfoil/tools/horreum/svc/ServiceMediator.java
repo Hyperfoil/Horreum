@@ -172,7 +172,7 @@ public class ServiceMediator {
     public void processDatasetEvents(Dataset.EventNew newEvent) {
         onNewDataset(newEvent);
         validateDataset(newEvent.datasetId);
-        this.actionService.onDatasetLabelsComputed(newEvent.testId, newEvent);
+        this.actionService.onDatasetLabelsComputed(newEvent.testId, newEvent.datasetId);
     }
 
     // NEW_DATASET, i.e., when uploading new run, has higher priority than RECALC_DATASET, i.e., when updating label schema

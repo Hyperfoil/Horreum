@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
+import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -130,7 +132,8 @@ public class ActionServiceImpl implements ActionService {
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
-    public void onDatasetLabelsComputed(Integer testId, Dataset.EventNew payload) {
+    public void onDatasetLabelsComputed(Integer testId, int datasetId) {
+        Dataset payload = DatasetMapper.from(DatasetDAO.findById(datasetId));
         executeActions(ActionEvent.DATASET_LABELS_COMPUTED, testId, payload, true);
     }
 
