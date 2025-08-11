@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -35,8 +33,10 @@ import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.entity.data.AllowedSiteDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.mapper.ActionMapper;
 import io.hyperfoil.tools.horreum.mapper.AllowedSiteMapper;
+import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.logging.Log;
@@ -131,14 +131,14 @@ public class ActionServiceImpl implements ActionService {
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Transactional
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void onDatasetLabelsComputed(Integer testId, int datasetId) {
         DatasetDAO datasetDAO = DatasetDAO.findById(datasetId);
         if (datasetDAO != null) {
             Dataset payload = DatasetMapper.from(datasetDAO);
             executeActions(ActionEvent.DATASET_LABELS_COMPUTED, testId, payload, true);
         } else {
-            throw new RuntimeException("Cannot find datasetId="+ datasetId);
+            throw new RuntimeException("Cannot find datasetId=" + datasetId);
         }
     }
 
