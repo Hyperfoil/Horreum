@@ -23,6 +23,7 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.api.data.Action;
 import io.hyperfoil.tools.horreum.api.data.AllowedSite;
+import io.hyperfoil.tools.horreum.api.data.Dataset;
 import io.hyperfoil.tools.horreum.api.data.Run;
 import io.hyperfoil.tools.horreum.api.data.Test;
 import io.hyperfoil.tools.horreum.api.data.TestExport;
@@ -32,8 +33,10 @@ import io.hyperfoil.tools.horreum.entity.ActionLogDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
 import io.hyperfoil.tools.horreum.entity.data.AllowedSiteDAO;
+import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.mapper.ActionMapper;
 import io.hyperfoil.tools.horreum.mapper.AllowedSiteMapper;
+import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.logging.Log;
@@ -125,6 +128,18 @@ public class ActionServiceImpl implements ActionService {
     @Transactional
     public void onNewTest(Test test) {
         executeActions(ActionEvent.TEST_NEW, test.id, test, true);
+    }
+
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    public void onDatasetLabelsComputed(Integer testId, int datasetId) {
+        DatasetDAO datasetDAO = DatasetDAO.findById(datasetId);
+        if (datasetDAO != null) {
+            Dataset payload = DatasetMapper.from(datasetDAO);
+            executeActions(ActionEvent.DATASET_LABELS_COMPUTED, testId, payload, true);
+        } else {
+            throw new RuntimeException("Cannot find datasetId=" + datasetId);
+        }
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
