@@ -67,7 +67,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                 <Split>
                     <SplitItem>
                         <TypeaheadSelect
-                            selectOptions={Object.entries(schemaFilterOptions).map(
+                            initialOptions={Object.entries(schemaFilterOptions).map(
                                 ([name, title]) => ({value: name, content: title})
                             )}
                             selected={schemaFilter}

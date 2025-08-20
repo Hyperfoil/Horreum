@@ -31,7 +31,7 @@ export default function FolderSelect({folder, onChange, canCreate, readOnly, pla
     return (
         canCreate ?
             <TypeaheadSelect
-                selectOptions={typeaheadOptions}
+                initialOptions={typeaheadOptions}
                 selected={folder}
                 onSelect={(_, item) => {
                     if (typeaheadOptions.every((o) => o.value !== item)) { // a new item has just been created!
