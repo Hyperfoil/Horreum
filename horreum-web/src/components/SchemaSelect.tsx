@@ -33,7 +33,7 @@ export default function SchemaSelect({value, onChange, disabled, noSchemaOption,
     }, [onChange, value, noSchemaAllowed])
     return (
         <TypeaheadSelect
-            selectOptions={
+            initialOptions={
                 (noSchemaAllowed ? [{name: "", id: 0, uri: "", toString: () => "-- no schema --"}] : []).concat(options)
                     .map(o => ({value: o.id, content: o.toString(), disabled: disabled?.includes(o.uri)}))
             }

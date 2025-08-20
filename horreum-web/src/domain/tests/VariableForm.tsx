@@ -88,7 +88,7 @@ export default function VariableForm(props: VariableFormProps) {
             <FormGroup label="Group" fieldId="group">
                 <TypeaheadSelect
                     placeholder="-none-"
-                    selectOptions={props.groups.map(g => ({value: g, content: g, selected: g === props.variable.group}))}
+                    initialOptions={props.groups.map(g => ({value: g, content: g, selected: g === props.variable.group}))}
                     onSelect={(_, item) => {
                         if (!props.groups.includes(item as string)) {
                             props.setGroups([...props.groups, item as string].sort())
