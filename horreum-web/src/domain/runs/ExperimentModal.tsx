@@ -62,9 +62,9 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                         >
                             <div style={{ overflowY: "auto" }}>
                                 <Tabs
-                                    isSecondary={true}
                                     activeKey={activeSecondaryTab}
                                     onSelect={(_, key) => setActiveSecondaryTab(key)}
+                                    variant="secondary"
                                 >
                                     <Tab eventKey="results" title="Results">
                                         <Table variant="compact">

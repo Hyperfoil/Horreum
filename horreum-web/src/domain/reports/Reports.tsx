@@ -146,7 +146,7 @@ export default function Reports(props: ReportGroup) {
         <>
             <Toolbar>
                 <ToolbarContent>
-                    <ToolbarGroup variant="button-group">
+                    <ToolbarGroup variant="action-group">
                         <ToolbarItem>
                             <ButtonLink to={`/test/${test.id}/reports/table/config/__new`}>New report configuration</ButtonLink>
                         </ToolbarItem>

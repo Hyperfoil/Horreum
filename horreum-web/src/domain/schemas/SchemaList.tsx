@@ -176,7 +176,7 @@ export default function SchemaList() {
                         />
                     </ToolbarItem>
                     {isTester && (
-                        <ToolbarGroup variant="button-group" align={{ default: 'alignRight' }}>
+                        <ToolbarGroup variant="action-group" align={{ default: 'alignEnd' }}>
                             <ToolbarItem>
                                 <ImportButton
                                     label="Import schema"
