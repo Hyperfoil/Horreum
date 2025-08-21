@@ -200,12 +200,12 @@ export default function ApiKeys() {
                 aria-label="new-api-key"
                 variant="small"
                 onClose={() => setNewKeyValue(undefined)}>
-                <ClipboardCopy isReadOnly>{newKeyValue}</ClipboardCopy>
                 <HelperText>
-                    <HelperTextItem variant="warning" hasIcon>
+                    <HelperTextItem variant="warning">
                         This is the only time you'll be able to see the key
                     </HelperTextItem>
                 </HelperText>
+                <ClipboardCopy isReadOnly>{newKeyValue ?? ""}</ClipboardCopy>
             </Modal>
             <Modal
                 isOpen={renameKeyId != undefined}
