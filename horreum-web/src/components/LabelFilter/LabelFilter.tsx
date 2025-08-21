@@ -154,7 +154,7 @@ export default function LabelFilter({selection, onSelect, source, emptyPlacehold
                     )
         })
 
-        return <ToolbarToggleGroup toggleIcon={<FilterIcon />} breakpoint="xl"  spacer={{ default: 'spacerLg' }}>
+        return <ToolbarToggleGroup toggleIcon={<FilterIcon />} breakpoint="xl">
             <ToolbarGroup variant="filter-group">
                 <ToolbarItem>{attributeDropdown}</ToolbarItem>
                 {items}

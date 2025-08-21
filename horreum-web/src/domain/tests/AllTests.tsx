@@ -59,7 +59,7 @@ type WatchDropdownProps = {
     watching?: string[]
 }
 
-const DEFAULT_FOLDER: string = "";
+const DEFAULT_FOLDER = "";
 
 const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -461,7 +461,7 @@ export default function AllTests() {
             </Toolbar>
             <Toolbar>
                 <ToolbarContent>
-                    <ToolbarGroup variant="button-group">
+                    <ToolbarGroup variant="action-group">
                         {isAuthenticated && (
                             <ToolbarItem>
                                 <TeamSelect
@@ -482,7 +482,7 @@ export default function AllTests() {
                         </ToolbarItem>
                     </ToolbarGroup>
                     {isTester && (
-                        <ToolbarGroup variant="button-group" align={{ default: 'alignRight' }}>
+                        <ToolbarGroup variant="action-group" align={{ default: 'alignEnd' }}>
                             <ToolbarItem>
                                 <ImportButton
                                     label="Import test"
