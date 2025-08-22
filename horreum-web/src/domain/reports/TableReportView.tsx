@@ -65,7 +65,7 @@ function DataView(props: DataViewProps) {
                 </>
             }
             bodyContent={
-                <Table variant="compact">
+                <Table borders={false} variant="compact">
                     <Tbody>
                         {props.config.components.map((c, i) => (
                             <Tr key={i}>
@@ -162,7 +162,7 @@ function ComponentTable(props: ComponentTableProps) {
     return (
         <Level style={{ padding: "50px"}}>
             <LevelItem style={{ width: "100%" }}>
-                <Table variant="compact">
+                <Table borders={false} variant="compact">
                     <Thead>
                         <Tr>
                             <Th></Th>

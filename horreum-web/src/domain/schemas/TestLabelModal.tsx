@@ -80,7 +80,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
             {datasets && !hasResult && (
                 <>
                     <OuterScrollContainer style={{ overflowY: "auto", height: "80vh" }}>
-                        <Table aria-label="Available datasets" variant="compact" isStickyHeader>
+                        <Table aria-label="Available datasets" borders={false} variant="compact" isStickyHeader>
                             <Thead>
                                 <Tr>
                                     {["Test", "Dataset", "Description", ""].map((col, index) =>

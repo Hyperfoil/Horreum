@@ -167,16 +167,19 @@ export default function TestDatasets() {
                     return (
                         <Button
                             variant="secondary"
-                            onClick={() =>
-                                setComparedDatasets(comparedDatasets.filter(ds => ds.id !== arg.cell.value))
-                            }
+                            onClick={() => setComparedDatasets(comparedDatasets.filter(ds => ds.id !== arg.cell.value))}
+                            size='sm'
                         >
                             Remove
                         </Button>
                     )
                 } else {
                     return (
-                        <Button onClick={() => setComparedDatasets([...comparedDatasets, arg.row.original])}>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setComparedDatasets([...comparedDatasets, arg.row.original])}
+                            size='sm'
+                        >
                             Compare
                         </Button>
                     )

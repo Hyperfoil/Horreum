@@ -75,7 +75,7 @@ const DatastoresTable = (props: dataStoreTableProps) => {
     ];
 
     return (
-        <Table aria-label="Datastores table">
+        <Table aria-label="Datastores table" borders={false}>
             <Thead>
                 <Tr>
                     <Th>{columnNames.type}</Th>

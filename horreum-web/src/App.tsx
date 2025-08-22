@@ -182,27 +182,18 @@ function Main() {
         <Nav id="nav-primary-simple">
             <NavList>
                 <NavItem itemId={0}>
-                    <NavLink
-                        to="/test"
-                        style={{color: "var(--pf-c-nav--m-horizontal__link--Color)"}}
-                    >
+                    <NavLink to="/test">
                         Tests
                     </NavLink>
                 </NavItem>
                 <NavItem itemId={1}>
-                    <NavLink
-                        to="/schema"
-                        style={{color: "var(--pf-c-nav--m-horizontal__link--Color)"}}
-                    >
+                    <NavLink to="/schema">
                         Schemas
                     </NavLink>
                 </NavItem>
                 {(isAdmin || isManager ) && (
                     <NavItem itemId={4}>
-                        <NavLink
-                            to="/admin"
-                            style={{color: "var(--pf-c-nav--m-horizontal__link--Color)"}}
-                        >
+                        <NavLink to="/admin">
                             Administration
                         </NavLink>
                     </NavItem>

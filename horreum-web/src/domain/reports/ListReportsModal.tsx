@@ -33,7 +33,7 @@ export default function ListReportsModal({ isOpen, onClose, summary, onReload }:
                     </Bullseye>
                 )}
                 {summary && (
-                    <Table variant="compact">
+                    <Table borders={false} variant="compact">
                         <Thead>
                             <Tr>
                                 <Th>Report</Th>

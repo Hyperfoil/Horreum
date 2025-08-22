@@ -178,7 +178,7 @@ export default function LogModal(props: LogModalProps) {
                         }}
                     />
                     <OuterScrollContainer style={{ overflowY:"auto", height: "80vh" }}>
-                        <Table aria-label="Simple Table" variant="compact">
+                        <Table aria-label="Simple Table" borders={false} variant="compact">
                             <Thead>
                                 <Tr>
                                     {props.columns.map((col, index) =>

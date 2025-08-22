@@ -67,7 +67,7 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                                     variant="secondary"
                                 >
                                     <Tab eventKey="results" title="Results">
-                                        <Table variant="compact">
+                                        <Table borders={false} variant="compact">
                                             <Thead>
                                                 <Tr>
                                                     <Th>Variable</Th>

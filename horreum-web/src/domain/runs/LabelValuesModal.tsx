@@ -68,7 +68,7 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
             )}
             {labelValues.length > 0 && (
                 <OuterScrollContainer style={{ overflowY:"auto", height: "80vh" }}>
-                    <Table aria-label="Simple Table" variant="compact">
+                    <Table aria-label="Simple Table" borders={false} variant="compact">
                         <Thead>
                             <Tr>
                                 {["Label", "Schema", "Value"].map((col, index) =>
