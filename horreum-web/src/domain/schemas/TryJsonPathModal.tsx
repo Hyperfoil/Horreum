@@ -162,7 +162,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                 <>
                     <OuterScrollContainer style={{ overflowY: "scroll", maxHeight: "70vh" }}>
                         {runs && (
-                            <Table aria-label="Available runs" variant="compact" isStickyHeader>
+                            <Table aria-label="Available runs" borders={false} variant="compact" isStickyHeader>
                                 <Thead>
                                     <Tr>
                                         {["Test", "Run", "Description", ""].map((col, index) =>
@@ -198,7 +198,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                             </Table>
                         )}
                         {datasets && (
-                            <Table aria-label="Available datasets" variant="compact" isStickyHeader>
+                            <Table aria-label="Available datasets" borders={false} variant="compact" isStickyHeader>
                                 <Thead>
                                     <Tr>
                                         {["Test", "Dataset", "Description", ""].map((col, index) =>

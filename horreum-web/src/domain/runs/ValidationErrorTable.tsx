@@ -11,7 +11,7 @@ type ValidationErrorTableProps = {
 export default function ValidationErrorTable(props: ValidationErrorTableProps) {
     return (
         props.errors &&
-        <Table aria-label="validation-errors" variant="compact" isStickyHeader>
+        <Table aria-label="validation-errors" borders={false} variant="compact" isStickyHeader>
             <Thead>
                 <Tr>
                     {["Schema", "Type", "Path", "Schema Location", "Arguments", "Message"].map((col, index) =>

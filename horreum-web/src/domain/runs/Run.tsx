@@ -102,7 +102,7 @@ export default function Run() {
                     </Toolbar>
                     <Card>
                         <CardHeader>
-                            <Table variant="compact">
+                            <Table borders={false} variant="compact">
                                 <Thead>
                                     <Tr>
                                         <Th>Id</Th>

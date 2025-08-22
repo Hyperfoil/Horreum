@@ -74,8 +74,7 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                             onSelect={(_, item) => setSchemaFilter(item as string)}
                             noOptionsFoundMessage={(filter) => `"${filter}" does not match any schema`}
                             isScrollable
-                            toggleProps={{icon: <FilterIcon/>}}
-                            maxMenuHeight="80vh"
+                            toggleProps={{icon: <FilterIcon />, style: { alignItems: "center", paddingLeft: "1em" } }}
                         />
                     </SplitItem>
                     {schemaFilter === ALL_SCHEMAS || <SplitItem>
@@ -113,7 +112,6 @@ export default function Labels({ labels, onChange, isReadOnly, error, defaultMet
                             onSelectionChange={(_, item) => onChange(item as string[])}
                             isScrollable
                             toggleProps={{status: error ? "danger" : undefined}}
-                            maxMenuHeight="80vh"
                         />
                     </SplitItem>
                 </Split>

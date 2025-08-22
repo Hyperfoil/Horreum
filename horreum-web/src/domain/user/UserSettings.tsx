@@ -41,13 +41,10 @@ export const UserProfileLink = () => {
         return (
             <div style={{ margin: "10px" }}>
                 <NavLink to="/usersettings">
-                    <span style={{ color: "#d2d2d2" }}>
-                        {profile.firstName}
-                        {"\u00A0"}
-                        {profile.lastName}
-                        {"\u00A0"}
+                    <span style={{ color: "var(--pf-t--global--icon--color--regular)" }}>
+                        {`${profile.firstName} ${profile.lastName} `}
+                        <UserIcon />
                     </span>
-                    <UserIcon style={{ fill: "#d2d2d2" }} />
                 </NavLink>
             </div>
         )

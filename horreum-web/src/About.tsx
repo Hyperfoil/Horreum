@@ -16,8 +16,8 @@ import {
 import {Modal} from '@patternfly/react-core/deprecated';
 import { QuestionCircleIcon } from "@patternfly/react-icons"
 
-import MoonIcon from '@patternfly/react-icons/dist/esm/icons/moon-icon';
-import SunIcon from '@patternfly/react-icons/dist/esm/icons/sun-icon';
+import MoonIcon from '@patternfly/react-icons/dist/esm/icons/outlined-moon-icon';
+import SunIcon from '@patternfly/react-icons/dist/esm/icons/outlined-sun-icon';
 
 import { configApi } from "./api"
 import { formatDateTime } from "./utils"
@@ -56,7 +56,7 @@ export default function About() {
     return (
         <>
             <MenuToggle id="toggle-dark-theme" variant="plain" onClick={() => setIsDarkTheme(!isDarkTheme)}>
-                { isDarkTheme ? <SunIcon style={{ color: '#FC0' }} /> : <MoonIcon style={{ color: '#FEC' }} /> }
+                { isDarkTheme ? <SunIcon style={{ color: '#FC0' }} /> : <MoonIcon /> }
             </MenuToggle>
             <Dropdown
                 isOpen={isDropdownOpen}
@@ -68,7 +68,7 @@ export default function About() {
                         ref={toggleRef}
                         variant="plain"
                         onClick={() => setDropdownOpen(!isDropdownOpen)}>
-                        <QuestionCircleIcon color="white"/>
+                        <QuestionCircleIcon />
                     </MenuToggle>
                 )}
             >
