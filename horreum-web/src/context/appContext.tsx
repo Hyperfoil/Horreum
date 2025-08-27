@@ -7,7 +7,11 @@ import {AlertContextType, AppContextType, AuthContextType} from "./@types/appCon
 
 export const AppContext = React.createContext<AppContextType | null>(null);
 
-const ContextProvider: React.FC<React.ReactNode> = ({ children }) => {
+type ContextProviderProps = {
+  children: React.ReactNode;
+};
+
+const ContextProvider: React.FC<ContextProviderProps> = ({ children }) => {
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const newAlert = (newAlert: Alert) => {
         setAlerts([...alerts, newAlert]);
