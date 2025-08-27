@@ -2,9 +2,9 @@ import { useEffect, useState } from "react"
 
 import {Button, Form, FormGroup, Spinner} from '@patternfly/react-core';
 import {Modal} from '@patternfly/react-core/deprecated';
-import {SimpleSelect} from "@patternfly/react-templates";
 
 import SchemaSelect from "../../components/SchemaSelect"
+import { SimpleSelect } from "../../components/templates/SimpleSelect";
 
 type InitialSchema = {
     schema: string

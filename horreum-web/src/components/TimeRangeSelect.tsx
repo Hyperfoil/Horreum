@@ -1,4 +1,4 @@
-import {SimpleSelect} from "@patternfly/react-templates";
+import { SimpleSelect } from "./templates/SimpleSelect"
 
 type TimeRangeSelectProps = {
     selection: TimeRange

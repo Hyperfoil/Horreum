@@ -27,8 +27,7 @@ import OptionalFunction from "../../components/OptionalFunction"
 import ConditionComponent from "../../components/ConditionComponent"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import {SimpleSelect} from "@patternfly/react-templates";
-
+import { SimpleSelect } from "../../components/templates/SimpleSelect";
 
 type ExperimentsProps = {
     test?: Test

@@ -8,9 +8,10 @@ import {
 	Split,
 	SplitItem
 } from '@patternfly/react-core';
-import {SimpleSelect, TypeaheadSelect} from "@patternfly/react-templates";
 
 import { deepEquals, noop } from "../utils"
+import { SimpleSelect } from "./templates/SimpleSelect";
+import { TypeaheadSelect } from "./templates/TypeahedSelect"
 
 export function convertLabels(obj: any): string {
     if (!obj) {
