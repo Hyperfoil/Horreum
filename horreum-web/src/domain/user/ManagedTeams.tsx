@@ -30,7 +30,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
         setModified(true)
         props.onModified(true)
     }
-    const teamMembersFuncs = useRef<TeamMembersFunctions>()
+    const teamMembersFuncs = useRef<TeamMembersFunctions>(undefined)
 
     props.funcs.current = {
         save: () => teamMembersFuncs.current?.save().then(_ => setModified(false)) || Promise.resolve(),

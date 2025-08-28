@@ -3,12 +3,12 @@ import { useReactToPrint } from "react-to-print"
 import { Button } from "@patternfly/react-core"
 
 type PrintButtonProps = {
-    printRef: RefObject<HTMLDivElement>
+    printRef: RefObject<HTMLDivElement | null>
 }
 
 export default function PrintButton(props: PrintButtonProps) {
     const printHandle = useReactToPrint({
-        content: () => props.printRef.current,
+        contentRef: props.printRef,
         pageStyle: "@page { margin: 1cm; }",
     })
     return (

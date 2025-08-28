@@ -265,8 +265,8 @@ export default function Schema() {
                 setShowMessageBanner(true)
             })
     }
-    const transformersFuncsRef = useRef<TabFunctions>()
-    const labelsFuncsRef = useRef<TabFunctions>()
+    const transformersFuncsRef = useRef<TabFunctions>(undefined)
+    const labelsFuncsRef = useRef<TabFunctions>(undefined)
 
     const bannerProps = {
         bannerData: {
