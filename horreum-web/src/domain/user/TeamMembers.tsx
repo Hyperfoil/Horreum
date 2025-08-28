@@ -102,8 +102,8 @@ type TeamMembersProps = {
 
 export default function TeamMembers(props: TeamMembersProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const [availableUsers, setAvailableUsers] = useState<ReactElement[]>([])
-    const [members, setMembers] = useState<ReactElement[]>([])
+    const [availableUsers, setAvailableUsers] = useState<ReactElement<any>[]>([])
+    const [members, setMembers] = useState<ReactElement<any>[]>([])
     const memberRoles = useRef<Map<string, string[]>>(new Map())
     useEffect(() => {
         setAvailableUsers([])
@@ -172,7 +172,7 @@ export default function TeamMembers(props: TeamMembersProps) {
             chosenOptionsTitle={"Members of " + teamToName(props.team)}
             onListChange={(_event, newAvailable, newChosen) => {
                 setAvailableUsers(
-                    (newAvailable as ReactElement[]).map(item => {
+                    (newAvailable as ReactElement<any>[]).map(item => {
                         if (availableUsers.includes(item)) {
                             return item
                         }
@@ -186,7 +186,7 @@ export default function TeamMembers(props: TeamMembersProps) {
                     })
                 )
                 setMembers(
-                    (newChosen as ReactElement[]).map(item => {
+                    (newChosen as ReactElement<any>[]).map(item => {
                         if (members.includes(item)) {
                             return item
                         }
@@ -198,5 +198,5 @@ export default function TeamMembers(props: TeamMembersProps) {
                 props.onModified()
             }}
         />
-    )
+    );
 }

@@ -334,7 +334,7 @@ function ExpressionHelp(props: ExpressionHelpProps) {
 }
 
 type GitHubTokenInputProps = {
-    helpIcon: ReactElement
+    helpIcon: ReactElement<any>
     secrets: any
     onChange(secrets: any): void
 }
@@ -370,7 +370,7 @@ function GitHubTokenInput(props: GitHubTokenInputProps) {
 }
 
 type SlackTokenInputProps = {
-    helpIcon: ReactElement
+    helpIcon: ReactElement<any>
     secrets: any
     onChange(secrets: any): void
 }

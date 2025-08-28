@@ -57,7 +57,7 @@ const LOG_LEVELS = [
 ].reduce((acc, el, i) => {
     acc[i.toString()] = el
     return acc
-}, {} as Record<string, ReactElement>)
+}, {} as Record<string, ReactElement<any>>)
 
 type LogModalProps = {
     columns: string[]

@@ -55,7 +55,7 @@ type LabelsSelectProps = {
     selection?: SelectedLabels
     onSelect(selection: SelectedLabels | undefined): void
     source(): Promise<any[]>
-    emptyPlaceholder?: ReactElement | null
+    emptyPlaceholder?: ReactElement<any> | null
     optionForAll?: string
     forceSplit?: boolean
     fireOnPartial?: boolean
