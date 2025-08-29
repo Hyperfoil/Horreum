@@ -96,9 +96,10 @@ function FewTestsSelect(props: TestSelectProps) {
             isFullWidth
             isExpanded={open}
             isDisabled={props.isDisabled}
+            isPlaceholder={selected === undefined}
             onClick={() => setOpen(!open)}
         >
-            {selected}
+            {selected ?? "Select a test..."}
         </MenuToggle>
 
     return (
@@ -117,7 +118,6 @@ function FewTestsSelect(props: TestSelectProps) {
             }}
             onOpenChange={(open) => setOpen(open)}
             toggle={toggle}
-            placeholder={"Select a test..."}
             isScrollable
             maxMenuHeight="45vh"
             shouldFocusToggleOnSelect
