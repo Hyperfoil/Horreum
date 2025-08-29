@@ -12,11 +12,11 @@ type TransformationLogModalProps = {
 
 export default function TransformationLogModal(props: TransformationLogModalProps) {
     const fetchCount = useCallback(
-        level => logApi.getTransformationLogCount(props.testId, level, props.runId),
+        (level: number) => logApi.getTransformationLogCount(props.testId, level, props.runId),
         [props.testId]
     )
     const fetchRows = useCallback(
-        (level, page, limit) =>
+        (level: number, page: number, limit: number) =>
             logApi.getTransformationLog(props.testId, level, limit, page, props.runId).then(response =>
                 (response as TransformationLog[]).map(log => ({
                     cells: [
@@ -32,7 +32,7 @@ export default function TransformationLogModal(props: TransformationLogModalProp
         [props.testId]
     )
     const deleteFromTo = useCallback(
-        (from, to) => logApi.deleteTransformationLogs(props.testId, from, props.runId, to),
+        (from: number, to: number) => logApi.deleteTransformationLogs(props.testId, from, props.runId, to),
         [props.testId]
     )
     return (

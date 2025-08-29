@@ -107,7 +107,7 @@ export default function ActionList() {
                     )
                 },
             },
-        ], undefined
+        ], []
     )
 
     return (
