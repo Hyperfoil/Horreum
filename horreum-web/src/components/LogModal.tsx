@@ -1,4 +1,4 @@
-import {ReactElement, useContext, useEffect, useMemo, useState} from "react"
+import {ReactElement, ReactNode, useContext, useEffect, useMemo, useState} from "react"
 import {
     Button,
     Bullseye,
@@ -190,7 +190,7 @@ export default function LogModal(props: LogModalProps) {
                                 {rows.map((row, index) =>
                                     <Tr key={index}>
                                         {row.cells?.map((cell, index) =>
-                                            <Td key={index}>{(cell as IRowCell).title}</Td>
+                                            <Td key={index}>{(cell as IRowCell).title as ReactNode}</Td>
                                         )}
                                     </Tr>
                                 )}

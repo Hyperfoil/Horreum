@@ -1,4 +1,4 @@
-import { SetStateAction, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { ReactNode, SetStateAction, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useSelector } from "react-redux"
 import {
     Breadcrumb,
@@ -211,7 +211,7 @@ function renderTableBody(rows: IRow[], setRows: { (v: SetStateAction<IRow[]>): v
                 }/>
                 {row.cells?.map((cell, index) =>
                     <Td key={index} colSpan={(cell as IRowCell).props?.colSpan}>
-                        <ExpandableRowContent>{(cell as IRowCell).title}</ExpandableRowContent>
+                        <ExpandableRowContent>{(cell as IRowCell).title as ReactNode}</ExpandableRowContent>
                     </Td>
                 )}
             </Tr>
