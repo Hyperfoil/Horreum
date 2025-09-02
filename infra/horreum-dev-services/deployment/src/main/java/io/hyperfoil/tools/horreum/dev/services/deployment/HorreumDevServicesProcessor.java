@@ -25,11 +25,10 @@ import io.quarkus.deployment.annotations.BuildSteps;
 import io.quarkus.deployment.builditem.*;
 import io.quarkus.deployment.console.ConsoleInstalledBuildItem;
 import io.quarkus.deployment.console.StartupLogCompressor;
-import io.quarkus.deployment.dev.devservices.GlobalDevServicesConfig;
 import io.quarkus.deployment.logging.LoggingSetupBuildItem;
 
 @BuildSteps(onlyIfNot = IsNormal.class, onlyIf = { HorreumDevServicesProcessor.IsEnabled.class,
-        GlobalDevServicesConfig.Enabled.class })
+        io.quarkus.deployment.dev.devservices.DevServicesConfig.Enabled.class })
 public class HorreumDevServicesProcessor {
 
     private static final Logger log = Logger.getLogger(HorreumDevServicesProcessor.class);
@@ -48,7 +47,7 @@ public class HorreumDevServicesProcessor {
             LaunchModeBuildItem launchMode,
             Optional<ConsoleInstalledBuildItem> consoleInstalledBuildItem,
             LoggingSetupBuildItem loggingSetupBuildItem,
-            GlobalDevServicesConfig devServicesConfig) {
+            io.quarkus.deployment.dev.devservices.DevServicesConfig devServicesConfig) {
 
         StartupLogCompressor compressor = new StartupLogCompressor(
                 (launchMode.isTest() ? "(test) " : "") + "Horreum Dev Services Starting:",
