@@ -298,7 +298,7 @@ function LabelsComparison({headers, datasets, alerting}: LabelsComparisonProps) 
             </Flex>
             <div ref={componentRef}>
                 <InnerScrollContainer>
-                    <Table title="Label(s) Comparison" aria-label="Label comparison" variant="compact">
+                    <Table title="Label(s) Comparison" aria-label="Label comparison" borders={false} variant="compact">
                         <Caption>Label(s) Comparison</Caption>
                         {renderTableHead(headers)}
                         {renderTableBody(rows, setRows)}
@@ -392,7 +392,7 @@ function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps
             </Flex>
             <div ref={componentRef}>
                 <InnerScrollContainer>
-                    <Table aria-label="View comparison" variant="compact">
+                    <Table aria-label="View comparison" borders={false} variant="compact">
                         <Caption>View Component(s) Comparison</Caption>
                         {renderTableHead(headers)}
                         {renderTableBody(rows, setRows)}

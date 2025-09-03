@@ -1,6 +1,7 @@
 import { useState, useRef } from "react"
 import { useSelector } from "react-redux"
-import { Button, Form, FormGroup, Modal } from "@patternfly/react-core"
+import {Button, Form, FormGroup} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import TeamSelect, { createTeam, Team } from "../../components/TeamSelect"

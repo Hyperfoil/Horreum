@@ -231,7 +231,7 @@ function InnerSelect({disabled, isTypeahead, hasOnlyOneOption, selection, option
     return (
         isTypeahead
             ? <TypeaheadSelect
-                selectOptions={initialOptions}
+                initialOptions={initialOptions}
                 onSelect={(_, item) => onSelect(item as string)}
                 selected={(selection === all && all || selection)?.toString()}
                 onToggle={(expanding: any) => expanding && onOpen && onOpen()}

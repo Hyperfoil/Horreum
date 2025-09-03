@@ -22,7 +22,6 @@ import {
     FormGroup,
     PageSection,
     Spinner,
-    EmptyStateHeader,
 } from "@patternfly/react-core"
 
 import { UserIcon } from "@patternfly/react-icons"
@@ -42,13 +41,10 @@ export const UserProfileLink = () => {
         return (
             <div style={{ margin: "10px" }}>
                 <NavLink to="/usersettings">
-                    <span style={{ color: "#d2d2d2" }}>
-                        {profile.firstName}
-                        {"\u00A0"}
-                        {profile.lastName}
-                        {"\u00A0"}
+                    <span style={{ color: "var(--pf-t--global--icon--color--regular)" }}>
+                        {`${profile.firstName} ${profile.lastName} `}
+                        <UserIcon />
                     </span>
-                    <UserIcon style={{ fill: "#d2d2d2" }} />
                 </NavLink>
             </div>
         )
@@ -204,11 +200,7 @@ export function UserSettings() {
                                     }}
                                 />
                             )}
-                            {!selectedTeam && (
-                                <EmptyState>
-                                    <EmptyStateHeader titleText="No team selected" headingLevel="h3" />
-                                </EmptyState>
-                            )}
+                            {!selectedTeam && <EmptyState titleText="No team selected" headingLevel="h3" />}
                         </SavedTab>
                         <FragmentTab title="API keys" fragment="api-keys">
                             <ApiKeys/>

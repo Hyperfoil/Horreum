@@ -1,7 +1,8 @@
 import {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
-import { Bullseye, Button, Modal, Pagination, Spinner, Title } from "@patternfly/react-core"
+import {Bullseye, Button, Pagination, Spinner, Title} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"
@@ -79,7 +80,7 @@ export default function TestLabelModal(props: TestLabelModalProps) {
             {datasets && !hasResult && (
                 <>
                     <OuterScrollContainer style={{ overflowY: "auto", height: "80vh" }}>
-                        <Table aria-label="Available datasets" variant="compact" isStickyHeader>
+                        <Table aria-label="Available datasets" borders={false} variant="compact" isStickyHeader>
                             <Thead>
                                 <Tr>
                                     {["Test", "Dataset", "Description", ""].map((col, index) =>

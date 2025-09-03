@@ -1,7 +1,8 @@
 import { useState } from "react"
 
 import { NavLink } from "react-router-dom"
-import { Bullseye, Button, Modal, Spinner } from "@patternfly/react-core"
+import {Bullseye, Button, Spinner} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { ArrowRightIcon } from "@patternfly/react-icons"
 import { Table /* data-codemods */, Thead, Tbody, Tr, Th, Td } from "@patternfly/react-table"
 
@@ -32,7 +33,7 @@ export default function ListReportsModal({ isOpen, onClose, summary, onReload }:
                     </Bullseye>
                 )}
                 {summary && (
-                    <Table variant="compact">
+                    <Table borders={false} variant="compact">
                         <Thead>
                             <Tr>
                                 <Th>Report</Th>

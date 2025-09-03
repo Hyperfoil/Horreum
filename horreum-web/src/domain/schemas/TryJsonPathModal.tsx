@@ -1,6 +1,7 @@
 import {useContext, useEffect, useMemo, useState} from "react"
 
-import { Bullseye, Button, Flex, FlexItem, Modal, Pagination, Radio, Spinner, TextInput } from "@patternfly/react-core"
+import {Bullseye, Button, Flex, FlexItem, Pagination, Radio, Spinner, TextInput} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { NavLink } from "react-router-dom"
 
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
@@ -161,7 +162,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                 <>
                     <OuterScrollContainer style={{ overflowY: "scroll", maxHeight: "70vh" }}>
                         {runs && (
-                            <Table aria-label="Available runs" variant="compact" isStickyHeader>
+                            <Table aria-label="Available runs" borders={false} variant="compact" isStickyHeader>
                                 <Thead>
                                     <Tr>
                                         {["Test", "Run", "Description", ""].map((col, index) =>
@@ -197,7 +198,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                             </Table>
                         )}
                         {datasets && (
-                            <Table aria-label="Available datasets" variant="compact" isStickyHeader>
+                            <Table aria-label="Available datasets" borders={false} variant="compact" isStickyHeader>
                                 <Thead>
                                     <Tr>
                                         {["Test", "Dataset", "Description", ""].map((col, index) =>
@@ -259,7 +260,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     {"\u00A0"}
                     {props.target === "run" && (
                         <NavLink
-                            className="pf-v5-c-button pf-m-secondary"
+                            className="pf-v6-c-button pf-m-secondary"
                             to={`/run/${target?.id}?query=${encodeURIComponent(props.jsonpath || "")}#run`}
                         >
                             Go to run {target?.id}
@@ -267,7 +268,7 @@ export default function TryJsonPathModal(props: TryJsonPathModalProps) {
                     )}
                     {props.target === "run" && (
                         <NavLink
-                            className="pf-v5-c-button pf-m-secondary"
+                            className="pf-v6-c-button pf-m-secondary"
                             to={`/run/${(target as DatasetSummary).runId}?query=${encodeURIComponent(
                                 props.jsonpath || ""
                             )}#dataset${(target as DatasetSummary).ordinal}`}

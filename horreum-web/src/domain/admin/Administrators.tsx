@@ -1,10 +1,7 @@
 import {ReactElement, useState, useEffect, useContext} from "react"
 import { useSelector } from "react-redux"
-import { Button, 
-    DualListSelector, 
-    Form, 
-    FormGroup
-} from "@patternfly/react-core"
+import {Button, Form, FormGroup} from '@patternfly/react-core';
+import {DualListSelector} from '@patternfly/react-core/deprecated';
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import {userApi, UserData} from "../../api"

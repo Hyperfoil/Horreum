@@ -2,14 +2,14 @@ import {
     Button,
     Form,
     FormGroup,
-    Modal,
     Tab,
     Tabs,
     TextInput,
     HelperText,
     HelperTextItem,
-    FormHelperText,    
-} from "@patternfly/react-core";
+    FormHelperText
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import React, {useContext, useMemo, useState} from "react";
 import {noop} from "../../utils";
 import AccessChoice from "../../components/AccessChoice";

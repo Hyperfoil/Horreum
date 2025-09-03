@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useContext} from "react"
 
-import { Bullseye, Modal, Spinner, Tab, Tabs } from "@patternfly/react-core"
+import {Bullseye, Spinner, Tab, Tabs} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { Table /* data-codemods */, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table"
 
 import { NavLink } from "react-router-dom"
@@ -61,12 +62,12 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                         >
                             <div style={{ overflowY: "auto" }}>
                                 <Tabs
-                                    isSecondary={true}
                                     activeKey={activeSecondaryTab}
                                     onSelect={(_, key) => setActiveSecondaryTab(key)}
+                                    variant="secondary"
                                 >
                                     <Tab eventKey="results" title="Results">
-                                        <Table variant="compact">
+                                        <Table borders={false} variant="compact">
                                             <Thead>
                                                 <Tr>
                                                     <Th>Variable</Th>
@@ -83,13 +84,13 @@ export default function ExperimentModal(props: ExperimentModalProps) {
                                                             case "BETTER":
                                                                 style = {
                                                                     backgroundColor:
-                                                                        "var(--pf-v5-global--palette--green-100)",
+                                                                        "var(--pf-t--global--color--status--success--default)",
                                                                 }
                                                                 break
                                                             case "WORSE":
                                                                 style = {
                                                                     backgroundColor:
-                                                                        "var(--pf-v5-global--palette--red-50)",
+                                                                        "var(--pf-t--global--text--color--status--danger--default)",
                                                                 }
                                                                 break
                                                             default:

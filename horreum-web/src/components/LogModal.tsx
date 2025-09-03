@@ -6,10 +6,10 @@ import {
     EmptyStateBody,
     Flex,
     FlexItem,
-    Modal,
     Pagination,
-    Spinner, EmptyStateHeader,
-    } from "@patternfly/react-core"
+    Spinner
+} from '@patternfly/react-core';
+import { Modal } from '@patternfly/react-core/deprecated';
 import {
     CheckCircleIcon,
     ExclamationCircleIcon,
@@ -33,10 +33,10 @@ export type CommonLogModalProps = {
 
 export function LogLevelIcon(props: { level: number }) {
     const levels = [
-        <CheckCircleIcon style={{ fill: "var(--pf-v5-global--success-color--100)" }} />,
-        <InfoCircleIcon style={{ fill: "var(--pf-v5-global--info-color--100)" }} />,
-        <ExclamationTriangleIcon style={{ fill: "var(--pf-v5-global--warning-color--100)" }} />,
-        <ExclamationCircleIcon style={{ fill: "var(--pf-v5-global--danger-color--100)" }} />,
+        <CheckCircleIcon style={{ fill: "var(--pf-t--global--icon--color--severity--undefined--default)" }} />,
+        <InfoCircleIcon style={{ fill: "var(--pf-t--global--icon--color--severity--none--default)" }} />,
+        <ExclamationTriangleIcon style={{ fill: "var(--pf-t--global--icon--color--severity--moderate--default)" }} />,
+        <ExclamationCircleIcon style={{ fill: "var(--pf-t--global--icon--color--severity--critical--default)" }} />,
     ]
     return levels[props.level]
 }
@@ -113,15 +113,14 @@ export default function LogModal(props: LogModalProps) {
         []
     )
     return (
-        <Modal isOpen={props.isOpen} onClose={props.onClose} title={props.title} showClose={true}>
+        <Modal isOpen={props.isOpen} onClose={props.onClose} title={props.title}>
             {loading && (
                 <Bullseye>
                     <Spinner size="xl" />
                 </Bullseye>
             )}
             {!loading && count === 0 && (
-                <EmptyState>
-                    <EmptyStateHeader titleText="No logs" headingLevel="h4" />
+                <EmptyState titleText="No logs" headingLevel="h4">
                     <EmptyStateBody>
                         {props.emptyMessage}
                         <div style={{ marginTop: "16px" }}>
@@ -179,7 +178,7 @@ export default function LogModal(props: LogModalProps) {
                         }}
                     />
                     <OuterScrollContainer style={{ overflowY:"auto", height: "80vh" }}>
-                        <Table aria-label="Simple Table" variant="compact">
+                        <Table aria-label="Simple Table" borders={false} variant="compact">
                             <Thead>
                                 <Tr>
                                     {props.columns.map((col, index) =>

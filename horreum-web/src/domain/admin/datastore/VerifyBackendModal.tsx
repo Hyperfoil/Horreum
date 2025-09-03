@@ -2,13 +2,15 @@ import React, {useState} from "react"
 
 import {
     ActionGroup,
-    Button, Form,
-    FormGroup, Modal, TextInput,
+    Button,
+    Form,
+    FormGroup,
+    TextInput,
     HelperText,
     HelperTextItem,
-    FormHelperText,
-
-} from "@patternfly/react-core"
+    FormHelperText
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 type ConfirmDeleteModalProps = {
     isOpen: boolean

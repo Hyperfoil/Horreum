@@ -1,5 +1,6 @@
 import {ReactElement, useState, useEffect, useRef, MutableRefObject, useContext} from "react"
-import { DualListSelector, TreeView } from "@patternfly/react-core"
+import {TreeView} from '@patternfly/react-core';
+import {DualListSelector} from '@patternfly/react-core/deprecated';
 
 import { teamToName, userName } from "../../auth"
 import UserSearch from "../../components/UserSearch"

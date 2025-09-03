@@ -65,36 +65,29 @@ export default function FoldersAccordian(props: FoldersAccordianProps) {
 
     return (
         <Accordion asDefinitionList>
-            <AccordionItem>
+            <AccordionItem isExpanded={expanded ==='ex-horreum'}>
                 <AccordionToggle
                     onClick={() => {onToggle({id: 'ex-horreum'})}}
-                    isExpanded={expanded ==='ex-horreum'}
                     id="ex-horreum"
                 >
                     horreum
                 </AccordionToggle>
-                <AccordionContent
-                    id="ex-horreum-content"
-                    isHidden={expanded !== 'ex-horreum'}
-                >
+                <AccordionContent id="ex-horreum-content">
                     <p>
                         Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
                         dolore magna aliqua.
                     </p>
                 </AccordionContent>
             </AccordionItem>
-
-            <AccordionItem>
+            <AccordionItem isExpanded={expanded === 'ex-quarkus'}>
                 <AccordionToggle
                     onClick={() => {onToggle({id: 'ex-quarkus'})}}
-                    isExpanded={expanded === 'ex-quarkus'}
                     id="ex-quarkus"
                 >
                     quarkus
                 </AccordionToggle>
                 <AccordionContent
                     id="ex-quarkus-content"
-                    isHidden={expanded !=='ex-quarkus'}
                 >
                     <p>
                         Vivamus et tortor sed arcu congue vehicula eget et diam. Praesent nec dictum lorem. Aliquam id diam

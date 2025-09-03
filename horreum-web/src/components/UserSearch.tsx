@@ -46,15 +46,14 @@ export default function UserSearch(props: UserSearchProps) {
             </FlexItem>
             <FlexItem>
                 <Button
+                    icon={<ArrowRightIcon/>}
                     variant="control"
                     onClick={() => {
                         window.clearTimeout(userSearchTimer)
                         setUserSearchTimer(undefined)
                         fireSearch(userSearch || "")
                     }}
-                >
-                    <ArrowRightIcon />
-                </Button>
+                />
             </FlexItem>
         </Flex>
     )

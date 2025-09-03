@@ -24,7 +24,6 @@ export default function NumberBound({enabled, inclusive, value, isDisabled, onCh
                     onChange(enabled, inclusive, value)
                     }}
                     label="Enabled"
-                    labelOff="Disabled"
                 />
             </FlexItem>
             <FlexItem>

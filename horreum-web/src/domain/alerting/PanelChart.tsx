@@ -11,7 +11,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts"
-import { Bullseye, Button, EmptyState, Spinner, EmptyStateHeader, EmptyStateFooter,  } from "@patternfly/react-core"
+import { Bullseye, Button, EmptyState, EmptyStateFooter, Spinner } from "@patternfly/react-core"
 import { DateTime } from "luxon"
 import {alertingApi, AnnotationDefinition, FingerprintValue, TimeseriesTarget} from "../../api"
 import { fingerprintToString } from "../../utils"
@@ -226,8 +226,7 @@ export default function PanelChart({
                         </Bullseye>
                     )}
                     {chartData?.length === 0 && (
-                        <EmptyState>
-                            <EmptyStateHeader titleText="No datapoints in this range" headingLevel="h3" /><EmptyStateFooter>
+                        <EmptyState titleText="No datapoints in this range" headingLevel="h3"><EmptyStateFooter>
                             <Button
                                 isDisabled={gettingLast}
                                 onClick={() => {

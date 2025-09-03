@@ -1,9 +1,15 @@
 import { useState } from "react"
-import { Button, ButtonVariant, Form, FormGroup, Modal, TextInput,
+import {
+    Button,
+    ButtonVariant,
+    Form,
+    FormGroup,
+    TextInput,
     HelperText,
     HelperTextItem,
-    FormHelperText,
- } from "@patternfly/react-core"
+    FormHelperText
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 type AddAllowedSiteModalProps = {
     isOpen: boolean

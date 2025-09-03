@@ -23,11 +23,15 @@ import {
     List,
     ListItem,
     Modal,
+    ModalBody,
+    ModalHeader,
     PageSection,
     Popover,
     Spinner,
     TextInput,
-    Title, Toolbar, ToolbarContent,
+    Title,
+    Toolbar,
+    ToolbarContent
 } from "@patternfly/react-core"
 import { Link, NavLink } from "react-router-dom"
 
@@ -633,7 +637,10 @@ export default function TableReportConfigPage() {
                     </Form>
                     {preview && (
                         <Modal
-                            header={
+                            isOpen={!!preview}
+                            onClose={() => setPreview(undefined)}
+                        >
+                            <ModalHeader>
                                 <Flex>
                                     <FlexItem>
                                         <Title headingLevel="h1">Preview</Title>
@@ -642,24 +649,23 @@ export default function TableReportConfigPage() {
                                         <Button onClick={() => setPreviewLogOpen(true)}>Show log</Button>
                                     </FlexItem>
                                 </Flex>
-                            }
-                            isOpen={!!preview}
-                            onClose={() => setPreview(undefined)}
-                        >
-                            <ReportLogModal
-                                logs={preview.logs}
-                                isOpen={previewLogOpen}
-                                onClose={() => setPreviewLogOpen(false)}
-                            />
-                            <div
-                                style={{
-                                    overflowY: "auto",
-                                    maxHeight: "80vh",
-                                    paddingRight: "16px",
-                                }}
-                            >
-                                <TableReportView report={preview} />
-                            </div>
+                            </ModalHeader>
+                            <ModalBody>
+                                <ReportLogModal
+                                    logs={preview.logs}
+                                    isOpen={previewLogOpen}
+                                    onClose={() => setPreviewLogOpen(false)}
+                                />
+                                <div
+                                    style={{
+                                  overflowY: "auto",
+                                  maxHeight: "80vh",
+                                  paddingRight: "16px",
+                                 }}
+                                >
+                                    <TableReportView report={preview} />
+                                </div>
+                            </ModalBody>
                         </Modal>
                     )}
                 </CardBody>

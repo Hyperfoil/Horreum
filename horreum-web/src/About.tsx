@@ -11,13 +11,13 @@ import {
     DropdownList,
     MenuToggle,
     MenuToggleElement,
-    Modal,
     Spinner
 } from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { QuestionCircleIcon } from "@patternfly/react-icons"
 
-import MoonIcon from '@patternfly/react-icons/dist/esm/icons/moon-icon';
-import SunIcon from '@patternfly/react-icons/dist/esm/icons/sun-icon';
+import MoonIcon from '@patternfly/react-icons/dist/esm/icons/outlined-moon-icon';
+import SunIcon from '@patternfly/react-icons/dist/esm/icons/outlined-sun-icon';
 
 import { configApi } from "./api"
 import { formatDateTime } from "./utils"
@@ -35,7 +35,7 @@ const VERSION_ERROR = {
 
 export default function About() {
     const [isDarkTheme, setIsDarkTheme] = useState(JSON.parse(localStorage.getItem('dark-theme') ?? 'false') as boolean);
-    const applyTheme = () => (document.querySelector('html') as Element).classList.toggle('pf-v5-theme-dark', isDarkTheme);
+    const applyTheme = () => (document.querySelector('html') as Element).classList.toggle('pf-v6-theme-dark', isDarkTheme);
 
     useEffect(() => {
         localStorage.setItem('dark-theme', JSON.stringify(isDarkTheme));
@@ -56,7 +56,7 @@ export default function About() {
     return (
         <>
             <MenuToggle id="toggle-dark-theme" variant="plain" onClick={() => setIsDarkTheme(!isDarkTheme)}>
-                { isDarkTheme ? <SunIcon style={{ color: '#FC0' }} /> : <MoonIcon style={{ color: '#FEC' }} /> }
+                { isDarkTheme ? <SunIcon style={{ color: '#FC0' }} /> : <MoonIcon /> }
             </MenuToggle>
             <Dropdown
                 isOpen={isDropdownOpen}
@@ -68,7 +68,7 @@ export default function About() {
                         ref={toggleRef}
                         variant="plain"
                         onClick={() => setDropdownOpen(!isDropdownOpen)}>
-                        <QuestionCircleIcon color="white"/>
+                        <QuestionCircleIcon />
                     </MenuToggle>
                 )}
             >

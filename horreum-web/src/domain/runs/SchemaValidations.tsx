@@ -22,7 +22,7 @@ export default function SchemaValidations(props: SchemaValidationsProps) {
             <FormGroup label="Schemas" fieldId="schemas">
                 <div
                     style={{
-                        paddingTop: "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)",
+                        paddingTop: "var(--pf-t--global--spacer--control--vertical--default)",
                     }}
                 >
                     {(props.schemas &&
@@ -42,9 +42,12 @@ export default function SchemaValidations(props: SchemaValidationsProps) {
                                         )}
                                         {errors.length > 0 && <ErrorBadge>{errors.length}</ErrorBadge>}
                                         {props.onEdit && (
-                                            <Button variant="link" style={{ paddingTop: 0 }} onClick={props.onEdit}>
-                                                <EditIcon />
-                                            </Button>
+                                            <Button
+                                                icon={<EditIcon/>}
+                                                variant="link"
+                                                style={{paddingTop: 0}}
+                                                onClick={props.onEdit}
+                                            />
                                         )}
                                     </React.Fragment>
                                 )
@@ -54,9 +57,7 @@ export default function SchemaValidations(props: SchemaValidationsProps) {
                         <>
                             {props.noSchema}
                             {props.onEdit && (
-                                <Button variant="link" style={{ paddingTop: 0 }} onClick={props.onEdit}>
-                                    <EditIcon />
-                                </Button>
+                                <Button icon={<EditIcon/>} variant="link" style={{paddingTop: 0}} onClick={props.onEdit}/>
                             )}
                         </>
                     )}

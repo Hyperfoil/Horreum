@@ -18,14 +18,13 @@ export default function OptionalFunction({func, onChange, readOnly, undefinedTex
         } else {
             return (
                 <Button
-                    style={{ padding: 0, marginTop: "6px" }}
+                    icon={<AddCircleOIcon/>}
+                    style={{padding: 0, marginTop: "6px"}}
                     variant="link"
                     onClick={() => {
-                    onChange(defaultFunc)
+                        onChange(defaultFunc)
                     }}
                 >
-                    <AddCircleOIcon />
-                    {"\u00A0"}
                     {addText}
                 </Button>
             )

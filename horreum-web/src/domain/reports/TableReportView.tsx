@@ -65,7 +65,7 @@ function DataView(props: DataViewProps) {
                 </>
             }
             bodyContent={
-                <Table variant="compact">
+                <Table borders={false} variant="compact">
                     <Tbody>
                         {props.config.components.map((c, i) => (
                             <Tr key={i}>
@@ -162,7 +162,7 @@ function ComponentTable(props: ComponentTableProps) {
     return (
         <Level style={{ padding: "50px"}}>
             <LevelItem style={{ width: "100%" }}>
-                <Table variant="compact">
+                <Table borders={false} variant="compact">
                     <Thead>
                         <Tr>
                             <Th></Th>
@@ -208,7 +208,6 @@ function ComponentTable(props: ComponentTableProps) {
                 <div className="chartSwitch nonPrintable">
                     <Switch
                         label="Min-max Y axis"
-                        labelOff="Natural Y axis"
                         isChecked={minMaxDomain}
                         onChange={(_event, val) => setMinMaxDomain(val)}
                     />
@@ -291,8 +290,12 @@ function Comment(props: CommentProps) {
             <div className="reportComment markdown-body">
                 <ReactMarkdown>{text}</ReactMarkdown>
                 {props.editable && (
-                    <Button className="reportCommentEdit nonPrintable" variant="link" onClick={() => setEdit(true)}>
-                        <EditIcon />
+                    <Button
+                        icon={<EditIcon/>}
+                        className="reportCommentEdit nonPrintable"
+                        variant="link"
+                        onClick={() => setEdit(true)}
+                    >
                         {text ? " Edit" : " Add"} comment
                     </Button>
                 )}

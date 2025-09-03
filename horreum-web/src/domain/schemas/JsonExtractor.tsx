@@ -104,7 +104,7 @@ function checkName(name: string | undefined) {
 }
 
 const INVALID_NAME_HELPER = (
-    <span style={{ color: "var(--pf-v5-global--warning-color--200)" }}>
+    <span style={{ color: "var(--pf-t--global--text--color--status--warning--default)" }}>
         Name should match <code>[a-zA-Z_][a-zA-Z_0-9]*</code>. It shouldn't be a Javascript-reserved word either.
     </span>
 )
@@ -154,7 +154,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                     </FormGroup>
                     <FormGroup
                         label="JSONPath"
-                        labelIcon={<JsonPathDocsLink />}
+                        labelHelp={<JsonPathDocsLink />}
                         fieldId="jsonpath"
                     >
                         <TextInput
@@ -188,7 +188,7 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                     </FormGroup>
                     <FormGroup
                         label="Variant"
-                        labelIcon={
+                        labelHelp={
                             <Popover
                                 bodyContent={
                                     <List>
@@ -203,14 +203,12 @@ export default function JsonExtractor(props: JsonExtractorProps) {
                                     </List>
                                 }
                             >
-                                <Button variant="plain" onClick={e => e.preventDefault()}>
-                                    <HelpIcon />
-                                </Button>
+                                <Button icon={<HelpIcon/>} variant="plain" onClick={e => e.preventDefault()}/>
                             </Popover>
                         }
                         fieldId="variant"
                     >
-                        <Flex style={{ paddingTop: "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)" }}>
+                        <Flex style={{ paddingTop: "var(--pf-t--global--spacer--control--vertical--default)" }}>
                             <FlexItem>
                                 <Radio
                                     name={variantName}

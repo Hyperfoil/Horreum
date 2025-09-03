@@ -257,7 +257,7 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
                                     id="delete"
                                     aria-labelledby="delete"
                                     aria-label="Settings actions"
-                                    isPlainButtonAction
+                                    
                                 >
                                     <Button
                                         style={{ width: "51%" }}

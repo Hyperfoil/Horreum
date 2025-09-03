@@ -1,20 +1,20 @@
 import {useState, useEffect, useContext} from "react"
 import {
-	ActionGroup,
-	Button,
-	ExpandableSection,
-	Form,
-	FormGroup,
-	Modal,
-	Tab,
-	Tabs,
-	TextArea,
-	Switch,
+    ActionGroup,
+    Button,
+    ExpandableSection,
+    Form,
+    FormGroup,
+    Tab,
+    Tabs,
+    TextArea,
+    Switch,
     Dropdown,
     DropdownItem,
     MenuToggle,
     MenuToggleElement
 } from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import {alertingApi, Change, FingerprintValue, Variable} from "../../api"
@@ -120,7 +120,6 @@ const ChangeModal = ({ change, isOpen, onClose, onUpdate }: ChangeModalProps) =>
                         isChecked={confirmed}
                         onChange={(_event, val) => setConfirmed(val)}
                         label="Confirmed"
-                        labelOff="Not confirmed"
                     />
                 </FormGroup>
                 <FormGroup label="Description" fieldId="description">

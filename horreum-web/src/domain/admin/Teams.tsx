@@ -1,12 +1,14 @@
 import {useContext, useEffect, useRef, useState} from "react"
 import { useSelector } from "react-redux"
-import { Button, 
-    FormGroup, 
+import {
+    Button,
+    FormGroup,
     HelperText,
     HelperTextItem,
     FormHelperText,
-    Modal, 
-    TextInput } from "@patternfly/react-core"
+    TextInput
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
 import TeamMembers, { TeamMembersFunctions } from "../user/TeamMembers"

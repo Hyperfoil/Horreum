@@ -6,24 +6,24 @@ import {ChangeDetection, ConditionConfig, Variable, alertingApi, updateChangeDet
 import { NavLink } from "react-router-dom"
 
 import {
-	Alert,
-	AlertActionCloseButton,
-	Bullseye,
-	Button,
-	EmptyState,
-	Form,
-	FormGroup,
-	Modal,
-	Popover,
-	SimpleList,
-	SimpleListGroup,
-	SimpleListItem,
-	Spinner,
-	Split,
-	SplitItem,
-	TextInput,
-	Title
+    Alert,
+    AlertActionCloseButton,
+    Bullseye,
+    Button,
+    EmptyState,
+    Form,
+    FormGroup,
+    Popover,
+    SimpleList,
+    SimpleListGroup,
+    SimpleListItem,
+    Spinner,
+    Split,
+    SplitItem,
+    TextInput,
+    Title
 } from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import {SimpleSelect} from "@patternfly/react-templates";
 
 import { PlusCircleIcon } from "@patternfly/react-icons"
@@ -392,7 +392,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 <FormGroup
                     fieldId="timelineLabels"
                     label="Timeline labels"
-                    labelIcon={
+                    labelHelp={
                         <Popover
                             headerContent="Labels used to extract timeline"
                             bodyContent={
@@ -430,7 +430,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 <FormGroup
                     fieldId="timelineFunction"
                     label="Timeline function"
-                    labelIcon={
+                    labelHelp={
                         <Popover
                             headerContent="Transform timeline labels into timestamp"
                             bodyContent={
@@ -458,7 +458,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 <FormGroup
                     fieldId="fingerprintLabels"
                     label="Fingerprint labels"
-                    labelIcon={
+                    labelHelp={
                         <Popover
                             headerContent="Labels used to extract fingerprint"
                             bodyContent={
@@ -487,7 +487,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                 <FormGroup
                     fieldId="fingerprintFilter"
                     label="Fingerprint filter"
-                    labelIcon={
+                    labelHelp={
                         <Popover
                             headerContent="Filter fingerprints where change detection is applied"
                             bodyContent={
@@ -644,9 +644,8 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
                         </SimpleList>
                     )}
                     {isTester && (
-                        <Button variant="link" onClick={addVariable}>
-                            <PlusCircleIcon />
-                            {"\u00A0"}Add new variable...
+                        <Button icon={<PlusCircleIcon/>} variant="link" onClick={addVariable}>
+                            Add new variable...
                         </Button>
                     )}
                 </SplitItem>

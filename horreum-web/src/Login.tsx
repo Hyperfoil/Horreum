@@ -1,7 +1,8 @@
 import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./context/appContext";
 import {AppContextType} from "./context/@types/appContextTypes";
-import {Button, Form, FormGroup, Modal, Spinner, TextInput} from "@patternfly/react-core";
+import {Button, Form, FormGroup, Spinner, TextInput} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 import {userApi} from "./api";
 import store from "./store";
 import {BASIC_AUTH, UPDATE_ROLES, AFTER_LOGOUT, STORE_PROFILE, UPDATE_DEFAULT_TEAM} from "./auth";

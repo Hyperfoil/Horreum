@@ -36,14 +36,14 @@ export default function ToolbarLabelFilter(props: ToolbarLabelFilterProps) {
 
     return (
         <ToolbarFilter
-            chips={selection !== undefined ? [selection] : ([] as string[])}
-            deleteChip={() => {
+            labels={selection !== undefined ? [selection] : ([] as string[])}
+            deleteLabel={() => {
                 const newFilter = {...props.filter}
                 delete newFilter[props.name]
                 props.setFilter(newFilter)
                 setSelection(undefined);
             }}
-            deleteChipGroup={() => {
+            deleteLabelGroup={() => {
                 const newFilter = {...props.filter}
                 delete newFilter[props.name]
                 props.setFilter(newFilter)

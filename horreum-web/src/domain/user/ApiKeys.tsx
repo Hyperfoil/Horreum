@@ -7,10 +7,10 @@ import {
     HelperText,
     HelperTextItem,
     Label,
-    Modal,
     TextInput,
-    Tooltip,
-} from "@patternfly/react-core"
+    Tooltip
+} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 import {ApiKeyResponse, userApi} from "../../api";
 import {AppContext} from "../../context/appContext";
@@ -88,7 +88,7 @@ export default function ApiKeys() {
             } else if (key.toExpiration < 2) {
                 labels.push(<Label key="expiration" color="orange">Expires TOMORROW</Label>)
             } else if (key.toExpiration < 7) {
-                labels.push(<Label key="expiration" color="gold">Expires in less than a week</Label>)
+                labels.push(<Label key="expiration" color="yellow">Expires in less than a week</Label>)
             }
         }
         return labels
@@ -146,7 +146,7 @@ export default function ApiKeys() {
                             </Td>
                             <Td dataLabel="access" textCenter>
                                 <Tooltip trigger="mouseenter" content={keyAccessTooltip(key)}>
-                                    <span>{key.access?.toLocaleDateString() || <Label color="cyan">Never used</Label>}</span>
+                                    <span>{key.access?.toLocaleDateString() || <Label color="teal">Never used</Label>}</span>
                                 </Tooltip>
                             </Td>
                             <Td dataLabel="status" textCenter>{keyStatus(key)}</Td>
@@ -200,12 +200,12 @@ export default function ApiKeys() {
                 aria-label="new-api-key"
                 variant="small"
                 onClose={() => setNewKeyValue(undefined)}>
-                <ClipboardCopy isReadOnly>{newKeyValue}</ClipboardCopy>
                 <HelperText>
-                    <HelperTextItem variant="warning" hasIcon>
+                    <HelperTextItem variant="warning">
                         This is the only time you'll be able to see the key
                     </HelperTextItem>
                 </HelperText>
+                <ClipboardCopy isReadOnly>{newKeyValue ?? ""}</ClipboardCopy>
             </Modal>
             <Modal
                 isOpen={renameKeyId != undefined}

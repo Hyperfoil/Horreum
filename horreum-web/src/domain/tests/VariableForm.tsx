@@ -88,7 +88,7 @@ export default function VariableForm(props: VariableFormProps) {
             <FormGroup label="Group" fieldId="group">
                 <TypeaheadSelect
                     placeholder="-none-"
-                    selectOptions={props.groups.map(g => ({value: g, content: g, selected: g === props.variable.group}))}
+                    initialOptions={props.groups.map(g => ({value: g, content: g, selected: g === props.variable.group}))}
                     onSelect={(_, item) => {
                         if (!props.groups.includes(item as string)) {
                             props.setGroups([...props.groups, item as string].sort())
@@ -186,7 +186,7 @@ export default function VariableForm(props: VariableFormProps) {
                     <FormGroup label="Model" fieldId="model">
                         <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
                             <FlexItem
-                                style={{ paddingTop: "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)" }}
+                                style={{ paddingTop: "var(--pf-t--global--spacer--control--vertical--default)" }}
                             >
                                 {usedModel.title}
                                 <Popover headerContent={usedModel.title} bodyContent={usedModel.description}>

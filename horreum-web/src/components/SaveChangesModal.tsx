@@ -1,6 +1,7 @@
 import {useState} from "react"
 
-import {Bullseye, Button, Modal, Spinner, Split, SplitItem} from "@patternfly/react-core"
+import {Bullseye, Button, Spinner, Split, SplitItem} from '@patternfly/react-core';
+import {Modal} from '@patternfly/react-core/deprecated';
 
 type SaveChangesModalProps = {
     isOpen: boolean

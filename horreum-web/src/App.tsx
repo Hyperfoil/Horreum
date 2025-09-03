@@ -6,7 +6,7 @@ import {BarsIcon} from '@patternfly/react-icons';
 import {
     Brand,
     Button,
-    Masthead, MastheadBrand, MastheadContent, MastheadMain, MastheadToggle,
+    Masthead, MastheadBrand, MastheadContent, MastheadLogo, MastheadMain, MastheadToggle,
     Nav,
     NavItem,
     NavList,
@@ -125,7 +125,7 @@ function Main() {
     const headerToolbar = (
         <Toolbar id="header-toolbar">
             <ToolbarContent>
-                <ToolbarGroup align={{ default: 'alignRight' }}>
+                <ToolbarGroup align={{ default: 'alignEnd' }}>
                     <ToolbarItem>
                         <UserProfileLink/>
                     </ToolbarItem>
@@ -147,24 +147,20 @@ function Main() {
 
     const Header = (
         <Masthead>
-            <MastheadToggle>
-                <Button variant="plain" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Global navigation">
-                    <BarsIcon/>
-                </Button>
-            </MastheadToggle>
             <MastheadMain>
+                <MastheadToggle>
+                    <Button icon={<BarsIcon/>} variant="plain" onClick={() => setSidebarOpen(!sidebarOpen)}
+                            aria-label="Global navigation"/>
+                </MastheadToggle>
                 <MastheadBrand>
-                    <Brand src={"/logo.png"} alt="Horreum Logo" heights={{ default: '36px' }} />
+                    <MastheadLogo>
+                        <Brand src={"/logo.png"} alt="Horreum Logo" heights={{default: '36px'}}/>
+                    </MastheadLogo>
                 </MastheadBrand>
             </MastheadMain>
             <MastheadContent>
-                { headerToolbar }
+                {headerToolbar}
             </MastheadContent>
-
-            {/*<PageHeaderTools>*/}
-
-            {/*</PageHeaderTools>*/}
-
         </Masthead>
     );
 
@@ -183,30 +179,21 @@ function Main() {
 
 
     const navigation = (
-        <Nav id="nav-primary-simple" theme="dark">
+        <Nav id="nav-primary-simple">
             <NavList>
                 <NavItem itemId={0}>
-                    <NavLink
-                        to="/test"
-                        style={{color: "var(--pf-c-nav--m-horizontal__link--Color)"}}
-                    >
+                    <NavLink to="/test">
                         Tests
                     </NavLink>
                 </NavItem>
                 <NavItem itemId={1}>
-                    <NavLink
-                        to="/schema"
-                        style={{color: "var(--pf-c-nav--m-horizontal__link--Color)"}}
-                    >
+                    <NavLink to="/schema">
                         Schemas
                     </NavLink>
                 </NavItem>
                 {(isAdmin || isManager ) && (
                     <NavItem itemId={4}>
-                        <NavLink
-                            to="/admin"
-                            style={{color: "var(--pf-c-nav--m-horizontal__link--Color)"}}
-                        >
+                        <NavLink to="/admin">
                             Administration
                         </NavLink>
                     </NavItem>
@@ -217,7 +204,7 @@ function Main() {
     );
 
     const sidebar = (
-        <PageSidebar theme="dark">
+        <PageSidebar>
             <PageSidebarBody>
                 {navigation}
             </PageSidebarBody>
@@ -229,7 +216,7 @@ function Main() {
             <Banner/>
             <Page
                 mainContainerId={pageId}
-                header={Header}
+                masthead={Header}
                 sidebar={sidebarOpen && sidebar}
                 skipToContent={pageSkipToContent}>
 

@@ -10,13 +10,13 @@ export default function ErrorBadge({children}: ErrorBadgeProps) {
     return (
         <Badge
             style={{
-                background: "var(--pf-v5-global--palette--orange-50)",
-                color: "var(--pf-v5-global--Color--200)",
+                background: "var(--pf-t--global--color--status--warning--default)",
+                color: "var(--pf-t--global--text--color--status--on-warning--default",
             }}
         >
             <ExclamationTriangleIcon
                 style={{
-                    fill: "var(--pf-v5-global--warning-color--100)",
+                    fill: "var(--pf-t--global--icon--color--status--warning--default)",
                     marginTop: "4px",
                 }}
             />{" "}

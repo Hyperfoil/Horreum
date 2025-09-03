@@ -93,8 +93,7 @@ export default function Experiments(props: ExperimentsProps) {
                         <Flex justifyContent={{default: "justifyContentSpaceBetween"}}>
                             <FlexItem
                                 style={{
-                                    paddingTop:
-                                        "var(--pf-v5-c-form--m-horizontal__group-label--md--PaddingTop)",
+                                    paddingTop: "var(--pf-t--global--spacer--control--vertical--default)",
                                 }}
                             >
                                 {usedModel.title}
