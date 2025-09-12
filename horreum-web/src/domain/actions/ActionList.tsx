@@ -1,7 +1,7 @@
 import {useContext, useEffect, useMemo, useState} from "react"
 import { useSelector } from "react-redux"
 
-import { Button, Hint, HintBody, Switch, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
+import { Button, Hint, HintBody, PageSection, Switch, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 
 import {allActions, addGlobalAction, deleteGlobalAction} from "../../api"
 import { isAdminSelector } from "../../auth"
@@ -112,11 +112,13 @@ export default function ActionList() {
 
     return (
         <>
-            <Hint>
-                <HintBody>
-                    These Actions are global actions. For individual test actions, please go to Test configuration.
-                </HintBody>
-            </Hint>
+            <PageSection>
+                <Hint>
+                    <HintBody>
+                        These Actions are global actions. For individual test actions, please go to Test configuration.
+                    </HintBody>
+                </Hint>
+            </PageSection>
             <Toolbar
                 className="pf-v6-l-toolbar pf-v6-u-justify-content-space-between pf-v6-u-mx-xl pf-v6-u-my-md"
                 style={{ justifyContent: "space-between" }}
