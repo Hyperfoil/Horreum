@@ -22,8 +22,8 @@ import ReactMarkdown from "react-markdown"
 import {TableReportData, TableReport, TableReportConfig, ReportComment, reportApi} from "../../api"
 import { formatDateTime } from "../../utils"
 import { colors } from "../../charts"
-import "./TableReportView.css"
 import "github-markdown-css"
+import "./TableReportView.css"
 
 function formatter(func: string | undefined) {
     // eslint-disable-next-line
