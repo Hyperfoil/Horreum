@@ -43,6 +43,10 @@ code {
     --pf-v6-c-card--BorderWidth: 0
 }
 
+.pf-v6-c-table.pf-m-striped {
+    --pf-v6-c-table--m-striped__tr--BackgroundColor: var(--pf-t--global--background--color--primary--hover);
+}
+
 .pf-v6-c-button {
   border-radius: var(--pf-t--global--border--radius--small);
 }

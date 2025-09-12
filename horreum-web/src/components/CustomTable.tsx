@@ -149,7 +149,7 @@ function CustomTable<D extends object>({
                 </CardHeader>
             )}
             <CardBody style={{ overflowX: "auto" }}>
-                <Table borders={false} variant="compact" {...getTableProps()} style={{tableLayout: tableLayout}}>
+                <Table borders={false} isStriped variant="compact" {...getTableProps()} style={{tableLayout: tableLayout}}>
                     {isLoading && (
                         <Thead>
                             <Tr>
