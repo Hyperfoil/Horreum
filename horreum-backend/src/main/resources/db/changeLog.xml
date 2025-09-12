@@ -4840,4 +4840,26 @@
             DROP TABLE label_recalc_queue;
         </sql>
     </changeSet>
+    <changeSet id="131" author="stalep">
+        <validCheckSum>ANY</validCheckSum>
+
+        <createSequence sequenceName="action_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="actionlog_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="backendconfig_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="changedetection_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="changedetectionlog_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="experiment_profile_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="label_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="missingdata_rule_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="schema_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="test_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="transformer_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="variable_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="view_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="viewcomponent_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <createSequence sequenceName="watch_seq" startValue="1" incrementBy="50" cacheSize="1" />
+        <sql>
+            GRANT ALL ON SEQUENCE Action_SEQ, ActionLog_SEQ, BackendConfig_SEQ, ChangeDetection_SEQ, ChangeDetectionLog_SEQ, Experiment_Profile_SEQ, Label_SEQ, MissingData_Rule_SEQ, Schema_SEQ, Test_SEQ, Transformer_SEQ, Variable_SEQ, View_SEQ, ViewComponent_SEQ, Watch_SEQ TO "${quarkus.datasource.username}";
+        </sql>
+    </changeSet>
 </databaseChangeLog>
