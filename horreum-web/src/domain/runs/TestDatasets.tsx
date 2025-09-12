@@ -1,6 +1,7 @@
 import React from 'react';
 import {
-    ToolbarContent,
+ Divider,
+ ToolbarContent,
 } from '@patternfly/react-core';
 
 import {useCallback, useContext, useEffect, useMemo, useState} from "react"
@@ -275,7 +276,7 @@ export default function TestDatasets() {
                 <PageSection variant="default" isCenterAligned>
 
                 {comparedDatasets && comparedDatasets.length > 0 && (
-                    <div style={{ marginTop: "30px"}}>
+                    <div>
                         <CustomTable<DatasetSummary> title="Datasets for comparison" columns={columns} data={comparedDatasets} isLoading={false} showNumberOfRows={false} />
                         <ButtonLink
                             to={
@@ -284,10 +285,10 @@ export default function TestDatasets() {
                                 "#labels"
                             }
                             isDisabled={comparedDatasets.length === 0}
-                            style={{ marginTop: "15px" }}
                         >
                             Compare labels
                         </ButtonLink>
+                        <Divider style={{ marginTop: "15px" }} />
                     </div>
                 )}
 
