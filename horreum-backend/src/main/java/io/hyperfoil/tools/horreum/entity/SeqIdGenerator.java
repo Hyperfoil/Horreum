@@ -11,8 +11,9 @@ import jakarta.persistence.Id;
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
+import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
-import org.hibernate.id.factory.spi.CustomIdGeneratorCreationContext;
+// import org.hibernate.id.factory.spi.CustomIdGeneratorCreationContext;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.type.Type;
 
@@ -44,7 +45,7 @@ public class SeqIdGenerator extends SequenceStyleGenerator {
     private final Integer allocationSize;
     private final Integer initialValue;
 
-    public SeqIdGenerator(CustomSequenceGenerator config, Member annotatedMember, CustomIdGeneratorCreationContext context) {
+    public SeqIdGenerator(CustomSequenceGenerator config, Member annotatedMember, GeneratorCreationContext context) {
         sequenceName = config.name();
         allocationSize = config.allocationSize();
         initialValue = config.initialValue();
