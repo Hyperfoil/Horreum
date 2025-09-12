@@ -2,7 +2,7 @@ import React, { ReactElement } from "react"
 
 import { interleave } from "../../utils"
 
-import { Button, Form, FormGroup, Tooltip } from "@patternfly/react-core"
+import { Button, Form, FormGroup, PageSection, Tooltip } from "@patternfly/react-core"
 import { EditIcon, TimesIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import { SchemaUsage, ValidationError } from "../../api"
@@ -18,13 +18,9 @@ type SchemaValidationsProps = {
 
 export default function SchemaValidations(props: SchemaValidationsProps) {
     return (
-        <Form isHorizontal>
-            <FormGroup label="Schemas" fieldId="schemas">
-                <div
-                    style={{
-                        paddingTop: "var(--pf-t--global--spacer--control--vertical--default)",
-                    }}
-                >
+        <PageSection padding={{ default: "noPadding" }} style={{ paddingBlockEnd: "var(--pf-v6-c-page__main-section--PaddingBlockEnd)"}}>
+            <Form isHorizontal>
+                <FormGroup label="Schemas" fieldId="schemas">
                     {(props.schemas &&
                         props.schemas.length > 0 &&
                         interleave(
@@ -61,13 +57,13 @@ export default function SchemaValidations(props: SchemaValidationsProps) {
                             )}
                         </>
                     )}
-                </div>
-            </FormGroup>
-            {props.errors && props.errors.length > 0 && (
-                <FormGroup label="Validation errors" fieldId="none">
-                    <ValidationErrorTable errors={props.errors} schemas={props.schemas} />
                 </FormGroup>
-            )}
-        </Form>
+                {props.errors && props.errors.length > 0 && (
+                    <FormGroup label="Validation errors" fieldId="none">
+                        <ValidationErrorTable errors={props.errors} schemas={props.schemas} />
+                    </FormGroup>
+                )}
+            </Form>
+        </PageSection>
     )
 }
