@@ -3,6 +3,7 @@ package io.hyperfoil.tools.horreum.svc;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -19,6 +20,7 @@ import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
 
+import org.apache.commons.collections4.ListUtils;
 import org.hibernate.Hibernate;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
@@ -60,6 +62,8 @@ import io.quarkus.security.identity.SecurityIdentity;
 @Startup
 public class DatasetServiceImpl implements DatasetService {
 
+    private static final int LABEL_VALUES_RECALC_BATCH_SIZE = 40;
+
     //@formatter:off
     private static final String LABEL_QUERY = """
          WITH
@@ -68,7 +72,7 @@ public class DatasetServiceImpl implements DatasetService {
             FROM dataset_schemas ds
             JOIN label ON label.schema_id = ds.schema_id
             LEFT JOIN label_extractors le ON le.label_id = label.id
-            WHERE ds.dataset_id = ?1 AND (?2 < 0 OR label.id = ?2) GROUP BY label.id, label.name, ds.schema_id
+            WHERE ds.dataset_id = :datasetId AND (:allLabels = TRUE OR label.id IN :labelIds) GROUP BY label.id, label.name, ds.schema_id
          ),
          lvalues AS (
             SELECT ul.label_id, le.name,
@@ -81,7 +85,7 @@ public class DatasetServiceImpl implements DatasetService {
             JOIN dataset_schemas ds ON dataset.id = ds.dataset_id
             JOIN used_labels ul ON ul.schema_id = ds.schema_id
             LEFT JOIN label_extractors le ON ul.label_id = le.label_id
-            WHERE dataset.id = ?1
+            WHERE dataset.id = :datasetId
          )
          SELECT lvalues.label_id, ul.name, function,
                (CASE
@@ -447,17 +451,15 @@ public class DatasetServiceImpl implements DatasetService {
         return DatasetMapper.from(dataset);
     }
 
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Transactional
-    void calculateLabelValues(int testId, int datasetId, int queryLabelId, boolean isRecalculation) {
-        Log.debugf("Calculating label values for dataset %d, label %d", datasetId, queryLabelId);
+    private List<Object[]> calculateLabelValues(int datasetId, boolean allLabels, List<Integer> queryLabelIds) {
         List<Object[]> extracted;
         try {
             // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
             // to the uploading user. However, the uploader should not have rights to fetch these anyway...
             extracted = em.unwrap(Session.class).createNativeQuery(LABEL_QUERY, Object[].class)
-                    .setParameter(1, datasetId)
-                    .setParameter(2, queryLabelId)
+                    .setParameter("datasetId", datasetId)
+                    .setParameter("allLabels", allLabels)
+                    .setParameterList("labelIds", queryLabelIds, Integer.class)
                     .addScalar("label_id", StandardBasicTypes.INTEGER)
                     .addScalar("name", StandardBasicTypes.TEXT)
                     .addScalar("function", StandardBasicTypes.TEXT)
@@ -467,19 +469,39 @@ public class DatasetServiceImpl implements DatasetService {
             logMessageInNewTx(datasetId, PersistentLogDAO.ERROR,
                     "Failed to extract data (JSONPath expression error?): " + Util.explainCauses(e));
             findFailingExtractor(datasetId);
-            return;
+            return Collections.emptyList();
         }
 
         // While any change should remove the label_value first via trigger it is possible
         // that something triggers two events after each other, removing the data (twice)
         // before the first event is processed. The second event would then find the label_value
         // already present and would fail with a constraint violation.
-        if (queryLabelId < 0) {
+        if (allLabels) {
             LabelValueDAO.delete("datasetId", datasetId);
         } else {
-            LabelValueDAO.delete("datasetId = ?1 AND labelId = ?2", datasetId, queryLabelId);
+            LabelValueDAO.delete("datasetId = ?1 AND labelId IN ?2", datasetId, queryLabelIds);
         }
 
+        return extracted;
+    }
+
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
+    @Transactional
+    void calculateLabelValues(int testId, int datasetId, Integer[] queryLabelIds, boolean isRecalculation) {
+        Log.debugf("Calculating label values for dataset %d, labels %s", datasetId, Arrays.toString(queryLabelIds));
+        List<Object[]> extracted;
+        if (queryLabelIds == null || queryLabelIds.length == 0) {
+            extracted = this.calculateLabelValues(datasetId, true, Collections.emptyList());
+        } else {
+            // apply batching if the number of labels is too big
+            extracted = new ArrayList<>();
+            List<List<Integer>> batches = ListUtils.partition(Arrays.asList(queryLabelIds), LABEL_VALUES_RECALC_BATCH_SIZE);
+            for (List<Integer> batch : batches) {
+                extracted.addAll(this.calculateLabelValues(datasetId, false, new ArrayList<>(batch)));
+            }
+        }
+
+        // Delete data before re-computing Dataset specific data
         FingerprintDAO.deleteById(datasetId);
         Util.evaluateWithCombinationFunction(extracted,
                 (row) -> (String) row[2],
@@ -488,7 +510,8 @@ public class DatasetServiceImpl implements DatasetService {
                 (row) -> createLabelValue(datasetId, testId, (int) row[0], (JsonNode) row[3]),
                 (row, e, jsCode) -> logMessage(datasetId, PersistentLogDAO.ERROR,
                         "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
-                (out) -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>", out));
+                (out) -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>",
+                        out));
 
         // create new dataset views from the recently created label values
         calcDatasetViews(datasetId);
@@ -636,7 +659,7 @@ public class DatasetServiceImpl implements DatasetService {
     }
 
     public void onNewDataset(Dataset.EventNew event) {
-        calculateLabelValues(event.testId, event.datasetId, event.labelId, event.isRecalculation);
+        calculateLabelValues(event.testId, event.datasetId, event.labelIds, event.isRecalculation);
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)

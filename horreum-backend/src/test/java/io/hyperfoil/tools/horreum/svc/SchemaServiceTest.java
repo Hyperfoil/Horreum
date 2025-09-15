@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -41,6 +42,7 @@ import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.SchemaDAO;
 import io.hyperfoil.tools.horreum.entity.data.TransformerDAO;
+import io.hyperfoil.tools.horreum.mapper.LabelMapper;
 import io.hyperfoil.tools.horreum.test.HorreumTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
@@ -541,6 +543,37 @@ class SchemaServiceTest extends BaseServiceTest {
         assertNotNull(label);
         assertEquals("foo-updated", label.name);
         assertEquals(2, label.extractors.size());
+    }
+
+    @org.junit.jupiter.api.Test
+    void testUpdateMultipleSchemaLabels() {
+        Schema schema = createSchema("Dummy schema", "urn:xxx:1.0");
+
+        int labelId1 = addLabel(schema, "foo", null, new Extractor("foo", "$.foo", false));
+        assertTrue(labelId1 > 0);
+        int labelId2 = addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
+        assertTrue(labelId2 > 0);
+
+        Label label1 = LabelMapper.from(LabelDAO.findById(labelId1));
+        label1.name = "foo-updated";
+        Label label2 = LabelMapper.from(LabelDAO.findById(labelId2));
+        label2.name = "bar-updated";
+
+        int[] updatedLabelIds = updateLabels(schema, label1, label2);
+        assertTrue(Arrays.stream(updatedLabelIds).filter(id -> id == labelId1).findFirst().isPresent());
+        assertTrue(Arrays.stream(updatedLabelIds).filter(id -> id == labelId2).findFirst().isPresent());
+
+        em.clear();
+
+        LabelDAO dbLabel1 = LabelDAO.findById(labelId1);
+        assertNotNull(dbLabel1);
+        assertEquals("foo-updated", dbLabel1.name);
+        assertEquals(1, dbLabel1.extractors.size());
+
+        LabelDAO dbLabel2 = LabelDAO.findById(labelId2);
+        assertNotNull(dbLabel1);
+        assertEquals("bar-updated", dbLabel2.name);
+        assertEquals(1, dbLabel2.extractors.size());
     }
 
     @org.junit.jupiter.api.Test
