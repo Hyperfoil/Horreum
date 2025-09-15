@@ -87,7 +87,7 @@
         <quarkus.version>3.21.3</quarkus.version>
         <quinoa.version>2.5.5</quinoa.version>
         <surefire-plugin.version>3.5.3</surefire-plugin.version>
-        <failsafe-plugin.version>3.5.3</failsafe-plugin.version>
+        <failsafe-plugin.version>3.5.4</failsafe-plugin.version>
         <validator.version>1.5.8</validator.version>
         <jayway.jsonpath.version>2.9.0</jayway.jsonpath.version>
 
