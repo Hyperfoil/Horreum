@@ -164,7 +164,7 @@ public class ServiceMediator {
     void onNewDataset(Dataset.EventNew eventNew) {
         datasetService.onNewDataset(eventNew);
         // if labelId > 0, you are not recomputing the entire dataset label values
-        if (eventNew.labelId <= 0) {
+        if (eventNew.labelIds == null || eventNew.labelIds.length == 0) {
             this.actionService.onDatasetLabelsComputed(eventNew.testId, eventNew.datasetId);
         }
     }

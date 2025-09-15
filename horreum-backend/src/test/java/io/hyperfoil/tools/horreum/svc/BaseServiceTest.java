@@ -375,14 +375,13 @@ public class BaseServiceTest {
         return runIds.get(0);
     }
 
-    protected Integer addOrUpdateLabel(Integer schemaId, Label label) {
-        String labelId = jsonRequest()
-                .body(label)
+    protected Integer addLabel(Integer schemaId, Label label) {
+        return jsonRequest()
+                .body(List.of(label))
                 .post("/api/schema/" + schemaId + "/labels")
                 .then()
                 .statusCode(201)
-                .extract().asString();
-        return Integer.parseInt(labelId);
+                .extract().as(Integer[].class)[0];
     }
 
     protected RunService.RunsSummary listTestRuns(int testId, boolean trashed,
@@ -567,6 +566,12 @@ public class BaseServiceTest {
         return putLabel(schema, labelId, name, function, l -> l.id = labelId, extractors);
     }
 
+    protected int[] updateLabels(Schema schema, Label... labels) {
+        Response response = jsonRequest().body(labels).put("/api/schema/" + schema.id + "/labels");
+        response.then().statusCode(200);
+        return response.body().as(int[].class);
+    }
+
     protected int postLabel(Schema schema, String name, String function, Consumer<Label> mutate,
             Extractor... extractors) {
         Label l = new Label();
@@ -579,9 +584,9 @@ public class BaseServiceTest {
         if (mutate != null) {
             mutate.accept(l);
         }
-        Response response = jsonRequest().body(l).post("/api/schema/" + schema.id + "/labels");
+        Response response = jsonRequest().body(List.of(l)).post("/api/schema/" + schema.id + "/labels");
         response.then().statusCode(201);
-        return Integer.parseInt(response.body().asString());
+        return response.body().as(Integer[].class)[0];
     }
 
     protected int putLabel(Schema schema, Integer labelId, String name, String function, Consumer<Label> mutate,
@@ -597,9 +602,9 @@ public class BaseServiceTest {
         if (mutate != null) {
             mutate.accept(l);
         }
-        Response response = jsonRequest().body(l).put("/api/schema/" + schema.id + "/labels");
+        Response response = jsonRequest().body(List.of(l)).put("/api/schema/" + schema.id + "/labels");
         response.then().statusCode(200);
-        return Integer.parseInt(response.body().asString());
+        return response.body().as(Integer[].class)[0];
     }
 
     protected void deleteLabel(Schema schema, int labelId) {
@@ -969,10 +974,10 @@ public class BaseServiceTest {
                 readFile(p.resolve("throughput_label.json").toFile()), Label.class);
         assertEquals("dev-team", l.owner);
         l.owner = "foo-team";
-        Response response = jsonRequest().body(l)
+        Response response = jsonRequest().body(List.of(l))
                 .post("/api/schema/" + s.id + "/labels");
         assertEquals(201, response.statusCode());
-        l.id = Integer.parseInt(response.body().asString());
+        l.id = response.body().as(Integer[].class)[0];
 
         Transformer transformer = new ObjectMapper().readValue(
                 readFile(p.resolve("acme_transformer.json").toFile()), Transformer.class);

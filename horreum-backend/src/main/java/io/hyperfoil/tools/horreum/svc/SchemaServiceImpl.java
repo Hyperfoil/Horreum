@@ -187,6 +187,7 @@ public class SchemaServiceImpl implements SchemaService {
 
     /**
      * Create or update a Schema entity by performing the appropriate validation logics
+     *
      * @param schemaDTO the DTO that should be mapped to the database
      * @return the db Schema id
      */
@@ -540,7 +541,7 @@ public class SchemaServiceImpl implements SchemaService {
         int schemaId = label.getSchemaId();
         int labelId = label.id;
         label.delete();
-        emitLabelChanged(labelId, schemaId);
+        emitLabelChanged(List.of(labelId), schemaId);
     }
 
     @PermitAll
@@ -767,39 +768,61 @@ public class SchemaServiceImpl implements SchemaService {
     @WithRoles
     @Transactional
     @Override
-    public Integer addLabel(int schemaId, Label labelDTO) {
-        if (labelDTO == null) {
-            throw ServiceException.badRequest("No label?");
+    public List<Integer> addLabels(int schemaId, List<Label> labels) {
+        if (labels == null || labels.isEmpty()) {
+            Log.warn("Adding empty set of labels for schema " + schemaId);
+            return Collections.emptyList();
         }
 
-        if (labelDTO.id != null && LabelDAO.findById(labelDTO.id) != null) {
-            throw ServiceException.badRequest("Label with id " + labelDTO.id + " already exists");
+        List<Label> invalidLabels = labels.stream().filter(l -> l.id != null && LabelDAO.findById(l.id) != null).toList();
+        if (!invalidLabels.isEmpty()) {
+            throw ServiceException.badRequest("Trying to add already existing labels "
+                    + Arrays.toString(invalidLabels.stream().map(l -> l.id).toArray()));
         }
 
-        Log.info("Adding label " + labelDTO.name + " for schema " + schemaId);
+        Log.info("Adding labels " + Arrays.toString(labels.stream().map(l -> l.name).toArray()) + " for schema " + schemaId);
 
         // ensure we are creating new instance by clearing the id
-        labelDTO.clearIds();
+        labels.forEach(l -> {
+            l.clearIds();
+            l.schemaId = schemaId;
+        });
 
-        labelDTO.schemaId = schemaId;
-        return addOrUpdateLabel(labelDTO);
+        return bulkAddOrUpdateLabels(schemaId, labels);
     }
 
     @WithRoles
     @Transactional
     @Override
-    public Integer updateLabel(int schemaId, Label labelDTO) {
-        if (labelDTO == null) {
-            throw ServiceException.badRequest("No label?");
+    public List<Integer> updateLabels(int schemaId, List<Label> labels) {
+        if (labels == null || labels.isEmpty()) {
+            Log.warn("Adding empty set of labels for schema " + schemaId);
+            return Collections.emptyList();
         }
 
-        if (labelDTO.id == null || LabelDAO.findById(labelDTO.id) == null) {
-            throw ServiceException.notFound("Missing label id or label with id " + labelDTO.id + " does not exist");
+        List<Label> invalidLabels = labels.stream().filter(l -> l.id == null || LabelDAO.findById(l.id) == null).toList();
+        if (!invalidLabels.isEmpty()) {
+            throw ServiceException.notFound("Missing label id or label with id "
+                    + Arrays.toString(invalidLabels.stream().map(l -> l.id).toArray()) + " does not exist");
         }
 
-        Log.info("Updating label " + labelDTO.name + " with id " + labelDTO.id + " for schema " + schemaId);
-        labelDTO.schemaId = schemaId;
-        return addOrUpdateLabel(labelDTO);
+        Log.info("Updating labels " + Arrays.toString(labels.stream().map(l -> l.name).toArray()) + " for schema " + schemaId);
+
+        // ensure the schemaId is set to all entities
+        labels.forEach(l -> l.schemaId = schemaId);
+        return bulkAddOrUpdateLabels(schemaId, labels);
+    }
+
+    private List<Integer> bulkAddOrUpdateLabels(Integer schemaId, List<Label> labels) {
+        List<Integer> ids = new ArrayList<>();
+        for (Label labelDTO : labels) {
+            ids.add(addOrUpdateLabel(labelDTO));
+        }
+
+        // emit label changes in bulk
+        emitLabelChanged(ids, schemaId);
+
+        return ids;
     }
 
     private int addOrUpdateLabel(Label labelDTO) {
@@ -854,7 +877,6 @@ public class SchemaServiceImpl implements SchemaService {
             label.persistAndFlush();
         }
 
-        emitLabelChanged(label.id, label.getSchemaId());
         return label.id;
     }
 
@@ -864,7 +886,12 @@ public class SchemaServiceImpl implements SchemaService {
         }
     }
 
-    private void emitLabelChanged(int labelId, int schemaId) {
+    private void emitLabelChanged(List<Integer> labelIds, int schemaId) {
+        if (labelIds == null || labelIds.isEmpty()) {
+            Log.warn("Emitting labels changed with empty set of label ids for schema " + schemaId);
+            return;
+        }
+
         try {
             List<Object[]> datasetIds = session
                     .createNativeQuery(datasetIdQuery, Object[].class)
@@ -879,7 +906,8 @@ public class SchemaServiceImpl implements SchemaService {
             Util.registerTxSynchronization(tm, txStatus -> {
                 for (var dataset : datasetIds) {
                     mediator.queueDatasetEvents(
-                            new Dataset.EventNew((Integer) dataset[0], (Integer) dataset[1], 0, labelId, true));
+                            new Dataset.EventNew((Integer) dataset[0], (Integer) dataset[1], 0,
+                                    labelIds.toArray(new Integer[] {}), true));
                 }
             });
         } catch (NoResultException nre) {

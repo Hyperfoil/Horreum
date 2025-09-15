@@ -649,6 +649,7 @@ public class AlertingServiceImpl implements AlertingService {
         }
 
         // this should happen only after reboot, let's start with last change
+        // FIXME: this is happening also when updating a single label for a schema
         if (valid != null) {
             int numDeleted = session.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
                     "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
