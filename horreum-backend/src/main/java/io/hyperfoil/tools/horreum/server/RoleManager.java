@@ -38,9 +38,9 @@ public class RoleManager {
 
         if (Log.isDebugEnabled()) { // enable with: `quarkus.log.category."io.hyperfoil.tools.horreum.server.RoleManager".level=DEBUG`
             try {
-                Log.debugf("Setting roles '%s' (replacing '%s') on transaction %s", roles, row[0], txManager.getTransaction());
+                Log.tracef("Setting roles '%s' (replacing '%s') on transaction %s", roles, row[0], txManager.getTransaction());
             } catch (SystemException e) {
-                Log.debugf("Setting roles '%s' (replacing '%s'), but obtaining current transaction failed due to %s", roles,
+                Log.tracef("Setting roles '%s' (replacing '%s'), but obtaining current transaction failed due to %s", roles,
                         row[0], e.getMessage());
             }
         }

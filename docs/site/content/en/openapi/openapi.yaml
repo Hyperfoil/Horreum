@@ -4613,9 +4613,8 @@ paths:
           description: Created
   /api/schema/{schemaId}/labels:
     put:
-      description: Update existing Label for a Schema (Label id only required when
-        updating existing one)
-      operationId: updateLabel
+      description: Update existing Label(s) for a Schema
+      operationId: updateLabels
       tags:
       - Schema
       parameters:
@@ -4628,19 +4627,23 @@ paths:
           type: integer
           format: int32
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Label"
+              type: array
+              items:
+                $ref: "#/components/schemas/Label"
+        required: true
       responses:
         "200":
           description: Schema updated successfully
           content:
             application/json:
               schema:
-                type: integer
-                format: int32
+                type: array
+                items:
+                  type: integer
+                  format: int32
     get:
       description: Retrieve list of Labels for a Schema by Schema ID
       operationId: labels
@@ -4665,9 +4668,8 @@ paths:
                 items:
                   $ref: "#/components/schemas/Label"
     post:
-      description: Save new or update existing Label for a Schema (Label id only required
-        when updating existing one)
-      operationId: addLabel
+      description: Save new Label for a Schema
+      operationId: addLabels
       tags:
       - Schema
       parameters:
@@ -4684,15 +4686,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Label"
+              type: array
+              items:
+                $ref: "#/components/schemas/Label"
       responses:
         "201":
           description: New schema created successfully
           content:
             application/json:
               schema:
-                type: integer
-                format: int32
+                type: array
+                items:
+                  type: integer
+                  format: int32
   /api/schema/{schemaId}/labels/{labelId}:
     delete:
       description: Delete existing Label from a Schema

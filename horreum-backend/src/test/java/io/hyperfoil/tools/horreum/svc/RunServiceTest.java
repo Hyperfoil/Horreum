@@ -1057,7 +1057,7 @@ public class RunServiceTest extends BaseServiceTest {
             lblCpu.owner = test.owner;
             lblCpu.metrics = true;
             lblCpu.filtering = false;
-            lblCpu.id = addOrUpdateLabel(schema.id, lblCpu);
+            lblCpu.id = addLabel(schema.id, lblCpu);
 
             Label lblThroughput = new Label();
             lblThroughput.name = "throughput";
@@ -1067,7 +1067,7 @@ public class RunServiceTest extends BaseServiceTest {
             lblThroughput.owner = test.owner;
             lblThroughput.metrics = true;
             lblThroughput.filtering = false;
-            lblThroughput.id = addOrUpdateLabel(schema.id, lblThroughput);
+            lblThroughput.id = addLabel(schema.id, lblThroughput);
 
             Label lblJob = new Label();
             lblJob.name = "job";
@@ -1077,7 +1077,7 @@ public class RunServiceTest extends BaseServiceTest {
             lblJob.owner = test.owner;
             lblJob.metrics = false;
             lblJob.filtering = true;
-            lblJob.id = addOrUpdateLabel(schema.id, lblJob);
+            lblJob.id = addLabel(schema.id, lblJob);
 
             Label lblBuildID = new Label();
             lblBuildID.name = "build-id";
@@ -1087,7 +1087,7 @@ public class RunServiceTest extends BaseServiceTest {
             lblBuildID.owner = test.owner;
             lblBuildID.metrics = false;
             lblBuildID.filtering = true;
-            lblBuildID.id = addOrUpdateLabel(schema.id, lblBuildID);
+            lblBuildID.id = addLabel(schema.id, lblBuildID);
 
             //3. Config change detection variables
             Variable variable = new Variable();

@@ -190,27 +190,27 @@ public interface SchemaService {
     @POST
     @Path("{schemaId}/labels")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Operation(description = "Save new or update existing Label for a Schema (Label id only required when updating existing one)")
+    @Operation(description = "Save new Label for a Schema")
     @ResponseStatus(201)
     @Parameters(value = {
             @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
     })
     @APIResponses(value = {
-            @APIResponse(responseCode = "201", description = "New schema created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+            @APIResponse(responseCode = "201", description = "New schema created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.ARRAY, implementation = Integer.class)))
     })
-    Integer addLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
+    List<Integer> addLabels(@PathParam("schemaId") int schemaId, @RequestBody(required = true) List<Label> labels);
 
     @PUT
     @Path("{schemaId}/labels")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Operation(description = "Update existing Label for a Schema (Label id only required when updating existing one)")
+    @Operation(description = "Update existing Label(s) for a Schema")
     @Parameters(value = {
             @Parameter(name = "schemaId", description = "Schema ID", example = "101"),
     })
     @APIResponses(value = {
-            @APIResponse(responseCode = "200", description = "Schema updated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(implementation = Integer.class)))
+            @APIResponse(responseCode = "200", description = "Schema updated successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @org.eclipse.microprofile.openapi.annotations.media.Schema(type = SchemaType.ARRAY, implementation = Integer.class)))
     })
-    Integer updateLabel(@PathParam("schemaId") int schemaId, @RequestBody(required = true) Label label);
+    List<Integer> updateLabels(@PathParam("schemaId") int schemaId, @RequestBody List<Label> labels);
 
     @DELETE
     @Path("{schemaId}/labels/{labelId}")

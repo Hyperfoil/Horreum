@@ -64,16 +64,13 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
     const isTesterForLabel = useTester(selected?.owner || "__no_owner__")
     const defaultTeam = useSelector(defaultTeamSelector)
     funcsRef.current = {
-        save: () =>
-            Promise.all([
-                ...labels
-                    .filter(l => l.modified)
-                    .map(l =>
-                        (l.id > 0 ? schemaApi.updateLabel(l.schemaId, l) : schemaApi.addLabel(l.schemaId, l)).then(id => {
-                            l.id = id
-                            l.modified = false
-                        })
-                    ),
+        save: () =>{
+            const labelsToUpdate = labels.filter(l => l.modified && l.id > 0);
+            const labelsToAdd = labels.filter(l => l.modified && l.id <= 0);
+
+            return Promise.all([
+                ...(labelsToUpdate.length > 0 ? [schemaApi.updateLabels(schemaId, labelsToUpdate)] : []),
+                ...(labelsToAdd.length > 0 ? [schemaApi.addLabels(schemaId, labelsToAdd)] : []),
                 ...deleted.map(l =>
                     schemaApi.deleteLabel(l.schemaId, l.id).catch(e => {
                         setLabels([...labels, l])
@@ -81,11 +78,13 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
                     })
                 ),
             ])
+            .then(() => setResetCounter(resetCounter + 1))
                 .catch(error => {
                     alerting.dispatchError( error, "LABEL_UPDATE", "Failed to update one or more labels.")
                     return Promise.reject(error)
                 })
-                .finally(() => setDeleted([])),
+                .finally(() => setDeleted([]))
+        },
         reset: () => {
             setResetCounter(resetCounter + 1)
             setSelected(undefined)
@@ -132,6 +131,7 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
             )
             .finally(() => setLoading(false))
     }, [schemaId, resetCounter])
+
 
     return (
         <>

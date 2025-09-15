@@ -1,5 +1,6 @@
 package io.hyperfoil.tools.horreum.api.data;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -136,7 +137,7 @@ public class Dataset extends ProtectedTimeType {
         public int datasetId;
         public int testId;
         public int runId;
-        public int labelId = -1;
+        public Integer[] labelIds;
         public boolean isRecalculation;
 
         public EventNew() {
@@ -146,6 +147,7 @@ public class Dataset extends ProtectedTimeType {
             this.datasetId = dataSet.id;
             this.testId = dataSet.testid;
             this.runId = dataSet.runId;
+            this.labelIds = new Integer[] {};
             this.isRecalculation = isRecalculation;
         }
 
@@ -153,7 +155,15 @@ public class Dataset extends ProtectedTimeType {
             this.datasetId = datasetId;
             this.testId = testId;
             this.runId = runId;
-            this.labelId = labelId;
+            this.labelIds = new Integer[] { labelId };
+            this.isRecalculation = isRecalculation;
+        }
+
+        public EventNew(int datasetId, int testId, int runId, Integer[] labelIds, boolean isRecalculation) {
+            this.datasetId = datasetId;
+            this.testId = testId;
+            this.runId = runId;
+            this.labelIds = labelIds;
             this.isRecalculation = isRecalculation;
         }
 
@@ -163,7 +173,7 @@ public class Dataset extends ProtectedTimeType {
                     "datasetId=" + datasetId +
                     ", testId=" + testId +
                     ", runId=" + runId +
-                    ", labelId=" + labelId +
+                    ", labelIds=" + Arrays.toString(labelIds) +
                     ", isRecalculation=" + isRecalculation +
                     '}';
         }
