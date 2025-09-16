@@ -3,20 +3,11 @@ package io.hyperfoil.tools.horreum.entity.data;
 import java.util.Collections;
 import java.util.List;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 
-import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
@@ -27,7 +18,8 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @JsonIgnoreType
 public class ViewDAO extends PanacheEntityBase {
     @Id
-    @CustomSequenceGenerator(name = "viewidgenerator", allocationSize = 1)
+    @SequenceGenerator(name = "viewidgenerator", sequenceName = "viewidgenerator", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "viewidgenerator")
     public Integer id;
 
     @NotNull

@@ -14,7 +14,7 @@ import java.util.List;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.Response;
 
-import org.hibernate.exception.SQLGrammarException;
+import org.hibernate.exception.AuthException;
 import org.junit.jupiter.api.Disabled;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -94,7 +94,7 @@ class SchemaServiceNoRestTest extends BaseServiceNoRestTest {
         String schemaUri = "urn:dummy:schema";
         Schema schema = createSampleSchema("Dummy schema", schemaUri, FOO_TEAM);
 
-        assertThrows(SQLGrammarException.class, () -> schemaService.addSchema(schema));
+        assertThrows(AuthException.class, () -> schemaService.addSchema(schema));
     }
 
     @org.junit.jupiter.api.Test

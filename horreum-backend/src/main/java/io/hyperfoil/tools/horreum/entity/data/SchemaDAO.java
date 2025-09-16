@@ -1,12 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.NamedNativeQueries;
-import jakarta.persistence.NamedNativeQuery;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Type;
@@ -14,7 +8,6 @@ import org.hibernate.annotations.Type;
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 
 @NamedNativeQueries({
@@ -52,7 +45,8 @@ public class SchemaDAO extends OwnedEntityBase {
     public static final int TYPE_ARRAY_ELEMENT = 2;
 
     @Id
-    @CustomSequenceGenerator(name = "schema_id_seq", allocationSize = 1)
+    @SequenceGenerator(name = "schema_id_seq", sequenceName = "schema_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "schema_id_seq")
     public Integer id;
 
     @NotNull

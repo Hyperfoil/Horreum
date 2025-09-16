@@ -3,21 +3,13 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 import java.time.Instant;
 import java.util.Objects;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.ConstraintMode;
-import jakarta.persistence.Entity;
-import jakarta.persistence.ForeignKey;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Type;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
-import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -29,7 +21,8 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Table(name = "missingdata_rule")
 public class MissingDataRuleDAO extends PanacheEntityBase {
     @Id
-    @CustomSequenceGenerator(name = "mdridgenerator", allocationSize = 1)
+    @SequenceGenerator(name = "mdridgenerator", sequenceName = "mdridgenerator", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "mdridgenerator")
     public Integer id;
 
     public String name;

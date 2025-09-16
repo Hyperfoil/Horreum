@@ -2,22 +2,12 @@ package io.hyperfoil.tools.horreum.entity.alerting;
 
 import java.util.List;
 
-import jakarta.persistence.ConstraintMode;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ForeignKey;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
-import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -29,7 +19,8 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = "testid"))
 public class WatchDAO extends PanacheEntityBase {
     @Id
-    @CustomSequenceGenerator(name = "subscriptionidgenerator", allocationSize = 1)
+    @SequenceGenerator(name = "subscriptionidgenerator", sequenceName = "subscriptionidgenerator", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "subscriptionidgenerator")
     public Integer id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)

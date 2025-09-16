@@ -14,7 +14,7 @@ import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
-import io.hyperfoil.tools.horreum.dev.services.deployment.config.DevServicesConfig;
+import io.hyperfoil.tools.horreum.dev.services.deployment.config.HorreumDevServicesConfig;
 import io.hyperfoil.tools.horreum.infra.common.HorreumResources;
 import io.hyperfoil.tools.horreum.infra.common.SelfSignedCert;
 import io.quarkus.deployment.IsDevelopment;
@@ -25,11 +25,11 @@ import io.quarkus.deployment.annotations.BuildSteps;
 import io.quarkus.deployment.builditem.*;
 import io.quarkus.deployment.console.ConsoleInstalledBuildItem;
 import io.quarkus.deployment.console.StartupLogCompressor;
-import io.quarkus.deployment.dev.devservices.GlobalDevServicesConfig;
+import io.quarkus.deployment.dev.devservices.DevServicesConfig;
 import io.quarkus.deployment.logging.LoggingSetupBuildItem;
 
 @BuildSteps(onlyIfNot = IsNormal.class, onlyIf = { HorreumDevServicesProcessor.IsEnabled.class,
-        GlobalDevServicesConfig.Enabled.class })
+        DevServicesConfig.Enabled.class })
 public class HorreumDevServicesProcessor {
 
     private static final Logger log = Logger.getLogger(HorreumDevServicesProcessor.class);
@@ -43,12 +43,12 @@ public class HorreumDevServicesProcessor {
             DockerStatusBuildItem dockerStatusBuildItem,
             BuildProducer<HorreumDevServicesConfigBuildItem> horreumBuildItemBuildProducer,
             List<DevServicesSharedNetworkBuildItem> devServicesSharedNetworkBuildItem,
-            DevServicesConfig horreumBuildTimeConfig,
+            HorreumDevServicesConfig horreumBuildTimeConfig,
             CuratedApplicationShutdownBuildItem closeBuildItem,
             LaunchModeBuildItem launchMode,
             Optional<ConsoleInstalledBuildItem> consoleInstalledBuildItem,
             LoggingSetupBuildItem loggingSetupBuildItem,
-            GlobalDevServicesConfig devServicesConfig) {
+            DevServicesConfig devServicesConfig) {
 
         StartupLogCompressor compressor = new StartupLogCompressor(
                 (launchMode.isTest() ? "(test) " : "") + "Horreum Dev Services Starting:",
@@ -207,7 +207,7 @@ public class HorreumDevServicesProcessor {
     }
 
     public static class IsEnabled implements BooleanSupplier {
-        DevServicesConfig config;
+        HorreumDevServicesConfig config;
 
         public boolean getAsBoolean() {
             return config.enabled();

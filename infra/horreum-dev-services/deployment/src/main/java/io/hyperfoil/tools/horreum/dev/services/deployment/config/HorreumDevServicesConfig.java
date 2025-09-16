@@ -7,7 +7,7 @@ import io.smallrye.config.WithDefault;
 
 @ConfigRoot(phase = ConfigPhase.BUILD_TIME)
 @ConfigMapping(prefix = "horreum.dev-services")
-public interface DevServicesConfig {
+public interface HorreumDevServicesConfig {
 
     /**
      * Horreum dev services

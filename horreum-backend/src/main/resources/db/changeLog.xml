@@ -4840,4 +4840,10 @@
             DROP TABLE label_recalc_queue;
         </sql>
     </changeSet>
+    <changeSet id="131" author="stalep">
+        <validCheckSum>ANY</validCheckSum>
+        <dropSequence sequenceName="datasetlog_seq"/>
+        <dropSequence sequenceName="transformationlog_seq"/>
+        <dropSequence sequenceName="tokenidgenerator"/>
+    </changeSet>
 </databaseChangeLog>
