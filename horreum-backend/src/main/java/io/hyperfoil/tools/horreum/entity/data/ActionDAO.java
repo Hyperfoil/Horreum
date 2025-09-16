@@ -1,10 +1,6 @@
 package io.hyperfoil.tools.horreum.entity.data;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Transient;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Type;
@@ -12,7 +8,6 @@ import org.hibernate.annotations.Type;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.converter.ActionEventConverter;
-import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.svc.ActionEvent;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -20,7 +15,8 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity(name = "Action")
 public class ActionDAO extends PanacheEntityBase {
     @Id
-    @CustomSequenceGenerator(name = "action_id_seq", allocationSize = 1)
+    @SequenceGenerator(name = "action_id_seq", sequenceName = "action_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "action_id_seq")
     public Integer id;
 
     @NotNull

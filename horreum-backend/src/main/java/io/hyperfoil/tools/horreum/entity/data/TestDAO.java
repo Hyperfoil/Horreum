@@ -2,15 +2,7 @@ package io.hyperfoil.tools.horreum.entity.data;
 
 import java.util.Collection;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Fetch;
@@ -23,7 +15,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.api.data.Access;
-import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 import io.hyperfoil.tools.horreum.entity.backend.DatastoreConfigDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -32,7 +23,8 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @JsonIgnoreType
 public class TestDAO extends PanacheEntityBase {
     @Id
-    @CustomSequenceGenerator(name = "test_id_seq", allocationSize = 1, initialValue = 10)
+    @SequenceGenerator(name = "test_id_seq", sequenceName = "test_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "test_id_seq")
     @Column(name = "id")
     public Integer id;
 

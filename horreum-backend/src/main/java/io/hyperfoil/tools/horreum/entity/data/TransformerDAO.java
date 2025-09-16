@@ -4,25 +4,17 @@ import static java.lang.Integer.compare;
 
 import java.util.Collection;
 
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreType;
-
-import io.hyperfoil.tools.horreum.entity.CustomSequenceGenerator;
 
 @Entity(name = "Transformer")
 @JsonIgnoreType
 public class TransformerDAO extends OwnedEntityBase implements Comparable<TransformerDAO> {
     @Id
-    @CustomSequenceGenerator(name = "transformeridgenerator", allocationSize = 1)
+    @SequenceGenerator(name = "transformeridgenerator", sequenceName = "transformeridgenerator", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "transformeridgenerator")
     public Integer id;
 
     @NotNull
