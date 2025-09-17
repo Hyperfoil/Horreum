@@ -52,6 +52,7 @@ release.properties
 
 # production
 /horreum-web/build
+/horreum-web/dist
 
 # generated API
 /horreum-web/src/generated

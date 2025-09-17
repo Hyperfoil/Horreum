@@ -172,7 +172,7 @@ export const configApi = new ConfigApi(configuration)
 export interface TestStorage extends Test {
     datasets?: number // dataset count in AllTests
     runs?: number // run count in AllTests
-    watching?: string[]
+    watching?: Set<string>
     views?: View[]
 }
 
