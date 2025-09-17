@@ -86,7 +86,7 @@
         <graalvm.version>23.1.2</graalvm.version>
         <quarkus.version>3.26.3</quarkus.version>
         <quinoa.version>2.6.2</quinoa.version>
-        <surefire-plugin.version>3.5.3</surefire-plugin.version>
+        <surefire-plugin.version>3.5.4</surefire-plugin.version>
         <failsafe-plugin.version>3.5.4</failsafe-plugin.version>
         <validator.version>1.5.9</validator.version>
         <jayway.jsonpath.version>2.9.0</jayway.jsonpath.version>
