@@ -26,7 +26,7 @@
   "keycloak-js": "23.0.7",
   "luxon": "3.3.0",
   "moment": "2.30.1",
-  "monaco-editor": "0.52.0",
+  "monaco-editor": "0.53.0",
   "react": "18.2.0",
   "react-autosuggest": "10.1.0",
   "react-dom": "18.2.0",
