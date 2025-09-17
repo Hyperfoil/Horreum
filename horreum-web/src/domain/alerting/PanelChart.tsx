@@ -12,6 +12,9 @@ import {
     YAxis,
 } from "recharts"
 import { Bullseye, Button, EmptyState, EmptyStateFooter, Spinner } from "@patternfly/react-core"
+import t_global_border_radius_small from '@patternfly/react-tokens/dist/esm/t_global_border_radius_small';
+import t_global_border_color_on_secondary from '@patternfly/react-tokens/dist/esm/t_global_border_color_on_secondary';
+import t_global_background_color_secondary_default from '@patternfly/react-tokens/dist/esm/t_global_background_color_secondary_default';
 import { DateTime } from "luxon"
 import {alertingApi, AnnotationDefinition, FingerprintValue, TimeseriesTarget} from "../../api"
 import { fingerprintToString } from "../../utils"
@@ -308,8 +311,10 @@ export default function PanelChart({
                                                 <div
                                                     className="recharts-default-tooltip"
                                                     style={{
-                                                        background: "white",
-                                                        border: "1px solid black",
+                                                        background: t_global_background_color_secondary_default.var,
+                                                        border: `1px solid ${t_global_border_color_on_secondary.var}`,
+                                                        borderRadius: t_global_border_radius_small.var,
+                                                        padding: t_global_border_radius_small.var,
                                                         maxWidth: "400px",
                                                         maxHeight: "500px",
                                                         overflowY: "auto",
