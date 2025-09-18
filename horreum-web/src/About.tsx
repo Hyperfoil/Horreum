@@ -24,12 +24,14 @@ import { formatDateTime } from "./utils"
 
 type VersionInfo = {
     version: string
+    commit: string
     startTimestamp: number
     privacyStatement?: string
 }
 
 const VERSION_ERROR = {
     version: "<unknown:error>",
+    commit: "<unknown:error>",
     startTimestamp: 0,
 }
 
@@ -92,11 +94,6 @@ export default function About() {
                 title="About Horreum"
                 isOpen={isModalOpen}
                 onClose={() => setModalOpen(false)}
-                actions={[
-                    <Button key={0} onClick={() => setModalOpen(false)}>
-                        Close
-                    </Button>,
-                ]}
             >
                 {!versionInfo && (
                     <Bullseye>
@@ -108,6 +105,10 @@ export default function About() {
                         <DescriptionListGroup>
                             <DescriptionListTerm>Version</DescriptionListTerm>
                             <DescriptionListDescription>{versionInfo.version}</DescriptionListDescription>
+                        </DescriptionListGroup>
+                        <DescriptionListGroup>
+                            <DescriptionListTerm>Commit</DescriptionListTerm>
+                            <DescriptionListDescription>{versionInfo.commit}</DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
                             <DescriptionListTerm>Up Since</DescriptionListTerm>

@@ -2911,6 +2911,7 @@ components:
       type: object
       required:
       - version
+      - commit
       - startTimestamp
       properties:
         version:
@@ -2918,6 +2919,11 @@ components:
           description: Version of Horreum
           examples:
           - 0.9.4
+        commit:
+          type: string
+          description: Commit of Horreum
+          examples:
+          - 15bc9e5
         startTimestamp:
           type: integer
           format: int64

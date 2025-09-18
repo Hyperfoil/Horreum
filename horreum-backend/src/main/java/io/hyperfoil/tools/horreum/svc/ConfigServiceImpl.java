@@ -35,6 +35,9 @@ public class ConfigServiceImpl implements ConfigService {
     @ConfigProperty(name = "horreum.privacy")
     Optional<String> privacyStatement;
 
+    @ConfigProperty(name = "horreum.application.commit")
+    String appCommit;
+
     @Inject
     SecurityIdentity identity;
 
@@ -57,6 +60,7 @@ public class ConfigServiceImpl implements ConfigService {
     public VersionInfo version() {
         VersionInfo info = new VersionInfo();
         info.version = Version.getVersion();
+        info.commit = appCommit;
         info.startTimestamp = startTimestamp;
         info.privacyStatement = privacyStatement.orElse(null);
         return info;

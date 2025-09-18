@@ -80,22 +80,25 @@ public interface ConfigService {
     void deleteDatastore(@PathParam("id") Integer datastoreId);
 
     class VersionInfo {
-        @Schema(description = "Version of Horreum", example = "0.9.4")
+        @Schema(description = "Version of Horreum", examples = "0.9.4")
         @NotNull
         public String version;
+        @Schema(description = "Commit of Horreum", examples = "15bc9e5")
+        @NotNull
+        public String commit;
         @JsonProperty(required = true)
-        @Schema(description = "Timestamp of server startup", example = "2023-10-18 18:00:57")
+        @Schema(description = "Timestamp of server startup", examples = "2023-10-18 18:00:57")
         public long startTimestamp;
-        @Schema(description = "Privacy statement", example = "link/to/external/privacy/statement")
+        @Schema(description = "Privacy statement", examples = "link/to/external/privacy/statement")
         public String privacyStatement;
     }
 
     class KeycloakConfig {
-        @Schema(description = "Keycloak realm securing Horreum instance", example = "horreum")
+        @Schema(description = "Keycloak realm securing Horreum instance", examples = "horreum")
         public String realm;
-        @Schema(description = "URL of Keycloak instance securing Horreum", example = "https://horreum-keycloak.example.com")
+        @Schema(description = "URL of Keycloak instance securing Horreum", examples = "https://horreum-keycloak.example.com")
         public String url;
-        @Schema(description = "Keycloak client ID in Horreum realm for User Interface", example = "horreum-ui")
+        @Schema(description = "Keycloak client ID in Horreum realm for User Interface", examples = "horreum-ui")
         public String clientId;
     }
 
