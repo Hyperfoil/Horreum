@@ -3,7 +3,7 @@ import { Badge } from "@patternfly/react-core"
 import { ExclamationCircleIcon } from "@patternfly/react-icons"
 
 type ErrorBadgeProps = {
-    children: string | number | ReactElement
+    children: string | number | ReactElement<any>
 }
 
 export default function ErrorBadge({ children }: ErrorBadgeProps) {

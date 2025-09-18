@@ -1,27 +1,9 @@
 import { useEffect, useState } from "react"
-import { 
-    Column,
-    SortingRule,
-    TableState,
-    UseRowSelectRowProps,
-    UseRowSelectState,
-    UseSortByColumnProps,
-    UseSortByState,
-    useRowSelect,
-    useSortBy,
-    useTable
-} from "react-table"
 import { noop } from "../utils"
-import { Card, CardBody, CardFooter, CardHeader, Flex, FlexItem, OnPerPageSelect, OnSetPage, Pagination, PaginationVariant, Skeleton, Spinner, Title } from "@patternfly/react-core"
+import { Card, CardBody, CardFooter, CardHeader, Flex, FlexItem, OnPerPageSelect, OnSetPage, Pagination, PaginationVariant, Skeleton, Spinner, Title, Tooltip } from "@patternfly/react-core"
 import { Table, Tbody, Td, Th, Thead, Tr } from "@patternfly/react-table"
 import { ThSortType } from "@patternfly/react-table/dist/esm/components/Table/base/types"
-
-type Direction = 'asc' | 'desc' | undefined;
-
-export type StickyProps = {
-    isStickyColumn?: boolean,
-    hasLeftBorder?: boolean
-}
+import { ColumnDef, flexRender, getCoreRowModel, getSortedRowModel, RowSelectionState, SortingState, useReactTable } from "@tanstack/react-table"
 
 type PaginationProps = {
     top?: boolean
@@ -37,27 +19,17 @@ type PaginationProps = {
 
 type CustomTableProps<D extends object> = {
     title?: string
-    columns: Column<D>[]
+    columns: ColumnDef<D>[]
     data: D[]
-    sortBy: SortingRule<D>[]
+    sortBy: SortingState
     isLoading: boolean
-    selected?: Record<string, boolean>
-    onSelected(ids: Record<string, boolean>): void
-    onSortBy?(order: SortingRule<D>[]): void
+    selected?: RowSelectionState
+    onSelected(ids: RowSelectionState): void
+    onSortBy?(order: SortingState): void
     showNumberOfRows?: boolean,
     cellModifier?: "wrap" | "fitContent" | "breakWord" | "nowrap" | "truncate"
     tableLayout?: "fixed" | "auto"
     pagination?: PaginationProps
-}
-
-const NO_DATA: Record<string, unknown>[] = []
-const NO_SORT: SortingRule<any>[] = []
-
-const defaultProps = {
-    sortBy: NO_SORT,
-    isLoading: false,
-    selected: NO_DATA,
-    onSelected: noop,
 }
 
 function CustomTable<D extends object>({
@@ -74,53 +46,32 @@ function CustomTable<D extends object>({
     tableLayout,
     pagination
 }: CustomTableProps<D>) {
-    const [currentSortBy, setCurrentSortBy] = useState(sortBy)
-    const [activeSortIndex, setActiveSortIndex] = useState<number | undefined>();
-    const [activeSortDirection, setActiveSortDirection] = useState<Direction>();
-    const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow, state } = useTable<D>(
+    const [sorting, setSorting] = useState<SortingState>(sortBy);
+    const [rowSelection, setRowSelection] = useState({});
+
+    useEffect(() => onSortBy?.(sorting), [sorting])
+    useEffect(() => onSelected?.(rowSelection), [rowSelection])
+
+    const table = useReactTable(
         {
             columns,
-            data: data || NO_DATA,
+            data: data || [],
             initialState: {
-                sortBy: currentSortBy,
-                selectedRowIds: selected,
-            } as TableState<D>,
+                sorting: sortBy,
+                rowSelection: selected
+            },
+            state: {
+                sorting,
+                rowSelection,
+            },
+            enableRowSelection: true,
+            getCoreRowModel: getCoreRowModel(),
+            // getPaginationRowModel: getPaginationRowModel(), // not needed with server pagination
+            getSortedRowModel: getSortedRowModel(),
+            onSortingChange: setSorting,
+            onRowSelectionChange: setRowSelection,
         },
-        useSortBy,
-        useRowSelect
     )
-    const rsState = state as UseRowSelectState<D>
-    const sortState = state as UseSortByState<D>
-
-    // keep active index and direction aligned with the selected sortBy
-    const updateActiveIndexes = (selectedSortBy: SortingRule<D> | undefined) => {
-        if (selectedSortBy) {
-            setActiveSortIndex(columns.findIndex(c => c.id === selectedSortBy.id))
-            setActiveSortDirection(selectedSortBy.desc ? "desc" : "asc")
-        } else {
-            setActiveSortIndex(undefined)
-            setActiveSortDirection(undefined)
-        }
-    }
-
-    useEffect(() => {
-        setCurrentSortBy(sortBy)
-    }, [sortBy])
-
-    useEffect(() => {
-        updateActiveIndexes(currentSortBy.length > 0 ? currentSortBy[0] : undefined)
-    }, [currentSortBy])
-    
-    useEffect(() => {
-        setCurrentSortBy(sortState.sortBy)
-        if (onSortBy && sortState.sortBy) {
-            onSortBy(sortState.sortBy)
-        }
-    }, [sortState.sortBy])
-
-    useEffect(() => {
-        onSelected(rsState.selectedRowIds)
-    }, [rsState.selectedRowIds, onSelected])
 
     const renderPagination = (variant?: 'top' | 'bottom' | PaginationVariant, isCompact?: boolean) => pagination && (
         <FlexItem align={{ default: 'alignRight' }}>
@@ -149,7 +100,7 @@ function CustomTable<D extends object>({
                 </CardHeader>
             )}
             <CardBody style={{ overflowX: "auto" }}>
-                <Table borders={false} isStriped variant="compact" {...getTableProps()} style={{tableLayout: tableLayout}}>
+                <Table borders={false} isStriped variant="compact" {...table} style={{tableLayout: tableLayout}}>
                     {isLoading && (
                         <Thead>
                             <Tr>
@@ -160,33 +111,32 @@ function CustomTable<D extends object>({
                         </Thead>
                     ) || (
                         <Thead>
-                            {headerGroups.map(headerGroup => {
+                            {table.getHeaderGroups().map(headerGroup => {
                                 return (
-                                    <Tr {...headerGroup.getHeaderGroupProps()}>
-                                        {headerGroup.headers.map((col, columnIndex) => {
-                                            const columnProps = col as unknown as UseSortByColumnProps<D>
-                                            const stickyProps = col as unknown as StickyProps
-                                            const sortParams: { sort?: ThSortType } = columnProps.canSort ? {
+                                    <Tr key={headerGroup.id}>
+                                        {headerGroup.headers.map((header, headerIndex) => {
+                                            const sortParams: { sort?: ThSortType } = header.column.getCanSort() ? {
                                                 sort: {
                                                     sortBy: {
-                                                    index: activeSortIndex,
-                                                    direction: activeSortDirection
+                                                        index: header.column.getIsSorted() ? header.index : -1,
+                                                        direction: header.column.getIsSorted() || undefined,
                                                     },
-                                                    columnIndex,
-                                                }
+                                                    onSort: header.column.getToggleSortingHandler(),
+                                                    columnIndex: header.index
+                                                },
                                             } : {}
 
                                             return (
-                                                <Th
+                                                <Th key={`${headerGroup.id}-h${headerIndex}`}
+                                                    aria-label={`column ${header.column.columnDef.header}`}
                                                     modifier={cellModifier ?? "fitContent"}
-                                                    isStickyColumn={stickyProps.isStickyColumn}
-                                                    hasLeftBorder={stickyProps.hasLeftBorder}
-                                                    {...sortParams} 
-                                                    {...col.getHeaderProps(
-                                                        columnProps.getSortByToggleProps(columnProps.canSort ? {title: "Sort by " + col.Header} : {})
-                                                    )}
+                                                    isStickyColumn={header.column.getIsPinned() !== false}
+                                                    hasLeftBorder={header.column.getIsPinned() === 'right'}
+                                                    {...sortParams}
+                                                    tooltipProps={{}}
+                                                    tooltip={header.column.getCanSort() ? <Tooltip content={`Sort by ${headerIndex}`} /> : undefined}
                                                 >
-                                                    {col.render("Header")}
+                                                    {flexRender(header.column.columnDef.header, header.getContext())}
                                                 </Th>
                                             )
                                         })}
@@ -209,29 +159,23 @@ function CustomTable<D extends object>({
                             })}
                         </Tbody>
                     ) || (
-                        <Tbody {...getTableBodyProps()}>
-                            {rows.map(row => {
-                                prepareRow(row)
-                                const rowProps = row.getRowProps()
-                                return (
-                                    <Tr {...rowProps} isRowSelected={(row as unknown as UseRowSelectRowProps<D>).isSelected}>
-                                        {row.cells.map(cell => {
-                                            const stickyProps = cell.column as unknown as StickyProps
-                                            return (
-                                                <Td 
-                                                    modifier={cellModifier ?? "fitContent"}
-                                                    dataLabel={cell.column.Header?.toString()}
-                                                    isStickyColumn={stickyProps.isStickyColumn}
-                                                    hasLeftBorder={stickyProps.hasLeftBorder}
-                                                    {...cell.getCellProps()}
-                                                >
-                                                    {cell.render("Cell")}
-                                                </Td>
-                                            )
-                                        })}
-                                    </Tr>
-                                )
-                            })}
+                        <Tbody>
+                            {table.getRowModel().rows.map(row =>
+                                <Tr key={row.id} isRowSelected={row.getIsSelected()}>
+                                    {row.getVisibleCells().map(cell => {
+                                        return (
+                                            <Td key={cell.id}
+                                                dataLabel={cell.column.columnDef.header?.toString()}
+                                                modifier={cellModifier ?? "fitContent"}
+                                                isStickyColumn={cell.column.getIsPinned() !== false}
+                                                hasLeftBorder={cell.column.getIsPinned() === 'right'}
+                                            >
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </Td>
+                                        )
+                                    })}
+                                </Tr>
+                            )}
                         </Tbody>
                     )}
                 </Table>
@@ -240,9 +184,7 @@ function CustomTable<D extends object>({
                 <CardFooter>
                     <Flex>
                         {(showNumberOfRows === undefined || showNumberOfRows) && (
-                            <FlexItem align={{ default: 'alignLeft' }}>
-                                <span>Showing {rows.length} rows</span>
-                            </FlexItem>
+                            <FlexItem align={{ default: 'alignLeft' }}>{`Showing ${table.getRowModel().rows.length} rows`}</FlexItem>
                         )}
                         {pagination?.bottom && renderPagination()}
                     </Flex>
@@ -252,6 +194,11 @@ function CustomTable<D extends object>({
     )
 }
 
-CustomTable.defaultProps = defaultProps
+CustomTable.defaultProps = {
+    sortBy: [],
+    isLoading: false,
+    selected: [],
+    onSelected: noop,
+}
 
 export default CustomTable

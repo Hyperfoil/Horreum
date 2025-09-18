@@ -42,7 +42,7 @@ export default function Teams(props: TeamsProps) {
     const [nextTeam, setNextTeam] = useState<Team>()
     const [newUserModalOpen, setNewUserModalOpen] = useState(false)
     const isAdmin = useSelector(isAdminSelector)
-    const teamFuncsRef = useRef<TeamMembersFunctions>()
+    const teamFuncsRef = useRef<TeamMembersFunctions>(undefined)
     useEffect(() => {
         if (!isAdmin) {
             return // happens during reload

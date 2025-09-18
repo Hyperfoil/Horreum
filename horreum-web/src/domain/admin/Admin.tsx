@@ -15,8 +15,8 @@ import Datastores from "./Datastores";
 import RemoveUsers from "./RemoveUsers";
 
 export default function Admin() {
-    const adminFuncsRef = useRef<TabFunctions>()
-    const teamsFuncsRef = useRef<TabFunctions>()
+    const adminFuncsRef = useRef<TabFunctions>(undefined)
+    const teamsFuncsRef = useRef<TabFunctions>(undefined)
     const isAdmin = useSelector(isAdminSelector)
     const isManager = useSelector(isManagerSelector)
 

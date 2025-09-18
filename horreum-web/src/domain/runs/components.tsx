@@ -20,6 +20,7 @@ import { useTester } from "../../auth"
 import {Access, recalculateDatasets, RunSummary, trash, updateDescription, updateRunAccess} from "../../api"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import { Cell } from "@tanstack/react-table";
 
 export function Description(description: string) {
     const truncated = (
@@ -241,16 +242,7 @@ export function UpdateDescriptionModal({ isOpen, onClose, run }: UpdateDescripti
 
 export function renderCell(renderString: string | undefined, sub: string | undefined, token: string | undefined) {
     const render = renderString ? new Function("return " + renderString)() : undefined
-    return (arg: any) => {
-        const {
-            cell: {
-                value: cellValue,
-                row: { index },
-            },
-            data,
-        } = arg
-        return renderImpl(cellValue, render, sub, data[index], token)
-    }
+    return (cell: any) => renderImpl(cell.getValue(), render, sub, cell.row.original, token);
 }
 
 export function renderValue(renderString: string | undefined, sub: string | undefined, token: string | undefined) {

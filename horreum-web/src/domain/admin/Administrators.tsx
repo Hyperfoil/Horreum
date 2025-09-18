@@ -30,8 +30,8 @@ export default function Administrators(props: AdministratorsProps) {
     const [modified, setModified] = useState(false)
     const [resetCounter, setResetCounter] = useState(0)
     const [createNewUser, setCreateNewUser] = useState(false)
-    const [availableUsers, setAvailableUsers] = useState<ReactElement[]>([])
-    const [admins, setAdmins] = useState<ReactElement[]>([])
+    const [availableUsers, setAvailableUsers] = useState<ReactElement<any>[]>([])
+    const [admins, setAdmins] = useState<ReactElement<any>[]>([])
     const isAdmin = useSelector(isAdminSelector)
     useEffect(() => {
         if (isAdmin) {
@@ -78,7 +78,7 @@ export default function Administrators(props: AdministratorsProps) {
                     chosenOptionsTitle="Administrators"
                     onListChange={(_event, newAvailable, newChosen) => {
                         setAvailableUsers(
-                            (newAvailable as ReactElement[]).map(item => {
+                            (newAvailable as ReactElement<any>[]).map(item => {
                                 if (availableUsers.includes(item)) {
                                     return item
                                 }
@@ -88,7 +88,7 @@ export default function Administrators(props: AdministratorsProps) {
                             })
                         )
                         setAdmins(
-                            (newChosen as ReactElement[]).map(item => {
+                            (newChosen as ReactElement<any>[]).map(item => {
                                 if (admins.includes(item)) {
                                     return item
                                 }
@@ -110,5 +110,5 @@ export default function Administrators(props: AdministratorsProps) {
                 onCreate={noop}
             />
         </Form>
-    )
+    );
 }

@@ -9,8 +9,10 @@ import {LabelInfo, schemaApi} from "../api"
 
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
-import {MultiTypeaheadSelect, SimpleDropdown, TypeaheadSelect} from "@patternfly/react-templates";
 import FilterIcon from "@patternfly/react-icons/dist/esm/icons/filter-icon";
+import { TypeaheadSelect } from "./templates/TypeahedSelect"
+import { MultiTypeaheadSelect } from "./templates/MultiTypeaheadSelect";
+import { SimpleDropdown } from "./templates/SimpleDropdown";
 
 type LabelsProps = {
     labels: string[]

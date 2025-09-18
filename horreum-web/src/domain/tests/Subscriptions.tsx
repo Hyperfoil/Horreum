@@ -16,7 +16,7 @@ type SubscriptionsProps = {
     funcsRef: TabFunctionsRef
 }
 
-function userElement(user: UserData): ReactElement {
+function userElement(user: UserData): ReactElement<any> {
     let str = ""
     if (user.firstName) {
         str += user.firstName + " "
@@ -31,19 +31,19 @@ function userElement(user: UserData): ReactElement {
     }
 }
 
-function teamElement(team: string): ReactElement {
+function teamElement(team: string): ReactElement<any> {
     return <span key={team}>{teamToName(team)}</span>
 }
 
 export default function Subscriptions(props: SubscriptionsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
     const isTester = useTester(props.testOwner)
-    const [availableUsers, setAvailableUsers] = useState<ReactElement[]>([])
-    const [watchingUsers, setWatchingUsers] = useState<ReactElement[]>([])
-    const [optoutUsers, setOptoutUsers] = useState<ReactElement[]>([])
+    const [availableUsers, setAvailableUsers] = useState<ReactElement<any>[]>([])
+    const [watchingUsers, setWatchingUsers] = useState<ReactElement<any>[]>([])
+    const [optoutUsers, setOptoutUsers] = useState<ReactElement<any>[]>([])
 
-    const [availableTeams, setAvailableTeams] = useState<ReactElement[]>([])
-    const [watchingTeams, setWatchingTeams] = useState<ReactElement[]>([])
+    const [availableTeams, setAvailableTeams] = useState<ReactElement<any>[]>([])
+    const [watchingTeams, setWatchingTeams] = useState<ReactElement<any>[]>([])
 
     const [reloadCounter, setReloadCounter] = useState(0)
     const updateUsers = (users: UserData[]) =>
@@ -100,8 +100,8 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 chosenOptions={watchingUsers}
                 chosenOptionsTitle="Watching users"
                 onListChange={(_event, newAvailable, newChosen) => {
-                    setAvailableUsers(newAvailable as ReactElement[])
-                    setWatchingUsers(newChosen as ReactElement[])
+                    setAvailableUsers(newAvailable as ReactElement<any>[])
+                    setWatchingUsers(newChosen as ReactElement<any>[])
                     props.onModified(true)
                 }}
             />
@@ -117,8 +117,8 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 chosenOptions={optoutUsers}
                 chosenOptionsTitle="Opted out users"
                 onListChange={(_event, newAvailable, newChosen) => {
-                    setAvailableUsers(newAvailable as ReactElement[])
-                    setOptoutUsers(newChosen as ReactElement[])
+                    setAvailableUsers(newAvailable as ReactElement<any>[])
+                    setOptoutUsers(newChosen as ReactElement<any>[])
                     props.onModified(true)
                 }}
             />
@@ -131,11 +131,11 @@ export default function Subscriptions(props: SubscriptionsProps) {
                 chosenOptions={watchingTeams}
                 chosenOptionsTitle="Watching teams"
                 onListChange={(_event, newAvailable, newChosen) => {
-                    setAvailableTeams(newAvailable as ReactElement[])
-                    setWatchingTeams(newChosen as ReactElement[])
+                    setAvailableTeams(newAvailable as ReactElement<any>[])
+                    setWatchingTeams(newChosen as ReactElement<any>[])
                     props.onModified(true)
                 }}
             />
         </>
-    )
+    );
 }

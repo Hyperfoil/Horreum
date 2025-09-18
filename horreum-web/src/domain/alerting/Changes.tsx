@@ -30,11 +30,11 @@ import {
 	EmptyStateBody,
 	Spinner,
 } from '@patternfly/react-core';
-import {SimpleSelect} from "@patternfly/react-templates";
 import { useNavigate } from "react-router-dom"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
+import { SimpleSelect } from "../../components/templates/SimpleSelect"
 
 type TimespanSelectProps = {
     value?: number

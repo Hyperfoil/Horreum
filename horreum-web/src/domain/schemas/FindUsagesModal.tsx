@@ -86,7 +86,7 @@ function usageToCells(u: LabelLocation) {
             ]
         }
         default:
-            return [<DataListCell>Unknown location? {u}</DataListCell>]
+            return [<DataListCell>Unknown location? {`${u}`}</DataListCell>]
     }
 }
 

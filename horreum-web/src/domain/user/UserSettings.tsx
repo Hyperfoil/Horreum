@@ -74,7 +74,7 @@ export function UserSettings() {
     }
     useEffect(loadPersonal, [profile])
     const managedTeams = useManagedTeams()
-    const teamFuncsRef = useRef<TabFunctions>()
+    const teamFuncsRef = useRef<TabFunctions>(undefined)
     function reportError(error: any) {
         return alerting.dispatchError(error, "UPDATE_SETTINGS", "Failed to update user settings")
     }

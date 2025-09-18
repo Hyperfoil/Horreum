@@ -12,7 +12,7 @@ import EllipsisVIcon from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-ico
 
 interface MenuItemProvider<C> {
     (props: ActionMenuProps, isTester: boolean, close: () => void, config: C): {
-        item: ReactElement
+        item: ReactElement<any>
         modal: ReactNode
     }
 }

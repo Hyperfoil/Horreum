@@ -20,15 +20,6 @@ import {isAuthenticatedSelector, teamsSelector, teamToName} from "../../auth"
 
 import { fetchTest } from "../../api"
 
-import {
-    CellProps,
-    UseTableOptions,
-    UseRowSelectInstanceProps,
-    UseRowSelectRowProps,
-    Column,
-    UseSortByColumnOptions,
-    SortingRule,
-} from "react-table"
 import {runApi, RunSummary, SortDirection, Test} from "../../api"
 import { NoSchemaInRun } from "./NoSchema"
 import { Description, ExecutionTime, Menu } from "./components"
@@ -38,9 +29,9 @@ import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {RunImportModal} from "./RunImportModal";
 import CustomTable from "../../components/CustomTable"
+import { ColumnDef, ColumnSort, createColumnHelper } from "@tanstack/react-table"
 
-type RunColumn = Column<RunSummary> & UseSortByColumnOptions<RunSummary>
-
+const columnHelper = createColumnHelper<RunSummary>()
 
 export default function RunList() {
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -52,7 +43,7 @@ export default function RunList() {
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
-    const [sortBy, setSortBy] = useState<SortingRule<RunSummary>>({id: "start", desc: true})
+    const [sortBy, setSortBy] = useState<ColumnSort>({id: 'start', desc: true})
     const pagination = useMemo(() => ({ page, perPage, sortBy }), [page, perPage, sortBy])
 
     const [showTrashed, setShowTrashed] = useState(false)
@@ -126,103 +117,61 @@ export default function RunList() {
     const clearCallback = () => {
         setSelectedRows({})
     }
-    const tableColumns: RunColumn[] = [
-        {
-            Header: "",
-            id: "selection",
-            disableSortBy: true,
-            Cell: ({ row }: any) => {
-                const props = row.getToggleRowSelectedProps()
-                delete props.indeterminate
-                // Note: to limit selection to 2 entries use
-                //   disabled={!row.isSelected && selectedFlatRows.length >= 2}
-                // with { row, selectedFlatRows }: C as this function's argument
-                return <input type="checkbox" {...props} />
-            },
-        },
-        {
-            Header: "Id",
-            id: "id",
-            accessor: "id",
-            Cell: (arg:  CellProps<RunSummary>) => {
-                const {
-                    cell: { value },
-                } = arg
-                return (
-                    <>
-                        <NavLink to={`/run/${value}#run`}>
-                            <ArrowRightIcon />
-                            {"\u00A0"}
-                            {value}
-                        </NavLink>
-                        {arg.row.original.trashed && <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} />}
-                    </>
-                )
-            },
-        },
-        {
-            Header: "Schema(s)",
-            id: "schemas",
-            accessor: "schemas",
-            disableSortBy: true,
-            Cell: (arg:  CellProps<RunSummary>) => {
-                const {
-                    cell: { value },
-                } = arg
+    const tableColumns: ColumnDef<RunSummary, any>[] = [
+        columnHelper.display({
+            id: 'selected',
+            cell: ({ row }) => <input type="checkbox" disabled={!row.getCanSelect()} checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()}/>
+        }),
+        columnHelper.accessor('id', {
+            header: 'Id',
+            cell: ({ row }) => <>
+                <NavLink to={`/run/${row.original.id}#run`}>
+                    <ArrowRightIcon />&nbsp;{row.original.id}
+                </NavLink>
+                {row.original.trashed && <TrashIcon style={{ fill: "#888", marginLeft: "10px" }} />}
+            </>
+        }),
+        columnHelper.accessor('schemas', {
+            header: 'Schemas(s)',
+            enableSorting: false,
+            cell: ({ row }) => {
+                const value = row.original.schemas;
                 // LEFT JOIN results in schema.id == 0
-                if (!value || Object.keys(value).length == 0) {
-                    return <NoSchemaInRun />
-                } else {
-                    return <SchemaList schemas={value} validationErrors={arg.row.original.validationErrors || []} />
-                }
-            },
-        },
-        {
-            Header: "Description",
-            id: "description",
-            accessor: "description",
-            Cell: (arg:  CellProps<RunSummary>) => Description(arg.cell.value),
-        },
-        {
-            Header: "Executed",
-            id: "start",
-            accessor: "start",
-            Cell: (arg:  CellProps<RunSummary>) => ExecutionTime(arg.row.original),
-        },
-        {
-            Header: "Duration",
+                return !value || Object.keys(value).length === 0 ? (
+                    <NoSchemaInRun />
+                ) : (
+                    <SchemaList schemas={value} validationErrors={row.original.validationErrors ?? []} />
+                )
+            }
+        }),
+        columnHelper.accessor('description', {
+            header: 'Description',
+            cell: ({ row }) => Description(row.original.description ?? "")
+        }),
+        columnHelper.accessor('start', {
+            header: 'Executed',
+            cell: ({ row }) => ExecutionTime(row.original)
+        }),
+        columnHelper.accessor((run) => toEpochMillis(run.stop) - toEpochMillis(run.start), {
+            header: 'Duration',
             id: "(stop - start)",
-            accessor: (run: RunSummary) =>
-                Duration.fromMillis(toEpochMillis(run.stop) - toEpochMillis(run.start)).toFormat("hh:mm:ss.SSS"),
-        },
-        {
-            Header: "Datasets",
-            id: "datasets",
-            accessor: (run: RunSummary) => run.datasets.length,
-        },
-        {
-            Header: "Owner",
-            id: "owner",
-            accessor: (row: RunSummary) => ({
-                owner: row.owner,
-                access: row.access,
-            }),
-            Cell: (arg:  CellProps<RunSummary>) => (
-                <>
-                    {teamToName(arg.cell.value.owner)}
-                    <span style={{ marginLeft: '8px' }}>
-                        <AccessIcon access={arg.cell.value.access} showText={false} />
-                    </span>
-                </>
-            ),
-        },
-        {
-            Header: "Actions",
-            id: "actions",
-            accessor: "id",
-            disableSortBy: true,
-            Cell: (arg: CellProps<RunSummary, number>) => Menu(arg.row.original, loadTestRuns, clearCallback),
-        },
+            cell: ({ getValue }) => Duration.fromMillis(getValue()).toFormat("hh:mm:ss.SSS")
+        }),
+        columnHelper.accessor((run) => run.datasets.length, {
+            header: 'Datasets',
+            id: 'datasets'
+        }),
+        columnHelper.accessor('owner', {
+            header: 'Owner',
+            cell: ({ row }) => <>
+                {teamToName(row.original.owner)}&nbsp;<AccessIcon access={row.original.access} showText={false} />
+            </>
+        }),
+        columnHelper.display({
+            header: 'Actions',
+            id: 'actions',
+            cell: ({ row }) => Menu(row.original, loadTestRuns, clearCallback)
+        })
     ]
 
     const toggleNewRunModal = () => {

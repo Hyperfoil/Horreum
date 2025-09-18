@@ -13,7 +13,6 @@ import {noop} from "../../utils"
 
 import ActionMenu, {useChangeAccess, useDelete} from "../../components/ActionMenu"
 import ButtonLink from "../../components/ButtonLink"
-import {CellProps, Column} from "react-table"
 import {Access, SortDirection, Schema, schemaApi, SchemaExport} from "../../api"
 import TeamSelect, {ONLY_MY_OWN, Team, createTeam} from "../../components/TeamSelect";
 import AccessIcon from "../../components/AccessIcon"
@@ -23,8 +22,9 @@ import {useSelector} from "react-redux";
 import ImportButton from "../../components/ImportButton";
 import CustomTable from "../../components/CustomTable"
 import FilterSearchInput from "../../components/FilterSearchInput";
+import { ColumnDef, createColumnHelper } from "@tanstack/react-table"
 
-type C = CellProps<Schema>
+const columnHelper = createColumnHelper<Schema>();
 
 export default function SchemaList() {
     document.title = "Schemas | Horreum"
@@ -80,77 +80,56 @@ export default function SchemaList() {
         navigate(location.pathname + query)
     }, [rolesFilter])
 
-    const columns: Column<Schema>[] = useMemo(
-        () => [
-            {
-                Header: "Name",
-                id: "name",
-                accessor: "name",
-                Cell: (arg: C) => {
-                    return <NavLink to={"/schema/" + arg.row.original.id}>{arg.cell.value}</NavLink>
-                },
-            },
-            {
-                Header: "URI",
-                id: "uri",
-                accessor: "uri",
-            },
-            {
-                Header: "Description",
-                id: "description",
-                accessor: "description",
-            },
-            {
-                Header: "Owner",
-                id: "owner",
-                accessor: (row: Schema) => ({
-                    owner: row.owner,
-                    access: row.access,
-                }),
-                Cell: (arg: C) => (
-                    <>
-                        {teamToName(arg.cell.value.owner)}
-                        <span style={{ marginLeft: '8px' }}>
-                            <AccessIcon access={arg.cell.value.access} showText={false} />
-                        </span>
-                    </>
-                ),
-            },
-            {
-                Header: "Actions",
-                accessor: "id",
-                disableSortBy: true,
-                Cell: arg => {
-                    const changeAccess = useChangeAccess({
-                        onAccessUpdate: (id, owner, access) => {
-                            return schemaApi.updateSchemaAccess(id, owner, access).then(
-                                () => noop(),
-                                error => alerting.dispatchError(error, "SCHEMA_UPDATE", "Failed to update schema access.")
-                            ).then(() => reloadSchemas)
-                        },
-                    })
-                    const del = useDelete({
-                        onDelete: id => {
-                            return schemaApi.deleteSchema(id)
-                                .then(() => id,
-                                    error => alerting.dispatchError(error, "SCHEMA_DELETE", "Failed to delete schema " + id)
-                                ).then(id => removeSchema(id))
-                                .catch(noop)
-                        },
-                    })
-                    return (
-                        <ActionMenu
-                            id={arg.cell.value}
-                            owner={arg.row.original.owner}
-                            access={arg.row.original.access as Access}
-                            description={"schema " + arg.row.original.name + " (" + arg.row.original.uri + ")"}
-                            items={[changeAccess, del]}
-                        />
-                    )
-                },
-            },
-        ],
-        [schemas]
+    const columns: ColumnDef<Schema, any>[] = useMemo(
+     () => [
+         columnHelper.accessor('name', {
+             header: 'Name',
+             cell: ({ row }) => <NavLink to={`/schema/${row.original.id}`}>{row.original.name}</NavLink>,
+             sortingFn: "textCaseSensitive"
+         }),
+         columnHelper.accessor('uri', {
+             header: 'URI',
+         }),
+         columnHelper.accessor('description', {
+             header: 'Description',
+         }),
+         columnHelper.accessor('owner', {
+             header: 'Owner',
+             cell: ({ row }) => <>
+                 {teamToName(row.original.owner)}
+                 <span style={{ marginLeft: '8px' }}>
+                     <AccessIcon access={row.original.access} showText={false} />
+                 </span>
+             </>
+         }),
+         columnHelper.display({
+             header: "Actions",
+             cell: ({ row }) => {
+                 const changeAccess = useChangeAccess({
+                     onAccessUpdate: (id, owner, access) => schemaApi.updateSchemaAccess(id, owner, access).then(
+                         () => noop(),
+                         error => alerting.dispatchError(error, "SCHEMA_UPDATE", "Failed to update schema access.")
+                     ).then(() => reloadSchemas)
+                 })
+                 const del = useDelete({
+                     onDelete: id => schemaApi.deleteSchema(id).then(
+                         () => id,
+                         error => alerting.dispatchError(error, "SCHEMA_DELETE", "Failed to delete schema " + id)
+                     ).then(id => removeSchema(id)).catch(noop)
+                 })
+                 return (
+                     <ActionMenu
+                         id={row.original.id}
+                         owner={row.original.owner}
+                         access={row.original.access as Access}
+                         description={"schema " + row.original.name + " (" + row.original.uri + ")"}
+                         items={[changeAccess, del]}
+                     />
+                 )
+             }
+         })
+     ],
+     [schemas]
     )
 
     return (

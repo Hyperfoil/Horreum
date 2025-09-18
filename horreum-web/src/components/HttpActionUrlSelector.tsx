@@ -8,12 +8,11 @@ import {
     HelperTextItem,
     TextInput,
 } from '@patternfly/react-core';
-import {SimpleSelect} from "@patternfly/react-templates";
 
 import { AllowedSite, getAllowedSites} from "../api"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
-
+import { SimpleSelect } from "./templates/SimpleSelect";
 
 function isValidUrl(url: string) {
     try {

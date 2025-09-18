@@ -19,13 +19,15 @@ import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import {alertingApi, Change, FingerprintValue, Variable} from "../../api"
 import { fingerprintToString, formatDateTime } from "../../utils"
-import { Column, UseSortByColumnOptions } from "react-table"
 import { useTester } from "../../auth"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable";
 
 import EllipsisVIcon from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon';
+import { ColumnDef, createColumnHelper } from "@tanstack/react-table";
+
+const columnHelper = createColumnHelper<Change>()
 
 type ChangeMenuProps = {
     change: Change
@@ -94,8 +96,6 @@ const ChangeMenu = ({ change, onDelete, onUpdate }: ChangeMenuProps) => {
         </>
     )
 }
-
-type C = Column<Change> & UseSortByColumnOptions<Change>
 
 type ChangeModalProps = {
     change?: Change
@@ -170,69 +170,51 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
         )
     }, [varId])
     const isTester = useTester(testOwner)
-    const columns: C[] = [
-        {
-            Header: "Confirmed",
-            id: "confirmed",
-            accessor: "confirmed",
-            Cell: (arg: any) => (arg.cell.value ? <CheckIcon id={"change_" + arg.row.original.id} /> : <></>),
-        },
-        {
-            Header: "Time",
-            id: "timestamp",
-            accessor: "timestamp",
-            sortType: "datetime",
-            Cell: (arg: any) => <div>{formatDateTime(arg.cell.value)}</div>,
-        },
-        {
-            Header: "Dataset",
-            id: "dataset",
-            accessor: "dataset",
-            Cell: (arg: any) => {
-                const dataset = arg.cell.value
-                if (!dataset) return <></>
-                return (
-                    <NavLink to={`/run/${dataset.runId}#dataset${dataset.ordinal}`}>
-                        {dataset.runId}/{dataset.ordinal}
-                    </NavLink>
-                )
-            },
-        },
-        {
-            Header: "Description",
-            id: "description",
-            accessor: "description",
-            Cell: (arg: any) => <div dangerouslySetInnerHTML={{ __html: arg.cell.value }} />,
-        },
+    const columns: ColumnDef<Change, any>[] = [
+        columnHelper.accessor('confirmed', {
+            header: 'Confirmed',
+            cell: ({ row }) => row.original.confirmed ? <CheckIcon id={"change_" + row.original.id} /> : <></>
+        }),
+        columnHelper.accessor('timestamp', {
+            header: 'Time',
+            cell: ({ row }) => <div>{formatDateTime(row.original.timestamp)}</div>
+        }),
+        columnHelper.accessor('dataset', {
+            header: "Dataset",
+            cell: ({ row }) => {
+                const dataset = row.original.dataset;
+                return dataset ? <NavLink to={`/run/${dataset.runId}#dataset${dataset.ordinal}`}>{dataset.runId}/{dataset.ordinal}</NavLink> : <></>
+            }
+        }),
+        columnHelper.accessor('description', {
+            header: 'Description',
+            cell: ({ getValue }) => <div dangerouslySetInnerHTML={{ __html: getValue() }} />
+        })
     ]
     if (isTester) {
-        columns.push({
-            Header: "",
-            id: "id",
-            accessor: "id",
-            disableSortBy: true,
-            Cell: (arg: any) => {
-                return (
-                    <ChangeMenu
-                        change={arg.row.original}
-                        onDelete={changeId =>
-                            alertingApi.deleteChange(changeId).then(
-                                _ => setChanges(changes.filter(c => c.id !== changeId)),
-                                error =>
-                                    alerting.dispatchError(error,"CHANGE_DELETE", "Failed to delete change " + changeId)
-                            )
-                        }
-                        onUpdate={change =>
-                            alertingApi.updateChange(change.id, change).then(
-                                _ => setChanges(changes.map(c => (c.id === change.id ? change : c))),
-                                error =>
-                                    alerting.dispatchError(error,"CHANGE_UPDATE", "Failed to update change " + change.id)
-                            )
-                        }
-                    />
-                )
-            },
-        })
+        columns.push(
+            columnHelper.display({
+                header: '',
+                id: "id",
+                cell: ({ row }) => <ChangeMenu
+                    change={row.original}
+                    onDelete={changeId =>
+                        alertingApi.deleteChange(changeId).then(
+                            _ => setChanges(changes.filter(c => c.id !== changeId)),
+                            error =>
+                                alerting.dispatchError(error,"CHANGE_DELETE", "Failed to delete change " + changeId)
+                        )
+                    }
+                    onUpdate={change =>
+                        alertingApi.updateChange(change.id, change).then(
+                            _ => setChanges(changes.map(c => (c.id === change.id ? change : c))),
+                            error =>
+                                alerting.dispatchError(error,"CHANGE_UPDATE", "Failed to update change " + change.id)
+                        )
+                    }
+                />
+            })
+        )
     }
     // TODO: this doesn't work, table won't get updated when selected changes
     const selected = { [changes.findIndex(c => c.id === selectedChangeId)]: true }

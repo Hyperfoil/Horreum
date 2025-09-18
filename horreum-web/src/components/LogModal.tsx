@@ -1,4 +1,4 @@
-import {ReactElement, useContext, useEffect, useMemo, useState} from "react"
+import {ReactElement, ReactNode, useContext, useEffect, useMemo, useState} from "react"
 import {
     Button,
     Bullseye,
@@ -22,7 +22,7 @@ import ConfirmDeleteModal from "./ConfirmDeleteModal"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {IRow, IRowCell, OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
-import {SimpleSelect} from "@patternfly/react-templates";
+import { SimpleSelect } from "./templates/SimpleSelect"
 
 export type CommonLogModalProps = {
     title: string
@@ -57,7 +57,7 @@ const LOG_LEVELS = [
 ].reduce((acc, el, i) => {
     acc[i.toString()] = el
     return acc
-}, {} as Record<string, ReactElement>)
+}, {} as Record<string, ReactElement<any>>)
 
 type LogModalProps = {
     columns: string[]
@@ -190,7 +190,7 @@ export default function LogModal(props: LogModalProps) {
                                 {rows.map((row, index) =>
                                     <Tr key={index}>
                                         {row.cells?.map((cell, index) =>
-                                            <Td key={index}>{(cell as IRowCell).title}</Td>
+                                            <Td key={index}>{(cell as IRowCell).title as ReactNode}</Td>
                                         )}
                                     </Tr>
                                 )}

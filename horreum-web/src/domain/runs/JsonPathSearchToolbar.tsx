@@ -12,13 +12,13 @@ import {
 	ToolbarContent,
 	ToolbarItem,
 } from '@patternfly/react-core';
-import {SimpleSelect} from "@patternfly/react-templates";
 import { HelpIcon } from "@patternfly/react-icons"
 import { toString } from "../../components/Editor"
 import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams } from "react-autosuggest"
 import { QueryResult } from "../../api"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import { SimpleSelect } from "../../components/templates/SimpleSelect";
 
 type ToolbarProps = {
     originalData: any

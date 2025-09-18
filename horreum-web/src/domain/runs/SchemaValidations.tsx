@@ -13,7 +13,7 @@ type SchemaValidationsProps = {
     schemas: SchemaUsage[]
     errors: ValidationError[]
     onEdit?(): void
-    noSchema: ReactElement
+    noSchema: ReactElement<any>
 }
 
 export default function SchemaValidations(props: SchemaValidationsProps) {

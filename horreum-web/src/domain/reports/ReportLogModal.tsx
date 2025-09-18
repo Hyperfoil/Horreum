@@ -31,10 +31,10 @@ export default function ReportLogModal({ logs, ...props }: ReportLogModalProps) 
             fetchLogs={(level, page, limit) =>
                 Promise.resolve(
                     rows
-                        .filter(r => (r.cells[0].title as ReactElement).props.level >= level)
+                        .filter(r => (r.cells[0].title as ReactElement<any>).props.level >= level)
                         .slice(page * limit, (page + 1) * limit)
                 )
             }
         />
-    )
+    );
 }

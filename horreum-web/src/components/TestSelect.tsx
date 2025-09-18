@@ -9,12 +9,12 @@ import {
     Split,
     SplitItem
 } from '@patternfly/react-core';
-import {SimpleSelect} from "@patternfly/react-templates";
 import {fetchTests, Test} from "../api"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
 import {teamsSelector} from "../auth";
+import { SimpleSelect } from "./templates/SimpleSelect";
 
 export interface SelectedTest {
     id: number
@@ -96,9 +96,10 @@ function FewTestsSelect(props: TestSelectProps) {
             isFullWidth
             isExpanded={open}
             isDisabled={props.isDisabled}
+            isPlaceholder={selected === undefined}
             onClick={() => setOpen(!open)}
         >
-            {selected}
+            {selected ?? "Select a test..."}
         </MenuToggle>
 
     return (
@@ -117,7 +118,6 @@ function FewTestsSelect(props: TestSelectProps) {
             }}
             onOpenChange={(open) => setOpen(open)}
             toggle={toggle}
-            placeholder={"Select a test..."}
             isScrollable
             maxMenuHeight="45vh"
             shouldFocusToggleOnSelect

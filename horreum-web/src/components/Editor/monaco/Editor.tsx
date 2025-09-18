@@ -13,7 +13,7 @@ type EditorProps = {
 
 export default function Editor(props: EditorProps) {
     const monaco = useMonaco()
-    const valueGetter = useRef<() => string>()
+    const valueGetter = useRef<() => string>(undefined)
 
     const onMount: OnMount = (editor: editor.IStandaloneCodeEditor) => {
         valueGetter.current = () => editor.getValue()

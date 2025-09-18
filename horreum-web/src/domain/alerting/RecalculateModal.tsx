@@ -63,7 +63,7 @@ export default function RecalculateModal({ title, recalculate, cancel, message, 
     const [debug, setDebug] = useState(false)
     const [clearDatapoints, setClearDatapoints] = useState(true)
     const [timeRange, setTimeRange] = useState<TimeRange>()
-    const timer = useRef<number>()
+    const timer = useRef<number>(undefined)
     const [result, setResult] = useState<DatapointRecalculationStatus>()
     const close = () => {
         setProgress(-1)

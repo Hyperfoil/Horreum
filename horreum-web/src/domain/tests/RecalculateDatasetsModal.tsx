@@ -17,7 +17,7 @@ export default function RecalculateDatasetsModal(props: RecalculateDatasetsModal
     const [test, setTest] = useState<TestStorage | undefined>(undefined)
     const [progress, setProgress] = useState(-1)
     const [status, setStatus] = useState<RecalculationStatus>()
-    const timerId = useRef<number>()
+    const timerId = useRef<number>(undefined)
     const totalRuns = status ? status.totalRuns : test?.runs
     const onClose = useCallback(() => {
         if (timerId.current) {

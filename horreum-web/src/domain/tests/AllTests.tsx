@@ -31,7 +31,6 @@ import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
 
 import {isAuthenticatedSelector, teamsSelector, teamToName, userProfileSelector, useTester} from "../../auth"
-import {CellProps, Column, SortingRule, UseSortByColumnOptions} from "react-table"
 import {noop} from "../../utils"
 import {
     Access,
@@ -53,6 +52,7 @@ import FoldersDropDown from "../../components/FoldersDropdown";
 import ImportButton from "../../components/ImportButton";
 import CustomTable from "../../components/CustomTable";
 import FilterSearchInput from "../../components/FilterSearchInput";
+import { ColumnDef, ColumnSort, createColumnHelper } from "@tanstack/react-table";
 
 type WatchDropdownProps = {
     id: number
@@ -136,9 +136,6 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
         </Dropdown>
     )
 }
-
-type C = CellProps<TestStorage>
-type Col = Column<TestStorage> & UseSortByColumnOptions<TestStorage>
 
 function useRecalculate(): MenuItem<undefined> {
     const [modalOpen, setModalOpen] = useState(false)
@@ -283,6 +280,8 @@ export function useMoveToFolder(config: MoveToFolderConfig): MenuItem<MoveToFold
     return [MoveToFolderProvider, config]
 }
 
+const columnHelper = createColumnHelper<TestStorage>()
+
 export default function AllTests() {
     const { alerting } = useContext(AppContext) as AppContextType;
     const navigate = useNavigate()
@@ -291,100 +290,66 @@ export default function AllTests() {
     const [folder, setFolder] = useState(params.get("folder") ?? DEFAULT_FOLDER)
 
     document.title = "Tests | Horreum"
-    const watchingColumn: Col = {
-        Header: "Watching",
-        id: "watching",
-        accessor: "watching",
-        disableSortBy: true,
-        Cell: (arg: C) => {
-            return <WatchDropdown watching={arg.cell.value ? Array.from(arg.cell.value) : []} id={arg.row.original.id} />
-        },
-    }
 
-    let columns: Col[] = useMemo(
-        () => [
-            {
-                Header: "Name",
-                id: "name",
-                accessor: "name",
-                disableSortBy: false,
-                Cell: (arg: C) => <NavLink to={`/test/${arg.row.original.id}`}>{arg.cell.value}</NavLink>,
-            },
-            { 
-                Header: "Description", 
-                id: "description",
-                accessor: "description"
-            },
-            {
-                Header: "Datasets",
-                id: "datasets",
-                accessor: "datasets",
-                Cell: (arg: C) => {
-                    const {
-                        cell: {
-                            value,
-                            row: { index },
-                        },
-                        data,
-                    } = arg
-                    return (
-                        <NavLink to={`/test/${data[index].id}#data`}>
-                            {value === undefined ? "(unknown)" : value}&nbsp;
-                            <FolderOpenIcon />
-                        </NavLink>
-                    )
-                },
-            },
-            {
-                Header: "Owner",
-                id: "owner",
-                accessor: (row: TestStorage) => ({
-                    owner: row.owner,
-                    access: row.access,
-                }),
-                Cell: (arg: C) => (
-                    <>
-                        {teamToName(arg.cell.value.owner)}
-                        <span style={{ marginLeft: '8px' }}>
-                            <AccessIcon access={arg.cell.value.access} showText={false} />
-                        </span>
-                    </>
-                ),
-            },
-            {
-                Header: "Actions",
-                id: "actions",
-                accessor: "id",
-                disableSortBy: true,
-                Cell: (arg: C) => {
-                    const changeAccess = useChangeAccess({
-                        onAccessUpdate: (id: number, owner: string, access: Access) => {
-                            updateAccess(id, owner, access, alerting).then(() => loadTests())
-                        },
-                    })
-                    const move = useMoveToFolder({
-                        name: arg.row.original.name,
-                        folder: pagination.folder || DEFAULT_FOLDER,
-                        onMove: (id, newFolder) => updateFolder(id, pagination.folder, newFolder, alerting).then(loadTests),
-                    })
-                    const del = useDelete({
-                        name: arg.row.original.name,
-                        afterDelete: () => loadTests(),
-                    })
-                    const recalc = useRecalculate()
-                    return (
-                        <ActionMenu
-                            id={arg.cell.value}
-                            access={arg.row.original.access as Access}
-                            owner={arg.row.original.owner}
-                            description={"test " + arg.row.original.name}
-                            items={[changeAccess, move, del, recalc]}
-                        />
-                    )
-                },
-            },
+    const watchingColumn = columnHelper.accessor('watching', {
+        header: "Watching",
+        enableSorting: false,
+        cell: ({ row }) => <WatchDropdown watching={Array.from(row.original.watching ?? [])} id={row.original.id} />
+    })
+
+    let columns: ColumnDef<TestStorage, any>[] = useMemo(() => [
+        columnHelper.accessor('name', {
+            header: "Name",
+            cell: ({ row }) => <NavLink to={`/test/${row.original.id}`}>{row.original.name}</NavLink>,
+            sortingFn: "textCaseSensitive"
+        }),
+        columnHelper.accessor('description', {
+            header: 'Description',
+            sortingFn: "textCaseSensitive"
+        }),
+        columnHelper.accessor('datasets', {
+            header: "Datasets",
+            cell: ({ row }) => <NavLink to={`/test/${row.original.id}#data`}>{row.original.datasets ?? "(unknown)"}&nbsp;<FolderOpenIcon /></NavLink>
+        }),
+        columnHelper.accessor('owner', {
+            header: 'Owner',
+            cell: (arg) => <>
+                {teamToName(arg.getValue())}
+                <span style={{ marginLeft: '8px' }}>
+                    <AccessIcon access={arg.row.original.access} showText={false} />
+                </span>
+            </>
+        }),
+        columnHelper.display({
+            header: 'Actions',
+            id: 'actions',
+            cell: ({ row }) => {
+                const changeAccess = useChangeAccess({
+                    onAccessUpdate: (id: number, owner: string, access: Access) => {
+                        updateAccess(id, owner, access, alerting).then(() => loadTests())
+                    }
+                })
+                const move = useMoveToFolder({
+                    name: row.original.name,
+                    folder: pagination.folder || DEFAULT_FOLDER,
+                    onMove: (id, newFolder) => updateFolder(id, pagination.folder, newFolder, alerting).then(loadTests)
+                })
+                const del = useDelete({
+                    name: row.original.name,
+                    afterDelete: loadTests
+                })
+                const recalc = useRecalculate()
+                return <ActionMenu
+                     id={row.original.id}
+                     access={row.original.access}
+                     owner={row.original.owner}
+                     description={`Test ${row.original.name}`}
+                     items={[changeAccess, move, del, recalc]}
+                />
+            }
+        })
         ],
-        [ folder]
+        [folder]
     )
 
     const [allTests, setTests] = useState<TestStorage[]>([])
@@ -396,7 +361,7 @@ export default function AllTests() {
     const [loading, setLoading] = useState(false)
     const [limit, setLimit] = useState(20)
     const [page, setPage] = useState(1)
-    const [sortBy, setSortBy] = useState<SortingRule<TestStorage>>({id: "name", desc: false})
+    const [sortBy, setSortBy] = useState<ColumnSort>({id: "name", desc: false})
     const pagination = useMemo(() => ({ page, limit, sortBy, folder }), [page, limit, sortBy, folder])
     
     const [count, setCount] = useState(0)
