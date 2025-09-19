@@ -45,14 +45,13 @@ function checkVariable(v: Variable) {
 
 export default function VariableForm(props: VariableFormProps) {
     const [changeDetection, setChangeDetection] = useState<ChangeDetection>()
-    const [adding, setAdding] = useState(false)
     const [newModel, setNewModel] = useState<string>()
     useEffect(() => {
-        if (!changeDetection && !adding) {
-            const rds = [...props.variable.changeDetection]
-            setChangeDetection(rds.length > 0 ? rds[0] : undefined)
+        const rds = [...props.variable.changeDetection]
+        if (!changeDetection || !rds.includes(changeDetection)) {
+            setChangeDetection(rds[0])
         }
-    }, [props.variable, props.variable.changeDetection, changeDetection])
+    }, [props.variable])
     const usedModel = props.models.find(m => m.name === changeDetection?.model)
     const update = (rd: ChangeDetection) => {
         const newArray = [...props.variable.changeDetection]
@@ -131,13 +130,7 @@ export default function VariableForm(props: VariableFormProps) {
                 activeKey={changeDetection ? props.variable.changeDetection.indexOf(changeDetection) : "__add"}
                 onSelect={(e, index) => {
                     e.preventDefault()
-                    if (index === "__add") {
-                        setChangeDetection(undefined)
-                        setAdding(true)
-                    } else {
-                        setChangeDetection(props.variable.changeDetection[index as number])
-                        setAdding(false)
-                    }
+                    setChangeDetection(index === "__add" ? undefined : props.variable.changeDetection[index as number])
                 }}
             >
                 {tabs}
