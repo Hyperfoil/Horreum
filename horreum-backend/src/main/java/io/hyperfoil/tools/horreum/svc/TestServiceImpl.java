@@ -186,7 +186,8 @@ public class TestServiceImpl implements TestService {
             Log.debugf("Failed to retrieve test %s - could not find it in the database", testNameOrId);
         }
         // we need to be vague about the test existence
-        throw ServiceException.badRequest("Cannot upload to test " + testNameOrId);
+        throw ServiceException
+                .badRequest("Cannot upload to test " + testNameOrId + ", either it does not exist or user is not an uploader");
     }
 
     @Override
