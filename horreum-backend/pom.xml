@@ -254,6 +254,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <jvmArgs>--add-opens java.base/java.lang=ALL-UNNAMED</jvmArgs>
                     <properties>
                         <quarkus.container-image.additional-tags>${buildNumber}</quarkus.container-image.additional-tags>
                     </properties>
