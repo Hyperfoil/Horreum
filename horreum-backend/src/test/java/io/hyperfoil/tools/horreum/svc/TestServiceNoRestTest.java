@@ -602,7 +602,8 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
         ServiceException thrown = assertThrows(ServiceException.class,
                 () -> ((TestServiceImpl) testService).ensureTestExists(testName));
-        assertEquals("Cannot upload to test " + testName, thrown.getMessage());
+        assertEquals("Cannot upload to test " + testName + ", either it does not exist or user is not an uploader",
+                thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
 
@@ -614,7 +615,8 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
 
         ServiceException thrown = assertThrows(ServiceException.class,
                 () -> ((TestServiceImpl) testService).ensureTestExists(testName));
-        assertEquals("Cannot upload to test " + testName, thrown.getMessage());
+        assertEquals("Cannot upload to test " + testName + ", either it does not exist or user is not an uploader",
+                thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
 
@@ -622,7 +624,8 @@ class TestServiceNoRestTest extends BaseServiceNoRestTest {
     void testEnsureTestExistsFailure() {
         ServiceException thrown = assertThrows(ServiceException.class,
                 () -> ((TestServiceImpl) testService).ensureTestExists("NotExisting"));
-        assertEquals("Cannot upload to test NotExisting", thrown.getMessage());
+        assertEquals("Cannot upload to test NotExisting, either it does not exist or user is not an uploader",
+                thrown.getMessage());
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), thrown.getResponse().getStatus());
     }
 
