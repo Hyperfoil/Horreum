@@ -100,7 +100,7 @@ function CustomTable<D extends object>({
                 </CardHeader>
             )}
             <CardBody style={{ overflowX: "auto" }}>
-                <Table borders={false} isStriped variant="compact" {...table} style={{tableLayout: tableLayout}}>
+                <Table borders={false} variant="compact" {...table} style={{tableLayout: tableLayout}}>
                     {isLoading && (
                         <Thead>
                             <Tr>
