@@ -1,13 +1,14 @@
 import React, {useContext, useEffect, useMemo, useState} from "react"
 import { NavLink } from "react-router-dom"
 
-import {Bullseye, EmptyState, EmptyStateBody, Spinner} from '@patternfly/react-core';
+import { Bullseye, EmptyState, EmptyStateBody, Spinner, Tooltip, Truncate } from '@patternfly/react-core';
 import {Modal} from '@patternfly/react-core/deprecated';
 
 import {datasetApi, LabelValue} from "../../api"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
+import { t_global_font_family_mono } from '@patternfly/react-tokens'
 
 type LabelValuesModalProps = {
     datasetId: number
@@ -42,18 +43,19 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
         () =>
             labelValues.map(lv => ({
                 cells: [
-                    <React.Fragment key="name">{lv.name}</React.Fragment>,
-                    <NavLink key="schema" to={`/schema/${lv.schema.id}#labels+${encodeURIComponent(lv.name)}`}>
-                        {lv.schema.name} (<code>{lv.schema.uri}</code>)
-                    </NavLink>,
-                    <pre key="value">
-                        <code>{formatValue(lv.value)}</code>
-                    </pre>,
+                    lv.name,
+                    <Tooltip content={<code>{lv.schema.uri}</code>}>
+                        <NavLink key="schema" to={`/schema/${lv.schema.id}#labels+${encodeURIComponent(lv.name)}`}>{lv.schema.name}</NavLink>
+                    </Tooltip>,
+                    <Truncate content={formatValue(lv.value)} style={{ fontFamily: t_global_font_family_mono.var }}/>,
                 ],
             })),
         [labelValues]
     )
 
+    // width of each column in percentage (columns are `label`, `schema`, `value`)
+    const columnWidths : Array<10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50 | 60 | 70 | 80 | 90> = [50, 25, 25];
+    
     return (
         <Modal
             title="Effective label values"
@@ -68,11 +70,11 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
             )}
             {labelValues.length > 0 && (
                 <OuterScrollContainer style={{ overflowY:"auto", height: "80vh" }}>
-                    <Table aria-label="Simple Table" borders={false} variant="compact">
+                    <Table aria-label="Simple Table" borders={false} isStickyHeader variant="compact">
                         <Thead>
                             <Tr>
                                 {["Label", "Schema", "Value"].map((col, index) =>
-                                    <Th key={index} aria-label={"header-" + index}>{col}</Th>
+                                    <Th key={index} aria-label={"header-" + index} width={columnWidths[index]}>{col}</Th>
                                 )}
                             </Tr>
                         </Thead>
@@ -80,7 +82,7 @@ export default function LabelValuesModal(props: LabelValuesModalProps) {
                             {rows.map((row, index) =>
                                 <Tr key={index}>
                                     {row.cells.map((cell, index) =>
-                                        <Td key={index}>{cell}</Td>
+                                        <Td key={index} modifier="breakWord">{cell}</Td>
                                     )}
                                 </Tr>
                             )}
