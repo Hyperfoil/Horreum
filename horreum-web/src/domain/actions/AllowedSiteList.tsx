@@ -1,21 +1,20 @@
 import {useContext, useEffect, useState} from "react"
 
-import { UseSortByColumnOptions } from "react-table"
 import { Bullseye, Button, Spinner, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 
 import { addSite, AllowedSite, deleteSite, getAllowedSites} from "../../api"
 
-
 import AddAllowedSiteModal from "./AddAllowedSiteModal"
-import { Column } from "react-table"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import CustomTable, { StickyProps } from "../../components/CustomTable"
+import CustomTable from "../../components/CustomTable"
+import { ColumnDef, createColumnHelper } from "@tanstack/react-table"
 
-type C = Column<AllowedSite> & UseSortByColumnOptions<AllowedSite> & StickyProps
+const columnHelper = createColumnHelper<AllowedSite>()
 
 function AllowedSiteList() {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const [isOpen, setOpen] = useState(false)
     const [prefixes, setPrefixes] = useState<AllowedSite[]>()
 
     const fetchAllowedSites = () => {
@@ -26,48 +25,31 @@ function AllowedSiteList() {
     useEffect(() => {
         fetchAllowedSites()
     }, [])
-    const columns: C[] = [
-        {
-            Header: "Site prefix",
-            id: "prefix",
-            accessor: "prefix",
-            Cell: (arg: any) => {
-                const {
-                    cell: { value },
-                } = arg
-                return value === "" ? <span style={{ color: "#888" }}>&lt;empty&gt;</span> : value
-            },
-        },
-        {
-            Header: "",
-            id: "id",
-            accessor: "id",
-            disableSortBy: true,
-            isStickyColumn: true,
-            hasLeftBorder: false,
-            Cell: (arg: any) => {
-                const {
-                    cell: { value },
-                } = arg
-                return (
+
+    const columns : ColumnDef<AllowedSite, any>[] = [
+            columnHelper.accessor("prefix", {
+                header: "Site Prefix",
+                cell: ({ row }) => row.original.prefix === "" ? <span style={{ color: "#888" }}>&lt;empty&gt;</span> : row.original.prefix,
+            }),
+            columnHelper.display({
+                header: "",
+                id: "id",
+                cell: ({ row }) =>
                     <div style={{ textAlign: "right" }}>
                         <Button
                             variant="danger"
                             onClick={() => {
                                 if (prefixes) {
-                                    setPrefixes(prefixes.filter(p => p.id !== value))
+                                    setPrefixes(prefixes.filter(p => p.id !== row.original.id))
                                 }
-                                return deleteSite(value, alerting).then(_ => fetchAllowedSites())
+                                return deleteSite(row.original.id as number, alerting).then(fetchAllowedSites)
                             }}
                         >
                             Delete
                         </Button>
                     </div>
-                )
-            },
-        },
-    ]
-    const [isOpen, setOpen] = useState(false)
+            }),
+        ];
 
     return (
         <>

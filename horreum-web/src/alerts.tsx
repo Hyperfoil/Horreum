@@ -1,7 +1,7 @@
 import { Alert as PatternflyAlert, AlertActionCloseButton, AlertVariant } from "@patternfly/react-core"
 
 import {AppContext} from "./context/appContext";
-import React, {useContext} from "react";
+import {useContext} from "react";
 import {AppContextType} from "./context/@types/appContextTypes";
 
 export interface Alert {
@@ -71,7 +71,7 @@ function Alerts() {
                         />
                     }
                 >
-                    {alert.content}
+                    <>{alert.content}</>
                 </PatternflyAlert>
             ))}
         </div>

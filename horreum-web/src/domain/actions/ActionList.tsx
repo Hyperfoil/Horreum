@@ -7,12 +7,14 @@ import {allActions, addGlobalAction, deleteGlobalAction} from "../../api"
 import { isAdminSelector } from "../../auth"
 
 import AddActionModal from "./AddActionModal"
-import { Column } from "react-table"
 import {Action} from "../../api"
 import ActionLogModal from "../tests/ActionLogModal"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
+import { ColumnDef, createColumnHelper } from "@tanstack/react-table"
+
+const columnHelper = createColumnHelper<Action>()
 
 export default function ActionList() {
     const { alerting } = useContext(AppContext) as AppContextType;
@@ -40,39 +42,23 @@ export default function ActionList() {
     }
 */
 
-    const columns: Column<Action>[] = useMemo(
+    const columns: ColumnDef<Action, any>[] = useMemo(
         () => [
-            {
-                Header: "Event type",
-                id: "event",
-                accessor: "event",
-            },
-            {
-                Header: "Action type",
-                id: "type",
-                accessor: "type",
-            },
-            {
-                Header: "Run always",
-                id: "runAlways",
-                accessor: "runAlways",
-                Cell: (arg: any) => {
-                    return (
-                        <Switch
-                            isChecked={arg.cell.value}
-                            label="Enabled"
-                            onChange={(e, _) => e.preventDefault()}
-                        />
-                    )
-                },
-            },
-            {
-                Header: "Configuration",
-                id: "config",
-                accessor: "config",
-                Cell: (arg: any) => {
-                    const config = arg.cell.value
-                    switch (arg.row.original.type) {
+            columnHelper.accessor("event", {
+                header: "EventType",
+            }),
+            columnHelper.accessor("type", {
+                header: "Action Type",
+            }),
+            columnHelper.accessor("runAlways", {
+                header: "Run Always",
+                cell: ({ getValue }) => <Switch isChecked={getValue()} label="Enabled" onChange={(e, _) => e.preventDefault()} />,
+            }),
+            columnHelper.accessor("config", {
+                header: "Configuration",
+                cell: ({ row }) => {
+                    const config: any = row.original.config
+                    switch (row.original.type) {
                         case "http":
                             return config.url
                         case "github":
@@ -83,31 +69,21 @@ export default function ActionList() {
                             return "unknown"
                     }
                 },
-            },
-            {
-                Header: "",
-                id: "id",
-                accessor: "id",
-                disableSortBy: true,
-                isStickyColumn: true,
-                hasLeftBorder: false,
-                Cell: (arg: any) => {
-                    const {
-                        cell: { value },
-                    } = arg
-                    return (
-                        <div style={{ textAlign: "right" }}>
-                            <Button
-                                variant="danger"
-                                onClick={() => deleteGlobalAction(value, alerting).then(_ => fetchAllActions())}
-                            >
-                                Delete
-                            </Button>
-                        </div>
-                    )
-                },
-            },
-        ], undefined
+            }),
+            columnHelper.display({
+                id: "delete",
+                cell: ({ row }) =>
+                    <div style={{ textAlign: "right" }}>
+                        <Button
+                            variant="danger"
+                            onClick={() => deleteGlobalAction(row.original.id, alerting).then(_ => fetchAllActions())}
+                        >
+                            Delete
+                        </Button>
+                    </div>
+                }),
+            ],
+        []
     )
 
     return (

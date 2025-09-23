@@ -32,7 +32,7 @@ import {
 } from "../../api"
 import HttpActionUrlSelector from "../../components/HttpActionUrlSelector"
 import { CHANGE_NEW, EXPERIMENT_RESULT_NEW, TEST_NEW, DATASET_LABELS_COMPUTED } from "./reducers"
-import {SimpleSelect} from "@patternfly/react-templates";
+import { SimpleSelect } from "../../components/templates/SimpleSelect"
 
 function defaultConfig(type: string): ActionConfig {
   var config
@@ -334,7 +334,7 @@ function ExpressionHelp(props: ExpressionHelpProps) {
 }
 
 type GitHubTokenInputProps = {
-    helpIcon: ReactElement
+    helpIcon: ReactElement<any>
     secrets: any
     onChange(secrets: any): void
 }
@@ -370,7 +370,7 @@ function GitHubTokenInput(props: GitHubTokenInputProps) {
 }
 
 type SlackTokenInputProps = {
-    helpIcon: ReactElement
+    helpIcon: ReactElement<any>
     secrets: any
     onChange(secrets: any): void
 }

@@ -5,7 +5,7 @@ import { Alert, FormGroup, Switch,
 import { ConditionComponent as ConditionComponentDef } from "../api"
 import LogSlider from "./LogSlider"
 import NumberBound from "./NumberBound"
-import {SimpleSelect} from "@patternfly/react-templates";
+import { SimpleSelect } from "./templates/SimpleSelect"
 
 type ConditionComponentProps = {
     value: any
@@ -37,7 +37,7 @@ export default function ConditionComponent({ value, onChange, properties, isTest
             component = (
                 <SimpleSelect
                     initialOptions={Object.entries((properties as any).options).map(([name, title]) => (
-                        {value: name, content: title, selected: name === value}
+                        {value: name, content: `${title}`, selected: name === value}
                     ))}
                     selected={value}
                     onSelect={(_, item) => onChange(item as string)}

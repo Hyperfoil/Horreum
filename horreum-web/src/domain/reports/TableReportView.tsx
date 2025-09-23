@@ -147,17 +147,7 @@ function ComponentTable(props: ComponentTableProps) {
                     : undefined
             }
         />,
-        <Legend
-            key="legend"
-            iconType="line"
-            payload={series.map((s, i) => ({
-                id: s,
-                type: "line",
-                color: colors[i % colors.length],
-                value: seriesFormatter(s),
-            }))}
-            align="center"
-        />,
+        <Legend key="legend" iconType="line" align="center" />,
     ]
     return (
         <Level style={{ padding: "50px"}}>

@@ -1,7 +1,7 @@
 import { useCallback } from "react"
 import {logApi} from "../../api"
 import LogModal, { CommonLogModalProps, LogLevelIcon } from "../../components/LogModal"
-import { ActionLog } from "../../generated/models/ActionLog"
+import { ActionLog } from "../../generated"
 import { formatDateTime } from "../../utils"
 
 type ActionLogModalProps = {
@@ -9,9 +9,9 @@ type ActionLogModalProps = {
 } & CommonLogModalProps
 
 export default function ActionLogModal(props: ActionLogModalProps) {
-    const fetchCount = useCallback(level => logApi.getActionLogCount(props.testId, level), [props.testId])
+    const fetchCount = useCallback((level : number) => logApi.getActionLogCount(props.testId, level), [props.testId])
     const fetchLogs = useCallback(
-        (level, page, limit) =>
+        (level: number, page: number, limit: number) =>
             logApi.getActionLog(props.testId, level, limit, page).then(response =>
                 (response as ActionLog[]).map(log => ({
                     cells: [
@@ -25,7 +25,7 @@ export default function ActionLogModal(props: ActionLogModalProps) {
             ),
         [props.testId]
     )
-    const deleteLogs = useCallback((from, to) => logApi.deleteActionLogs(props.testId, from, to), [props.testId])
+    const deleteLogs = useCallback((from: number, to: number) => logApi.deleteActionLogs(props.testId, from, to), [props.testId])
     return (
         <LogModal
             {...props}

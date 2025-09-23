@@ -2,7 +2,6 @@ import {useContext, useEffect, useMemo, useState} from "react"
 import { useSelector } from "react-redux"
 
 import { NavLink } from "react-router-dom"
-import { CellProps, Column } from "react-table"
 import {
     Button,
     Toolbar,
@@ -25,8 +24,9 @@ import ListReportsModal from "./ListReportsModal"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
+import { ColumnDef, ColumnSort, createColumnHelper } from "@tanstack/react-table"
 
-type C = CellProps<TableReportSummary>
+const columnHelper = createColumnHelper<TableReportSummary>()
 
 type ReportGroup = {
     testId: number
@@ -39,9 +39,8 @@ export default function Reports(props: ReportGroup) {
     const { alerting } = useContext(AppContext) as AppContextType;
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
-    const [sort, setSort] = useState("title")
-    const [direction, setDirection] = useState<SortDirection>("Descending")
-    const pagination = useMemo(() => ({ page, perPage, sort, direction }), [page, perPage, sort, direction])
+    const [sortBy, setSortBy] = useState<ColumnSort>({id: 'title', desc: true})
+    const pagination = useMemo(() => ({ page, perPage, sortBy }), [page, perPage, sortBy])
     const [roles, setRoles] = useState<Team>()
     const test = {id: props.testId} as SelectedTest
 
@@ -55,12 +54,12 @@ export default function Reports(props: ReportGroup) {
     useEffect(() => {
         setLoading(true)
         reportApi.getTableReports(
-            pagination.direction,
+            pagination.sortBy.desc ? SortDirection.Descending : SortDirection.Ascending,
             undefined,
             pagination.perPage,
             pagination.page,
             roles?.key,
-            pagination.sort,
+            pagination.sortBy.id,
             (test && test.id) || undefined
         )
             .then(setTableReports)
@@ -68,74 +67,63 @@ export default function Reports(props: ReportGroup) {
             .finally(() => setLoading(false))
     }, [pagination, roles, teams, tableReportsReloadCounter])
 
-    const columns: Column<TableReportSummary>[] = useMemo(
+    const columns: ColumnDef<TableReportSummary, any>[] = useMemo(
         () => [
-            {
-                Header: "Title",
-                id: "title",
-                accessor: r => r.title.toLowerCase(), // for case-insensitive sorting
-                Cell: (arg: C) => {
-                    const title = arg.row.original.title
-                    const configId = arg.row.original.configId
-
+            columnHelper.accessor( 'title', {
+                header: "Title",
+                sortingFn: "text",
+                cell: ({ row }) => {
+                    const title = row.original.title;
+                    const configId = row.original.configId;
                     return configId === undefined ? (
-                        <div>title</div>
+                        <div>{title}</div>
                     ) : (
                         <NavLink to={`/test/${test.id}/reports/table/config/${configId}`}>
                             {title} <EditIcon />
                         </NavLink>
                     )
-                },
-            },
-            {
-                Header: "Last report",
-                id: "created",
-                accessor: "reports",
-                disableSortBy: true, // TODO: fix client-side sorting
-                Cell: (arg: C) => {
-                    const reports = arg.cell.value
-                    if (reports && reports.length > 0) {
-                        const last = reports[0]
-                        return (
-                            <NavLink to={`/test/${test.id}/reports/table/${last.id}`}>
-                                <ArrowRightIcon />
-                                {"\u00A0"}
-                                {formatDateTime(last.created)}
-                            </NavLink>
-                        )
-                    } else {
-                        return <div>"No report"</div>
-                    }
-                },
-            },
-            {
-                Header: "Total reports",
-                id: "count",
-                accessor: "reports",
-                disableSortBy: true, // TODO: fix client-side sorting
-                Cell: (arg: C) => {
-                    if (arg.cell.value.length === 0) {
-                        return <span style={{ paddingLeft: "16px" }}>0</span>
-                    }
-                    return (
-                        <Button
+                }
+            }),
+            columnHelper.accessor((summary) => summary.reports[0]?.created , {
+                header: 'Last Report',
+                id: 'created',
+                enableSorting: false,
+                cell: ({ row }) => {
+                    const reports = row.original.reports;
+                    return reports && reports.length > 0 ? (
+                        <NavLink to={`/test/${test.id}/reports/table/${reports[0].id}`}>
+                             <ArrowRightIcon />&nbsp;{formatDateTime(reports[0].created)}
+                        </NavLink>
+                    ) : (
+                        <div>"No report"</div>
+                    )
+                }
+            }),
+            columnHelper.accessor((row) => row.reports.length, {
+                header: 'Total Reports',
+                id: 'count',
+                enableSorting: false,
+                cell: ({ row }) => {
+                    return row.original.reports.length === 0 ? (
+                        <span style={{ paddingLeft: "16px" }}>0</span>
+                    ) : (
+                       <Button
                             icon={<FolderOpenIcon/>}
                             variant="link"
                             style={{paddingTop: 0, paddingBottom: 0}}
                             onClick={() =>
-                                setTableReportGroup({testId: arg.row.original.testId, title: arg.row.original.title})
+                                setTableReportGroup({testId: row.original.testId, title:row.original.title})
                             }
                         >
-                            {arg.cell.value.length}
+                            {row.original.reports.length}
                         </Button>
                     )
-                },
-            },
+                }
+            })
         ],
         []
     )
 
-    const isTester = useTester()
     const tableReportSummary =
         (tableReportGroup !== undefined &&
             tableReports?.reports.find(
@@ -184,10 +172,10 @@ export default function Reports(props: ReportGroup) {
             <CustomTable<TableReportSummary>
                 columns={columns}
                 data={tableReports?.reports || []}
+                sortBy={[sortBy]}
                 onSortBy={order => {
                     if (order.length > 0 && order[0]) {
-                        setSort(order[0].id)
-                        setDirection(order[0].desc ? "Descending" : "Ascending")
+                        setSortBy(order[0])
                     }
                 }}
                 isLoading={loading}

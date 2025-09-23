@@ -122,7 +122,6 @@ export default function PanelChart({
     onChangeSelected: propOnChangeSelected,
 }: PanelProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const [legend, setLegend] = useState<any[]>() // Payload is not exported
     const [lines, setLines] = useState<any[]>()
     const [datapoints, setDatapoints] = useState<TimeseriesTarget[]>()
     const [annotations, setAnnotations] = useState<AnnotationDefinition[]>()
@@ -131,14 +130,6 @@ export default function PanelChart({
     useEffect(() => {
         setDatapoints(undefined)
         fetchDatapoints(variables, fingerprint, startTime, endTime).then(response => {
-            setLegend(
-                response.map((tt, i) => ({
-                    id: tt.target,
-                    type: "line",
-                    value: tt.target,
-                    color: colors[i % colors.length],
-                }))
-            )
             setLines(
                 response.map((tt, i) => (
                     <Line
@@ -291,7 +282,7 @@ export default function PanelChart({
                                     tick={{ fontSize: 12 }}
                                     domain={["dataMin", "dataMax"]}
                                 />
-                                <Legend iconType="line" payload={legend} align="left" />
+                                <Legend iconType="line" align="left" />
                                 <Tooltip
                                     content={({ active, payload, label }) => {
                                         if (!active) {
