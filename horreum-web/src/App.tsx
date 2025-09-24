@@ -65,7 +65,22 @@ const router = createBrowserRouter(
             <Route path="/admin" element={<Admin/>}/>
             <Route path="/usersettings" element={<UserSettings/>}/>
         </Route>
-    )
+    ), {
+        future: {
+            // loaders will no longer revalidate by default after an action throws/returns a Response with a 4xx/5xx status code
+            v7_skipActionErrorRevalidation: true,
+            // it is also useful if you are using lazy to load your route modules
+            v7_partialHydration: true,
+            // This normalizes formMethod fields as uppercase HTTP methods to align with the fetch() behavior
+            v7_normalizeFormMethod: true,
+            // The fetcher lifecycle is now based on when it returns to an idle state rather than when its owner component unmounts
+            v7_fetcherPersist: true,
+            // This uses React.useTransition instead of React.useState for Router state updates
+            v7_startTransition: true,
+            // Changes the relative path matching and linking for multi-segment splats paths like dashboard/* (vs. just *)
+            v7_relativeSplatPath: true,
+        },
+    }
 );
 
 export default function App() {
