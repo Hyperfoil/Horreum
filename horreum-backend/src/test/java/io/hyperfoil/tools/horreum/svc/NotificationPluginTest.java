@@ -63,6 +63,11 @@ public class NotificationPluginTest {
     }
 
     @Test
+    public void testApiKeyExpiration() {
+        withAllPlugins(notification -> notification.notifyApiKeyExpiration("Dummy key", Instant.now(), Instant.now(), 1, 1));
+    }
+
+    @Test
     public void test() {
         var event = new MissingValuesEvent(new DatasetDAO.Info(1, 1, 0, 1), new HashSet<>(Arrays.asList("foo", "bar")), true);
         withAllPlugins(notification -> notification.notifyMissingValues("Dummy Test", null, event));

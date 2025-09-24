@@ -7,7 +7,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.time.ZoneOffset;
 import java.util.Date;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -164,8 +164,8 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("baseUrl", baseUrl)
                     .data("username", username)
                     .data("keyName", keyName)
-                    .data("creation", creation.truncatedTo(ChronoUnit.DAYS))
-                    .data("lastAccess", lastAccess.truncatedTo(ChronoUnit.DAYS))
+                    .data("creation", creation.atOffset(ZoneOffset.UTC).toLocalDateTime())
+                    .data("lastAccess", lastAccess.atOffset(ZoneOffset.UTC).toLocalDateTime())
                     .data("expiration", toExpiration)
                     .data("active", active)
                     .render();
