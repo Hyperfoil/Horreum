@@ -3,16 +3,14 @@ package io.hyperfoil.tools.horreum.svc;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.time.Instant;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.TestInfo;
 
@@ -27,38 +25,17 @@ import io.hyperfoil.tools.horreum.api.SortDirection;
 import io.hyperfoil.tools.horreum.api.alerting.MissingDataRule;
 import io.hyperfoil.tools.horreum.api.alerting.Variable;
 import io.hyperfoil.tools.horreum.api.alerting.Watch;
-import io.hyperfoil.tools.horreum.api.data.Action;
-import io.hyperfoil.tools.horreum.api.data.ActionLog;
-import io.hyperfoil.tools.horreum.api.data.Dataset;
-import io.hyperfoil.tools.horreum.api.data.ExperimentComparison;
-import io.hyperfoil.tools.horreum.api.data.ExperimentProfile;
-import io.hyperfoil.tools.horreum.api.data.Extractor;
-import io.hyperfoil.tools.horreum.api.data.FingerprintValue;
-import io.hyperfoil.tools.horreum.api.data.Fingerprints;
-import io.hyperfoil.tools.horreum.api.data.Schema;
-import io.hyperfoil.tools.horreum.api.data.Test;
-import io.hyperfoil.tools.horreum.api.data.TestExport;
-import io.hyperfoil.tools.horreum.api.data.Transformer;
-import io.hyperfoil.tools.horreum.api.data.View;
-import io.hyperfoil.tools.horreum.api.data.ViewComponent;
+import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
-import io.hyperfoil.tools.horreum.entity.alerting.ChangeDetectionDAO;
-import io.hyperfoil.tools.horreum.entity.alerting.MissingDataRuleDAO;
-import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
-import io.hyperfoil.tools.horreum.entity.alerting.WatchDAO;
-import io.hyperfoil.tools.horreum.entity.data.ActionDAO;
-import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.entity.data.RunDAO;
-import io.hyperfoil.tools.horreum.entity.data.TestDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.*;
+import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.VariableMapper;
 import io.hyperfoil.tools.horreum.server.CloseMe;
-import io.hyperfoil.tools.horreum.test.InMemoryAMQTestProfile;
-import io.hyperfoil.tools.horreum.test.PostgresResource;
-import io.hyperfoil.tools.horreum.test.TestUtil;
+import io.hyperfoil.tools.horreum.test.*;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -69,7 +46,7 @@ import io.restassured.response.Response;
 @QuarkusTest
 @QuarkusTestResource(PostgresResource.class)
 @QuarkusTestResource(OidcWiremockTestResource.class)
-@TestProfile(InMemoryAMQTestProfile.class)
+@TestProfile(HorreumTestProfile.class)
 class TestServiceTest extends BaseServiceTest {
 
     @org.junit.jupiter.api.Test
@@ -203,7 +180,7 @@ class TestServiceTest extends BaseServiceTest {
 
         Test t = new ObjectMapper().readValue(
                 readFile(p.resolve("quarkus_quickstart_test_empty.json").toFile()), Test.class);
-        assertEquals("perf-team", t.owner);
+        assertEquals("foo-team", t.owner);
         t.owner = "foo-team";
         Test t2 = createTest(t);
         assertEquals(t.description, t2.description);
@@ -633,5 +610,97 @@ class TestServiceTest extends BaseServiceTest {
                 .statusCode(200)
                 .extract()
                 .as(TestService.TestQueryResult.class);
+    }
+
+    @org.junit.jupiter.api.Test
+    void testUpdateLabelsOnRuns() throws IOException, InterruptedException {
+        Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
+        p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+        ObjectMapper mapper = new ObjectMapper();
+        String s = readFile(p.resolve("quarkus_sb_schema.json").toFile());
+        Integer schemaId = jsonRequest().body(s).post("/api/schema/import").then().statusCode(201).extract().as(Integer.class);
+
+        long currentNumberOfLabelValues = LabelValueDAO.count();
+
+        s = readFile(p.resolve("quarkus_sb_compare_ds.json").toFile());
+        Integer schemaId2 = jsonRequest().body(s).post("/api/schema/import").then().statusCode(201).extract().as(Integer.class);
+        assertTrue(schemaId2 > schemaId);
+
+        String t = readFile(p.resolve("quarkus_sb_test.json").toFile());
+        Integer testId = jsonRequest().body(t).post("/api/test/import").then().statusCode(201).extract().as(Integer.class);
+
+        TestDAO test = TestDAO.<TestDAO> find("name", "quarkus-spring-boot-comparison").firstResult();
+        assertEquals(1, test.transformers.size());
+
+        //let's get all the labels to make sure they're all there
+        List<Label> labels = jsonRequest().get("/api/schema/" + schemaId + "/labels")
+                .then().statusCode(200).extract().body().jsonPath().getList(".", Label.class);
+        assertEquals(30, labels.size());
+
+        List<Label> labels2 = jsonRequest().get("/api/schema/" + schemaId2 + "/labels")
+                .then().statusCode(200).extract().body().jsonPath().getList(".", Label.class);
+        assertEquals(11, labels2.size());
+
+        BlockingQueue<Test> newDataPoints = serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW, testId);
+        List<Integer> runIds = new ArrayList<>();
+        for (int i = 1; i < 5; i++) {
+
+            BlockingQueue<Test> events = serviceMediator.getEventQueue(AsyncEventChannels.RUN_NEW, testId);
+            Run run = new Run();
+            run.testid = testId;
+            run.data = mapper.readTree(p.resolve("quarkus_sb_run" + i + ".json").toFile());
+            run.start = Instant.parse(run.data.get("timing").get("start").asText());
+            run.stop = Instant.parse(run.data.get("timing").get("stop").asText());
+            run.owner = "foo-team";
+
+            Response response = jsonRequest()
+                    .auth()
+                    .oauth2(getUploaderToken())
+                    .body(run)
+                    .post("/api/run/test");
+            assertEquals(202, response.statusCode());
+            assertEquals(1, response.getBody().as(List.class).size());
+
+            runIds.addAll(response.getBody().as(List.class));
+            assertFalse(runIds.isEmpty());
+            assertNotNull(events.poll(10, TimeUnit.SECONDS));
+        }
+        //make sure we've generating datapoints
+        assertNotNull(newDataPoints.poll(10, TimeUnit.SECONDS));
+
+        //we should have 20 datasets now in total
+        assertEquals(20, DatasetDAO.findAll().count());
+
+        //give Horreum some time to calculate LabelValues
+        Thread.sleep(2000);
+        System.out.println("Number of LabelValues: " + LabelValueDAO.count());
+        assertEquals(currentNumberOfLabelValues + 220, LabelValueDAO.count());
+
+        OptionalInt maxId;
+        try (Stream<DataPointDAO> datapoints = DataPointDAO.findAll().stream()) {
+            maxId = datapoints.mapToInt(n -> n.id).max();
+        }
+
+        //let's update one label
+        List<Integer> updatedLabels = jsonRequest().body(List.of(labels2.get(0))).put("/api/schema/" + schemaId2 + "/labels")
+                .then().statusCode(200).extract().body().jsonPath().getList(".", Integer.class);
+        assertEquals(1, updatedLabels.size());
+
+        Thread.sleep(2000);
+        try (Stream<DataPointDAO> datapoints = DataPointDAO.findAll().stream()) {
+            maxId = datapoints.mapToInt(n -> n.id).max();
+        }
+
+        //lets update 11 labels
+        updatedLabels = jsonRequest().body(labels2).put("/api/schema/" + schemaId2 + "/labels")
+                .then().statusCode(200).extract().body().jsonPath().getList(".", Integer.class);
+        assertEquals(11, updatedLabels.size());
+
+        Thread.sleep(2000);
+        int oldMaxId = maxId.getAsInt();
+        try (Stream<DataPointDAO> datapoints = DataPointDAO.findAll().stream()) {
+            maxId = datapoints.mapToInt(n -> n.id).max();
+        }
+        assertEquals(oldMaxId + 80, maxId.getAsInt());
     }
 }

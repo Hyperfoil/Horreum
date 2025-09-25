@@ -661,7 +661,7 @@ public class AlertingServiceImpl implements AlertingService {
         }
 
         var changeQuery = session
-                .createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
+                .createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.datasetId " +
                         "WHERE c.variable.id = :variableId AND fp.fpHash = :fpHash " +
                         "AND (c.timestamp < :validTimestamp OR (c.timestamp = :validTimestamp AND :exclusive = TRUE)) " +
                         "ORDER by c.timestamp DESC", ChangeDAO.class);
@@ -679,7 +679,7 @@ public class AlertingServiceImpl implements AlertingService {
         }
 
         List<DataPointDAO> dataPoints = session.createQuery(
-                "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
+                "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.datasetId " +
                         "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
                         "WHERE dp.variable.id = :variableId AND dp.timestamp BETWEEN :changeTimestamp AND :nextTimestamp " +
                         "AND fp.fpHash = :fpHash " +
