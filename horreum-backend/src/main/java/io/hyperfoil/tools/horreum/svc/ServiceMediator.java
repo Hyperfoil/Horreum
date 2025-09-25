@@ -150,7 +150,6 @@ public class ServiceMediator {
         datasetService.deleteDataset(datasetId);
     }
 
-    @Transactional
     void newChange(Change.Event event) {
         actionService.onNewChange(event);
         aggregator.onNewChange(event);
