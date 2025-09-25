@@ -151,18 +151,17 @@ public class ServiceMediator {
     }
 
     @Transactional
-    void updateLabels(Dataset.LabelsUpdatedEvent event) {
-        alertingService.onLabelsUpdated(event);
-    }
-
-    @Transactional
     void newChange(Change.Event event) {
         actionService.onNewChange(event);
         aggregator.onNewChange(event);
     }
 
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void onNewDataset(Dataset.EventNew eventNew) {
-        datasetService.onNewDataset(eventNew);
+        datasetService.calculateLabelValues(eventNew.testId, eventNew.datasetId, eventNew.labelIds);
+        alertingService
+                .onLabelValuesCalculation(
+                        new Dataset.LabelsUpdatedEvent(eventNew.testId, eventNew.datasetId, eventNew.isRecalculation));
         // if labelId > 0, you are not recomputing the entire dataset label values
         if (eventNew.labelIds == null || eventNew.labelIds.length == 0) {
             this.actionService.onDatasetLabelsComputed(eventNew.testId, eventNew.datasetId);
@@ -172,7 +171,6 @@ public class ServiceMediator {
     @Incoming("dataset-event-in")
     @Blocking(ordered = false, value = "horreum.dataset.pool")
     @ActivateRequestContext
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     public void processDatasetEvents(Dataset.EventNew newEvent) {
         onNewDataset(newEvent);
         validateDataset(newEvent.datasetId);

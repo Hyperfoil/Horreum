@@ -92,10 +92,23 @@ public class EmailPlugin implements NotificationPlugin {
                     .data("runId", event.dataset.runId)
                     .data("datasetOrdinal", event.dataset.ordinal)
                     .data("changes", event.changes())
-                    .createUni().subscribe().with(content -> {
-                        mailer.send(Mail.withHtml(data, subject, content)).await().atMost(sendMailTimeout);
+                    .createUni()
+                    // when the content is ready, TRANSFORM it into the next async action
+                    .onItem().transformToUni(content -> {
                         Log.debugf("Sending mail: %s", content);
-                    });
+                        // return the Uni from the mailer. DO NOT block or await!
+                        return mailer.send(Mail.withHtml(data, subject, content));
+                    })
+                    .ifNoItem().after(sendMailTimeout).fail()
+                    // add proper error handling to avoid "dropped" exceptions
+                    // e.g., Mutiny had to drop the following exception: io.smallrye.mutiny.TimeoutException
+                    .onFailure().invoke(e -> {
+                        Log.errorf(e, "Failed to send notification email for test %s and run %s", event.testName,
+                                event.dataset.runId);
+                    })
+                    .subscribe().with(item -> Log.debug("Successfully sent notification email."),
+                            failure -> {
+                                /* this is now handled by onFailure() above */ });
         }
 
         @Override

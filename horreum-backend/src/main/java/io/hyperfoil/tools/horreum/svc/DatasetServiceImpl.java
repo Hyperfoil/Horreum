@@ -43,9 +43,9 @@ import io.hyperfoil.tools.horreum.api.data.Label;
 import io.hyperfoil.tools.horreum.api.data.ValidationError;
 import io.hyperfoil.tools.horreum.api.services.DatasetService;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
-import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
+import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
@@ -451,7 +451,7 @@ public class DatasetServiceImpl implements DatasetService {
         return DatasetMapper.from(dataset);
     }
 
-    private List<Object[]> calculateLabelValues(int datasetId, boolean allLabels, List<Integer> queryLabelIds) {
+    private List<Object[]> getLabelValuesToCompute(int datasetId, boolean allLabels, List<Integer> queryLabelIds) {
         List<Object[]> extracted;
         try {
             // Note: we are fetching even labels that are marked as private/could be otherwise inaccessible
@@ -487,23 +487,23 @@ public class DatasetServiceImpl implements DatasetService {
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
-    void calculateLabelValues(int testId, int datasetId, Integer[] queryLabelIds, boolean isRecalculation) {
+    void calculateLabelValues(int testId, int datasetId, Integer[] queryLabelIds) {
         Log.debugf("Calculating label values for dataset %d, labels %s", datasetId, Arrays.toString(queryLabelIds));
-        List<Object[]> extracted;
+        List<Object[]> toCompute;
         if (queryLabelIds == null || queryLabelIds.length == 0) {
-            extracted = this.calculateLabelValues(datasetId, true, Collections.emptyList());
+            toCompute = this.getLabelValuesToCompute(datasetId, true, Collections.emptyList());
         } else {
             // apply batching if the number of labels is too big
-            extracted = new ArrayList<>();
+            toCompute = new ArrayList<>();
             List<List<Integer>> batches = ListUtils.partition(Arrays.asList(queryLabelIds), LABEL_VALUES_RECALC_BATCH_SIZE);
             for (List<Integer> batch : batches) {
-                extracted.addAll(this.calculateLabelValues(datasetId, false, new ArrayList<>(batch)));
+                toCompute.addAll(this.getLabelValuesToCompute(datasetId, false, new ArrayList<>(batch)));
             }
         }
 
         // Delete data before re-computing Dataset specific data
         FingerprintDAO.deleteById(datasetId);
-        Util.evaluateWithCombinationFunction(extracted,
+        Util.evaluateWithCombinationFunction(toCompute,
                 (row) -> (String) row[2],
                 (row) -> (row[3] instanceof ArrayNode ? flatten((ArrayNode) row[3]) : (JsonNode) row[3]),
                 (row, result) -> createLabelValue(datasetId, testId, (int) row[0], Util.convertToJson(result)),
@@ -515,12 +515,11 @@ public class DatasetServiceImpl implements DatasetService {
 
         // create new dataset views from the recently created label values
         calcDatasetViews(datasetId);
-
         createFingerprint(datasetId, testId);
-        mediator.updateLabels(new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation));
-        if (mediator.testMode())
-            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_UPDATED_LABELS,
-                    testId, new Dataset.LabelsUpdatedEvent(testId, datasetId, isRecalculation)));
+
+        // label values have been recomputed, invalidate existing datapoints
+        // cleanup datapoints for the current dataset
+        DataPointDAO.delete("dataset.id", datasetId);
     }
 
     @Transactional
@@ -656,10 +655,6 @@ public class DatasetServiceImpl implements DatasetService {
             FingerprintDAO.deleteById(dataset.id);
             createFingerprint(dataset.id, testId);
         }
-    }
-
-    public void onNewDataset(Dataset.EventNew event) {
-        calculateLabelValues(event.testId, event.datasetId, event.labelIds, event.isRecalculation);
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)

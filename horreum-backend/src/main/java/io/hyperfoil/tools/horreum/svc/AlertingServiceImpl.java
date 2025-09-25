@@ -18,7 +18,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -220,8 +219,6 @@ public class AlertingServiceImpl implements AlertingService {
     @Inject
     ChangeDetectionModelResolver modelResolver;
 
-    static ConcurrentHashMap<Integer, AtomicInteger> retryCounterSet = new ConcurrentHashMap<>();
-
     // entries can be removed from timer thread while normally this is updated from one of blocking threads
     private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
@@ -233,33 +230,15 @@ public class AlertingServiceImpl implements AlertingService {
         System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
     }
 
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Transactional
-    public void onLabelsUpdated(Dataset.LabelsUpdatedEvent event) {
+    public void onLabelValuesCalculation(Dataset.LabelsUpdatedEvent event) {
         boolean sendNotifications;
-        DataPointDAO.delete("dataset.id", event.datasetId);
         DatasetDAO dataset = DatasetDAO.findById(event.datasetId);
         if (dataset == null) {
-            // The run is not committed yet?
-            // Retry `horreum.alerting.updateLabel.retries` times before logging a warning
-            retryCounterSet.putIfAbsent(event.datasetId, new AtomicInteger(0));
-            int retryCounter = retryCounterSet.get(event.datasetId).getAndIncrement();
-            if (retryCounter < labelCalcRetries) {
-                Log.infof("Retrying labels update for dataset %d, attempt %d/%d", event.datasetId, retryCounter,
-                        this.labelCalcRetries);
-                vertx.setTimer(1000, timerId -> messageBus.executeForTest(event.datasetId, () -> Util.withTx(tm, () -> {
-                    onLabelsUpdated(event);
-                    return null;
-                })));
-                return;
-            } else {
-                //we have retried `horreum.alerting.updateLabel.retries` number of times, log a warning and stop retrying
-                Log.warnf("Unsuccessfully retried updating labels %d times for dataset %d. Stopping", this.labelCalcRetries,
-                        event.datasetId);
-                retryCounterSet.remove(event.datasetId);
-                return;
-            }
+            // if this happens, means the dataset has been removed before processing the event
+            // no need to retry as the same id will not appear anymore
+            throw new RuntimeException("Cannot find  dataset with id " + event.datasetId);
         }
+
         if (event.isRecalculation) {
             sendNotifications = false;
         } else {
@@ -270,15 +249,17 @@ public class AlertingServiceImpl implements AlertingService {
                 sendNotifications = true;
             }
         }
-        Recalculation recalculation = new Recalculation();
-        recalculation.clearDatapoints = true;
-        recalculation.lastDatapoint = true;
 
-        recalculateDatapointsForDataset(dataset, sendNotifications, false, recalculation);
+        recalculateDatapointsForDataset(dataset, sendNotifications, false, new Recalculation(true, true));
         recalculateMissingDataRules(dataset);
+
+        if (mediator.testMode())
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_UPDATED_LABELS,
+                    event.testId, new Dataset.LabelsUpdatedEvent(event.testId, event.datasetId, event.isRecalculation)));
     }
 
-    private void recalculateMissingDataRules(DatasetDAO dataset) {
+    @Transactional
+    void recalculateMissingDataRules(DatasetDAO dataset) {
         MissingDataRuleResultDAO.deleteForDataset(dataset.id);
         List<Object[]> ruleValues = session
                 .createNativeQuery(LOOKUP_RULE_LABEL_VALUES, Object[].class)
@@ -312,7 +293,7 @@ public class AlertingServiceImpl implements AlertingService {
         new MissingDataRuleResultDAO(ruleId, dataset.id, dataset.start).persist();
     }
 
-    private void recalculateDatapointsForDataset(DatasetDAO dataset, boolean notify, boolean debug,
+    void recalculateDatapointsForDataset(DatasetDAO dataset, boolean notify, boolean debug,
             Recalculation recalculation) {
         Log.debugf("Analyzing dataset %d (%d/%d)", (long) dataset.id, (long) dataset.run.id, dataset.ordinal);
         TestDAO test = TestDAO.findById(dataset.testid);
@@ -324,7 +305,7 @@ public class AlertingServiceImpl implements AlertingService {
             return;
         }
 
-        emitDatapoints(dataset, notify, debug, recalculation);
+        calculateDatapoints(dataset, notify, debug, recalculation);
     }
 
     private boolean testFingerprint(DatasetDAO dataset, String filter) {
@@ -406,7 +387,8 @@ public class AlertingServiceImpl implements AlertingService {
         }
     }
 
-    private void emitDatapoints(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
+    @Transactional
+    void calculateDatapoints(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
         Set<String> missingValueVariables = new HashSet<>();
         List<VariableData> values = session.createNativeQuery(LOOKUP_VARIABLES, Tuple.class)
                 .setParameter(1, dataset.testid)
@@ -536,7 +518,7 @@ public class AlertingServiceImpl implements AlertingService {
     @Transactional
     void createDataPoint(DatasetDAO dataset, Instant timestamp, int variableId, double value, boolean notify,
             Recalculation recalculation) {
-        DataPointDAO dataPoint = null;
+        DataPointDAO dataPoint;
         VariableDAO variableDAO = VariableDAO.findById(variableId);
         if (recalculation.clearDatapoints) {
             dataPoint = new DataPointDAO();
@@ -562,10 +544,12 @@ public class AlertingServiceImpl implements AlertingService {
         }
     }
 
+    @Transactional
     private void logCalculationMessage(DatasetDAO dataSet, int level, String format, Object... args) {
         logCalculationMessage(dataSet.testid, dataSet.id, level, format, args);
     }
 
+    @Transactional
     private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
         String msg = args.length == 0 ? format : format.formatted(args);
         Log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
@@ -1399,6 +1383,14 @@ public class AlertingServiceImpl implements AlertingService {
         boolean clearDatapoints;
 
         Map<Integer, DatasetDAO.Info> datasetsWithoutValue = new HashMap<>();
+
+        public Recalculation() {
+        }
+
+        public Recalculation(boolean lastDatapoint, boolean clearDatapoints) {
+            this.lastDatapoint = lastDatapoint;
+            this.clearDatapoints = clearDatapoints;
+        }
     }
 
     static final class VarAndFingerprint {

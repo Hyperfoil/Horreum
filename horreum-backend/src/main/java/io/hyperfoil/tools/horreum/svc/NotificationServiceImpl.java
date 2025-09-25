@@ -84,7 +84,8 @@ public class NotificationServiceImpl implements NotificationService {
             Log.debug("Notification skipped");
             return;
         }
-        Log.debugf("Received new changes in test %d (%s), dataset %d/%d (fingerprint: %s)",
+        // good information to log at INFO
+        Log.infof("Received new changes in test %d (%s), dataset %d/%d (fingerprint: %s)",
                 event.dataset.testId, event.testName, event.dataset.runId, event.dataset.ordinal, event.fingerprint);
         notifyAll(event.dataset.testId, n -> n.notifyChanges(event));
     }
@@ -112,6 +113,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .setParameter(1, testId).getResultList();
         if (results.isEmpty()) {
             Log.infof("There are no subscribers for notification on test %d!", testId);
+            return;
         }
         for (Object[] pair : results) {
             if (pair.length != 3) {
