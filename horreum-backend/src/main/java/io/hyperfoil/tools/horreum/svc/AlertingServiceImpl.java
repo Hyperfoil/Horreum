@@ -190,7 +190,6 @@ public class AlertingServiceImpl implements AlertingService {
               SELECT 1 FROM fingerprint fp
               WHERE fp.dataset_id = cc.dataset_id
                 AND fp.fp_hash = :fpHash
-                AND json_equals(fp.fingerprint, :fingerprint)
           );
         """;
 
@@ -641,13 +640,12 @@ public class AlertingServiceImpl implements AlertingService {
                 "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
                         "WHERE dp.variable_id = :variableId " +
                         "AND (timestamp > :validTimestamp OR (timestamp = :validTimestamp AND :exclusive)) " +
-                        "AND fp.fp_hash = :fpHash AND json_equals(fp.fingerprint, :fingerprint)",
+                        "AND fp.fp_hash = :fpHash",
                 Instant.class)
                 .setParameter("variableId", variable.id)
                 .setParameter("validTimestamp", valid != null ? valid.timestamp : LONG_TIME_AGO, StandardBasicTypes.INSTANT)
                 .setParameter("exclusive", valid == null || !valid.inclusive)
                 .setParameter("fpHash", fpHash)
-                .setParameter("fingerprint", fingerprint, JsonBinaryType.INSTANCE)
                 .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
         if (nextTimestamp == null) {
             // this is the exit clause to stops the recursive invocation
@@ -663,7 +661,6 @@ public class AlertingServiceImpl implements AlertingService {
                     .setParameter("validTimestamp", valid.timestamp, StandardBasicTypes.INSTANT)
                     .setParameter("exclusive", !valid.inclusive)
                     .setParameter("fpHash", fpHash)
-                    .setParameter("fingerprint", fingerprint, JsonBinaryType.INSTANCE)
                     .executeUpdate();
             Log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=",
                     valid.timestamp, variable.id, fingerprint);
@@ -673,14 +670,12 @@ public class AlertingServiceImpl implements AlertingService {
                 .createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
                         "WHERE c.variable = :variableId AND fp.fpHash = :fpHash " +
                         "AND (c.timestamp < :validTimestamp OR (c.timestamp = :validTimestamp AND :exclusive = TRUE)) " +
-                        "AND TRUE = function('json_equals', fp.fingerprint, :fingerprint) " +
                         "ORDER by c.timestamp DESC", ChangeDAO.class);
         changeQuery
                 .setParameter("variableId", variable)
                 .setParameter("validTimestamp", valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
                 .setParameter("exclusive", valid == null || valid.inclusive)
-                .setParameter("fpHash", fpHash)
-                .setParameter("fingerprint", fingerprint, JsonBinaryType.INSTANCE);
+                .setParameter("fpHash", fpHash);
         ChangeDAO lastChange = changeQuery.setMaxResults(1).getResultStream().findFirst().orElse(null);
 
         Instant changeTimestamp = LONG_TIME_AGO;
@@ -692,14 +687,14 @@ public class AlertingServiceImpl implements AlertingService {
         List<DataPointDAO> dataPoints = session.createQuery(
                 "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
                         "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
-                        "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 " +
-                        "AND TRUE = function('json_equals', fp.fingerprint, ?4) " +
+                        "WHERE dp.variable = :variableId AND dp.timestamp BETWEEN :changeTimestamp AND :nextTimestamp " +
+                        "AND fp.fpHash = :fpHash " +
                         "ORDER BY dp.timestamp DESC, dp.dataset.id DESC",
                 DataPointDAO.class)
-                .setParameter(1, variable)
-                .setParameter(2, changeTimestamp)
-                .setParameter(3, nextTimestamp)
-                .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
+                .setParameter("variableId", variable)
+                .setParameter("changeTimestamp", changeTimestamp)
+                .setParameter("nextTimestamp", nextTimestamp)
+                .setParameter("fpHash", fpHash)
                 .getResultList();
         // Last datapoint is already in the list
         if (dataPoints.isEmpty()) {
