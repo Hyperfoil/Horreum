@@ -7,6 +7,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 
 import org.hibernate.annotations.Type;
 
@@ -31,11 +33,22 @@ public class FingerprintDAO extends PanacheEntityBase {
     @Column(columnDefinition = "jsonb")
     public JsonNode fingerprint;
 
+    @Column(name = "fp_hash")
+    public Integer fpHash;
+
+    @PrePersist
+    @PreUpdate
+    // guarantees the hash is computed before persisting the fingerprint
+    public void populateHash() {
+        this.fpHash = fingerprint != null ? fingerprint.hashCode() : null;
+    }
+
     @Override
     public String toString() {
         return "FP{" +
                 "datasetId=" + datasetId +
                 ", fingerprint=" + fingerprint +
+                ", fpHash=" + fpHash +
                 '}';
     }
 }

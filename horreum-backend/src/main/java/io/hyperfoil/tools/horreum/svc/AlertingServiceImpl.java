@@ -189,6 +189,7 @@ public class AlertingServiceImpl implements AlertingService {
           AND EXISTS (
               SELECT 1 FROM fingerprint fp
               WHERE fp.dataset_id = cc.dataset_id
+                AND fp.fp_hash = :fpHash
                 AND json_equals(fp.fingerprint, :fingerprint)
           );
         """;
@@ -600,10 +601,12 @@ public class AlertingServiceImpl implements AlertingService {
                 Log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
                         dataPoint.datasetId, dataPoint.timestamp,
                         variable.id, variable.name, dataPoint.value);
-                JsonNode fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(dataPoint.datasetId)
-                        .map(fp -> fp.fingerprint).orElse(null);
 
-                VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
+                FingerprintDAO fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(dataPoint.datasetId).orElse(null);
+                JsonNode fpNode = fingerprint != null ? fingerprint.fingerprint : null;
+                Integer fpHash = fingerprint != null ? fingerprint.fpHash : null;
+
+                VarAndFingerprint key = new VarAndFingerprint(variable.id, fpNode);
                 Log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint,
                         dataPoint.timestamp, validUpTo.get(key));
                 validUpTo.compute(key, (ignored, current) -> {
@@ -613,7 +616,7 @@ public class AlertingServiceImpl implements AlertingService {
                         return current;
                     }
                 });
-                runChangeDetection(VariableDAO.findById(variable.id), fingerprint, event.notify, true, lastDatapoint);
+                runChangeDetection(VariableDAO.findById(variable.id), fpNode, fpHash, event.notify, true, lastDatapoint);
             } else {
                 Log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
                         dataPoint.datasetId, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
@@ -626,22 +629,25 @@ public class AlertingServiceImpl implements AlertingService {
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
-    void tryRunChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean lastDatapoint) {
-        runChangeDetection(variable, fingerprint, notify, false, lastDatapoint);
+    void tryRunChangeDetection(VariableDAO variable, JsonNode fingerprint, Integer fpHash, boolean notify) {
+        runChangeDetection(variable, fingerprint, fpHash, notify, false, false);
     }
 
     @Transactional
-    void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists,
+    void runChangeDetection(VariableDAO variable, JsonNode fingerprint, Integer fpHash, boolean notify, boolean expectExists,
             boolean lastDatapoint) {
         UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
         Instant nextTimestamp = session.createNativeQuery(
                 "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
-                        "WHERE dp.variable_id = ?1 AND (timestamp > ?2 OR (timestamp = ?2 AND ?3)) AND json_equals(fp.fingerprint, ?4)",
+                        "WHERE dp.variable_id = :variableId " +
+                        "AND (timestamp > :validTimestamp OR (timestamp = :validTimestamp AND :exclusive)) " +
+                        "AND fp.fp_hash = :fpHash AND json_equals(fp.fingerprint, :fingerprint)",
                 Instant.class)
-                .setParameter(1, variable.id)
-                .setParameter(2, valid != null ? valid.timestamp : LONG_TIME_AGO, StandardBasicTypes.INSTANT)
-                .setParameter(3, valid == null || !valid.inclusive)
-                .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
+                .setParameter("variableId", variable.id)
+                .setParameter("validTimestamp", valid != null ? valid.timestamp : LONG_TIME_AGO, StandardBasicTypes.INSTANT)
+                .setParameter("exclusive", valid == null || !valid.inclusive)
+                .setParameter("fpHash", fpHash)
+                .setParameter("fingerprint", fingerprint, JsonBinaryType.INSTANCE)
                 .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
         if (nextTimestamp == null) {
             // this is the exit clause to stops the recursive invocation
@@ -656,6 +662,7 @@ public class AlertingServiceImpl implements AlertingService {
                     .setParameter("variableId", variable.id)
                     .setParameter("validTimestamp", valid.timestamp, StandardBasicTypes.INSTANT)
                     .setParameter("exclusive", !valid.inclusive)
+                    .setParameter("fpHash", fpHash)
                     .setParameter("fingerprint", fingerprint, JsonBinaryType.INSTANCE)
                     .executeUpdate();
             Log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=",
@@ -664,14 +671,16 @@ public class AlertingServiceImpl implements AlertingService {
 
         var changeQuery = session
                 .createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
-                        "WHERE c.variable = ?1 AND (c.timestamp < ?2 OR (c.timestamp = ?2 AND ?3 = TRUE)) AND " +
-                        "TRUE = function('json_equals', fp.fingerprint, ?4) " +
+                        "WHERE c.variable = :variableId AND fp.fpHash = :fpHash " +
+                        "AND (c.timestamp < :validTimestamp OR (c.timestamp = :validTimestamp AND :exclusive = TRUE)) " +
+                        "AND TRUE = function('json_equals', fp.fingerprint, :fingerprint) " +
                         "ORDER by c.timestamp DESC", ChangeDAO.class);
         changeQuery
-                .setParameter(1, variable)
-                .setParameter(2, valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
-                .setParameter(3, valid == null || valid.inclusive)
-                .setParameter(4, fingerprint, JsonBinaryType.INSTANCE);
+                .setParameter("variableId", variable)
+                .setParameter("validTimestamp", valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
+                .setParameter("exclusive", valid == null || valid.inclusive)
+                .setParameter("fpHash", fpHash)
+                .setParameter("fingerprint", fingerprint, JsonBinaryType.INSTANCE);
         ChangeDAO lastChange = changeQuery.setMaxResults(1).getResultStream().findFirst().orElse(null);
 
         Instant changeTimestamp = LONG_TIME_AGO;
@@ -747,7 +756,7 @@ public class AlertingServiceImpl implements AlertingService {
         Util.doAfterCommit(tm, () -> {
             validateUpTo(variable, fingerprint, nextTimestamp);
             //assume not last datapoint if we have found more
-            messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, notify, false));
+            messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, fpHash, notify));
         });
     }
 
