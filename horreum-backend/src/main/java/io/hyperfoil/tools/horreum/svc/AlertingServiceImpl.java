@@ -18,7 +18,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -220,8 +219,6 @@ public class AlertingServiceImpl implements AlertingService {
     @Inject
     ChangeDetectionModelResolver modelResolver;
 
-    static ConcurrentHashMap<Integer, AtomicInteger> retryCounterSet = new ConcurrentHashMap<>();
-
     // entries can be removed from timer thread while normally this is updated from one of blocking threads
     private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
 
@@ -233,33 +230,15 @@ public class AlertingServiceImpl implements AlertingService {
         System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
     }
 
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Transactional
-    public void onLabelsUpdated(Dataset.LabelsUpdatedEvent event) {
+    public void onLabelValuesCalculation(Dataset.LabelsUpdatedEvent event) {
         boolean sendNotifications;
-        DataPointDAO.delete("dataset.id", event.datasetId);
         DatasetDAO dataset = DatasetDAO.findById(event.datasetId);
         if (dataset == null) {
-            // The run is not committed yet?
-            // Retry `horreum.alerting.updateLabel.retries` times before logging a warning
-            retryCounterSet.putIfAbsent(event.datasetId, new AtomicInteger(0));
-            int retryCounter = retryCounterSet.get(event.datasetId).getAndIncrement();
-            if (retryCounter < labelCalcRetries) {
-                Log.infof("Retrying labels update for dataset %d, attempt %d/%d", event.datasetId, retryCounter,
-                        this.labelCalcRetries);
-                vertx.setTimer(1000, timerId -> messageBus.executeForTest(event.datasetId, () -> Util.withTx(tm, () -> {
-                    onLabelsUpdated(event);
-                    return null;
-                })));
-                return;
-            } else {
-                //we have retried `horreum.alerting.updateLabel.retries` number of times, log a warning and stop retrying
-                Log.warnf("Unsuccessfully retried updating labels %d times for dataset %d. Stopping", this.labelCalcRetries,
-                        event.datasetId);
-                retryCounterSet.remove(event.datasetId);
-                return;
-            }
+            // if this happens, means the dataset has been removed before processing the event
+            // no need to retry as the same id will not appear anymore
+            throw new RuntimeException("Cannot find  dataset with id " + event.datasetId);
         }
+
         if (event.isRecalculation) {
             sendNotifications = false;
         } else {
@@ -270,15 +249,17 @@ public class AlertingServiceImpl implements AlertingService {
                 sendNotifications = true;
             }
         }
-        Recalculation recalculation = new Recalculation();
-        recalculation.clearDatapoints = true;
-        recalculation.lastDatapoint = true;
 
-        recalculateDatapointsForDataset(dataset, sendNotifications, false, recalculation);
+        recalculateDatapointsForDataset(dataset, sendNotifications, false, new Recalculation(true, true));
         recalculateMissingDataRules(dataset);
+
+        if (mediator.testMode())
+            Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_UPDATED_LABELS,
+                    event.testId, new Dataset.LabelsUpdatedEvent(event.testId, event.datasetId, event.isRecalculation)));
     }
 
-    private void recalculateMissingDataRules(DatasetDAO dataset) {
+    @Transactional
+    void recalculateMissingDataRules(DatasetDAO dataset) {
         MissingDataRuleResultDAO.deleteForDataset(dataset.id);
         List<Object[]> ruleValues = session
                 .createNativeQuery(LOOKUP_RULE_LABEL_VALUES, Object[].class)
@@ -312,7 +293,8 @@ public class AlertingServiceImpl implements AlertingService {
         new MissingDataRuleResultDAO(ruleId, dataset.id, dataset.start).persist();
     }
 
-    private void recalculateDatapointsForDataset(DatasetDAO dataset, boolean notify, boolean debug,
+    @Transactional
+    void recalculateDatapointsForDataset(DatasetDAO dataset, boolean notify, boolean debug,
             Recalculation recalculation) {
         Log.debugf("Analyzing dataset %d (%d/%d)", (long) dataset.id, (long) dataset.run.id, dataset.ordinal);
         TestDAO test = TestDAO.findById(dataset.testid);
@@ -324,7 +306,7 @@ public class AlertingServiceImpl implements AlertingService {
             return;
         }
 
-        emitDatapoints(dataset, notify, debug, recalculation);
+        calculateDatapoints(dataset, notify, debug, recalculation);
     }
 
     private boolean testFingerprint(DatasetDAO dataset, String filter) {
@@ -406,7 +388,8 @@ public class AlertingServiceImpl implements AlertingService {
         }
     }
 
-    private void emitDatapoints(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
+    @Transactional
+    void calculateDatapoints(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
         Set<String> missingValueVariables = new HashSet<>();
         List<VariableData> values = session.createNativeQuery(LOOKUP_VARIABLES, Tuple.class)
                 .setParameter(1, dataset.testid)
@@ -536,7 +519,7 @@ public class AlertingServiceImpl implements AlertingService {
     @Transactional
     void createDataPoint(DatasetDAO dataset, Instant timestamp, int variableId, double value, boolean notify,
             Recalculation recalculation) {
-        DataPointDAO dataPoint = null;
+        DataPointDAO dataPoint;
         VariableDAO variableDAO = VariableDAO.findById(variableId);
         if (recalculation.clearDatapoints) {
             dataPoint = new DataPointDAO();
@@ -562,10 +545,12 @@ public class AlertingServiceImpl implements AlertingService {
         }
     }
 
+    @Transactional
     private void logCalculationMessage(DatasetDAO dataSet, int level, String format, Object... args) {
         logCalculationMessage(dataSet.testid, dataSet.id, level, format, args);
     }
 
+    @Transactional
     private void logCalculationMessage(int testId, int datasetId, int level, String format, Object... args) {
         String msg = args.length == 0 ? format : format.formatted(args);
         Log.tracef("Logging %s for test %d, dataset %d: %s", PersistentLogDAO.logLevel(level), testId, datasetId, msg);
@@ -631,7 +616,8 @@ public class AlertingServiceImpl implements AlertingService {
         runChangeDetection(variable, fingerprint, notify, false, lastDatapoint);
     }
 
-    private void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists,
+    @Transactional
+    void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists,
             boolean lastDatapoint) {
         UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
         Instant nextTimestamp = session.createNativeQuery(
@@ -644,6 +630,7 @@ public class AlertingServiceImpl implements AlertingService {
                 .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
                 .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
         if (nextTimestamp == null) {
+            // this is the exit clause to stops the recursive invocation
             Log.debugf("No further datapoints for change detection");
             return;
         }
@@ -654,7 +641,7 @@ public class AlertingServiceImpl implements AlertingService {
             int numDeleted = session.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
                     "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
                     "WHERE NOT c.confirmed AND c.variable_id = ?1 AND (c.timestamp > ?2 OR (c.timestamp = ?2 AND ?3)) " +
-                    "AND json_equals(fp.fingerprint, ?4))", int.class)
+                    "AND json_equals(fp.fingerprint, ?4) ORDER BY c.id, c.dataset_id)", int.class)
                     .setParameter(1, variable.id)
                     .setParameter(2, valid.timestamp, StandardBasicTypes.INSTANT)
                     .setParameter(3, !valid.inclusive)
@@ -1001,7 +988,7 @@ public class AlertingServiceImpl implements AlertingService {
         }
 
         messageBus.executeForTest(testId, () -> {
-            startRecalculation(testId, notify, debug, clearDatapoints == null ? true : clearDatapoints, from, to);
+            startRecalculation(testId, notify, debug, clearDatapoints == null || clearDatapoints, from, to);
         });
     }
 
@@ -1025,7 +1012,7 @@ public class AlertingServiceImpl implements AlertingService {
             //update fingerprints before starting recalculation
             //TODO: check if we need to update fingerprints for all tests
             mediator.updateFingerprints(testId);
-            Log.debugf("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
+            Log.infof("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
             //TODO:: determine if we should clear datapoints
             recalculation.datasets = getDatasetsForRecalculation(testId, from, to, clearDatapoints);
             int numRuns = recalculation.datasets.size();
@@ -1034,16 +1021,14 @@ public class AlertingServiceImpl implements AlertingService {
             recalcProgress.put(testId, recalculation);
             //TODO:: this could be more streamlined
             Map<String, Integer> lastDatapoints = new HashMap<>();
-            recalculation.datasets.entrySet().forEach(entry -> lastDatapoints.put(entry.getValue(), entry.getKey()));
-            Set<Integer> lastDatapointSet = lastDatapoints.values().stream().collect(Collectors.toSet());
+            // recalculation.datasets contains an ordered list of <dataset, fingerprint>
+            // grouping by fingerprint will guarantee that we have the last datapoint for each fingerprint
+            recalculation.datasets.forEach((key, value) -> lastDatapoints.put(value, key));
+            Set<Integer> lastDatapointSet = new HashSet<>(lastDatapoints.values());
             for (int datasetId : recalculation.datasets.keySet()) {
                 // Since the evaluation might take few moments and we're dealing potentially with thousands
                 // of runs we'll process each run in a separate transaction
-                if (lastDatapointSet.contains(datasetId)) {
-                    recalculation.lastDatapoint = true;
-                } else {
-                    recalculation.lastDatapoint = false;
-                }
+                recalculation.lastDatapoint = lastDatapointSet.contains(datasetId);
                 recalculateForDataset(datasetId, notify, debug, recalculation);
                 recalculation.progress = 100 * ++completed / numRuns;
             }
@@ -1070,11 +1055,11 @@ public class AlertingServiceImpl implements AlertingService {
                 .setParameter(2, from == null ? Long.MIN_VALUE : from)
                 .setParameter(3, to == null ? Long.MAX_VALUE : to);
         //use LinkedHashMap to preserve ordering of ID insertion - query is ordered on start
-        Map<Integer, String> ids = new LinkedHashMap();
+        Map<Integer, String> ids = new LinkedHashMap<>();
         query.getResultList().forEach(tuple -> ids.put(
-                ((Integer) ((Tuple) tuple).get("id")).intValue(),
-                ((Tuple) tuple).get("fingerprint") == null ? "" : ((String) ((Tuple) tuple).get("fingerprint")).toString()));
-        List<Integer> datasetIDs = ids.keySet().stream().collect(Collectors.toList());
+                (Integer) ((Tuple) tuple).get("id"),
+                ((Tuple) tuple).get("fingerprint") == null ? "" : ((String) ((Tuple) tuple).get("fingerprint"))));
+        List<Integer> datasetIDs = new ArrayList<>(ids.keySet());
         if (clearDatapoints) {
             DataPointDAO.delete("dataset.id in ?1", datasetIDs);
         }
@@ -1399,6 +1384,14 @@ public class AlertingServiceImpl implements AlertingService {
         boolean clearDatapoints;
 
         Map<Integer, DatasetDAO.Info> datasetsWithoutValue = new HashMap<>();
+
+        public Recalculation() {
+        }
+
+        public Recalculation(boolean lastDatapoint, boolean clearDatapoints) {
+            this.lastDatapoint = lastDatapoint;
+            this.clearDatapoints = clearDatapoints;
+        }
     }
 
     static final class VarAndFingerprint {

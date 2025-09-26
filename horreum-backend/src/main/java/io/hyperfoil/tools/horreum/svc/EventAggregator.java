@@ -1,7 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -18,7 +18,7 @@ import io.vertx.core.Vertx;
 @Startup
 @ApplicationScoped
 public class EventAggregator {
-    private final Map<Integer, DatasetChanges> datasetChanges = new HashMap<>();
+    private final Map<Integer, DatasetChanges> datasetChanges = new ConcurrentHashMap<>();
 
     @Inject
     Vertx vertx;

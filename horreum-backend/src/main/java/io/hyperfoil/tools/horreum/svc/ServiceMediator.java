@@ -4,8 +4,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.control.ActivateRequestContext;
@@ -105,6 +109,9 @@ public class ServiceMediator {
     @Channel("run-upload-out")
     Emitter<RunUpload> runUploadEmitter;
 
+    // dummy ack handler when submitting event to the queue
+    private Supplier<CompletionStage<Void>> ackHandler = () -> CompletableFuture.completedFuture(null);
+
     private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events = new ConcurrentHashMap<>();
 
     public ServiceMediator() {
@@ -150,19 +157,17 @@ public class ServiceMediator {
         datasetService.deleteDataset(datasetId);
     }
 
-    @Transactional
-    void updateLabels(Dataset.LabelsUpdatedEvent event) {
-        alertingService.onLabelsUpdated(event);
-    }
-
-    @Transactional
     void newChange(Change.Event event) {
         actionService.onNewChange(event);
         aggregator.onNewChange(event);
     }
 
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void onNewDataset(Dataset.EventNew eventNew) {
-        datasetService.onNewDataset(eventNew);
+        datasetService.calculateLabelValues(eventNew.testId, eventNew.datasetId, eventNew.labelIds);
+        alertingService
+                .onLabelValuesCalculation(
+                        new Dataset.LabelsUpdatedEvent(eventNew.testId, eventNew.datasetId, eventNew.isRecalculation));
         // if labelId > 0, you are not recomputing the entire dataset label values
         if (eventNew.labelIds == null || eventNew.labelIds.length == 0) {
             this.actionService.onDatasetLabelsComputed(eventNew.testId, eventNew.datasetId);
@@ -172,7 +177,6 @@ public class ServiceMediator {
     @Incoming("dataset-event-in")
     @Blocking(ordered = false, value = "horreum.dataset.pool")
     @ActivateRequestContext
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     public void processDatasetEvents(Dataset.EventNew newEvent) {
         onNewDataset(newEvent);
         validateDataset(newEvent.datasetId);
@@ -181,11 +185,19 @@ public class ServiceMediator {
     // NEW_DATASET, i.e., when uploading new run, has higher priority than RECALC_DATASET, i.e., when updating label schema
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
     void queueDatasetEvents(Dataset.EventNew event) {
+
+        Function<Throwable, CompletionStage<Void>> nackHandler = (throwable) -> {
+            Log.error("NACK: Failed to send message for test {} and dataset {}.",
+                    new Object[] { event.testId, event.datasetId }, throwable);
+            // we could perform an async cleanup operation here if needed.
+            return CompletableFuture.completedFuture(null);
+        };
+
         OutgoingAmqpMetadata meta = OutgoingAmqpMetadata.builder()
                 .withPriority(event.isRecalculation ? Dataset.EventNew.Priority.RECALC_DATASET.value
                         : Dataset.EventNew.Priority.NEW_DATASET.value)
                 .build();
-        Message<Dataset.EventNew> msg = Message.of(event).addMetadata(meta);
+        Message<Dataset.EventNew> msg = Message.of(event, ackHandler, nackHandler).addMetadata(meta);
         dataSetEmitter.send(msg);
     }
 
