@@ -616,7 +616,7 @@ public class AlertingServiceImpl implements AlertingService {
         runChangeDetection(variable, fingerprint, notify, false, lastDatapoint);
     }
 
-    @Transactional
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
     void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists,
             boolean lastDatapoint) {
         UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
