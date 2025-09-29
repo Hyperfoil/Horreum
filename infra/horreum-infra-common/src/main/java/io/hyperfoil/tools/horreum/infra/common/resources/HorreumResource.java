@@ -83,7 +83,7 @@ public class HorreumResource implements ResourceLifecycleManager {
                 .withEnv("amqp-username", initArgs.getOrDefault("amqp-username", DEFAULT_AMQP_USERNAME))
                 .withEnv("amqp-password", initArgs.getOrDefault("amqp-password", DEFAULT_AMQP_PASSWORD))
                 .withEnv("amqp-reconnect-attempts", "100")
-                .withEnv("amqp-reconnect-interval", "1000")
+                .withEnv("amqp-reconnect-interval", "10")
                 .withEnv("quarkus.profile", "test")
                 .withEnv("quarkus.test.profile", "test")
                 .withEnv("horreum.bootstrap.password", "secret")
