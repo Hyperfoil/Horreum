@@ -605,7 +605,7 @@ public class AlertingServiceImpl implements AlertingService {
                 JsonNode fpNode = fingerprint != null ? fingerprint.fingerprint : null;
                 Integer fpHash = fingerprint != null ? fingerprint.fpHash : null;
 
-                VarAndFingerprint key = new VarAndFingerprint(variable.id, fpNode);
+                VarAndFingerprint key = new VarAndFingerprint(variable.id, fpHash);
                 Log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint,
                         dataPoint.timestamp, validUpTo.get(key));
                 validUpTo.compute(key, (ignored, current) -> {
@@ -635,7 +635,7 @@ public class AlertingServiceImpl implements AlertingService {
     @Transactional
     void runChangeDetection(VariableDAO variable, JsonNode fingerprint, Integer fpHash, boolean notify, boolean expectExists,
             boolean lastDatapoint) {
-        UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
+        UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fpHash));
         Instant nextTimestamp = session.createNativeQuery(
                 "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
                         "WHERE dp.variable_id = :variableId " +
@@ -663,7 +663,7 @@ public class AlertingServiceImpl implements AlertingService {
                     .setParameter("fpHash", fpHash)
                     .executeUpdate();
             Log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=",
-                    valid.timestamp, variable.id, fingerprint);
+                    valid.timestamp, variable.id, fpHash);
         }
 
         var changeQuery = session
@@ -749,14 +749,14 @@ public class AlertingServiceImpl implements AlertingService {
             }
         }
         Util.doAfterCommit(tm, () -> {
-            validateUpTo(variable, fingerprint, nextTimestamp);
+            validateUpTo(variable, fpHash, nextTimestamp);
             //assume not last datapoint if we have found more
             messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, fpHash, notify));
         });
     }
 
-    private void validateUpTo(VariableDAO variable, JsonNode fingerprint, Instant timestamp) {
-        validUpTo.compute(new VarAndFingerprint(variable.id, fingerprint), (ignored, current) -> {
+    private void validateUpTo(VariableDAO variable, int fpHash, Instant timestamp) {
+        validUpTo.compute(new VarAndFingerprint(variable.id, fpHash), (ignored, current) -> {
             Log.debugf("Attempt %s, valid up to %s", timestamp, current);
             if (current == null || !current.timestamp.isAfter(timestamp)) {
                 return new UpTo(timestamp, true);
@@ -1411,9 +1411,9 @@ public class AlertingServiceImpl implements AlertingService {
 
     static final class VarAndFingerprint {
         final int varId;
-        final JsonNode fingerprint;
+        final Integer fingerprint;
 
-        VarAndFingerprint(int varId, JsonNode fingerprint) {
+        VarAndFingerprint(int varId, Integer fingerprint) {
             this.varId = varId;
             this.fingerprint = fingerprint;
         }
