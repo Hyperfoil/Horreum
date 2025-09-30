@@ -547,7 +547,7 @@ public class AlertingServiceImpl implements AlertingService {
                     Parameters.with("dataset", dataset).and("variable", variableDAO)).firstResult();
         }
         if (dataPoint != null) {
-            DataPoint.Event event = new DataPoint.Event(DataPointMapper.from(dataPoint), dataset.testid, notify);
+            DataPoint.Event event = new DataPoint.Event(dataPoint.id, dataset.id, notify);
             onNewDataPoint(event, recalculation.lastDatapoint); //Test failure if we do not start a new thread and new tx
 
             if (mediator.testMode())
@@ -593,36 +593,30 @@ public class AlertingServiceImpl implements AlertingService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     void onNewDataPoint(DataPoint.Event event, boolean lastDatapoint) {
-        DataPoint dataPoint = event.dataPoint;
-        if (dataPoint.variable != null && dataPoint.variable.id != null) {
-            VariableDAO variable = VariableDAO.findById(dataPoint.variable.id);
-            if (variable != null) {
-                Log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
-                        dataPoint.datasetId, dataPoint.timestamp,
-                        variable.id, variable.name, dataPoint.value);
+        DataPointDAO dataPoint = DataPointDAO.findById(event.dataPointId);
+        if (dataPoint.variable != null) {
+            VariableDAO variable = dataPoint.variable;
+            Log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
+                    event.datasetId, dataPoint.timestamp, variable.id, variable.name, dataPoint.value);
 
-                FingerprintDAO fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(dataPoint.datasetId).orElse(null);
-                JsonNode fpNode = fingerprint != null ? fingerprint.fingerprint : null;
-                Integer fpHash = fingerprint != null ? fingerprint.fpHash : null;
+            FingerprintDAO fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(event.datasetId).orElse(null);
+            JsonNode fpNode = fingerprint != null ? fingerprint.fingerprint : null;
+            Integer fpHash = fingerprint != null ? fingerprint.fpHash : null;
 
-                VarAndFingerprint key = new VarAndFingerprint(variable.id, fpHash);
-                Log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint,
-                        dataPoint.timestamp, validUpTo.get(key));
-                validUpTo.compute(key, (ignored, current) -> {
-                    if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
-                        return new UpTo(dataPoint.timestamp, false);
-                    } else {
-                        return current;
-                    }
-                });
-                runChangeDetection(VariableDAO.findById(variable.id), fpNode, fpHash, event.notify, true, lastDatapoint);
-            } else {
-                Log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
-                        dataPoint.datasetId, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
-            }
+            VarAndFingerprint key = new VarAndFingerprint(variable.id, fpHash);
+            Log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint,
+                    dataPoint.timestamp, validUpTo.get(key));
+            validUpTo.compute(key, (ignored, current) -> {
+                if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
+                    return new UpTo(dataPoint.timestamp, false);
+                } else {
+                    return current;
+                }
+            });
+            runChangeDetection(VariableDAO.findById(variable.id), fpNode, fpHash, event.notify, true, lastDatapoint);
         } else {
             Log.warnf("Could not process new datapoint for dataset %d when the supplied variable or id reference is null ",
-                    dataPoint.datasetId);
+                    event.datasetId);
         }
     }
 

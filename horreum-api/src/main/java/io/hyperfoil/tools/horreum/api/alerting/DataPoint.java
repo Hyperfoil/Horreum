@@ -54,21 +54,21 @@ public class DataPoint {
     }
 
     public static class Event {
-        public DataPoint dataPoint;
-        public int testId;
+        public int dataPointId;
+        public int datasetId;
         public boolean notify;
 
         public Event() {
         }
 
-        public Event(DataPoint dataPoint, int testId, boolean notify) {
-            this.dataPoint = dataPoint;
-            this.testId = testId;
+        public Event(int dataPointId, int datasetId, boolean notify) {
+            this.dataPointId = dataPointId;
+            this.datasetId = datasetId;
             this.notify = notify;
         }
 
         public String toString() {
-            return "DataPoint.Event{dataPoint=" + this.dataPoint + ", notify=" + this.notify + '}';
+            return "DataPoint.Event{dataPoint=" + this.dataPointId + ", notify=" + this.notify + '}';
         }
     }
 }

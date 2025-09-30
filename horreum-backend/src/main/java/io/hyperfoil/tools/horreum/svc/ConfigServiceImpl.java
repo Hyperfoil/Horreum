@@ -35,7 +35,7 @@ public class ConfigServiceImpl implements ConfigService {
     @ConfigProperty(name = "horreum.privacy")
     Optional<String> privacyStatement;
 
-    @ConfigProperty(name = "horreum.application.commit")
+    @ConfigProperty(name = "horreum.application.commit", defaultValue = "<unknown>")
     String appCommit;
 
     @Inject

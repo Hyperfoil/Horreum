@@ -1188,12 +1188,12 @@ public class BaseServiceTest {
         }
     }
 
-    protected DataPoint assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
+    protected int assertValue(BlockingQueue<DataPoint.Event> datapointQueue, double value) throws InterruptedException {
         DataPoint.Event dpe = datapointQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(dpe);
-        assertEquals(value, dpe.dataPoint.value);
+        assertEquals(value, DataPointDAO.<DataPointDAO> findById(dpe.dataPointId).value);
         testSerialization(dpe, DataPoint.Event.class);
-        return dpe.dataPoint;
+        return dpe.dataPointId;
     }
 
     protected <T> void testSerialization(T event, Class<T> eventClass) {
