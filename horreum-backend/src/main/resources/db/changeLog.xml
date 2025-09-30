@@ -4846,4 +4846,8 @@
         <dropSequence sequenceName="transformationlog_seq"/>
         <dropSequence sequenceName="tokenidgenerator"/>
     </changeSet>
+    <changeSet id="132" author="lampajr">
+        <validCheckSum>ANY</validCheckSum>
+        <customChange class="io.hyperfoil.tools.horreum.migration.BackfillFingerprintHashChangeSet" />
+    </changeSet>
 </databaseChangeLog>

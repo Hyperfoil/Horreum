@@ -84,101 +84,115 @@ public class AlertingServiceImpl implements AlertingService {
 
     //@formatter:off
     private static final String LOOKUP_TIMESTAMP =
-         """
-            SELECT timeline_function,
-               (CASE
-                  WHEN jsonb_array_length(timeline_labels) = 1 THEN jsonb_agg(lv.value)->0
-                  ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
-               END) as value
-            FROM test
-            JOIN label ON json_contains(timeline_labels, label.name)
-            JOIN label_values lv ON label.id = lv.label_id
-            WHERE test.id = ?1 AND lv.dataset_id = ?2
-               AND timeline_labels IS NOT NULL
-               AND jsonb_typeof(timeline_labels) = 'array'
-               AND jsonb_array_length(timeline_labels) > 0
-            GROUP BY timeline_function, timeline_labels
-         """;
+        """
+        SELECT timeline_function,
+           (CASE
+              WHEN jsonb_array_length(timeline_labels) = 1 THEN jsonb_agg(lv.value)->0
+              ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
+           END) as value
+        FROM test
+        JOIN label ON json_contains(timeline_labels, label.name)
+        JOIN label_values lv ON label.id = lv.label_id
+        WHERE test.id = ?1 AND lv.dataset_id = ?2
+           AND timeline_labels IS NOT NULL
+           AND jsonb_typeof(timeline_labels) = 'array'
+           AND jsonb_array_length(timeline_labels) > 0
+        GROUP BY timeline_function, timeline_labels
+        """;
 
     private static final String LOOKUP_VARIABLES =
-         """
-            SELECT
-               var.id as variableId,
-               var.name,
-               var.\"group\",
-               var.calculation,
-               jsonb_array_length(var.labels) AS numLabels,
-               (CASE
-                  WHEN jsonb_array_length(var.labels) = 1 THEN jsonb_agg(lv.value)->0
-                  ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
-                  END) AS value
-            FROM variable var
-            LEFT JOIN label ON json_contains(var.labels, label.name)
-            LEFT JOIN label_values lv ON label.id = lv.label_id
-            WHERE var.testid = ?1
-               AND lv.dataset_id = ?2
-            GROUP BY var.id, var.name, var.\"group\", var.calculation
-         """;
+        """
+        SELECT
+           var.id as variableId,
+           var.name,
+           var.\"group\",
+           var.calculation,
+           jsonb_array_length(var.labels) AS numLabels,
+           (CASE
+              WHEN jsonb_array_length(var.labels) = 1 THEN jsonb_agg(lv.value)->0
+              ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
+              END) AS value
+        FROM variable var
+        LEFT JOIN label ON json_contains(var.labels, label.name)
+        LEFT JOIN label_values lv ON label.id = lv.label_id
+        WHERE var.testid = ?1
+           AND lv.dataset_id = ?2
+        GROUP BY var.id, var.name, var.\"group\", var.calculation
+        """;
 
     private static final String LOOKUP_RULE_LABEL_VALUES =
-         """
-         SELECT
-            mdr.id AS rule_id,
-            mdr.condition,
-            (CASE
-               WHEN mdr.labels IS NULL OR jsonb_array_length(mdr.labels) = 0 THEN NULL
-               WHEN jsonb_array_length(mdr.labels) = 1 THEN jsonb_agg(lv.value)->0
-               ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
-            END) as value
-         FROM missingdata_rule mdr
-         LEFT JOIN label ON json_contains(mdr.labels, label.name)
-         LEFT JOIN label_values lv ON label.id = lv.label_id AND lv.dataset_id = ?1
-         WHERE mdr.test_id = ?2
-         GROUP BY rule_id, mdr.condition
-         """;
+        """
+        SELECT
+        mdr.id AS rule_id,
+        mdr.condition,
+        (CASE
+           WHEN mdr.labels IS NULL OR jsonb_array_length(mdr.labels) = 0 THEN NULL
+           WHEN jsonb_array_length(mdr.labels) = 1 THEN jsonb_agg(lv.value)->0
+           ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
+        END) as value
+        FROM missingdata_rule mdr
+        LEFT JOIN label ON json_contains(mdr.labels, label.name)
+        LEFT JOIN label_values lv ON label.id = lv.label_id AND lv.dataset_id = ?1
+        WHERE mdr.test_id = ?2
+        GROUP BY rule_id, mdr.condition
+        """;
 
     private static final String LOOKUP_LABEL_VALUE_FOR_RULE =
-         """
-            SELECT
-             (CASE
-               WHEN mdr.labels IS NULL OR jsonb_array_length(mdr.labels) = 0 THEN NULL
-               WHEN jsonb_array_length(mdr.labels) = 1 THEN jsonb_agg(lv.value)->0
-               ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
-             END) as value
-         FROM missingdata_rule mdr
-         LEFT JOIN label ON json_contains(mdr.labels, label.name)
-         LEFT JOIN label_values lv ON label.id = lv.label_id AND lv.dataset_id = ?1
-         WHERE mdr.id = ?2
-         GROUP BY mdr.labels
-         """;
+        """
+        SELECT
+         (CASE
+           WHEN mdr.labels IS NULL OR jsonb_array_length(mdr.labels) = 0 THEN NULL
+           WHEN jsonb_array_length(mdr.labels) = 1 THEN jsonb_agg(lv.value)->0
+           ELSE COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb)
+         END) as value
+        FROM missingdata_rule mdr
+        LEFT JOIN label ON json_contains(mdr.labels, label.name)
+        LEFT JOIN label_values lv ON label.id = lv.label_id AND lv.dataset_id = ?1
+        WHERE mdr.id = ?2
+        GROUP BY mdr.labels
+        """;
 
     private static final String LOOKUP_RECENT =
-         """
-         SELECT
-            DISTINCT ON(mdr.id) mdr.id,
-            mdr.test_id,
-            mdr.name,
-            mdr.maxstaleness,
-            rr.timestamp
-         FROM missingdata_rule mdr
-         LEFT JOIN missingdata_ruleresult rr ON mdr.id = rr.rule_id
-         WHERE last_notification IS NULL
-            OR EXTRACT(EPOCH FROM last_notification) * 1000 < EXTRACT(EPOCH FROM current_timestamp) * 1000 - mdr.maxstaleness
-         ORDER BY mdr.id, timestamp DESC
-         """;
+        """
+        SELECT
+        DISTINCT ON(mdr.id) mdr.id,
+        mdr.test_id,
+        mdr.name,
+        mdr.maxstaleness,
+        rr.timestamp
+        FROM missingdata_rule mdr
+        LEFT JOIN missingdata_ruleresult rr ON mdr.id = rr.rule_id
+        WHERE last_notification IS NULL
+        OR EXTRACT(EPOCH FROM last_notification) * 1000 < EXTRACT(EPOCH FROM current_timestamp) * 1000 - mdr.maxstaleness
+        ORDER BY mdr.id, timestamp DESC
+        """;
 
     private static final String FIND_LAST_DATAPOINTS =
-         """
-         SELECT
-            DISTINCT ON(variable_id) variable_id AS variable,
-            EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp
-         FROM datapoint dp
-         LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id
-         WHERE
-            ((fp.fingerprint IS NULL AND (?1)::jsonb IS NULL) OR json_equals(fp.fingerprint, (?1)::jsonb))
-            AND variable_id = ANY(?2)
-         ORDER BY variable_id, timestamp DESC
-         """;
+        """
+        SELECT
+        DISTINCT ON(variable_id) variable_id AS variable,
+        EXTRACT(EPOCH FROM timestamp) * 1000 AS timestamp
+        FROM datapoint dp
+        LEFT JOIN fingerprint fp ON fp.dataset_id = dp.dataset_id
+        WHERE
+        ((fp.fingerprint IS NULL AND (?1)::jsonb IS NULL) OR json_equals(fp.fingerprint, (?1)::jsonb))
+        AND variable_id = ANY(?2)
+        ORDER BY variable_id, timestamp DESC
+        """;
+
+    private static final String DELETE_CHANGES_BY_TIMEFRAME =
+        """
+        DELETE FROM change cc
+        WHERE NOT cc.confirmed
+          AND cc.variable_id = :variableId
+          AND (cc.timestamp > :validTimestamp OR (cc.timestamp = :validTimestamp AND :exclusive))
+          AND EXISTS (
+              SELECT 1 FROM fingerprint fp
+              WHERE fp.dataset_id = cc.dataset_id
+                AND fp.fp_hash = :fpHash
+          );
+        """;
+
     //@formatter:on
     private static final Instant LONG_TIME_AGO = Instant.ofEpochSecond(0);
     private static final Instant VERY_DISTANT_FUTURE = Instant.parse("2666-06-06T06:06:06.00Z");
@@ -586,10 +600,12 @@ public class AlertingServiceImpl implements AlertingService {
                 Log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
                         dataPoint.datasetId, dataPoint.timestamp,
                         variable.id, variable.name, dataPoint.value);
-                JsonNode fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(dataPoint.datasetId)
-                        .map(fp -> fp.fingerprint).orElse(null);
 
-                VarAndFingerprint key = new VarAndFingerprint(variable.id, fingerprint);
+                FingerprintDAO fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(dataPoint.datasetId).orElse(null);
+                JsonNode fpNode = fingerprint != null ? fingerprint.fingerprint : null;
+                Integer fpHash = fingerprint != null ? fingerprint.fpHash : null;
+
+                VarAndFingerprint key = new VarAndFingerprint(variable.id, fpNode);
                 Log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint,
                         dataPoint.timestamp, validUpTo.get(key));
                 validUpTo.compute(key, (ignored, current) -> {
@@ -599,7 +615,7 @@ public class AlertingServiceImpl implements AlertingService {
                         return current;
                     }
                 });
-                runChangeDetection(VariableDAO.findById(variable.id), fingerprint, event.notify, true, lastDatapoint);
+                runChangeDetection(VariableDAO.findById(variable.id), fpNode, fpHash, event.notify, true, lastDatapoint);
             } else {
                 Log.warnf("Could not process new datapoint for dataset %d at %s, could not find variable by id %d ",
                         dataPoint.datasetId, dataPoint.timestamp, dataPoint.variable == null ? -1 : dataPoint.variable.id);
@@ -612,22 +628,24 @@ public class AlertingServiceImpl implements AlertingService {
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
-    void tryRunChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean lastDatapoint) {
-        runChangeDetection(variable, fingerprint, notify, false, lastDatapoint);
+    void tryRunChangeDetection(VariableDAO variable, JsonNode fingerprint, Integer fpHash, boolean notify) {
+        runChangeDetection(variable, fingerprint, fpHash, notify, false, false);
     }
 
     @Transactional
-    void runChangeDetection(VariableDAO variable, JsonNode fingerprint, boolean notify, boolean expectExists,
+    void runChangeDetection(VariableDAO variable, JsonNode fingerprint, Integer fpHash, boolean notify, boolean expectExists,
             boolean lastDatapoint) {
         UpTo valid = validUpTo.get(new VarAndFingerprint(variable.id, fingerprint));
         Instant nextTimestamp = session.createNativeQuery(
                 "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
-                        "WHERE dp.variable_id = ?1 AND (timestamp > ?2 OR (timestamp = ?2 AND ?3)) AND json_equals(fp.fingerprint, ?4)",
+                        "WHERE dp.variable_id = :variableId " +
+                        "AND (timestamp > :validTimestamp OR (timestamp = :validTimestamp AND :exclusive)) " +
+                        "AND fp.fp_hash = :fpHash",
                 Instant.class)
-                .setParameter(1, variable.id)
-                .setParameter(2, valid != null ? valid.timestamp : LONG_TIME_AGO, StandardBasicTypes.INSTANT)
-                .setParameter(3, valid == null || !valid.inclusive)
-                .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
+                .setParameter("variableId", variable.id)
+                .setParameter("validTimestamp", valid != null ? valid.timestamp : LONG_TIME_AGO, StandardBasicTypes.INSTANT)
+                .setParameter("exclusive", valid == null || !valid.inclusive)
+                .setParameter("fpHash", fpHash)
                 .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
         if (nextTimestamp == null) {
             // this is the exit clause to stops the recursive invocation
@@ -638,14 +656,11 @@ public class AlertingServiceImpl implements AlertingService {
         // this should happen only after reboot, let's start with last change
         // FIXME: this is happening also when updating a single label for a schema
         if (valid != null) {
-            int numDeleted = session.createNativeQuery("DELETE FROM change cc WHERE cc.id IN (" +
-                    "SELECT id FROM change c LEFT JOIN fingerprint fp ON c.dataset_id = fp.dataset_id " +
-                    "WHERE NOT c.confirmed AND c.variable_id = ?1 AND (c.timestamp > ?2 OR (c.timestamp = ?2 AND ?3)) " +
-                    "AND json_equals(fp.fingerprint, ?4) ORDER BY c.id, c.dataset_id)", int.class)
-                    .setParameter(1, variable.id)
-                    .setParameter(2, valid.timestamp, StandardBasicTypes.INSTANT)
-                    .setParameter(3, !valid.inclusive)
-                    .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
+            int numDeleted = session.createNativeQuery(DELETE_CHANGES_BY_TIMEFRAME, int.class)
+                    .setParameter("variableId", variable.id)
+                    .setParameter("validTimestamp", valid.timestamp, StandardBasicTypes.INSTANT)
+                    .setParameter("exclusive", !valid.inclusive)
+                    .setParameter("fpHash", fpHash)
                     .executeUpdate();
             Log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=",
                     valid.timestamp, variable.id, fingerprint);
@@ -653,14 +668,14 @@ public class AlertingServiceImpl implements AlertingService {
 
         var changeQuery = session
                 .createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.dataset.id " +
-                        "WHERE c.variable = ?1 AND (c.timestamp < ?2 OR (c.timestamp = ?2 AND ?3 = TRUE)) AND " +
-                        "TRUE = function('json_equals', fp.fingerprint, ?4) " +
+                        "WHERE c.variable = :variableId AND fp.fpHash = :fpHash " +
+                        "AND (c.timestamp < :validTimestamp OR (c.timestamp = :validTimestamp AND :exclusive = TRUE)) " +
                         "ORDER by c.timestamp DESC", ChangeDAO.class);
         changeQuery
-                .setParameter(1, variable)
-                .setParameter(2, valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
-                .setParameter(3, valid == null || valid.inclusive)
-                .setParameter(4, fingerprint, JsonBinaryType.INSTANCE);
+                .setParameter("variableId", variable)
+                .setParameter("validTimestamp", valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
+                .setParameter("exclusive", valid == null || valid.inclusive)
+                .setParameter("fpHash", fpHash);
         ChangeDAO lastChange = changeQuery.setMaxResults(1).getResultStream().findFirst().orElse(null);
 
         Instant changeTimestamp = LONG_TIME_AGO;
@@ -672,14 +687,14 @@ public class AlertingServiceImpl implements AlertingService {
         List<DataPointDAO> dataPoints = session.createQuery(
                 "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.dataset.id " +
                         "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
-                        "WHERE dp.variable = ?1 AND dp.timestamp BETWEEN ?2 AND ?3 " +
-                        "AND TRUE = function('json_equals', fp.fingerprint, ?4) " +
+                        "WHERE dp.variable = :variableId AND dp.timestamp BETWEEN :changeTimestamp AND :nextTimestamp " +
+                        "AND fp.fpHash = :fpHash " +
                         "ORDER BY dp.timestamp DESC, dp.dataset.id DESC",
                 DataPointDAO.class)
-                .setParameter(1, variable)
-                .setParameter(2, changeTimestamp)
-                .setParameter(3, nextTimestamp)
-                .setParameter(4, fingerprint, JsonBinaryType.INSTANCE)
+                .setParameter("variableId", variable)
+                .setParameter("changeTimestamp", changeTimestamp)
+                .setParameter("nextTimestamp", nextTimestamp)
+                .setParameter("fpHash", fpHash)
                 .getResultList();
         // Last datapoint is already in the list
         if (dataPoints.isEmpty()) {
@@ -736,7 +751,7 @@ public class AlertingServiceImpl implements AlertingService {
         Util.doAfterCommit(tm, () -> {
             validateUpTo(variable, fingerprint, nextTimestamp);
             //assume not last datapoint if we have found more
-            messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, notify, false));
+            messageBus.executeForTest(variable.testId, () -> tryRunChangeDetection(variable, fingerprint, fpHash, notify));
         });
     }
 
