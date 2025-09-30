@@ -1,6 +1,10 @@
 package io.hyperfoil.tools.horreum.svc;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import jakarta.annotation.security.PermitAll;
@@ -36,7 +40,7 @@ public class ConfigServiceImpl implements ConfigService {
     Optional<String> privacyStatement;
 
     @ConfigProperty(name = "horreum.application.commit", defaultValue = "<unknown>")
-    String appCommit;
+    Optional<String> appCommit;
 
     @Inject
     SecurityIdentity identity;
@@ -60,7 +64,7 @@ public class ConfigServiceImpl implements ConfigService {
     public VersionInfo version() {
         VersionInfo info = new VersionInfo();
         info.version = Version.getVersion();
-        info.commit = appCommit;
+        info.commit = appCommit.orElse("<unknown>");
         info.startTimestamp = startTimestamp;
         info.privacyStatement = privacyStatement.orElse(null);
         return info;
