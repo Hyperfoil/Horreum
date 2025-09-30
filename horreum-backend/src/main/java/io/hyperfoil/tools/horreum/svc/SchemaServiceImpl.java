@@ -29,8 +29,6 @@ import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
 
-import org.hibernate.ScrollMode;
-import org.hibernate.ScrollableResults;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.query.SelectionQuery;
@@ -74,7 +72,6 @@ import io.hyperfoil.tools.horreum.mapper.ValidationErrorMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.logging.Log;
-import io.quarkus.narayana.jta.runtime.TransactionConfiguration;
 import io.quarkus.panache.common.Page;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.security.identity.SecurityIdentity;
@@ -402,46 +399,6 @@ public class SchemaServiceImpl implements SchemaService {
         if (mediator.testMode())
             Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_VALIDATED,
                     dataset.testid, new Schema.ValidationEvent(dataset.id, DatasetMapper.from(dataset).validationErrors)));
-    }
-
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Transactional(Transactional.TxType.REQUIRES_NEW)
-    @TransactionConfiguration(timeout = 3600)
-    // 1 hour, this may run a long time
-    void revalidateAll(int schemaId) {
-        SchemaDAO schema = SchemaDAO.findById(schemaId);
-        if (schema == null) {
-            Log.errorf("Cannot load schema %d for validation", schemaId);
-            return;
-        }
-        //clear tables on schemaId
-        em.createNativeQuery("DELETE FROM dataset_validationerrors WHERE schema_id = ?1")
-                .setParameter(1, schemaId).executeUpdate();
-        em.createNativeQuery("DELETE FROM run_validationerrors WHERE schema_id = ?1")
-                .setParameter(1, schemaId).executeUpdate();
-
-        Predicate<String> schemaFilter = uri -> uri.equals(schema.uri);
-        // If the URI was updated together with JSON schema run_schemas are removed and filled-in asynchronously
-        // so we cannot rely on run_schemas
-        runService.findRunsWithUri(schema.uri,
-                (runId, testId) -> messageBus.executeForTest(testId, () -> validateRunData(runId, schemaFilter)));
-        // Datasets might be re-created if URI is changing, so we might work on old, non-existent ones
-        ScrollableResults<RecreateDataset> results = session
-                .createNativeQuery("SELECT id, testid FROM dataset WHERE ?1 IN (SELECT jsonb_array_elements(data)->>'$schema')",
-                        Tuple.class)
-                .setParameter(1, schema.uri)
-                .setTupleTransformer((tuple, aliases) -> {
-                    RecreateDataset r = new RecreateDataset();
-                    r.datasetId = (int) tuple[0];
-                    r.testId = (int) tuple[1];
-                    return r;
-                })
-                .setReadOnly(true).setFetchSize(100)
-                .scroll(ScrollMode.FORWARD_ONLY);
-        while (results.next()) {
-            RecreateDataset r = results.get();
-            messageBus.executeForTest(r.testId, () -> validateDatasetData(r.datasetId, schemaFilter));
-        }
     }
 
     private void validateData(JsonNode data, Predicate<String> filter, Collection<ValidationErrorDAO> consumer) {
