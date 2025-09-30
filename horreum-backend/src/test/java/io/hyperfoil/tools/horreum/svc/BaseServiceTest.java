@@ -703,7 +703,7 @@ public class BaseServiceTest {
                 if (oldDs != null) {
                     oldDs.delete();
                 }
-                DatasetDAO.delete("run.id", run.id);
+                DatasetDAO.delete("runId", run.id);
                 RunDAO.findById(run.id).delete();
             } catch (Throwable t) {
                 error = t;

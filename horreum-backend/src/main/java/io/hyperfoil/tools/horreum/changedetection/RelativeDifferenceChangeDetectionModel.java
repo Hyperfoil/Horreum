@@ -121,8 +121,8 @@ public class RelativeDifferenceChangeDetectionModel implements ChangeDetectionMo
                 DataPointDAO prevDataPoint = dataPoints.get(window - 1);
                 DataPointDAO lastDataPoint = dataPoints.get(0);
                 change.description = "Datasets %d/%d (%s) - %d/%d (%s): %s %f, previous mean %f (stddev %f), relative change %.2f%%"
-                        .formatted(prevDataPoint.dataset.run.id, prevDataPoint.dataset.ordinal, prevDataPoint.timestamp,
-                                lastDataPoint.dataset.run.id, lastDataPoint.dataset.ordinal, lastDataPoint.timestamp,
+                        .formatted(prevDataPoint.dataset.runId, prevDataPoint.dataset.ordinal, prevDataPoint.timestamp,
+                                lastDataPoint.dataset.runId, lastDataPoint.dataset.ordinal, lastDataPoint.timestamp,
                                 config.filter, filteredValue, previousStats.getMean(), previousStats.getStandardDeviation(),
                                 100 * (ratio - 1));
 

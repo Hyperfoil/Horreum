@@ -327,7 +327,7 @@ public class RunServiceTest extends BaseServiceTest {
         assertEquals(runId, event.runId);
         DatasetDAO ds = DatasetDAO.findById(event.datasetId);
         assertNotNull(ds);
-        assertEquals(runId, ds.run.id);
+        assertEquals(runId, ds.runId);
     }
 
     @org.junit.jupiter.api.Test
@@ -698,14 +698,14 @@ public class RunServiceTest extends BaseServiceTest {
             List<Integer> dsIds1 = recalculateDatasetForRun(ds.runId);
             assertEquals(1, dsIds1.size());
             try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
-                List<DatasetDAO> dataSets = DatasetDAO.find("run.id", ds.runId).list();
+                List<DatasetDAO> dataSets = DatasetDAO.find("runId", ds.runId).list();
                 assertEquals(1, dataSets.size());
                 assertEquals(dsIds1.get(0), dataSets.get(0).id);
                 em.clear();
             }
             List<Integer> dsIds2 = recalculateDatasetForRun(ds.runId);
             try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
-                List<DatasetDAO> dataSets = DatasetDAO.find("run.id", ds.runId).list();
+                List<DatasetDAO> dataSets = DatasetDAO.find("runId", ds.runId).list();
                 assertEquals(1, dataSets.size());
                 assertEquals(dsIds2.get(0), dataSets.get(0).id);
             }
@@ -1303,7 +1303,7 @@ public class RunServiceTest extends BaseServiceTest {
         assertNotNull(run);
         assertEquals("a new description", run.description);
 
-        DatasetDAO ds = DatasetDAO.find("run.id = ?1", firstId).firstResult();
+        DatasetDAO ds = DatasetDAO.find("runId = ?1", firstId).firstResult();
         assertNotNull(ds);
         assertEquals("a new description", ds.description);
     }
@@ -1340,7 +1340,7 @@ public class RunServiceTest extends BaseServiceTest {
         assertNotNull(run);
         assertEquals(Access.PROTECTED, run.access);
 
-        DatasetDAO ds = DatasetDAO.find("run.id = ?1", firstId).firstResult();
+        DatasetDAO ds = DatasetDAO.find("runId = ?1", firstId).firstResult();
         assertNotNull(ds);
         assertEquals(Access.PROTECTED, ds.access);
     }

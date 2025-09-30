@@ -374,7 +374,7 @@ public class RunServiceImpl implements RunService {
         }
 
         // propagate the same change to all datasets belonging to the run
-        DatasetDAO.update("owner = ?1, access = ?2 WHERE run.id = ?3", owner, access, id);
+        DatasetDAO.update("owner = ?1, access = ?2 WHERE runId = ?3", owner, access, id);
     }
 
     @RolesAllowed(Roles.UPLOADER)
@@ -1031,7 +1031,7 @@ public class RunServiceImpl implements RunService {
     private void trashConnectedDatasets(int runId, int testId) {
         //Make sure to remove run_schemas as we've trashed the run
         em.createNativeQuery("DELETE FROM run_schemas WHERE runid = ?1").setParameter(1, runId).executeUpdate();
-        List<DatasetDAO> datasets = DatasetDAO.list("run.id", runId);
+        List<DatasetDAO> datasets = DatasetDAO.list("runId", runId);
         Log.debugf("Trashing run %d (test %d, %d datasets)", runId, testId, datasets.size());
         for (var dataset : datasets) {
             mediator.propagatedDatasetDelete(dataset.id);
@@ -1050,7 +1050,7 @@ public class RunServiceImpl implements RunService {
         }
         run.description = description;
         // propagate the same change to all datasets belonging to the run
-        DatasetDAO.update("description = ?1 WHERE run.id = ?2", description, run.id);
+        DatasetDAO.update("description = ?1 WHERE runId = ?2", description, run.id);
     }
 
     @RolesAllowed(Roles.TESTER)
@@ -1196,7 +1196,7 @@ public class RunServiceImpl implements RunService {
 
         // We need to make sure all old datasets are gone before creating new; otherwise we could
         // break the runid,ordinal uniqueness constraint
-        for (DatasetDAO old : DatasetDAO.<DatasetDAO> list("run.id", runId)) {
+        for (DatasetDAO old : DatasetDAO.<DatasetDAO> list("runId", runId)) {
             for (DataPointDAO dp : DataPointDAO.<DataPointDAO> list("dataset.id", old.getInfo().id)) {
                 dp.delete();
             }

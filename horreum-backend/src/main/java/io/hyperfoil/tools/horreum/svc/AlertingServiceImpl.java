@@ -309,7 +309,7 @@ public class AlertingServiceImpl implements AlertingService {
     @Transactional
     void recalculateDatapointsForDataset(DatasetDAO dataset, boolean notify, boolean debug,
             Recalculation recalculation) {
-        Log.debugf("Analyzing dataset %d (%d/%d)", (long) dataset.id, (long) dataset.run.id, dataset.ordinal);
+        Log.debugf("Analyzing dataset %d (%d/%d)", (long) dataset.id, (long) dataset.runId, dataset.ordinal);
         TestDAO test = TestDAO.findById(dataset.testid);
         if (test == null) {
             Log.errorf("Cannot load test ID %d", dataset.testid);

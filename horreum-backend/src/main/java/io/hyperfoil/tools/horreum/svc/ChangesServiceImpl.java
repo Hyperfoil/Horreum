@@ -200,9 +200,9 @@ public class ChangesServiceImpl implements ChangesService {
             content.append(" (group ").append(change.variable.group).append(")");
         }
         content.append("<br>").append(change.description).append("<br>Confirmed: ").append(change.confirmed);
-        return new AnnotationDefinition("Change in run " + change.dataset.run.id + "/" + change.dataset.ordinal,
+        return new AnnotationDefinition("Change in run " + change.dataset.runId + "/" + change.dataset.ordinal,
                 content.toString(), false,
-                change.timestamp.toEpochMilli(), 0, new String[0], change.id, change.variable.id, change.dataset.run.id,
+                change.timestamp.toEpochMilli(), 0, new String[0], change.id, change.variable.id, change.dataset.runId,
                 change.dataset.ordinal);
     }
 

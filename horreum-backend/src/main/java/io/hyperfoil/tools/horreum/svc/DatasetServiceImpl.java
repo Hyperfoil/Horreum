@@ -264,7 +264,7 @@ public class DatasetServiceImpl implements DatasetService {
         }
         DatasetService.DatasetList list = new DatasetService.DatasetList();
         list.datasets = query.getResultList();
-        list.total = DatasetDAO.count("run.id = ?1", runId);
+        list.total = DatasetDAO.count("runId = ?1", runId);
         return list;
     }
 

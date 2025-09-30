@@ -116,7 +116,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
         Util.withTx(tm, () -> {
             try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-                List<DatasetLogDAO> logs = DatasetLogDAO.find("dataset.run.id", runId).list();
+                List<DatasetLogDAO> logs = DatasetLogDAO.find("dataset.runId", runId).list();
                 assertFalse(logs.isEmpty());
                 return null;
             }
@@ -127,7 +127,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
             TestUtil.eventually(() -> {
                 em.clear();
-                List<DatasetLogDAO> currentLogs = DatasetLogDAO.find("dataset.run.id", runId).list();
+                List<DatasetLogDAO> currentLogs = DatasetLogDAO.find("dataset.runId", runId).list();
                 assertEquals(0, currentLogs.size());
             });
         }

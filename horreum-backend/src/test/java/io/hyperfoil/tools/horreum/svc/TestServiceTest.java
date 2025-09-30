@@ -169,7 +169,7 @@ class TestServiceTest extends BaseServiceTest {
             assertTrue(ds.id > maxId);
             assertEquals(0, ds.ordinal);
         });
-        assertEquals(NUM_DATASETS, datasets.stream().map(ds -> ds.run.id).collect(Collectors.toSet()).size());
+        assertEquals(NUM_DATASETS, datasets.stream().map(ds -> ds.runId).collect(Collectors.toSet()).size());
     }
 
     @org.junit.jupiter.api.Test
