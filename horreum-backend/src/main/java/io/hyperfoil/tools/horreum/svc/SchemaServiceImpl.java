@@ -362,32 +362,29 @@ public class SchemaServiceImpl implements SchemaService {
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
-    void validateDatasetData(int datasetId, Predicate<String> schemaFilter) {
+    void validateDatasetData(int datasetId) {
         Log.debugf("About to validate data for dataset %d", datasetId);
         DatasetDAO dataset = DatasetDAO.findById(datasetId);
         if (dataset == null) {
             // Don't log error when the dataset is not present and we're revalidating all datasets - it might be
             // concurrently removed because of URI change
-            if (schemaFilter != null) {
-                Log.errorf("Cannot load dataset %d for schema validation", datasetId);
-            }
+            Log.errorf("Cannot load dataset %d for validation", datasetId);
             return;
         }
-        em.createNativeQuery("DELETE FROM dataset_validationerrors WHERE dataset_id = ?1")
-                .setParameter(1, dataset.id).executeUpdate();
 
         if (dataset.data == null) {
+            Log.errorf("Missing data for dataset %d", datasetId);
             return;
         }
 
         if (dataset.validationErrors != null) {
-            dataset.validationErrors
-                    .removeIf(e -> schemaFilter == null || (e.schema != null && schemaFilter.test(e.schema.uri)));
+            // clear existing validation errors
+            dataset.validationErrors.clear();
         } else {
             dataset.validationErrors = new ArrayList<>();
         }
 
-        validateData(dataset.data, schemaFilter, dataset.validationErrors);
+        validateData(dataset.data, null, dataset.validationErrors);
 
         for (var item : dataset.data) {
             String uri = item.path("$schema").asText();
