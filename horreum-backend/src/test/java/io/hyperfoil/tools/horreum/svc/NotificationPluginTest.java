@@ -45,8 +45,8 @@ public class NotificationPluginTest {
         c2.variable.group = "some group";
         c2.variable.name = "another var";
 
-        dc1.addChange(new Change.Event(c1, dc1.testName, dc1.dataset, true));
-        dc1.addChange(new Change.Event(c2, dc1.testName, dc1.dataset, true));
+        dc1.addChange(new Change.Event(c1, 1, dc1.testName, dc1.dataset, true));
+        dc1.addChange(new Change.Event(c2, 1, dc1.testName, dc1.dataset, true));
         withAllPlugins(notification -> notification.notifyChanges(dc1));
     }
 

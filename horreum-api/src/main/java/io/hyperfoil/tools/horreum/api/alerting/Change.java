@@ -41,6 +41,7 @@ public class Change {
 
     public static class Event {
         public Change change;
+        public int testId;
         public String testName;
         public Dataset.Info dataset;
         public boolean notify;
@@ -48,7 +49,7 @@ public class Change {
         public Event() {
         }
 
-        public Event(Change change, String testName, Dataset.Info dataset, boolean notify) {
+        public Event(Change change, int testId, String testName, Dataset.Info dataset, boolean notify) {
             this.change = change;
             this.testName = testName;
             this.dataset = dataset;

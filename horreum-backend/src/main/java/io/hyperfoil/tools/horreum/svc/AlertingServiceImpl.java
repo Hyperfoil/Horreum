@@ -727,8 +727,8 @@ public class AlertingServiceImpl implements AlertingService {
                             Hibernate.initialize(change.dataset.run.id);
                             String testName = TestDAO.<TestDAO> findByIdOptional(variable.testId).map(test -> test.name)
                                     .orElse("<unknown>");
-                            Change.Event event = new Change.Event(ChangeMapper.from(change), testName,
-                                    DatasetMapper.fromInfo(info), notify);
+                            Change.Event event = new Change.Event(ChangeMapper.from(change), variable.testId,
+                                    testName, DatasetMapper.fromInfo(info), notify);
                             if (mediator.testMode())
                                 Util.registerTxSynchronization(tm, txStatus -> mediator
                                         .publishEvent(AsyncEventChannels.CHANGE_NEW, change.dataset.testid, event));
