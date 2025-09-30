@@ -15,11 +15,14 @@ public class Change {
     @NotNull
     @JsonProperty(required = true)
     public Variable variable;
+
     @JsonIgnore
-    public Dataset dataset;
+    public Dataset.Info dataset;
+
     @NotNull
     @JsonProperty(required = true)
     public Instant timestamp;
+
     @NotNull
     @JsonProperty(required = true)
     public boolean confirmed;
@@ -30,7 +33,7 @@ public class Change {
 
     @JsonProperty("dataset")
     public Dataset.Info getDatasetId() {
-        return this.dataset != null ? this.dataset.getInfo() : null;
+        return this.dataset;
     }
 
     public String toString() {
@@ -43,21 +46,20 @@ public class Change {
         public Change change;
         public int testId;
         public String testName;
-        public Dataset.Info dataset;
         public boolean notify;
 
         public Event() {
         }
 
-        public Event(Change change, int testId, String testName, Dataset.Info dataset, boolean notify) {
+        public Event(Change change, int testId, String testName, boolean notify) {
             this.change = change;
+            this.testId = testId;
             this.testName = testName;
-            this.dataset = dataset;
             this.notify = notify;
         }
 
         public String toString() {
-            return "Change.Event{change=" + this.change + ", dataset=" + this.dataset + ", notify=" + this.notify + '}';
+            return "Change.Event{change=" + this.change + ", notify=" + this.notify + '}';
         }
     }
 }

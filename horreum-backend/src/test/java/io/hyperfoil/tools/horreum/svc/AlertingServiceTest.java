@@ -226,13 +226,13 @@ public class AlertingServiceTest extends BaseServiceTest {
         Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(changeEvent1);
         assertEquals(run13, changeEvent1.change.dataset.runId);
-        assertEquals(run13, changeEvent1.dataset.runId);
+        assertEquals(run13, changeEvent1.change.dataset.runId);
 
         int run14 = uploadRun(ts + 13, ts + 13, runWithValue(2, schema), test.name);
         Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(changeEvent2);
         assertEquals(run14, changeEvent2.change.dataset.runId);
-        assertEquals(run14, changeEvent2.dataset.runId);
+        assertEquals(run14, changeEvent2.change.dataset.runId);
     }
 
     @org.junit.jupiter.api.Test

@@ -43,8 +43,8 @@ public class ChangeToMarkdown implements BodyFormatter {
                 .data("testId", String.valueOf(change.variable.testId))
                 .data("variable", change.variable.name)
                 .data("group", change.variable.group)
-                .data("runId", event.dataset.runId)
-                .data("datasetOrdinal", event.dataset.ordinal)
+                .data("runId", event.change.dataset.runId)
+                .data("datasetOrdinal", event.change.dataset.ordinal)
                 .data("description", change.description)
                 .render();
     }

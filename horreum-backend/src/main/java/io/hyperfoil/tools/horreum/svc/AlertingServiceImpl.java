@@ -38,7 +38,6 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
@@ -328,7 +327,7 @@ public class AlertingServiceImpl implements AlertingService {
             return true;
         }
         Optional<JsonNode> result = session
-                .createNativeQuery("SELECT fp.fingerprint FROM fingerprint fp WHERE dataset_id = ?1", JsonNode.class)
+                .createNativeQuery("SELECT fp.fingerprint FROM fingerprint fp WHERE dataset_id = ?1")
                 .setParameter(1, dataset.id)
                 .addScalar("fingerprint", JsonBinaryType.INSTANCE)
                 .getResultStream().findFirst();
@@ -712,25 +711,11 @@ public class AlertingServiceImpl implements AlertingService {
                         model.analyze(dataPoints, detection.config, change -> {
                             logChangeDetectionMessage(testId, datasetId, PersistentLogDAO.DEBUG,
                                     "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
-                            DatasetDAO.Info info = session
-                                    .createNativeQuery(
-                                            "SELECT id, runid as \"runId\", ordinal, testid as \"testId\" FROM dataset WHERE id = ?1",
-                                            Tuple.class)
-                                    .setParameter(1, change.dataset.id)
-                                    .setTupleTransformer((tuples, aliases) -> {
-                                        DatasetDAO.Info i = new DatasetDAO.Info();
-                                        i.id = (int) tuples[0];
-                                        i.runId = (int) tuples[1];
-                                        i.ordinal = (int) tuples[2];
-                                        i.testId = (int) tuples[3];
-                                        return i;
-                                    }).getSingleResult();
                             em.persist(change);
-                            Hibernate.initialize(change.dataset.run.id);
+                            //                            Hibernate.initialize(change.dataset.run.id);
                             String testName = TestDAO.<TestDAO> findByIdOptional(testId).map(test -> test.name)
                                     .orElse("<unknown>");
-                            Change.Event event = new Change.Event(ChangeMapper.from(change), testId, testName,
-                                    DatasetMapper.fromInfo(info), notify);
+                            Change.Event event = new Change.Event(ChangeMapper.from(change), testId, testName, notify);
                             if (mediator.testMode())
                                 Util.registerTxSynchronization(tm, txStatus -> mediator
                                         .publishEvent(AsyncEventChannels.CHANGE_NEW, change.dataset.testid, event));

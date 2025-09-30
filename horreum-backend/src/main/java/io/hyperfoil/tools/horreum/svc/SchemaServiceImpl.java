@@ -375,26 +375,31 @@ public class SchemaServiceImpl implements SchemaService {
         }
         em.createNativeQuery("DELETE FROM dataset_validationerrors WHERE dataset_id = ?1")
                 .setParameter(1, dataset.id).executeUpdate();
-        if (dataset.data == null)
+
+        if (dataset.data == null) {
             return;
-        if (dataset.validationErrors != null)
+        }
+
+        if (dataset.validationErrors != null) {
             dataset.validationErrors
                     .removeIf(e -> schemaFilter == null || (e.schema != null && schemaFilter.test(e.schema.uri)));
-        if (dataset.data != null) {
-            if (dataset.validationErrors == null)
-                dataset.validationErrors = new ArrayList<>();
-            validateData(dataset.data, schemaFilter, dataset.validationErrors);
-            for (var item : dataset.data) {
-                String uri = item.path("$schema").asText();
-                if (uri == null || uri.isBlank()) {
-                    ValidationErrorDAO error = new ValidationErrorDAO();
-                    error.error = JsonNodeFactory.instance.objectNode().put("type", "No schema").put("message",
-                            "Element in the dataset does not reference any schema through the '$schema' property.");
-                    dataset.validationErrors.add(error);
-                }
-            }
-            dataset.persist();
+        } else {
+            dataset.validationErrors = new ArrayList<>();
         }
+
+        validateData(dataset.data, schemaFilter, dataset.validationErrors);
+
+        for (var item : dataset.data) {
+            String uri = item.path("$schema").asText();
+            if (uri == null || uri.isBlank()) {
+                ValidationErrorDAO error = new ValidationErrorDAO();
+                error.error = JsonNodeFactory.instance.objectNode().put("type", "No schema").put("message",
+                        "Element in the dataset does not reference any schema through the '$schema' property.");
+                dataset.validationErrors.add(error);
+            }
+        }
+
+        dataset.persist();
 
         if (mediator.testMode())
             Util.registerTxSynchronization(tm, txStatus -> mediator.publishEvent(AsyncEventChannels.DATASET_VALIDATED,

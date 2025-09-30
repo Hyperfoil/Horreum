@@ -64,6 +64,10 @@ public class DatasetDAO extends OwnedEntityBase {
     @JoinColumn(name = "runid")
     public RunDAO run;
 
+    // keep the raw run id for faster access
+    @Column(name = "runid", insertable = false, updatable = false)
+    public int runId;
+
     @NotNull
     public int ordinal;
 
@@ -72,7 +76,7 @@ public class DatasetDAO extends OwnedEntityBase {
     public Collection<ValidationErrorDAO> validationErrors;
 
     public int getRunId() {
-        return run.id;
+        return runId;
     }
 
     public void setRunId(int runId) {

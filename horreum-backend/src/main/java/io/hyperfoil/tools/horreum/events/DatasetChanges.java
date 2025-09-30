@@ -30,7 +30,7 @@ public class DatasetChanges {
     }
 
     public synchronized void addChange(Change.Event event) {
-        if (!event.dataset.equals(dataset) || !event.testName.equals(testName)) {
+        if (!event.change.dataset.equals(dataset) || !event.testName.equals(testName)) {
             throw new IllegalStateException();
         }
         notify = notify || event.notify;

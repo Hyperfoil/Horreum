@@ -9,24 +9,11 @@ public class ChangeMapper {
         Change dto = new Change();
         dto.id = c.id;
         dto.variable = VariableMapper.from(c.variable);
-        dto.dataset = DatasetMapper.from(c.dataset);
+        dto.dataset = DatasetMapper.fromDataset(c.dataset);
         dto.timestamp = c.timestamp;
         dto.confirmed = c.confirmed;
         dto.description = c.description;
 
         return dto;
-    }
-
-    public static ChangeDAO to(Change c) {
-        ChangeDAO dao = new ChangeDAO();
-        dao.id = c.id;
-        dao.variable = VariableMapper.to(c.variable);
-        dao.dataset = DatasetMapper.to(c.dataset, null);
-
-        dao.timestamp = c.timestamp;
-        dao.confirmed = c.confirmed;
-        dao.description = c.description;
-
-        return dao;
     }
 }
