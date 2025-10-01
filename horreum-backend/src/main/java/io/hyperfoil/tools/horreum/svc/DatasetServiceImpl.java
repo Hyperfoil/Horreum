@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -16,7 +17,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Tuple;
-import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
 
@@ -48,7 +48,6 @@ import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelValueDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
@@ -181,19 +180,23 @@ public class DatasetServiceImpl implements DatasetService {
          LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
          LEFT JOIN label ON label.id = label_id
          """;
+
+    private static final String LABEL_VALUES_BY_LABEL_NAMES = """
+         SELECT l.name as name, lv.value as val
+         FROM label_values lv
+         JOIN label l ON l.id = lv.label_id
+         WHERE lv.dataset_id = :datasetId AND l.name IN :labelNames
+         """;
     //@formatter:on
 
     @Inject
     EntityManager em;
 
     @Inject
-    ServiceMediator mediator;
-
-    @Inject
     SecurityIdentity identity;
 
     @Inject
-    TransactionManager tm;
+    Session session;
 
     @PermitAll
     @WithRoles
@@ -620,34 +623,39 @@ public class DatasetServiceImpl implements DatasetService {
 
     @Transactional
     void createFingerprint(int datasetId, int testId) {
-        JsonNode json = null;
+        List<String> fingerprintLabels = new ArrayList<>();
         try {
-            json = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
+            JsonNode fingerprintLabelsJson = em
+                    .createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
                     .setParameter(1, testId).getSingleResult();
+            fingerprintLabels = StreamSupport.stream(fingerprintLabelsJson.spliterator(), false).map(JsonNode::asText).toList();
         } catch (NoResultException noResultException) {
-            Log.infof("Could not find fingerprint for dataset: %d", datasetId);
+            Log.warnf("Could not find fingerprint for dataset: %d", datasetId);
         }
-        if (json == null)
+        if (fingerprintLabels.isEmpty()) {
             return;
+        }
 
         ObjectNode fpNode = JsonNodeFactory.instance.objectNode();
-        List<LabelValueDAO> labelValues = LabelValueDAO.find("datasetId", datasetId).list();
-        List<String[]> labelPairs = new ArrayList<>(labelValues.size());
-        for (var lv : labelValues)
-            labelPairs.add(new String[] { LabelDAO.<LabelDAO> findById(lv.labelId).name, lv.value.asText() });
+        List<Object[]> filteredLabelValues = session.createNativeQuery(LABEL_VALUES_BY_LABEL_NAMES, Object[].class)
+                .setParameter("datasetId", datasetId)
+                .setParameter("labelNames", fingerprintLabels)
+                .addScalar("name", StandardBasicTypes.TEXT)
+                .addScalar("val", JsonBinaryType.INSTANCE)
+                .getResultList();
 
-        for (int i = 0; i < json.size(); i++)
-            for (var name : labelPairs) {
-                if (json.get(i).asText().equals(name[0]))
-                    fpNode.put(name[0], name[1]);
-            }
+        // TODO: can we obtain the json node from the query??
+        for (Object[] lv : filteredLabelValues) {
+            fpNode.put((String) lv[0], ((JsonNode) lv[1]).asText());
+        }
 
         FingerprintDAO fp = new FingerprintDAO();
         fp.datasetId = datasetId;
         fp.fingerprint = fpNode;
         fp.populateHash(); // this call is not really necessary
-        if (fp.datasetId > 0)
+        if (fp.datasetId > 0) {
             fp.persist();
+        }
     }
 
     @Transactional

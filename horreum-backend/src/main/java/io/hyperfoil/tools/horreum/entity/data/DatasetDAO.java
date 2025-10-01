@@ -80,7 +80,7 @@ public class DatasetDAO extends OwnedEntityBase {
                 .setParameter(1, id).unwrap(NativeQuery.class)
                 .addScalar("fingerprint", JsonBinaryType.INSTANCE)
                 .getResultList();
-        if (fingerprintList.size() > 0) {
+        if (!fingerprintList.isEmpty()) {
             return fingerprintList.stream().findFirst().get().toString();
         } else {
             return "";
