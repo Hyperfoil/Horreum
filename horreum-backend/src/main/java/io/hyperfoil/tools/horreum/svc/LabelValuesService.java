@@ -373,8 +373,7 @@ public class LabelValuesService {
      */
     @Transactional
     public List<ExportedLabelValues> labelValuesByRun(int runId, String filter, String sort, String direction, int limit,
-            int page,
-            List<String> include, List<String> exclude, boolean multiFilter) {
+            int page, List<String> include, List<String> exclude, boolean multiFilter) {
 
         FilterDef filterDef = getFilterDef(Util.getFilterObject(filter), null, null, multiFilter, false,
                 (str) -> labelValuesByRun(runId, str, sort, direction, limit, page, include, exclude, false));

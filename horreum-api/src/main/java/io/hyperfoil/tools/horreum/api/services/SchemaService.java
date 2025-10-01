@@ -82,7 +82,7 @@ public interface SchemaService {
     @Operation(description = "Retrieve a paginated list of Schemas with available count")
     @Parameters(value = {
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas", example = "2"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas starting from 1", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
             @Parameter(name = "roles", description = "__my, __all or a comma delimited  list of roles", example = "__my"),

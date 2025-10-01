@@ -3174,7 +3174,8 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: filter by page number of a paginated list of Schemas
+      - description: filter by page number of a paginated list of Schemas starting
+          from 1
         example: 2
         name: page
         in: query
@@ -3228,7 +3229,8 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: filter by page number of a paginated list of Schemas
+      - description: filter by page number of a paginated list of Schemas starting
+          from 1
         example: 2
         name: page
         in: query
@@ -3283,7 +3285,8 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: filter by page number of a paginated list of Schemas
+      - description: filter by page number of a paginated list of Schemas starting
+          from 1
         example: 2
         name: page
         in: query
@@ -3572,7 +3575,8 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: filter by page number of a paginated list of Tests
+      - description: filter by page number of a paginated list of Tests starting from
+          1
         example: 2
         name: page
         in: query
@@ -3744,7 +3748,8 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: filter by page number of a paginated list of Tests
+      - description: filter by page number of a paginated list of Tests starting from
+          1
         example: 2
         name: page
         in: query
@@ -3799,7 +3804,8 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: filter by page number of a paginated list of Tests
+      - description: filter by page number of a paginated list of Tests starting from
+          1
         example: 2
         name: page
         in: query
@@ -4295,7 +4301,8 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: filter by page number of a paginated list of Schemas
+      - description: filter by page number of a paginated list of Schemas starting
+          from 1
         example: 2
         name: page
         in: query
@@ -4854,7 +4861,8 @@ paths:
         schema:
           type: integer
           format: int32
-      - description: filter by page number of a paginated list of Tests
+      - description: filter by page number of a paginated list of Tests starting from
+          1
         example: 2
         name: page
         in: query
@@ -5011,7 +5019,7 @@ paths:
           default: 20
         in: query
       - description: "filter by page number of a paginated list of, set to 0 means\
-          \ return all results "
+          \ return all results"
         example: 1
         name: page
         schema:
