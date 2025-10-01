@@ -618,7 +618,8 @@ public class RunServiceImpl implements RunService {
             }
         }
 
-        Log.debugf("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id, foundDescription);
+        Log.infof("Creating new run for test %s(%d) with description %s", testEntity.name, testEntity.id,
+                foundDescription != null ? foundDescription : "<empty>");
 
         RunDAO run = new RunDAO();
         run.testid = testEntity.id;
@@ -698,7 +699,8 @@ public class RunServiceImpl implements RunService {
             Log.error("Failed to persist run", e);
             throw ServiceException.serverError("Failed to persist run");
         }
-        Log.debugf("Upload flushed, run ID %d", run.id);
+
+        Log.infof("Run successfully persisted with ID %d", run.id);
 
         updateRunSchemas(run.id);
         mediator.newRun(RunMapper.from(run));
