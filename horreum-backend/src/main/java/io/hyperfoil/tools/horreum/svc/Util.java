@@ -190,7 +190,7 @@ public class Util {
     static void addLimitOffset(StringBuilder sql, Integer limit, Integer page) {
         if (limit != null && limit > 0) {
             sql.append(" limit ").append(limit);
-            if (page != null && page >= 0) {
+            if (page != null && page > 0) {
                 sql.append(" offset ").append(limit * (page - 1));
             }
         }

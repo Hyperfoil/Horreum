@@ -55,7 +55,7 @@ public interface DatasetService {
             @Parameter(name = "testId", description = "Test ID of test to retrieve list of Datasets", example = "101"),
             @Parameter(name = "filter", description = "JSON Filter expression to apply to query", example = "{\"buildID\":111111}"),
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas", example = "2"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas starting from 1", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
             @Parameter(name = "viewId", description = "Optional View ID to filter datasets by view", example = "202"),
@@ -75,7 +75,7 @@ public interface DatasetService {
             @Parameter(name = "runId", description = "Run ID of run to retrieve list of Datasets", example = "101"),
             @Parameter(name = "filter", description = "JSON Filter expression to apply to query", example = "{\"buildID\":111111}"),
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas", example = "2"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas starting from 1", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
             @Parameter(name = "viewId", description = "Optional View ID to filter datasets by view", example = "202"),
@@ -94,7 +94,7 @@ public interface DatasetService {
     @Parameters(value = {
             @Parameter(name = "uri", required = true, description = "Schema URI", example = "uri:techempower:0.1"),
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas", example = "2"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Schemas starting from 1", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
     })

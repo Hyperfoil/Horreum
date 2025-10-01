@@ -278,7 +278,7 @@ public interface RunService {
             @Parameter(name = "roles", description = "__my, __all or a comma delimited  list of roles", example = "__my"),
             @Parameter(name = "trashed", description = "show trashed runs", example = "false"),
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of Tests", example = "2"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Tests starting from 1", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending")
     })
@@ -306,7 +306,7 @@ public interface RunService {
             @Parameter(name = "testId", description = "Test ID", example = "101"),
             @Parameter(name = "trashed", description = "include trashed runs", example = "false"),
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of Tests", example = "2"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Tests starting from 1", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending")
     })
@@ -323,7 +323,7 @@ public interface RunService {
     @Parameters(value = {
             @Parameter(name = "uri", required = true, description = "Schema URI", example = "uri:my-schema:0.1"),
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of Tests", example = "2"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Tests starting from 1", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending")
     })

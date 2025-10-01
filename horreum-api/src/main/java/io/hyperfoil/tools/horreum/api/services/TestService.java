@@ -88,7 +88,7 @@ public interface TestService {
     @Parameters(value = {
             @Parameter(name = "roles", description = "__my, __all or a comma delimited  list of roles", example = "__my"),
             @Parameter(name = "limit", description = "limit the number of results", example = "20"),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of Tests", example = "2"),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of Tests starting from 1", example = "2"),
             @Parameter(name = "sort", description = "Field name to sort results", example = "name"),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending")
     })
@@ -108,7 +108,7 @@ public interface TestService {
             @Parameter(name = "roles", description = "\"__my\", \"__all\" or a comma delimited  list of roles", example = "__my"),
             @Parameter(name = "folder", description = "name of the Folder containing the Tests", example = "My Team Folder"),
             @Parameter(name = "limit", description = "limit the result count", example = DEFAULT_LIMIT, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_LIMIT)),
-            @Parameter(name = "page", description = "filter by page number of a paginated list of, set to 0 means return all results ", example = DEFAULT_PAGE, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_PAGE)),
+            @Parameter(name = "page", description = "filter by page number of a paginated list of, set to 0 means return all results", example = DEFAULT_PAGE, schema = @Schema(type = SchemaType.INTEGER, defaultValue = DEFAULT_PAGE)),
             @Parameter(name = "direction", description = "Sort direction", example = "Ascending"),
             @Parameter(name = "name", description = "Filter by test name", example = "MyTest"),
     })
