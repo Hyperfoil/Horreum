@@ -518,11 +518,25 @@ public class DatasetServiceImpl implements DatasetService {
 
         // create new dataset views from the recently created label values
         calcDatasetViews(datasetId);
-        createFingerprint(datasetId, testId);
+
+        createFingerprint(datasetId, getTestFingerprintLabelsAsList(testId));
 
         // label values have been recomputed, invalidate existing datapoints
         // cleanup datapoints for the current dataset
         DataPointDAO.delete("dataset.id", datasetId);
+    }
+
+    private List<String> getTestFingerprintLabelsAsList(int testId) {
+        List<String> fingerprintLabels = new ArrayList<>();
+        try {
+            JsonNode fingerprintLabelsJson = em
+                    .createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
+                    .setParameter(1, testId).getSingleResult();
+            fingerprintLabels = StreamSupport.stream(fingerprintLabelsJson.spliterator(), false).map(JsonNode::asText).toList();
+        } catch (NoResultException noResultException) {
+            Log.warnf("Could not find fingerprint for test: %d", testId);
+        }
+        return fingerprintLabels;
     }
 
     @Transactional
@@ -622,16 +636,7 @@ public class DatasetServiceImpl implements DatasetService {
     }
 
     @Transactional
-    void createFingerprint(int datasetId, int testId) {
-        List<String> fingerprintLabels = new ArrayList<>();
-        try {
-            JsonNode fingerprintLabelsJson = em
-                    .createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
-                    .setParameter(1, testId).getSingleResult();
-            fingerprintLabels = StreamSupport.stream(fingerprintLabelsJson.spliterator(), false).map(JsonNode::asText).toList();
-        } catch (NoResultException noResultException) {
-            Log.warnf("Could not find fingerprint for dataset: %d", datasetId);
-        }
+    void createFingerprint(int datasetId, List<String> fingerprintLabels) {
         if (fingerprintLabels.isEmpty()) {
             return;
         }
@@ -661,9 +666,10 @@ public class DatasetServiceImpl implements DatasetService {
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void updateFingerprints(int testId) {
+        List<String> fingerprintLabels = getTestFingerprintLabelsAsList(testId);
         for (var dataset : DatasetDAO.<DatasetDAO> find("testid", testId).list()) {
             FingerprintDAO.deleteById(dataset.id);
-            createFingerprint(dataset.id, testId);
+            createFingerprint(dataset.id, fingerprintLabels);
         }
     }
 
