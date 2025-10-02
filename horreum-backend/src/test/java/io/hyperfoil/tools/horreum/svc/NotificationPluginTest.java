@@ -39,14 +39,16 @@ public class NotificationPluginTest {
         c1.description = "foobar";
         c1.variable = new Variable();
         c1.variable.name = "some var";
+        c1.dataset = dc1.dataset;
         Change c2 = new Change();
         c2.timestamp = Instant.now();
         c2.variable = new Variable();
         c2.variable.group = "some group";
         c2.variable.name = "another var";
+        c2.dataset = dc1.dataset;
 
-        dc1.addChange(new Change.Event(c1, dc1.testName, dc1.dataset, true));
-        dc1.addChange(new Change.Event(c2, dc1.testName, dc1.dataset, true));
+        dc1.addChange(new Change.Event(c1, 1, dc1.testName, true));
+        dc1.addChange(new Change.Event(c2, 1, dc1.testName, true));
         withAllPlugins(notification -> notification.notifyChanges(dc1));
     }
 

@@ -41,20 +41,4 @@ public class DatasetLogDAO extends PersistentLogDAO {
         this.dataset = dataset;
         this.source = source;
     }
-
-    private int getTestId() {
-        return test.id;
-    }
-
-    private int getRunId() {
-        return dataset.run.id;
-    }
-
-    private int getDatasetId() {
-        return dataset.id;
-    }
-
-    private int getDatasetOrdinal() {
-        return dataset.ordinal;
-    }
 }

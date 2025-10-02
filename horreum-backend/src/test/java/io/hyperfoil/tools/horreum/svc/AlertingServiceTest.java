@@ -75,7 +75,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
         DataPoint.Event event1 = dpe.poll(10, TimeUnit.SECONDS);
         assertNotNull(event1);
-        assertEquals(42d, event1.dataPoint.value);
+        assertEquals(42d, DataPointDAO.<DataPointDAO> findById(event1.dataPointId).value);
         assertTrue(event1.notify);
 
         RestAssured.given().auth().oauth2(getTesterToken())
@@ -86,7 +86,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
         DataPoint.Event event2 = dpe.poll(10, TimeUnit.SECONDS);
         assertNotNull(event2);
-        assertEquals(0, event2.dataPoint.value, prettyPrint(event2));
+        assertEquals(0, DataPointDAO.<DataPointDAO> findById(event2.dataPointId).value, prettyPrint(event2));
         assertFalse(event2.notify);
     }
 
@@ -116,7 +116,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
         Util.withTx(tm, () -> {
             try (CloseMe ignored = roleManager.withRoles(Arrays.asList(TESTER_ROLES))) {
-                List<DatasetLogDAO> logs = DatasetLogDAO.find("dataset.run.id", runId).list();
+                List<DatasetLogDAO> logs = DatasetLogDAO.find("dataset.runId", runId).list();
                 assertFalse(logs.isEmpty());
                 return null;
             }
@@ -127,7 +127,7 @@ public class AlertingServiceTest extends BaseServiceTest {
 
             TestUtil.eventually(() -> {
                 em.clear();
-                List<DatasetLogDAO> currentLogs = DatasetLogDAO.find("dataset.run.id", runId).list();
+                List<DatasetLogDAO> currentLogs = DatasetLogDAO.find("dataset.runId", runId).list();
                 assertEquals(0, currentLogs.size());
             });
         }
@@ -226,13 +226,13 @@ public class AlertingServiceTest extends BaseServiceTest {
         Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(changeEvent1);
         assertEquals(run13, changeEvent1.change.dataset.runId);
-        assertEquals(run13, changeEvent1.dataset.runId);
+        assertEquals(run13, changeEvent1.change.dataset.runId);
 
         int run14 = uploadRun(ts + 13, ts + 13, runWithValue(2, schema), test.name);
         Change.Event changeEvent2 = changeQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(changeEvent2);
         assertEquals(run14, changeEvent2.change.dataset.runId);
-        assertEquals(run14, changeEvent2.dataset.runId);
+        assertEquals(run14, changeEvent2.change.dataset.runId);
     }
 
     @org.junit.jupiter.api.Test
@@ -552,23 +552,23 @@ public class AlertingServiceTest extends BaseServiceTest {
                 test.id);
 
         uploadRun(runWithValue(42, schema), test.name);
-        DataPoint first = assertValue(datapointQueue, 42);
+        int firstDPId = assertValue(datapointQueue, 42);
 
-        assertNotNull(DataPointDAO.findById(first.id));
+        assertNotNull(DataPointDAO.findById(firstDPId));
         assertEquals(1, DataPointDAO.count());
 
         recalculateDatasets(test.id, false);
-        DataPoint second = assertValue(datapointQueue, 42);
-        assertNotEquals(first.id, second.id);
+        int secondDPId = assertValue(datapointQueue, 42);
+        assertNotEquals(firstDPId, secondDPId);
 
-        assertEquals(0, DataPointDAO.count("id", first.id));
+        assertEquals(0, DataPointDAO.count("id", firstDPId));
 
         em.clear();
         // We need to use system role in the test because as the policy fetches ownership from dataset
         // and this is missing we wouldn't find the old datapoint anyway
         try (CloseMe ignored = roleManager.withRoles(SYSTEM_ROLES)) {
-            assertNotNull(DataPointDAO.findById(second.id));
-            assertNull(DataPointDAO.findById(first.id));
+            assertNotNull(DataPointDAO.findById(secondDPId));
+            assertNull(DataPointDAO.findById(firstDPId));
             assertEquals(1, DataPointDAO.count());
         }
     }
@@ -640,37 +640,37 @@ public class AlertingServiceTest extends BaseServiceTest {
         long ts = System.currentTimeMillis();
         uploadRun(ts, ts, runWithValue(1, schema).put("timestamp", 1662023776000L), test.name);
         DataPoint.Event dp11 = datapointQueue.poll(10, TimeUnit.SECONDS);
-        assertEquals(Instant.ofEpochSecond(1662023776), dp11.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023776), DataPointDAO.<DataPointDAO> findById(dp11.dataPointId).timestamp);
 
         uploadRun(ts - 1, ts - 1, runWithValue(2, schema).put("timestamp", "1662023777000"), test.name);
         DataPoint.Event dp12 = datapointQueue.poll(10, TimeUnit.SECONDS);
-        assertEquals(Instant.ofEpochSecond(1662023777), dp12.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023777), DataPointDAO.<DataPointDAO> findById(dp12.dataPointId).timestamp);
 
         uploadRun(ts + 1, ts + 1, runWithValue(3, schema).put("timestamp", "2022-09-01T11:16:18+02:00"), test.name);
         DataPoint.Event dp13 = datapointQueue.poll(10, TimeUnit.SECONDS);
-        assertEquals(Instant.ofEpochSecond(1662023778), dp13.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023778), DataPointDAO.<DataPointDAO> findById(dp13.dataPointId).timestamp);
 
         setChangeDetectionTimeline(test, Collections.singletonList("timestamp"), "timestamp => timestamp");
         // The DataSets will be recalculated based on DataSet.start, not DataPoint.timestamp
         recalculateDatapoints(test.id);
         DataPoint.Event dp22 = datapointQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(dp22);
-        assertEquals(Instant.ofEpochSecond(1662023777), dp22.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023777), DataPointDAO.<DataPointDAO> findById(dp22.dataPointId).timestamp);
         DataPoint.Event dp21 = datapointQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(dp21);
-        assertEquals(Instant.ofEpochSecond(1662023776), dp21.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023776), DataPointDAO.<DataPointDAO> findById(dp21.dataPointId).timestamp);
         DataPoint.Event dp23 = datapointQueue.poll(10, TimeUnit.SECONDS);
         assertNotNull(dp23);
-        assertEquals(Instant.ofEpochSecond(1662023778), dp23.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023778), DataPointDAO.<DataPointDAO> findById(dp23.dataPointId).timestamp);
 
         setChangeDetectionTimeline(test, Arrays.asList("timestamp", "value"), "({ timestamp, value }) => timestamp");
         recalculateDatapoints(test.id);
         DataPoint.Event dp32 = datapointQueue.poll(10, TimeUnit.SECONDS);
-        assertEquals(Instant.ofEpochSecond(1662023777), dp32.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023777), DataPointDAO.<DataPointDAO> findById(dp32.dataPointId).timestamp);
         DataPoint.Event dp31 = datapointQueue.poll(10, TimeUnit.SECONDS);
-        assertEquals(Instant.ofEpochSecond(1662023776), dp31.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023776), DataPointDAO.<DataPointDAO> findById(dp31.dataPointId).timestamp);
         DataPoint.Event dp33 = datapointQueue.poll(10, TimeUnit.SECONDS);
-        assertEquals(Instant.ofEpochSecond(1662023778), dp33.dataPoint.timestamp);
+        assertEquals(Instant.ofEpochSecond(1662023778), DataPointDAO.<DataPointDAO> findById(dp33.dataPointId).timestamp);
     }
 
     private void setChangeDetectionTimeline(Test test, List<String> labels, String function) {

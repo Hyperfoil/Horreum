@@ -40,11 +40,11 @@ public class DatasetMapper {
         return ds;
     }
 
-    public static Dataset.Info fromInfo(DatasetDAO.Info info) {
-        return new Dataset.Info(info.id, info.runId, info.ordinal, info.testId);
+    public static Dataset.Info fromDataset(DatasetDAO dao) {
+        return new Dataset.Info(dao.id, dao.getRunId(), dao.ordinal, dao.testid);
     }
 
-    public static DatasetDAO.Info toInfo(Dataset.Info info) {
-        return new DatasetDAO.Info(info.id, info.runId, info.ordinal, info.testId);
+    public static Dataset.Info fromInfo(DatasetDAO.Info info) {
+        return new Dataset.Info(info.id, info.runId, info.ordinal, info.testId);
     }
 }

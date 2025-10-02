@@ -7,7 +7,6 @@ import org.hibernate.annotations.Type;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
-import io.hyperfoil.tools.horreum.entity.alerting.VariableDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 
 /**
@@ -20,9 +19,8 @@ public class ChangeDetectionLogDAO extends PersistentLogDAO {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "changedetectionlog_id_generator")
     public Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "variableid", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
-    public VariableDAO variable;
+    @Column(name = "variableid")
+    public int variableId;
 
     @Type(JsonBinaryType.class)
     @Column(columnDefinition = "jsonb")
@@ -32,14 +30,10 @@ public class ChangeDetectionLogDAO extends PersistentLogDAO {
         super(0, null);
     }
 
-    public ChangeDetectionLogDAO(VariableDAO variable, JsonNode fingerprint, int level, String message) {
+    public ChangeDetectionLogDAO(int variableId, JsonNode fingerprint, int level, String message) {
         super(level, message);
-        this.variable = variable;
+        this.variableId = variableId;
         this.fingerprint = fingerprint;
-    }
-
-    public VariableDAO getVariable() {
-        return variable;
     }
 
     public JsonNode getFingerprint() {

@@ -179,7 +179,6 @@ public class ServiceMediator {
     @ActivateRequestContext
     public void processDatasetEvents(Dataset.EventNew newEvent) {
         onNewDataset(newEvent);
-        validateDataset(newEvent.datasetId);
     }
 
     // NEW_DATASET, i.e., when uploading new run, has higher priority than RECALC_DATASET, i.e., when updating label schema
@@ -291,7 +290,7 @@ public class ServiceMediator {
     }
 
     public void validateDataset(Integer datasetId) {
-        schemaService.validateDatasetData(datasetId, null);
+        schemaService.validateDatasetData(datasetId);
     }
 
     public <T> void publishEvent(AsyncEventChannels channel, int testId, T payload) {

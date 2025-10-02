@@ -63,7 +63,7 @@ public class ChangeDAO extends PanacheEntityBase {
         return "Change{" +
                 "id=" + id +
                 ", variable=" + variable.id +
-                ", dataset=" + dataset.id + " (" + dataset.run.id + "/" + dataset.ordinal + ")" +
+                ", dataset=" + dataset.id + " (" + dataset.runId + "/" + dataset.ordinal + ")" +
                 ", timestamp=" + timestamp +
                 ", confirmed=" + confirmed +
                 ", description='" + description + '\'' +

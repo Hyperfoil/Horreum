@@ -162,9 +162,7 @@ public class ActionServiceImpl implements ActionService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     public void onNewChange(Change.Event changeEvent) {
-        int testId = em.createQuery("SELECT testid FROM run WHERE id = ?1", Integer.class)
-                .setParameter(1, changeEvent.dataset.runId).getResultStream().findFirst().orElse(-1);
-        executeActions(ActionEvent.CHANGE_NEW, testId, changeEvent, changeEvent.notify);
+        executeActions(ActionEvent.CHANGE_NEW, changeEvent.testId, changeEvent, changeEvent.notify);
     }
 
     void validate(Action action) {

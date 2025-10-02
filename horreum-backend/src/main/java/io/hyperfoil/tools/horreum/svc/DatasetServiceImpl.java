@@ -264,7 +264,7 @@ public class DatasetServiceImpl implements DatasetService {
         }
         DatasetService.DatasetList list = new DatasetService.DatasetList();
         list.datasets = query.getResultList();
-        list.total = DatasetDAO.count("run.id = ?1", runId);
+        list.total = DatasetDAO.count("runId = ?1", runId);
         return list;
     }
 
@@ -506,8 +506,8 @@ public class DatasetServiceImpl implements DatasetService {
         Util.evaluateWithCombinationFunction(toCompute,
                 (row) -> (String) row[2],
                 (row) -> (row[3] instanceof ArrayNode ? flatten((ArrayNode) row[3]) : (JsonNode) row[3]),
-                (row, result) -> createLabelValue(datasetId, testId, (int) row[0], Util.convertToJson(result)),
-                (row) -> createLabelValue(datasetId, testId, (int) row[0], (JsonNode) row[3]),
+                (row, result) -> createLabelValue(datasetId, (int) row[0], Util.convertToJson(result)),
+                (row) -> createLabelValue(datasetId, (int) row[0], (JsonNode) row[3]),
                 (row, e, jsCode) -> logMessage(datasetId, PersistentLogDAO.ERROR,
                         "Evaluation of label %s failed: '%s' Code:<pre>%s</pre>", row[0], e.getMessage(), jsCode),
                 (out) -> logMessage(datasetId, PersistentLogDAO.DEBUG, "Output while calculating labels: <pre>%s</pre>",
@@ -609,7 +609,8 @@ public class DatasetServiceImpl implements DatasetService {
                 "We thought there's an error in one of the JSONPaths but independent validation did not find any problems.");
     }
 
-    private void createLabelValue(int datasetId, int testId, int labelId, JsonNode value) {
+    @Transactional
+    void createLabelValue(int datasetId, int labelId, JsonNode value) {
         LabelValueDAO labelValue = new LabelValueDAO();
         labelValue.datasetId = datasetId;
         labelValue.labelId = labelId;
@@ -617,7 +618,8 @@ public class DatasetServiceImpl implements DatasetService {
         labelValue.persist();
     }
 
-    private void createFingerprint(int datasetId, int testId) {
+    @Transactional
+    void createFingerprint(int datasetId, int testId) {
         JsonNode json = null;
         try {
             json = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)

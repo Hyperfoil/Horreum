@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 
 import jakarta.persistence.Basic;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -15,8 +14,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 
 import org.hibernate.annotations.Type;
@@ -60,9 +57,10 @@ public class DatasetDAO extends OwnedEntityBase {
     @Column(columnDefinition = "jsonb")
     public JsonNode data;
 
-    @ManyToOne(cascade = CascadeType.DETACH, fetch = FetchType.LAZY)
-    @JoinColumn(name = "runid")
-    public RunDAO run;
+    // keep the raw run id since we don't use the actual object anywhere
+    @NotNull
+    @Column(name = "runid")
+    public int runId;
 
     @NotNull
     public int ordinal;
@@ -72,11 +70,7 @@ public class DatasetDAO extends OwnedEntityBase {
     public Collection<ValidationErrorDAO> validationErrors;
 
     public int getRunId() {
-        return run.id;
-    }
-
-    public void setRunId(int runId) {
-        run = getEntityManager().getReference(RunDAO.class, runId);
+        return runId;
     }
 
     public String getFingerprint() {
@@ -94,7 +88,7 @@ public class DatasetDAO extends OwnedEntityBase {
     }
 
     public DatasetDAO.Info getInfo() {
-        return new DatasetDAO.Info(id, run.id, ordinal, testid);
+        return new DatasetDAO.Info(id, runId, ordinal, testid);
     }
 
     public static class EventNew {
@@ -112,7 +106,7 @@ public class DatasetDAO extends OwnedEntityBase {
         @Override
         public String toString() {
             return "Dataset.EventNew{" +
-                    "dataset=" + dataset.id + " (" + dataset.run.id + "/" + dataset.ordinal +
+                    "dataset=" + dataset.id + " (" + dataset.runId + "/" + dataset.ordinal +
                     "), isRecalculation=" + isRecalculation +
                     '}';
         }
@@ -122,7 +116,7 @@ public class DatasetDAO extends OwnedEntityBase {
     }
 
     public DatasetDAO(RunDAO run, int ordinal, String description, JsonNode data) {
-        this.run = run;
+        this.runId = run.id;
         this.start = run.start;
         this.stop = run.stop;
         this.testid = run.testid;

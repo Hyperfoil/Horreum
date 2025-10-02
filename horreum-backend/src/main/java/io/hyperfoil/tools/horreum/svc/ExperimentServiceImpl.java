@@ -293,7 +293,7 @@ public class ExperimentServiceImpl implements ExperimentService {
             }
 
             org.hibernate.query.Query<Dataset.Info> datasetQuery = em.unwrap(Session.class).createQuery(
-                    "SELECT id, run.id, ordinal, testid FROM dataset WHERE id IN ?1 ORDER BY start DESC", Dataset.Info.class);
+                    "SELECT id, runId, ordinal, testid FROM dataset WHERE id IN ?1 ORDER BY start DESC", Dataset.Info.class);
             datasetQuery.setTupleTransformer(
                     (tuples, aliases) -> new Dataset.Info((int) tuples[0], (int) tuples[1], (int) tuples[2], (int) tuples[3]));
             List<Dataset.Info> baseline = datasetQuery.setParameter(1, entry.getValue()).getResultList();

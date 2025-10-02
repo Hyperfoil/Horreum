@@ -34,10 +34,10 @@ public class EventAggregator {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     public synchronized void onNewChange(Change.Event event) {
-        datasetChanges.computeIfAbsent(event.dataset.id, id -> {
-            String fingerprint = DatasetDAO.getEntityManager().getReference(DatasetDAO.class, event.dataset.id)
+        datasetChanges.computeIfAbsent(event.change.dataset.id, id -> {
+            String fingerprint = DatasetDAO.getEntityManager().getReference(DatasetDAO.class, event.change.dataset.id)
                     .getFingerprint();
-            return new DatasetChanges(event.dataset, fingerprint, event.testName, event.notify);
+            return new DatasetChanges(event.change.dataset, fingerprint, event.testName, event.notify);
         }).addChange(event);
         handleDatasetChanges();
     }
