@@ -16,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 
+import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.Type;
 import org.hibernate.query.NativeQuery;
 
@@ -52,6 +53,7 @@ public class DatasetDAO extends OwnedEntityBase {
     public Integer testid;
 
     @NotNull
+    @Immutable // with this, data is ignored by the dirty-checking process
     @Basic(fetch = FetchType.LAZY)
     @Type(JsonBinaryType.class)
     @Column(columnDefinition = "jsonb")
