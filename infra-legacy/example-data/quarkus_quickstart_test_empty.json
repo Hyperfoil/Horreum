@@ -3,7 +3,7 @@
   "name": "Quarkus - config-quickstart - native",
   "folder": "quarkus",
   "description": "tst",
-  "owner": "perf-team",
+  "owner": "foo-team",
   "access": 0,
   "timelineLabels": null,
   "timelineFunction": null,

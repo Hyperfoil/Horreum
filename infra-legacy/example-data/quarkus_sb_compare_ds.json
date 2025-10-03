@@ -1,0 +1,187 @@
+{
+  "access": "PUBLIC",
+  "owner": "foo-team",
+  "id": 124,
+  "uri": "urn:quarkus-sb-compare-ds:0.1",
+  "name": "quarkus-sb-compare-ds",
+  "description": "",
+  "labels": [
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2346,
+      "name": "avBuildTime",
+      "extractors": [
+        {
+          "name": "avBuildTime",
+          "jsonpath": "$.avBuildTime",
+          "isarray": false
+        }
+      ],
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2349,
+      "name": "avThroughput",
+      "extractors": [
+        {
+          "name": "avThroughput",
+          "jsonpath": "$.avThroughput",
+          "isarray": false
+        }
+      ],
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2345,
+      "name": "avTimeToFirstRequest",
+      "extractors": [
+        {
+          "name": "avTimeToFirstRequest",
+          "jsonpath": "$.avTimeToFirstRequest",
+          "isarray": false
+        }
+      ],
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2352,
+      "name": "build",
+      "extractors": [
+        {
+          "name": "build",
+          "jsonpath": "$.buildId",
+          "isarray": false
+        }
+      ],
+      "filtering": true,
+      "metrics": false,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2353,
+      "name": "buildType",
+      "extractors": [
+        {
+          "name": "buildType",
+          "jsonpath": "$.buildType",
+          "isarray": false
+        }
+      ],
+      "filtering": true,
+      "metrics": false,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2347,
+      "name": "maxRss",
+      "extractors": [
+        {
+          "name": "maxRss",
+          "jsonpath": "$.maxRss",
+          "isarray": false
+        }
+      ],
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2351,
+      "name": "maxThroughputDensity",
+      "extractors": [
+        {
+          "name": "maxThroughputDensity",
+          "jsonpath": "$.maxThroughputDensity",
+          "isarray": false
+        }
+      ],
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2350,
+      "name": "rssFirstRequest",
+      "extractors": [
+        {
+          "name": "rssFirstRequest",
+          "jsonpath": "$.rssFirstRequest",
+          "isarray": false
+        }
+      ],
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2348,
+      "name": "rssStartup",
+      "extractors": [
+        {
+          "name": "rssStartup",
+          "jsonpath": "$.rssStartup",
+          "isarray": false
+        }
+      ],
+      "filtering": false,
+      "metrics": true,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2343,
+      "name": "Runtime",
+      "extractors": [
+        {
+          "name": "runtime",
+          "jsonpath": "$.runtime",
+          "isarray": false
+        }
+      ],
+      "filtering": true,
+      "metrics": false,
+      "schemaId": 124
+    },
+    {
+      "access": "PUBLIC",
+      "owner": "foo-team",
+      "id": 2344,
+      "name": "version",
+      "extractors": [
+        {
+          "name": "version",
+          "jsonpath": "$.version",
+          "isarray": false
+        }
+      ],
+      "filtering": true,
+      "metrics": false,
+      "schemaId": 124
+    }
+  ],
+  "transformers": []
+}
