@@ -187,6 +187,14 @@ public class DatasetServiceImpl implements DatasetService {
          JOIN label l ON l.id = lv.label_id
          WHERE lv.dataset_id = :datasetId AND l.name IN :labelNames
          """;
+
+    private static final String DELETE_FINGERPRINTS_BY_TEST = """
+         DELETE FROM fingerprint
+         WHERE dataset_id IN (
+            SELECT id FROM dataset
+            WHERE testid = :testId
+         )
+         """;
     //@formatter:on
 
     @Inject
@@ -645,16 +653,16 @@ public class DatasetServiceImpl implements DatasetService {
         }
 
         ObjectNode fpNode = JsonNodeFactory.instance.objectNode();
-        List<Object[]> filteredLabelValues = session.createNativeQuery(LABEL_VALUES_BY_LABEL_NAMES, Object[].class)
+        try (Stream<Object[]> filteredLabelValues = session.createNativeQuery(LABEL_VALUES_BY_LABEL_NAMES, Object[].class)
                 .setParameter("datasetId", datasetId)
                 .setParameter("labelNames", fingerprintLabels)
                 .addScalar("name", StandardBasicTypes.TEXT)
                 .addScalar("val", JsonBinaryType.INSTANCE)
-                .getResultList();
-
-        // TODO: can we obtain the json node from the query??
-        for (Object[] lv : filteredLabelValues) {
-            fpNode.put((String) lv[0], ((JsonNode) lv[1]).asText());
+                .stream()) {
+            // TODO: can we obtain the json node from the query directly??
+            filteredLabelValues.forEach(lv -> {
+                fpNode.put((String) lv[0], ((JsonNode) lv[1]).asText());
+            });
         }
 
         FingerprintDAO fp = new FingerprintDAO();
@@ -669,12 +677,26 @@ public class DatasetServiceImpl implements DatasetService {
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void updateFingerprints(int testId) {
+        Log.infof("Updating fingerprints for test %d", testId);
         List<String> fingerprintLabels = getTestFingerprintLabelsAsList(testId);
-        for (var dataset : DatasetDAO.<DatasetDAO> find("testid", testId).list()) {
-            FingerprintDAO.deleteById(dataset.id);
-            // skip calling createFingerprint if the there are not fingerprint labels
-            if (!fingerprintLabels.isEmpty()) {
-                createFingerprint(dataset.id, fingerprintLabels);
+
+        int nDeleted = session.createNativeQuery(DELETE_FINGERPRINTS_BY_TEST, Integer.class)
+                .setParameter("testId", testId)
+                .executeUpdate();
+
+        if (nDeleted > 0) {
+            Log.infof("Removed %d fingerprints from test %d", nDeleted, testId);
+        }
+
+        // skip calling createFingerprint if the there are not fingerprint labels
+        if (!fingerprintLabels.isEmpty()) {
+            Log.infof("Recreating fingerprints for test %d with labels %s", testId,
+                    Arrays.toString(fingerprintLabels.toArray()));
+            // using streams, hibernate does not need to materialize the entire list upfront (is this true?)
+            try (Stream<DatasetDAO> stream = DatasetDAO.<DatasetDAO> find("testid", testId).stream()) {
+                stream.forEach(d -> {
+                    createFingerprint(d.id, fingerprintLabels);
+                });
             }
         }
     }
