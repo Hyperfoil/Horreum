@@ -518,8 +518,11 @@ public class DatasetServiceImpl implements DatasetService {
 
         // create new dataset views from the recently created label values
         calcDatasetViews(datasetId);
-
-        createFingerprint(datasetId, getTestFingerprintLabelsAsList(testId));
+        // skip calling createFingerprint if the there are not fingerprint labels
+        List<String> fingerprintLabels = getTestFingerprintLabelsAsList(testId);
+        if (!fingerprintLabels.isEmpty()) {
+            createFingerprint(datasetId, fingerprintLabels);
+        }
 
         // label values have been recomputed, invalidate existing datapoints
         // cleanup datapoints for the current dataset
@@ -669,7 +672,10 @@ public class DatasetServiceImpl implements DatasetService {
         List<String> fingerprintLabels = getTestFingerprintLabelsAsList(testId);
         for (var dataset : DatasetDAO.<DatasetDAO> find("testid", testId).list()) {
             FingerprintDAO.deleteById(dataset.id);
-            createFingerprint(dataset.id, fingerprintLabels);
+            // skip calling createFingerprint if the there are not fingerprint labels
+            if (!fingerprintLabels.isEmpty()) {
+                createFingerprint(dataset.id, fingerprintLabels);
+            }
         }
     }
 
