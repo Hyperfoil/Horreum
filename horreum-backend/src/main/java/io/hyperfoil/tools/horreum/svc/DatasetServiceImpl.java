@@ -15,6 +15,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.NonUniqueResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Tuple;
 import jakarta.transaction.Transactional;
@@ -181,11 +182,14 @@ public class DatasetServiceImpl implements DatasetService {
          LEFT JOIN label ON label.id = label_id
          """;
 
-    private static final String LABEL_VALUES_BY_LABEL_NAMES = """
-         SELECT l.name as name, lv.value as val
+    private static final String GET_FINGERPRINT_FROM_LABEL_VALUES = """
+         SELECT COALESCE(jsonb_object_agg(l.name, lv.value), '{}'::jsonb) as fp
          FROM label_values lv
-         JOIN label l ON l.id = lv.label_id
-         WHERE lv.dataset_id = :datasetId AND l.name IN :labelNames
+             JOIN label l ON l.id = lv.label_id
+         WHERE lv.dataset_id = :datasetId AND l.name IN (
+             SELECT jsonb_array_elements_text(fingerprint_labels)
+             FROM test WHERE id = :testId AND jsonb_typeof(fingerprint_labels) = 'array'
+         );
          """;
 
     private static final String DELETE_FINGERPRINTS_BY_TEST = """
@@ -526,7 +530,7 @@ public class DatasetServiceImpl implements DatasetService {
 
         // create new dataset views from the recently created label values
         calcDatasetViews(datasetId);
-        createFingerprint(datasetId, getTestFingerprintLabelsAsList(testId));
+        createFingerprint(testId, datasetId);
 
         // label values have been recomputed, invalidate existing datapoints
         // cleanup datapoints for the current dataset
@@ -646,22 +650,20 @@ public class DatasetServiceImpl implements DatasetService {
     }
 
     @Transactional
-    void createFingerprint(int datasetId, List<String> fingerprintLabels) {
+    void createFingerprint(int testId, int datasetId) {
         // we need to create the fingerprint even if test fingerprint labels is empty
         // the fingerprint will be an empty json in that case
-        ObjectNode fpNode = JsonNodeFactory.instance.objectNode();
-        if (!fingerprintLabels.isEmpty()) {
-            try (Stream<Object[]> filteredLabelValues = session.createNativeQuery(LABEL_VALUES_BY_LABEL_NAMES, Object[].class)
+        JsonNode fpNode;
+        try {
+            fpNode = (JsonNode) em.createNativeQuery(GET_FINGERPRINT_FROM_LABEL_VALUES)
                     .setParameter("datasetId", datasetId)
-                    .setParameter("labelNames", fingerprintLabels)
-                    .addScalar("name", StandardBasicTypes.TEXT)
-                    .addScalar("val", JsonBinaryType.INSTANCE)
-                    .stream()) {
-                // TODO: can we obtain the json node from the query directly??
-                filteredLabelValues.forEach(lv -> {
-                    fpNode.put((String) lv[0], ((JsonNode) lv[1]).asText());
-                });
-            }
+                    .setParameter("testId", testId)
+                    .unwrap(NativeQuery.class)
+                    .addScalar("fp", JsonBinaryType.INSTANCE)
+                    .getSingleResult();
+        } catch (NonUniqueResultException | NoResultException e) {
+            // if the query does not produce any result, fallback to empty obj anyway
+            fpNode = JsonNodeFactory.instance.objectNode();
         }
 
         FingerprintDAO fp = new FingerprintDAO();
@@ -692,7 +694,7 @@ public class DatasetServiceImpl implements DatasetService {
         // using streams, hibernate does not need to materialize the entire list upfront (is this true?)
         try (Stream<DatasetDAO> stream = DatasetDAO.<DatasetDAO> find("testid", testId).stream()) {
             stream.forEach(d -> {
-                createFingerprint(d.id, fingerprintLabels);
+                createFingerprint(testId, d.id);
             });
         }
     }
