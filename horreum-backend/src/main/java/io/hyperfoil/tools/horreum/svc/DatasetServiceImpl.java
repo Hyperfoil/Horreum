@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -55,6 +54,7 @@ import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.logging.Log;
+import io.quarkus.panache.common.Parameters;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
@@ -190,14 +190,6 @@ public class DatasetServiceImpl implements DatasetService {
              SELECT jsonb_array_elements_text(fingerprint_labels)
              FROM test WHERE id = :testId AND jsonb_typeof(fingerprint_labels) = 'array'
          );
-         """;
-
-    private static final String DELETE_FINGERPRINTS_BY_TEST = """
-         DELETE FROM fingerprint
-         WHERE dataset_id IN (
-            SELECT id FROM dataset
-            WHERE testid = :testId
-         )
          """;
     //@formatter:on
 
@@ -537,22 +529,6 @@ public class DatasetServiceImpl implements DatasetService {
         DataPointDAO.delete("dataset.id", datasetId);
     }
 
-    private List<String> getTestFingerprintLabelsAsList(int testId) {
-        List<String> fingerprintLabels = new ArrayList<>();
-        try {
-            JsonNode fingerprintLabelsJson = em
-                    .createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
-                    .setParameter(1, testId).getSingleResult();
-            if (fingerprintLabelsJson != null && fingerprintLabelsJson.isArray()) {
-                fingerprintLabels = StreamSupport.stream(fingerprintLabelsJson.spliterator(), false).map(JsonNode::asText)
-                        .toList();
-            }
-        } catch (NoResultException noResultException) {
-            Log.warnf("Could not find fingerprint for test: %d", testId);
-        }
-        return fingerprintLabels;
-    }
-
     @Transactional
     public void calcDatasetViews(int datasetId) {
         // TODO(user) move calc_dataset_view into Horreum business logic see https://github.com/hibernate/hibernate-orm/pull/7457
@@ -679,24 +655,19 @@ public class DatasetServiceImpl implements DatasetService {
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void updateFingerprints(int testId) {
         Log.infof("Updating fingerprints for test %d", testId);
-        List<String> fingerprintLabels = getTestFingerprintLabelsAsList(testId);
+        JsonNode fingerprintLabels = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
+                .setParameter(1, testId).getSingleResult();
 
-        int nDeleted = session.createNativeQuery(DELETE_FINGERPRINTS_BY_TEST, Integer.class)
-                .setParameter("testId", testId)
-                .executeUpdate();
+        long nDeleted = FingerprintDAO.delete("datasetId in (select id from dataset where testid = :testid)",
+                Parameters.with("testid", testId));
 
         if (nDeleted > 0) {
             Log.infof("Removed %d fingerprints from test %d", nDeleted, testId);
         }
 
-        Log.infof("Recreating fingerprints for test %d with labels %s", testId,
-                Arrays.toString(fingerprintLabels.toArray()));
+        Log.infof("Recreating fingerprints for test %d with labels %s", testId, fingerprintLabels);
         // using streams, hibernate does not need to materialize the entire list upfront (is this true?)
-        try (Stream<DatasetDAO> stream = DatasetDAO.<DatasetDAO> find("testid", testId).stream()) {
-            stream.forEach(d -> {
-                createFingerprint(testId, d.id);
-            });
-        }
+        DatasetDAO.<DatasetDAO> stream("testid", testId).forEach(d -> createFingerprint(testId, d.id));
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)
