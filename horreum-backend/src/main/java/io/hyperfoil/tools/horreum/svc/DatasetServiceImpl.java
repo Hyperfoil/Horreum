@@ -14,9 +14,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.NonUniqueResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.Tuple;
-import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
 
@@ -48,13 +48,13 @@ import io.hyperfoil.tools.horreum.entity.PersistentLogDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DataPointDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.DatasetLogDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelValueDAO;
 import io.hyperfoil.tools.horreum.entity.data.TestDAO;
 import io.hyperfoil.tools.horreum.hibernate.JsonBinaryType;
 import io.hyperfoil.tools.horreum.mapper.DatasetMapper;
 import io.hyperfoil.tools.horreum.server.WithRoles;
 import io.quarkus.logging.Log;
+import io.quarkus.panache.common.Parameters;
 import io.quarkus.runtime.Startup;
 import io.quarkus.security.identity.SecurityIdentity;
 
@@ -181,19 +181,26 @@ public class DatasetServiceImpl implements DatasetService {
          LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
          LEFT JOIN label ON label.id = label_id
          """;
+
+    private static final String GET_FINGERPRINT_FROM_LABEL_VALUES = """
+         SELECT COALESCE(jsonb_object_agg(l.name, lv.value), '{}'::jsonb) as fp
+         FROM label_values lv
+             JOIN label l ON l.id = lv.label_id
+         WHERE lv.dataset_id = :datasetId AND l.name IN (
+             SELECT jsonb_array_elements_text(fingerprint_labels)
+             FROM test WHERE id = :testId AND jsonb_typeof(fingerprint_labels) = 'array'
+         );
+         """;
     //@formatter:on
 
     @Inject
     EntityManager em;
 
     @Inject
-    ServiceMediator mediator;
-
-    @Inject
     SecurityIdentity identity;
 
     @Inject
-    TransactionManager tm;
+    Session session;
 
     @PermitAll
     @WithRoles
@@ -515,7 +522,7 @@ public class DatasetServiceImpl implements DatasetService {
 
         // create new dataset views from the recently created label values
         calcDatasetViews(datasetId);
-        createFingerprint(datasetId, testId);
+        createFingerprint(testId, datasetId);
 
         // label values have been recomputed, invalidate existing datapoints
         // cleanup datapoints for the current dataset
@@ -619,44 +626,48 @@ public class DatasetServiceImpl implements DatasetService {
     }
 
     @Transactional
-    void createFingerprint(int datasetId, int testId) {
-        JsonNode json = null;
+    void createFingerprint(int testId, int datasetId) {
+        // we need to create the fingerprint even if test fingerprint labels is empty
+        // the fingerprint will be an empty json in that case
+        JsonNode fpNode;
         try {
-            json = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
-                    .setParameter(1, testId).getSingleResult();
-        } catch (NoResultException noResultException) {
-            Log.infof("Could not find fingerprint for dataset: %d", datasetId);
+            fpNode = (JsonNode) em.createNativeQuery(GET_FINGERPRINT_FROM_LABEL_VALUES)
+                    .setParameter("datasetId", datasetId)
+                    .setParameter("testId", testId)
+                    .unwrap(NativeQuery.class)
+                    .addScalar("fp", JsonBinaryType.INSTANCE)
+                    .getSingleResult();
+        } catch (NonUniqueResultException | NoResultException e) {
+            // if the query does not produce any result, fallback to empty obj anyway
+            fpNode = JsonNodeFactory.instance.objectNode();
         }
-        if (json == null)
-            return;
-
-        ObjectNode fpNode = JsonNodeFactory.instance.objectNode();
-        List<LabelValueDAO> labelValues = LabelValueDAO.find("datasetId", datasetId).list();
-        List<String[]> labelPairs = new ArrayList<>(labelValues.size());
-        for (var lv : labelValues)
-            labelPairs.add(new String[] { LabelDAO.<LabelDAO> findById(lv.labelId).name, lv.value.asText() });
-
-        for (int i = 0; i < json.size(); i++)
-            for (var name : labelPairs) {
-                if (json.get(i).asText().equals(name[0]))
-                    fpNode.put(name[0], name[1]);
-            }
 
         FingerprintDAO fp = new FingerprintDAO();
         fp.datasetId = datasetId;
         fp.fingerprint = fpNode;
         fp.populateHash(); // this call is not really necessary
-        if (fp.datasetId > 0)
+        if (fp.datasetId > 0) {
             fp.persist();
+        }
     }
 
     @Transactional
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void updateFingerprints(int testId) {
-        for (var dataset : DatasetDAO.<DatasetDAO> find("testid", testId).list()) {
-            FingerprintDAO.deleteById(dataset.id);
-            createFingerprint(dataset.id, testId);
+        Log.infof("Updating fingerprints for test %d", testId);
+        JsonNode fingerprintLabels = em.createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
+                .setParameter(1, testId).getSingleResult();
+
+        long nDeleted = FingerprintDAO.delete("datasetId in (select id from dataset where testid = :testid)",
+                Parameters.with("testid", testId));
+
+        if (nDeleted > 0) {
+            Log.infof("Removed %d fingerprints from test %d", nDeleted, testId);
         }
+
+        Log.infof("Recreating fingerprints for test %d with labels %s", testId, fingerprintLabels);
+        // using streams, hibernate does not need to materialize the entire list upfront (is this true?)
+        DatasetDAO.<DatasetDAO> stream("testid", testId).forEach(d -> createFingerprint(testId, d.id));
     }
 
     @Transactional(Transactional.TxType.REQUIRES_NEW)

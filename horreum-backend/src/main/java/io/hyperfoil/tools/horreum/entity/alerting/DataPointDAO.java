@@ -14,6 +14,8 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 
+import org.hibernate.annotations.Immutable;
+
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
@@ -22,6 +24,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity(name = "DataPoint")
 @Table(name = "DataPoint")
+@Immutable // immutable entity need not be dirty-checked, so Hibernate does not need to maintain a snapshot of its state
 public class DataPointDAO extends PanacheEntityBase {
 
     @Id

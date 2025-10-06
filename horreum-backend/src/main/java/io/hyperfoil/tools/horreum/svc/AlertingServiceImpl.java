@@ -988,6 +988,9 @@ public class AlertingServiceImpl implements AlertingService {
         });
     }
 
+    // It doesn't make sense to limit access to particular user when doing the recalculation,
+    // normally the calculation happens with system privileges anyway.
+    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     void startRecalculation(int testId, boolean notify, boolean debug, boolean clearDatapoints, Long from, Long to) {
         Recalculation recalculation = new Recalculation();
         Recalculation previous = recalcProgress.putIfAbsent(testId, recalculation);
@@ -1004,15 +1007,15 @@ public class AlertingServiceImpl implements AlertingService {
         recalculation.clearDatapoints = clearDatapoints;
 
         try {
-            Log.debugf("Updating fingerprints for test %d", testId);
             //update fingerprints before starting recalculation
-            //TODO: check if we need to update fingerprints for all tests
+            //TODO: check if we need to update fingerprints for all datasets
             mediator.updateFingerprints(testId);
             Log.infof("About to recalculate datapoints in test %d between %s and %s", testId, from, to);
             //TODO:: determine if we should clear datapoints
             recalculation.datasets = getDatasetsForRecalculation(testId, from, to, clearDatapoints);
             int numRuns = recalculation.datasets.size();
-            Log.debugf("Starting recalculation of test %d, %d runs", testId, numRuns);
+
+            Log.infof("Starting recalculation of test %d, %d runs", testId, numRuns);
             int completed = 0;
             recalcProgress.put(testId, recalculation);
             //TODO:: this could be more streamlined
@@ -1038,9 +1041,6 @@ public class AlertingServiceImpl implements AlertingService {
         }
     }
 
-    // It doesn't make sense to limit access to particular user when doing the recalculation,
-    // normally the calculation happens with system privileges anyway.
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
     Map<Integer, String> getDatasetsForRecalculation(Integer testId, Long from, Long to, boolean clearDatapoints) {
         Query query = session
@@ -1068,7 +1068,6 @@ public class AlertingServiceImpl implements AlertingService {
         return ids;
     }
 
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     void recalculateForDataset(Integer datasetId, boolean notify, boolean debug, Recalculation recalculation) {
         DatasetDAO dataset = DatasetDAO.findById(datasetId);
