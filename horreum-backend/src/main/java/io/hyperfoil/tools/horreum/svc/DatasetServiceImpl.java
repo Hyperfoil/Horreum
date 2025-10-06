@@ -526,11 +526,7 @@ public class DatasetServiceImpl implements DatasetService {
 
         // create new dataset views from the recently created label values
         calcDatasetViews(datasetId);
-        // skip calling createFingerprint if the there are not fingerprint labels
-        List<String> fingerprintLabels = getTestFingerprintLabelsAsList(testId);
-        if (!fingerprintLabels.isEmpty()) {
-            createFingerprint(datasetId, fingerprintLabels);
-        }
+        createFingerprint(datasetId, getTestFingerprintLabelsAsList(testId));
 
         // label values have been recomputed, invalidate existing datapoints
         // cleanup datapoints for the current dataset
@@ -543,7 +539,10 @@ public class DatasetServiceImpl implements DatasetService {
             JsonNode fingerprintLabelsJson = em
                     .createQuery("SELECT t.fingerprintLabels from test t WHERE t.id = ?1", JsonNode.class)
                     .setParameter(1, testId).getSingleResult();
-            fingerprintLabels = StreamSupport.stream(fingerprintLabelsJson.spliterator(), false).map(JsonNode::asText).toList();
+            if (fingerprintLabelsJson != null && fingerprintLabelsJson.isArray()) {
+                fingerprintLabels = StreamSupport.stream(fingerprintLabelsJson.spliterator(), false).map(JsonNode::asText)
+                        .toList();
+            }
         } catch (NoResultException noResultException) {
             Log.warnf("Could not find fingerprint for test: %d", testId);
         }
@@ -648,21 +647,21 @@ public class DatasetServiceImpl implements DatasetService {
 
     @Transactional
     void createFingerprint(int datasetId, List<String> fingerprintLabels) {
-        if (fingerprintLabels.isEmpty()) {
-            return;
-        }
-
+        // we need to create the fingerprint even if test fingerprint labels is empty
+        // the fingerprint will be an empty json in that case
         ObjectNode fpNode = JsonNodeFactory.instance.objectNode();
-        try (Stream<Object[]> filteredLabelValues = session.createNativeQuery(LABEL_VALUES_BY_LABEL_NAMES, Object[].class)
-                .setParameter("datasetId", datasetId)
-                .setParameter("labelNames", fingerprintLabels)
-                .addScalar("name", StandardBasicTypes.TEXT)
-                .addScalar("val", JsonBinaryType.INSTANCE)
-                .stream()) {
-            // TODO: can we obtain the json node from the query directly??
-            filteredLabelValues.forEach(lv -> {
-                fpNode.put((String) lv[0], ((JsonNode) lv[1]).asText());
-            });
+        if (!fingerprintLabels.isEmpty()) {
+            try (Stream<Object[]> filteredLabelValues = session.createNativeQuery(LABEL_VALUES_BY_LABEL_NAMES, Object[].class)
+                    .setParameter("datasetId", datasetId)
+                    .setParameter("labelNames", fingerprintLabels)
+                    .addScalar("name", StandardBasicTypes.TEXT)
+                    .addScalar("val", JsonBinaryType.INSTANCE)
+                    .stream()) {
+                // TODO: can we obtain the json node from the query directly??
+                filteredLabelValues.forEach(lv -> {
+                    fpNode.put((String) lv[0], ((JsonNode) lv[1]).asText());
+                });
+            }
         }
 
         FingerprintDAO fp = new FingerprintDAO();
@@ -688,16 +687,13 @@ public class DatasetServiceImpl implements DatasetService {
             Log.infof("Removed %d fingerprints from test %d", nDeleted, testId);
         }
 
-        // skip calling createFingerprint if the there are not fingerprint labels
-        if (!fingerprintLabels.isEmpty()) {
-            Log.infof("Recreating fingerprints for test %d with labels %s", testId,
-                    Arrays.toString(fingerprintLabels.toArray()));
-            // using streams, hibernate does not need to materialize the entire list upfront (is this true?)
-            try (Stream<DatasetDAO> stream = DatasetDAO.<DatasetDAO> find("testid", testId).stream()) {
-                stream.forEach(d -> {
-                    createFingerprint(d.id, fingerprintLabels);
-                });
-            }
+        Log.infof("Recreating fingerprints for test %d with labels %s", testId,
+                Arrays.toString(fingerprintLabels.toArray()));
+        // using streams, hibernate does not need to materialize the entire list upfront (is this true?)
+        try (Stream<DatasetDAO> stream = DatasetDAO.<DatasetDAO> find("testid", testId).stream()) {
+            stream.forEach(d -> {
+                createFingerprint(d.id, fingerprintLabels);
+            });
         }
     }
 

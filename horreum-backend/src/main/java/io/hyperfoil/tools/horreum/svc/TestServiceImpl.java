@@ -249,8 +249,9 @@ public class TestServiceImpl implements TestService {
 
             test.views = existing.views;
             test = em.merge(test);
-            if (shouldRecalculateLabels)
+            if (shouldRecalculateLabels) {
                 mediator.updateFingerprints(test.id);
+            }
         } else {
             // We need to persist the test before view in order for RLS to work
             if (test.views == null || test.views.isEmpty()) {
