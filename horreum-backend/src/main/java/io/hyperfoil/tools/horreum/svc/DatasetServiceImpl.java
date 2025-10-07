@@ -183,7 +183,18 @@ public class DatasetServiceImpl implements DatasetService {
          """;
 
     private static final String GET_FINGERPRINT_FROM_LABEL_VALUES = """
-         SELECT COALESCE(jsonb_object_agg(l.name, lv.value), '{}'::jsonb) as fp
+         SELECT COALESCE(
+             jsonb_object_agg(
+               l.name,
+               CASE
+                   -- if the jsonb value is a string, extract its raw text content
+                   WHEN jsonb_typeof(lv.value) = 'string' THEN lv.value #>> '{}'
+                   -- otherwise, just cast the value to text (for numbers, booleans, etc.)
+                   ELSE CAST(lv.value AS text)
+               END
+             ),
+             '{}'::jsonb
+         ) AS fp
          FROM label_values lv
              JOIN label l ON l.id = lv.label_id
          WHERE lv.dataset_id = :datasetId AND l.name IN (
@@ -198,9 +209,6 @@ public class DatasetServiceImpl implements DatasetService {
 
     @Inject
     SecurityIdentity identity;
-
-    @Inject
-    Session session;
 
     @PermitAll
     @WithRoles

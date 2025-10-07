@@ -190,9 +190,7 @@ export default function Changes(props: ChangesProps) {
     const navigate = useNavigate()
     const params = new URLSearchParams(location.search)
     const teams = useSelector(teamsSelector)
-    const newTest = { id: props.testID } as SelectedTest;
-    // This could be removed in future as the test id is provided by props therefore it should not change
-    const [selectedTest, setSelectedTest] = useState<SelectedTest>(newTest)
+    const currentTest = { id: props.testID } as SelectedTest;
 
     const paramFingerprint = params.get("fingerprint")
     const [selectedFingerprint, setSelectedFingerprint] = useState<FingerprintValue | undefined>(() => {
@@ -238,23 +236,23 @@ export default function Changes(props: ChangesProps) {
         return query.replace(/^&/, '');
     }
     useEffect(() => {
-        if (!selectedTest) {
+        if (!currentTest) {
             document.title = "Changes | Horreum"
             return
         }
-        document.title = `${selectedTest.id} | Horreum`
+        document.title = `${currentTest.id} | Horreum`
         const query = createQuery(false)
         if (query !== "") {
             navigate(location.pathname + "?" + query)
         }
-    }, [selectedTest, selectedFingerprint, endTime, timespan, lineType, firstNow, history])
+    }, [selectedFingerprint, endTime, timespan, lineType, firstNow, history])
     useEffect(() => {
         setPanels([])
         // We need to prevent fetching dashboard until we are sure if we need the fingerprint
-        if (selectedTest && !loadingFingerprints) {
+        if (!loadingFingerprints) {
             setLoadingPanels(true)
             alertingApi
-                .dashboard(selectedTest.id, fingerprintToString(selectedFingerprint))
+                .dashboard(currentTest.id, fingerprintToString(selectedFingerprint))
                 .then(
                     response => {
                         setPanels(response.panels)
@@ -263,7 +261,7 @@ export default function Changes(props: ChangesProps) {
                 )
                 .finally(() => setLoadingPanels(false))
         }
-    }, [selectedTest, selectedFingerprint, teams])
+    }, [selectedFingerprint, teams])
     useEffect(() => {
         const newDate = formatDate(endTime)
         if (newDate !== date) {
@@ -274,12 +272,9 @@ export default function Changes(props: ChangesProps) {
     const [selectedVariable, setSelectedVariable] = useState<number>()
 
     const fingerprintSource = useCallback(() => {
-        if (!selectedTest) {
-            return Promise.resolve([])
-        }
         setLoadingFingerprints(true)
         return testApi
-            .listFingerprints(selectedTest.id)
+            .listFingerprints(currentTest.id)
             .then(
                 response => {
                     setRequiresFingerprint(!!response && response.length > 1)
@@ -297,22 +292,19 @@ export default function Changes(props: ChangesProps) {
             .finally(() => {
                 setLoadingFingerprints(false)
             })
-    }, [selectedTest])
+    }, [])
     return (
             <Card>
                 <CardHeader>
                     {
                         <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
                             <div style={{ display: "flex", flexWrap: "wrap", width: "100%" }}>
-                                {selectedTest && (
-                                    <LabelsSelect
-                                        style={{ width: "fit-content" }}
-                                        selection={selectedFingerprint}
-                                        onSelect={setSelectedFingerprint}
-                                        source={fingerprintSource}
-                                        forceSplit={true}
-                                    />
-                                )}
+                                <LabelsSelect
+                                    style={{ width: "fit-content" }}
+                                    selection={selectedFingerprint}
+                                    onSelect={setSelectedFingerprint}
+                                    source={fingerprintSource}
+                                />
                             </div>
                             <div style={{ display: "flex" }}>
                                 <DatePicker
@@ -332,22 +324,17 @@ export default function Changes(props: ChangesProps) {
                     }
                 </CardHeader>
                 <CardBody>
-                    {!selectedTest && (
-                        <EmptyState titleText="No test selected" headingLevel="h2">
-                            <EmptyStateBody>Please select one of the tests above</EmptyStateBody>
-                        </EmptyState>
-                    )}
-                    {selectedTest && loadingFingerprints && (
+                    {loadingFingerprints && (
                         <EmptyState>
                             <EmptyStateBody>
                                 Loading fingerprints... <Spinner size="md" />
                             </EmptyStateBody>
                         </EmptyState>
                     )}
-                    {selectedTest && !loadingFingerprints && requiresFingerprint && !selectedFingerprint && (
+                    {!loadingFingerprints && requiresFingerprint && !selectedFingerprint && (
                         <EmptyState titleText="Please select datasets fingerprint." headingLevel="h2" />
                     )}
-                    {selectedTest && !loadingPanels && !requiresFingerprint && panels.length === 0 && (
+                    {!loadingPanels && !requiresFingerprint && panels.length === 0 && (
                         <EmptyState titleText={<>No change detection variables defined</>} headingLevel="h2" />
                     )}
                     {!loadingFingerprints &&
@@ -395,7 +382,7 @@ export default function Changes(props: ChangesProps) {
                                                     <ChangesTabs
                                                         variables={p.variables}
                                                         fingerprint={selectedFingerprint}
-                                                        testOwner={selectedTest?.owner}
+                                                        testOwner={currentTest.owner}
                                                         selectedChangeId={selectedChange}
                                                         selectedVariableId={selectedVariable}
                                                     />

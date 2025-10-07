@@ -43,7 +43,7 @@ function convertPartial(value: any) {
         copy.toString = () => convertLabelValue(value)
         return copy
       } 
-        return value
+    return value
 }
 
 export type SelectedLabels = {
@@ -57,14 +57,13 @@ type LabelsSelectProps = {
     source(): Promise<any[]>
     emptyPlaceholder?: ReactElement<any> | null
     optionForAll?: string
-    forceSplit?: boolean
     fireOnPartial?: boolean
     showKeyHelper?: boolean
     addResetButton?: boolean
     style?: CSSProperties
 }
 
-export default function LabelsSelect({disabled, selection, onSelect, source, emptyPlaceholder, optionForAll, forceSplit, fireOnPartial, showKeyHelper, addResetButton, style}: LabelsSelectProps) {
+export default function LabelsSelect({disabled, selection, onSelect, source, emptyPlaceholder, fireOnPartial, showKeyHelper, addResetButton, style}: LabelsSelectProps) {
     const [availableLabels, setAvailableLabels] = useState<any[]>([])
     const initialSelect = selection
         ? Object.entries(selection).reduce((acc, [key, value]) => {
@@ -80,25 +79,16 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
     useEffect(() => {
         source().then((response: any[]) => {
             setAvailableLabels(response)
-            if (!optionForAll && response && response.length === 1) {
+            if (response && response.length === 1) {
                 onSelect({ ...response[0], toString: () => convertLabels(response[0]) })
             }
         }, noop)
-    }, [source, onSelect, teams, optionForAll])
-    const all: SelectedLabels = useMemo(
-        () => ({
-            toString: () => optionForAll || "",
-        }),
-        [optionForAll]
-    )
+    }, [source, onSelect, teams])
     const options = useMemo(() => {
-        const opts = []
-        if (optionForAll) {
-            opts.push(all)
-        }
+        const opts: SelectedLabels[] = []
         availableLabels.map(t => ({ ...t, toString: () => convertLabels(t) })).forEach(o => opts.push(o))
         return opts
-    }, [availableLabels, all])
+    }, [availableLabels])
 
     function getFilteredOptions(filter: any) {
         return availableLabels.filter(ls => {
@@ -131,18 +121,6 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
     const empty = !options || options.length === 0
     if (empty) {
         return emptyPlaceholder || null
-    } else if (!forceSplit && availableLabels.length < 16) {
-        return (
-            <InnerSelect
-                disabled={disabled || empty}
-                all={all}
-                selection={selection === null && all || selection}
-                options={options}
-                onSelect={onSelect}
-                placeholderText="Choose labels..."
-                style={style}
-            />
-        )
     } else {
         const items = [...new Set(availableLabels.flatMap(ls => Object.keys(ls)))].map(key => {
             const values = filteredOptions.map(fo => fo[key])
@@ -158,12 +136,12 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
                 })
                 .map(value => convertPartial(value))
                 .sort()
+
             return (
                 <SplitItem key={key}>
                     {showKeyHelper && <HelperText>{key}:</HelperText>}
                     <InnerSelect
                         disabled={!!disabled}
-                        isTypeahead
                         hasOnlyOneOption={opts.length === 1 && partialSelect[key] === undefined}
                         selection={opts.length === 1 && opts[0] || partialSelect[key]}
                         options={opts}
@@ -214,41 +192,29 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
 
 type InnerSelectProps = {
     disabled: boolean
-    isTypeahead?: boolean
     hasOnlyOneOption?: boolean
     selection?: SelectedLabels
     options: SelectedLabels[]
-    all?: SelectedLabels
     onSelect(opt: string | undefined): void
     onOpen?(): void
     placeholderText: string
     style?: CSSProperties
 }
 
-function InnerSelect({disabled, isTypeahead, hasOnlyOneOption, selection, options, all, onSelect, onOpen, placeholderText, style}: InnerSelectProps) {
+function InnerSelect({disabled, hasOnlyOneOption, selection, options, onSelect, onOpen, placeholderText, style}: InnerSelectProps) {
     const initialOptions = options.map(
         o => ({value: o?.toString(), content: o?.toString(), selected: o?.toString() === selection?.toString()})
     )
     return (
-        isTypeahead
-            ? <TypeaheadSelect
-                initialOptions={initialOptions}
-                onSelect={(_, item) => onSelect(item as string)}
-                selected={(selection === all && all || selection)?.toString()}
-                onToggle={(expanding: any) => expanding && onOpen && onOpen()}
-                onClearSelection={hasOnlyOneOption ? undefined : () => onSelect(undefined)}
-                placeholder={placeholderText}
-                isDisabled={disabled}
-                style={style}
-            />
-            : <SimpleSelect
-                initialOptions={initialOptions}
-                onSelect={(_, item) => onSelect(item as string)}
-                selected={(selection === all && all || selection)?.toString()}
-                onToggle={(expanding: any) => expanding && onOpen && onOpen()}
-                placeholder={placeholderText}
-                isDisabled={disabled}
-                style={style}
-            />
+        <TypeaheadSelect
+            initialOptions={initialOptions}
+            onSelect={(_, item) => onSelect(item as string)}
+            selected={selection?.toString()}
+            onToggle={(expanding: any) => expanding && onOpen && onOpen()}
+            onClearSelection={hasOnlyOneOption ? undefined : () => onSelect(undefined)}
+            placeholder={placeholderText}
+            isDisabled={disabled}
+            style={style}
+        />
     )
 }
