@@ -15,6 +15,10 @@ export default function Editor(props: EditorProps) {
     const monaco = useMonaco()
     const valueGetter = useRef<() => string>(undefined)
 
+    // requires re-render. does not sync with localStorage
+    // the storage event is not triggered on the window where the change is made
+    const dark = localStorage.getItem('dark-theme') === 'true';
+
     const onMount: OnMount = (editor: editor.IStandaloneCodeEditor) => {
         valueGetter.current = () => editor.getValue()
         if (!monaco) {
@@ -38,13 +42,19 @@ export default function Editor(props: EditorProps) {
         <MonacoEditor
             value={props.value}
             language={props.language || "json"}
-            theme="vs-dark"
+            theme={dark ? 'vs-dark' : 'light'}
             options={{
                 //renderLineHighlight : 'none',
                 ...props.options,
                 language: props.language || "json",
                 automaticLayout: true,
                 scrollBeyondLastLine: false,
+                stickyScroll: {
+                    defaultModel: 'indentationModel',
+                    enabled: true,
+                    maxLineCount: 10,
+                    scrollWithEditor: true,
+                }
             }}
             height={props.height}
             onMount={onMount}
