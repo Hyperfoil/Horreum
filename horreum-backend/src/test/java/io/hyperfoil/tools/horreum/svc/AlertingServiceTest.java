@@ -247,7 +247,7 @@ public class AlertingServiceTest extends BaseServiceTest {
         addLabel(schema, "bar", null, new Extractor("bar", "$.bar", false));
 
         BlockingQueue<DataPoint.Event> datapointQueue = serviceMediator.getEventQueue(AsyncEventChannels.DATAPOINT_NEW, testId);
-        uploadRun(runWithValue(42, schema).put("foo", "aaa").put("bar", "bbb"), test.name);
+        uploadRun(runWithValue(42, schema).put("foo", "aaa").put("bar", 10), test.name);
         assertValue(datapointQueue, 42);
 
         List<FingerprintDAO> fingerprintsBefore = FingerprintDAO.listAll();
@@ -262,7 +262,7 @@ public class AlertingServiceTest extends BaseServiceTest {
         em.clear();
         List<FingerprintDAO> fingerprintsAfter = FingerprintDAO.listAll();
         assertEquals(1, fingerprintsAfter.size());
-        assertEquals(JsonNodeFactory.instance.objectNode().put("foo", "aaa").put("bar", "bbb"),
+        assertEquals(JsonNodeFactory.instance.objectNode().put("foo", "aaa").put("bar", "10"),
                 fingerprintsAfter.get(0).fingerprint);
         assertEquals(fingerprintsBefore.get(0).datasetId, fingerprintsAfter.get(0).datasetId);
 
