@@ -3,7 +3,7 @@ name: Perform Release
 on:
   workflow_dispatch:
 env:
-  RELEASE_BRANCH: 0.19
+  RELEASE_BRANCH: 0.20
 jobs:
   build:
     name: Perform release
