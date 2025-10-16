@@ -4850,4 +4850,15 @@
         <validCheckSum>ANY</validCheckSum>
         <customChange class="io.hyperfoil.tools.horreum.migration.BackfillFingerprintHashChangeSet" />
     </changeSet>
+    <changeSet id="133" author="lampajr">
+        <validCheckSum>ANY</validCheckSum>
+        <createIndex tableName="datapoint" indexName="idx_datapoint_variable_timestamp">
+            <column name="variable_id" />
+            <column name="timestamp" descending="true"/>
+        </createIndex>
+        <createIndex tableName="fingerprint" indexName="idx_fingerprint_hash_dataset">
+            <column name="fp_hash" />
+            <column name="dataset_id" />
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>
