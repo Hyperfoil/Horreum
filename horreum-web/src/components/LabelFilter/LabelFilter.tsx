@@ -137,7 +137,7 @@ export default function LabelFilter({selection, onSelect, source, emptyPlacehold
                     }
                     return true
                 })
-                .map(value => convertPartial(value))
+                .map(value => convertLabelValue(value))
                 .sort()
 
             return (
