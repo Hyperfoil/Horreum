@@ -5103,8 +5103,34 @@ paths:
                 $ref: "#/components/schemas/TestExport"
   /api/test/{id}/filteringLabelValues:
     get:
-      description: List all unique Label Values for a Test
+      description: "List all unique Label Values for a Test. This api is deprecated,\
+        \ use /filteringLabels instead."
+      deprecated: true
       operationId: filteringLabelValues
+      tags:
+      - Test
+      parameters:
+      - description: Test ID to retrieve Filtering Label Values for
+        example: 10
+        name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {}
+  /api/test/{id}/filteringLabels:
+    get:
+      description: List all possible values for each filtering label associated to
+        the test
+      operationId: filteringLabels
       tags:
       - Test
       parameters:

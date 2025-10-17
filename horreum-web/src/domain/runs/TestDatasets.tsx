@@ -44,6 +44,7 @@ import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
 import LabelFilter from "../../components/LabelFilter/LabelFilter";
 import { ColumnDef, ColumnSort, createColumnHelper } from '@tanstack/react-table';
+import LabelFilterV2 from "../../components/LabelFilter/LabelFilterv2";
 
 const columnHelper = createColumnHelper<DatasetSummary>()
 
@@ -166,6 +167,7 @@ export default function TestDatasets() {
     }, [test, token, comparedDatasets, viewId, views])
 
     const labelsSource = useCallback(() => testApi.filteringLabelValues(testIdInt), [testIdInt, teams, token])
+    const newLabelsSource = useCallback(() => testApi.filteringLabels(testIdInt), [testIdInt, teams, token])
 
     const arrayOfClearCallbacks : any[] = [];
     const clearCallback = (callback: () => void) => {
@@ -182,12 +184,18 @@ export default function TestDatasets() {
                 setFilter({});
             }}
         >
-            <ToolbarContent>
-                <LabelFilter
+            <ToolbarContent alignItems={"center"}>
+                {/*<LabelFilter*/}
+                {/*    selection={filter}*/}
+                {/*    onSelect={setFilter}*/}
+                {/*    source={labelsSource}*/}
+                {/*    emptyPlaceholder={<span>No filters available</span>}*/}
+                {/*    clearCallback={clearCallback}*/}
+                {/*/>*/}
+                <LabelFilterV2
                     selection={filter}
                     onSelect={setFilter}
-                    source={labelsSource}
-                    emptyPlaceholder={<span>No filters available</span>}
+                    source={newLabelsSource}
                     clearCallback={clearCallback}
                 />
 

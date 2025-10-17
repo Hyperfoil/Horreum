@@ -70,6 +70,14 @@ public class TestServiceImpl implements TestService {
     //using find and replace because  ASC or DESC cannot be set with a parameter
     //@formatter:off
     private static final String CHECK_TEST_EXISTS_BY_ID_QUERY = "SELECT EXISTS(SELECT 1 FROM test WHERE id = ?1)";
+    protected static final String LABEL_VALUES_SUMMARY_QUERY_2 = """
+        SELECT l.name, array_agg(DISTINCT lv.value #>> '{}') AS val
+            FROM dataset d
+            INNER JOIN label_values lv ON d.id = lv.dataset_id
+            INNER JOIN label l ON l.id = lv.label_id
+        WHERE d.testid = :testId AND l.filtering
+        GROUP BY l.id
+    """;
     protected static final String LABEL_VALUES_SUMMARY_QUERY = """
          SELECT DISTINCT COALESCE(jsonb_object_agg(label.name, lv.value), '{}'::jsonb) AS values
                   FROM dataset
@@ -77,7 +85,9 @@ public class TestServiceImpl implements TestService {
                   INNER JOIN label ON label.id = lv.label_id
                   WHERE dataset.testid = :testId AND label.filtering
                   GROUP BY dataset.id, runId
-         """;
+    """;
+
+
     //@formatter:on
 
     @Inject
@@ -635,6 +645,26 @@ public class TestServiceImpl implements TestService {
         List<ObjectNode> filters = query.getResultList();
 
         return filters != null ? filters : new ArrayList<>();
+    }
+
+    @Override
+    public Map<String, String[]> filteringLabels(int testId) {
+        TestDAO.findByIdOptional(testId).orElseThrow(() -> ServiceException.serverError("Cannot find test " + testId));
+
+        List<Object[]> filters = em.createNativeQuery(LABEL_VALUES_SUMMARY_QUERY_2)
+                .setParameter("testId", testId)
+                .unwrap(NativeQuery.class)
+                //                .addScalar("val", JsonBinaryType.INSTANCE)
+                .getResultList();
+
+        if (filters == null) {
+            return new HashMap<>();
+        }
+
+        return filters.stream().collect(Collectors.toMap(
+                row -> (String) row[0], // name of the label as key
+                row -> (String[]) row[1]) // array of all possible values as string
+        );
     }
 
     @WithRoles
