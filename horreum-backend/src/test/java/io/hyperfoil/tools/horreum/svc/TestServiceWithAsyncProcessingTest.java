@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -158,6 +159,60 @@ class TestServiceWithAsyncProcessingTest extends BaseServiceTest {
                 .filter(node -> node.get("filter-1").asText().equals("foo") && node.get("filter-2").asText().equals("baz"))
                 .findAny().orElse(null));
 
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testFilteringLabelValues(TestInfo info) throws InterruptedException {
+        Test test = createTest(createExampleTest(getTestName(info)));
+
+        String name = info.getTestClass().map(Class::getName).orElse("<unknown>") + "." + info.getDisplayName();
+        Schema schema = createSchema(name, uriForTest(info, "1.0"));
+
+        addLabel(schema, "filter-1", null, new Extractor("filter", "$.filter1", false));
+        addLabel(schema, "filter-2", null, new Extractor("filter", "$.filter2", false));
+
+        BlockingQueue<Dataset.LabelsUpdatedEvent> newDatasetQueue = serviceMediator
+                .getEventQueue(AsyncEventChannels.DATASET_UPDATED_LABELS, test.id);
+        ObjectNode run;
+
+        run = runWithValue(42, schema);
+        run.put("filter1", "foo");
+        run.put("filter2", "bar");
+        uploadRun(run, test.name);
+
+        run = runWithValue(43, schema);
+        run.put("filter1", "foo");
+        run.put("filter2", "bar");
+        uploadRun(run, test.name);
+
+        run = runWithValue(44, schema);
+        run.put("filter1", "biz");
+        run.put("filter2", "bar");
+        uploadRun(run, test.name);
+
+        run = runWithValue(45, schema);
+        run.put("filter1", "foo");
+        run.put("filter2", "baz");
+        uploadRun(run, test.name);
+
+        for (int i = 0; i < 4; i++) {
+            assertNotNull(newDatasetQueue.poll(10, TimeUnit.SECONDS));
+        }
+
+        Map<String, String[]> values = jsonRequest().get("/api/test/" + test.id + "/filteringLabels").then().statusCode(200)
+                .extract().body().as(new TypeRef<>() {
+                });
+
+        assertNotNull(values);
+        assertFalse(values.isEmpty());
+        // two filtering labels
+        assertEquals(2, values.size());
+        assertTrue(Arrays.asList(values.get("filter-1")).contains("foo"));
+        assertTrue(Arrays.asList(values.get("filter-1")).contains("biz"));
+        assertEquals(2, values.get("filter-1").length);
+        assertTrue(Arrays.asList(values.get("filter-2")).contains("bar"));
+        assertTrue(Arrays.asList(values.get("filter-2")).contains("baz"));
+        assertEquals(2, values.get("filter-2").length);
     }
 
     @org.junit.jupiter.api.Test
