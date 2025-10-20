@@ -55,7 +55,6 @@ import io.hyperfoil.tools.horreum.api.data.SchemaExport;
 import io.hyperfoil.tools.horreum.api.data.Transformer;
 import io.hyperfoil.tools.horreum.api.services.SchemaService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
-import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.entity.ValidationErrorDAO;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
 import io.hyperfoil.tools.horreum.entity.data.LabelDAO;
@@ -126,8 +125,6 @@ public class SchemaServiceImpl implements SchemaService {
     @Inject
     ServiceMediator mediator;
 
-    @Inject
-    BlockingTaskDispatcher messageBus;
     @Inject
     Session session;
 

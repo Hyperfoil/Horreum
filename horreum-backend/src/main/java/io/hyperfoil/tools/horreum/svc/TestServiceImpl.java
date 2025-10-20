@@ -682,21 +682,19 @@ public class TestServiceImpl implements TestService {
                 Log.debugf("Recalculate Datasets for run %d - forcing recalculation for test %d (%s)", runId, testId,
                         test.name);
 
-                mediator.executeBlocking(() -> {
-                    int newDatasets = 0;
-                    try {
-                        newDatasets = mediator.transform(runId, true);
-                    } finally {
-                        synchronized (status) {
-                            status.finished++;
-                            status.datasets += newDatasets;
-                            if (status.finished == status.totalRuns) {
-                                Log.infof("Datasets recalculation for test %d (%s) completed", testId, test.name);
-                                recalculations.remove(testId, status);
-                            }
+                int newDatasets = 0;
+                try {
+                    newDatasets = mediator.transform(runId, true);
+                } finally {
+                    synchronized (status) {
+                        status.finished++;
+                        status.datasets += newDatasets;
+                        if (status.finished == status.totalRuns) {
+                            Log.infof("Datasets recalculation for test %d (%s) completed", testId, test.name);
+                            recalculations.remove(testId, status);
                         }
                     }
-                });
+                }
             }
         }
     }
