@@ -42,9 +42,8 @@ import AccessIcon from "../../components/AccessIcon"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
-import LabelFilter from "../../components/LabelFilter/LabelFilter";
 import { ColumnDef, ColumnSort, createColumnHelper } from '@tanstack/react-table';
-import LabelFilterV2 from "../../components/LabelFilter/LabelFilterv2";
+import LabelFilter from "../../components/LabelFilter/LabelFilter";
 
 const columnHelper = createColumnHelper<DatasetSummary>()
 
@@ -185,14 +184,7 @@ export default function TestDatasets() {
             }}
         >
             <ToolbarContent alignItems={"center"}>
-                {/*<LabelFilter*/}
-                {/*    selection={filter}*/}
-                {/*    onSelect={setFilter}*/}
-                {/*    source={labelsSource}*/}
-                {/*    emptyPlaceholder={<span>No filters available</span>}*/}
-                {/*    clearCallback={clearCallback}*/}
-                {/*/>*/}
-                <LabelFilterV2
+                <LabelFilter
                     selection={filter}
                     onSelect={setFilter}
                     source={newLabelsSource}
