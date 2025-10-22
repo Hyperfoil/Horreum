@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react"
 
 import {notificationsApi} from "../api"
-import { SimpleSelect } from "./templates/SimpleSelect"
+import { SimpleSelect } from "@patternfly/react-templates"
 
 type NotificationMethodSelectProps = {
     isDisabled: boolean

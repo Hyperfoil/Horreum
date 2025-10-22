@@ -18,7 +18,7 @@ import Autosuggest, { InputProps, ChangeEvent, SuggestionsFetchRequestedParams }
 import { QueryResult } from "../../api"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import { SimpleSelect } from "../../components/templates/SimpleSelect";
+import { SimpleSelect } from "@patternfly/react-templates";
 
 type ToolbarProps = {
     originalData: any

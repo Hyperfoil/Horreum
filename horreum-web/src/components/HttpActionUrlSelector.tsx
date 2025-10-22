@@ -12,7 +12,7 @@ import {
 import { AllowedSite, getAllowedSites} from "../api"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
-import { SimpleSelect } from "./templates/SimpleSelect";
+import { SimpleSelect } from "@patternfly/react-templates";
 
 function isValidUrl(url: string) {
     try {

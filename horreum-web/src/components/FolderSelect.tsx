@@ -5,8 +5,7 @@ import {teamsSelector} from "../auth"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {fetchFolders} from "../api";
-import { SimpleSelect, SimpleSelectOption } from "./templates/SimpleSelect"
-import { TypeaheadSelect, TypeaheadSelectOption } from "./templates/TypeahedSelect"
+import { SimpleSelect, SimpleSelectOption, TypeaheadSelect, TypeaheadSelectOption } from "@patternfly/react-templates";
 
 type FolderSelectProps = {
     folder: string

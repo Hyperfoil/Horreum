@@ -40,7 +40,7 @@ import { Test } from "../../api"
 import VariableForm from "./VariableForm"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import { SimpleSelect } from "../../components/templates/SimpleSelect";
+import { SimpleSelect } from "@patternfly/react-templates";
 
 
 type TestSelectModalProps = {

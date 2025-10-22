@@ -10,8 +10,7 @@ import {
 } from '@patternfly/react-core';
 
 import { deepEquals, noop } from "../utils"
-import { SimpleSelect } from "./templates/SimpleSelect";
-import { TypeaheadSelect } from "./templates/TypeahedSelect"
+import { TypeaheadSelect } from "@patternfly/react-templates";
 
 export function convertLabels(obj: any): string {
     if (!obj) {

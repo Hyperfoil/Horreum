@@ -22,7 +22,7 @@ import ConfirmDeleteModal from "./ConfirmDeleteModal"
 import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {IRow, IRowCell, OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
-import { SimpleSelect } from "./templates/SimpleSelect"
+import { SimpleSelect } from "@patternfly/react-templates";
 
 export type CommonLogModalProps = {
     title: string

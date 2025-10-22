@@ -14,7 +14,7 @@ import {AppContext} from "../context/appContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
 import {teamsSelector} from "../auth";
-import { SimpleSelect } from "./templates/SimpleSelect";
+import { SimpleSelect } from "@patternfly/react-templates";
 
 export interface SelectedTest {
     id: number

@@ -24,8 +24,7 @@ import ConditionComponent from "../../components/ConditionComponent"
 import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
 import HelpButton from "../../components/HelpButton"
-import { TypeaheadSelect } from "../../components/templates/TypeahedSelect"
-import { SimpleSelect } from "../../components/templates/SimpleSelect"
+import { SimpleSelect, TypeaheadSelect } from "@patternfly/react-templates";
 
 type VariableFormProps = {
     variable: Variable
