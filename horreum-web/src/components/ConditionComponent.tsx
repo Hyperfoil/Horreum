@@ -5,7 +5,7 @@ import { Alert, FormGroup, Switch,
 import { ConditionComponent as ConditionComponentDef } from "../api"
 import LogSlider from "./LogSlider"
 import NumberBound from "./NumberBound"
-import { SimpleSelect } from "./templates/SimpleSelect"
+import { SimpleSelect } from "@patternfly/react-templates"
 
 type ConditionComponentProps = {
     value: any

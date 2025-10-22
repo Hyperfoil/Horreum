@@ -1,6 +1,6 @@
 import {useState, useEffect} from "react"
 import {schemaApi} from "../api"
-import { TypeaheadSelect } from "./templates/TypeahedSelect"
+import { TypeaheadSelect } from "@patternfly/react-templates"
 
 type SchemaSelectProps = {
     value?: string

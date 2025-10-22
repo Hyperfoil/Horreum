@@ -4,7 +4,7 @@ import {Button, Form, FormGroup, Spinner} from '@patternfly/react-core';
 import {Modal} from '@patternfly/react-core/deprecated';
 
 import SchemaSelect from "../../components/SchemaSelect"
-import { SimpleSelect } from "../../components/templates/SimpleSelect";
+import { SimpleSelect } from "@patternfly/react-templates";
 
 type InitialSchema = {
     schema: string

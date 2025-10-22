@@ -1,5 +1,5 @@
+import { SimpleSelect } from "@patternfly/react-templates"
 import {View} from "../api"
-import { SimpleSelect } from "./templates/SimpleSelect"
 
 type ViewSelectProps = {
     views: View[]

@@ -34,7 +34,7 @@ import { useNavigate } from "react-router-dom"
 import {AppContext} from "../../context/appContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
-import { SimpleSelect } from "../../components/templates/SimpleSelect"
+import { SimpleSelect } from "@patternfly/react-templates"
 
 type TimespanSelectProps = {
     value?: number
