@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.api.services;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import jakarta.validation.constraints.NotNull;
@@ -34,6 +35,7 @@ import org.jboss.resteasy.reactive.ResponseStatus;
 import org.jboss.resteasy.reactive.Separator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.SortDirection;
@@ -223,14 +225,24 @@ public interface TestService {
 
     @GET
     @Path("{id}/filteringLabelValues")
-    @Operation(description = "List all unique Label Values for a Test")
+    @Operation(description = "List all unique Label Values for a Test. This api is deprecated, use /filteringLabels instead.")
     @Parameters(value = {
             @Parameter(name = "id", description = "Test ID to retrieve Filtering Label Values for", example = "10"),
     })
     @APIResponses(value = { @APIResponse(responseCode = "200", content = {
             @Content(schema = @Schema(type = SchemaType.ARRAY, implementation = Object.class)) }) })
-    List<ObjectNode> filteringLabelValues(
-            @PathParam("id") int testId);
+    @Deprecated(forRemoval = true, since = "0.19.x")
+    List<ObjectNode> filteringLabelValues(@PathParam("id") int testId);
+
+    @GET
+    @Path("{id}/filteringLabels")
+    @Operation(description = "List all possible values for each filtering label associated to the test")
+    @Parameters(value = {
+            @Parameter(name = "id", description = "Test ID to retrieve Filtering Label Values for", example = "10"),
+    })
+    @APIResponses(value = { @APIResponse(responseCode = "200", content = {
+            @Content(schema = @Schema(type = SchemaType.ARRAY, implementation = Object.class)) }) })
+    Map<String, JsonNode> filteringLabels(@PathParam("id") int testId);
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
