@@ -653,20 +653,13 @@ public class TestServiceImpl implements TestService {
         // This check is good, keep it
         TestDAO.findByIdOptional(testId).orElseThrow(() -> ServiceException.serverError("Cannot find test " + testId));
 
-        List<Object[]> filters = em.createNativeQuery(LABEL_VALUES_SUMMARY_QUERY_NEW)
+        return em.unwrap(Session.class).createNativeQuery(LABEL_VALUES_SUMMARY_QUERY_NEW, Object[].class)
                 .setParameter("testId", testId)
-                .unwrap(NativeQuery.class)
                 .addScalar("name", StandardBasicTypes.STRING)
                 .addScalar("val", JsonBinaryType.INSTANCE)
-                .getResultList(); // No need to unwrap
-
-        if (filters == null) {
-            return new HashMap<>();
-        }
-
-        return filters.stream().collect(Collectors.toMap(
-                row -> (String) row[0], // name of the label as key
-                row -> (JsonNode) row[1]));
+                .stream().collect(Collectors.toMap(
+                        row -> (String) row[0], // name of the label as key
+                        row -> (JsonNode) row[1]));
     }
 
     @WithRoles
