@@ -69,7 +69,7 @@ export default function LabelFilter({selection, onSelect, source, clearCallback}
     } else {
         const items = Object.entries(availableLabels).map(label => {
             const opts = label[1]
-                .map((value: any) => convertLabelValue(value))
+                .map(convertLabelValue)
                 .sort()
 
             return (

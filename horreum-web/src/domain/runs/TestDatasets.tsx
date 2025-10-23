@@ -165,8 +165,7 @@ export default function TestDatasets() {
         return allColumns
     }, [test, token, comparedDatasets, viewId, views])
 
-    const labelsSource = useCallback(() => testApi.filteringLabelValues(testIdInt), [testIdInt, teams, token])
-    const newLabelsSource = useCallback(() => testApi.filteringLabels(testIdInt), [testIdInt, teams, token])
+    const labelsSource = useCallback(() => testApi.filteringLabels(testIdInt), [testIdInt, teams, token])
 
     const arrayOfClearCallbacks : any[] = [];
     const clearCallback = (callback: () => void) => {
@@ -187,7 +186,7 @@ export default function TestDatasets() {
                 <LabelFilter
                     selection={filter}
                     onSelect={setFilter}
-                    source={newLabelsSource}
+                    source={labelsSource}
                     clearCallback={clearCallback}
                 />
 
