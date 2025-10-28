@@ -2,17 +2,17 @@ import * as React from 'react';
 import {Alert, contextAlertAction} from "../alerts";
 import {useState} from "react";
 import {AlertVariant} from "@patternfly/react-core";
-import {userApi} from "../api";
-import {AlertContextType, AppContextType, AuthContextType} from "./@types/appContextTypes";
+import {AlertContextType, AppContextType} from "./@types/appContextTypes";
 
 export const AppContext = React.createContext<AppContextType | null>(null);
 
-type ContextProviderProps = {
+type AppContextProviderProps = {
   children: React.ReactNode;
 };
 
-const ContextProvider: React.FC<ContextProviderProps> = ({ children }) => {
+const AppContextProvider: React.FC<AppContextProviderProps> = ({ children }) => {
     const [alerts, setAlerts] = useState<Alert[]>([]);
+
     const newAlert = (newAlert: Alert) => {
         setAlerts([...alerts, newAlert]);
     };
@@ -55,24 +55,11 @@ const ContextProvider: React.FC<ContextProviderProps> = ({ children }) => {
         dispatchInfo: contextDispatchInfo
     };
 
-    const updateDefaultTeam = (team: string, onSuccess: () => void, onFailure: (error: any) => void): Promise<any> => {
-            return userApi.setDefaultTeam(team).then(
-                _ => onSuccess(),
-                error => onFailure(error)
-            )
-    }
-
-
-    const auth : AuthContextType = {
-        updateDefaultTeam: updateDefaultTeam
-    };
-
     const context : AppContextType = {
         alerting: alerting,
-        auth: auth
     };
 
     return <AppContext.Provider value={ context }>{children}</AppContext.Provider>;
 };
 
-export default ContextProvider;
+export default AppContextProvider;

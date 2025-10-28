@@ -4,7 +4,6 @@ import { SelectedTest } from "../../components/TestSelect"
 import LabelsSelect, { convertLabels } from "../../components/LabelsSelect"
 import PanelChart from "./PanelChart"
 import { fingerprintToString, formatDate } from "../../utils"
-import { teamsSelector } from "../../auth"
 import { DateTime } from "luxon"
 import {
     PanelInfo,
@@ -31,7 +30,7 @@ import {
 	Spinner,
 } from '@patternfly/react-core';
 import { useNavigate } from "react-router-dom"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {useSelector} from "react-redux";
 import { SimpleSelect } from "../../components/templates/SimpleSelect"
@@ -187,9 +186,9 @@ type ChangesProps = {
 
 export default function Changes(props: ChangesProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { teams } = useContext(AuthBridgeContext) as AuthContextType;
     const navigate = useNavigate()
     const params = new URLSearchParams(location.search)
-    const teams = useSelector(teamsSelector)
     const currentTest = { id: props.testID } as SelectedTest;
 
     const paramFingerprint = params.get("fingerprint")

@@ -12,7 +12,7 @@ import { NoSchemaInDataset } from "./NoSchema"
 import LabelValuesModal from "./LabelValuesModal"
 import ExperimentModal from "./ExperimentModal"
 import SchemaValidations from "./SchemaValidations"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 

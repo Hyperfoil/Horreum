@@ -8,7 +8,7 @@ import {
 } from "@patternfly/react-core"
 import {NavLink, useNavigate} from "react-router-dom"
 
-import {useTester, teamsSelector, teamToName} from "../../auth"
+import { teamToName } from "../../utils"
 import {noop} from "../../utils"
 
 import ActionMenu, {useChangeAccess, useDelete} from "../../components/ActionMenu"
@@ -16,13 +16,14 @@ import ButtonLink from "../../components/ButtonLink"
 import {Access, SortDirection, Schema, schemaApi, SchemaExport} from "../../api"
 import TeamSelect, {ONLY_MY_OWN, Team, createTeam} from "../../components/TeamSelect";
 import AccessIcon from "../../components/AccessIcon"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import {useSelector} from "react-redux";
 import ImportButton from "../../components/ImportButton";
 import CustomTable from "../../components/CustomTable"
 import FilterSearchInput from "../../components/FilterSearchInput";
 import { ColumnDef, createColumnHelper } from "@tanstack/react-table"
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 const columnHelper = createColumnHelper<Schema>();
 
@@ -31,7 +32,7 @@ export default function SchemaList() {
     const params = new URLSearchParams(location.search)
     const navigate = useNavigate()
     const {alerting} = useContext(AppContext) as AppContextType;
-    const teams = useSelector(teamsSelector)
+    const { teams, isTester } = useContext(AuthBridgeContext) as AuthContextType;
 
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
@@ -44,8 +45,6 @@ export default function SchemaList() {
     const rolesFilterFromQuery = params.get("filter")
     const [rolesFilter, setRolesFilter] = useState<Team>(rolesFilterFromQuery !== null ? createTeam(rolesFilterFromQuery) : ONLY_MY_OWN)
     const [nameFilter, setNameFilter] = useState<string>("")
-
-    const isTester = useTester()
 
     const removeSchema = (id: number) => {
         if (schemaCount > 0) {
@@ -136,7 +135,7 @@ export default function SchemaList() {
         <PageSection>
             <Toolbar>
                 <ToolbarContent>
-                    {isTester && (
+                    {isTester() && (
                         <ToolbarItem>
                             <TeamSelect
                                 includeGeneral={true}
@@ -154,7 +153,7 @@ export default function SchemaList() {
                             onClearBy={() => setNameFilter("")}
                         />
                     </ToolbarItem>
-                    {isTester && (
+                    {isTester() && (
                         <ToolbarGroup variant="action-group" align={{ default: 'alignEnd' }}>
                             <ToolbarItem>
                                 <ImportButton

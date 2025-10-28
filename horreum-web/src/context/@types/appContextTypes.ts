@@ -18,14 +18,6 @@ export type AlertContextType = {
 
 }
 
-export type AuthContextType = {
-    updateDefaultTeam: (team: string,
-                        onSuccess: () => void,
-                        onFailure: (error: any) => void) => Promise<any>;
-}
-
-
 export type AppContextType = {
     alerting: AlertContextType;
-    auth: AuthContextType;
 };

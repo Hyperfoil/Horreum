@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useContext } from "react"
-import { useSelector } from "react-redux"
 
 import {
     Form,
@@ -19,12 +18,14 @@ import FolderSelect from "../../components/FolderSelect"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
 import { Test, Access, addTest, configApi, Datastore, apiCall, updateTest } from "../../api"
-import { useTester, defaultTeamSelector, teamToName } from "../../auth"
-import { AppContext } from "../../context/appContext";
+import { teamToName } from "../../utils"
+import { AppContext } from "../../context/AppContext";
 import { AppContextType } from "../../context/@types/appContextTypes";
 import TeamSelect from "../../components/TeamSelect"
 import AccessChoice from "../../components/AccessChoice"
 import AccessIcon from "../../components/AccessIcon"
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 type GeneralProps = {
     test?: Test
@@ -50,7 +51,8 @@ const isUrlOrBlank = (input:string|undefined):boolean=>{
 
 export default function TestSettings({ test, onTestIdChange, onModified, funcsRef }: GeneralProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const defaultRole = useSelector(defaultTeamSelector)
+    const { defaultTeam, isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
+
     // general settings
     const [name, setName] = useState("")
     const [folder, setFolder] = useState("")
@@ -60,7 +62,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const [datastores, setDatastores] = useState<Datastore[]>([])
     // permissions
-    const [owner, setOwner] = useState(test?.owner || defaultRole || "")
+    const [owner, setOwner] = useState(test?.owner || defaultTeam || "")
     const [access, setAccess] = useState<Access>(test?.access || Access.Public)
 
     useEffect( () => {
@@ -75,7 +77,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
         setDescription(t?.description || "")
         setCompareUrl(t?.compareUrl?.toString() || undefined)
         setNotificationsEnabled(!t || t.notificationsEnabled)
-        setOwner(t?.owner || defaultRole || "")
+        setOwner(t?.owner || defaultTeam || "")
         setAccess(t?.access || Access.Public)
     }
     const handleOptionChange = (_ : React.FormEvent<HTMLSelectElement>, value: string) => {
@@ -101,7 +103,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
                 notificationsEnabled,
                 fingerprintLabels: test?.fingerprintLabels || [],
                 fingerprintFilter: test?.fingerprintFilter,
-                owner: owner || defaultRole || "__test_created_without_a_role__",
+                owner: owner || defaultTeam || "__test_created_without_a_role__",
                 access: access,
                 transformers: test?.transformers || [],
             }
@@ -115,7 +117,7 @@ export default function TestSettings({ test, onTestIdChange, onModified, funcsRe
         reset: () => updateState(test),
     }
 
-    const isTester = useTester(test?.owner)
+    const isTester = isTesterFunc(test?.owner)
     const isUrlValid = isUrlOrBlank(compareUrl)
     return (
         <>

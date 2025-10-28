@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useContext } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
-import { useSelector } from "react-redux"
-
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -19,7 +17,6 @@ import { Link } from "react-router-dom"
 
 import SavedTabs, { SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc } from "../../components/SavedTabs"
 
-import { useTester, teamsSelector } from "../../auth"
 import TestSettings from "./TestSettings"
 import Views from "./Views"
 import ChangeDetectionForm from "./ChangeDetectionForm"
@@ -29,7 +26,7 @@ import Subscriptions from "./Subscriptions"
 import Transformers from "./Transformers"
 import MissingDataNotifications from "./MissingDataNotifications"
 import { fetchTest, fetchViews, Test, testApi, View } from "../../api";
-import { AppContext } from "../../context/appContext";
+import { AppContext } from "../../context/AppContext";
 import { AppContextType } from "../../context/@types/appContextTypes";
 
 import TestDatasets from "../runs/TestDatasets";
@@ -37,8 +34,11 @@ import Changes from "../alerting/Changes";
 import Reports from "../reports/Reports";
 import RunList from "../runs/RunList";
 import ExportButton from "../../components/ExportButton";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 export default function TestView() {
+    const { teams, isTester } = useContext(AuthBridgeContext) as AuthContextType;
     const navigate = useNavigate()
     const {testId} = useParams<any>()
     const [testIdVal, setTestIdVal] = useState(testId === "_new" ? 0 : parseInt(testId ?? "-1"))
@@ -54,9 +54,6 @@ export default function TestView() {
     const subscriptionsFuncsRef = useRef<TabFunctions>(undefined)
     const transformersFuncsRef = useRef<TabFunctions>(undefined)
     const [loaded, setLoaded] = useState(false)
-
-    //replace redux
-    const teams = useSelector(teamsSelector)
 
     const refetchTest = () => {
         setLoaded(false)
@@ -83,9 +80,6 @@ export default function TestView() {
             navigate("/test/" + testIdVal, {replace: false})
         }
     }, [testIdVal])
-
-    //TODO:: replace redux
-    const isTester = useTester(test ? test.owner : undefined)
 
     return (
         <PageSection>
@@ -118,7 +112,7 @@ export default function TestView() {
                                 alerting.dispatchInfo("SAVE", "Saved!", "Test was successfully updated!", 3000)
                             }}
                             afterReset={() => setModified(false)}
-                            canSave={isTester}
+                            canSave={isTester()}
                         >
                             <SavedTab
                                 title="Runs"
@@ -255,7 +249,7 @@ export default function TestView() {
                             <SavedTab
                                 title="Actions"
                                 fragment="actions"
-                                isHidden={testIdVal <= 0 || !isTester}
+                                isHidden={testIdVal <= 0 || !isTester()}
                                 canSave={true}
                                 onSave={saveFunc(actionsFuncsRef)}
                                 onReset={resetFunc(actionsFuncsRef)}
@@ -271,7 +265,7 @@ export default function TestView() {
                             <SavedTab
                                 title="Subscriptions"
                                 fragment="subscriptions"
-                                isHidden={testIdVal <= 0 || !isTester}
+                                isHidden={testIdVal <= 0 || !isTester()}
                                 canSave={true}
                                 onSave={saveFunc(subscriptionsFuncsRef)}
                                 onReset={resetFunc(subscriptionsFuncsRef)}
@@ -308,7 +302,7 @@ export default function TestView() {
                                 fragment="export"
                                 canSave={false}
                                 onSave={() => Promise.resolve()}
-                                isHidden={testIdVal <= 0 || !isTester}
+                                isHidden={testIdVal <= 0 || !isTester()}
                                 isModified={() => false}
                             >
                                 <Form isHorizontal>

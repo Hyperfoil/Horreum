@@ -15,10 +15,10 @@ import {
 import {Modal} from '@patternfly/react-core/deprecated';
 import {userApi, UserData} from "../../api"
 import { getRoles } from "./TeamMembers"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import {useSelector} from "react-redux";
-import {oidcSelector} from "../../auth";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 type NewUserModalProps = {
@@ -30,6 +30,7 @@ type NewUserModalProps = {
 
 export default function NewUserModal(props: NewUserModalProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isOidc } = useContext(AuthBridgeContext) as AuthContextType;
     const [username, setUsername] = useState<string>()
     const [password, setPassword] = useState<string>()
     const [email, setEmail] = useState<string>()
@@ -40,7 +41,6 @@ export default function NewUserModal(props: NewUserModalProps) {
     const [tester, setTester] = useState(true)
     const [uploader, setUploader] = useState(false)
     const [manager, setManager] = useState(false)
-    const isOidc = useSelector(oidcSelector) !== undefined;
     const valid = username && (password || isOidc) && email && /^.+@.+\..+$/.test(email)
     useEffect(() => {
         setUsername(undefined)

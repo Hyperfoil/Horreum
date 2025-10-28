@@ -1,8 +1,6 @@
 import {useContext, useEffect, useState} from "react"
-import {useSelector} from "react-redux"
 
-import {teamsSelector} from "../auth"
-import {AppContext} from "../context/appContext";
+import {AppContext} from "../context/AppContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {fetchFolders} from "../api";
 import { SimpleSelect, SimpleSelectOption } from "./templates/SimpleSelect"
@@ -18,9 +16,9 @@ type FolderSelectProps = {
 
 export default function FolderSelect({folder, onChange, canCreate, readOnly, placeHolder}: FolderSelectProps) {
     const {alerting} = useContext(AppContext) as AppContextType
+    const { teams } = useContext(AuthBridgeContext) as AuthContextType;
     const [simpleOptions, setSimpleOptions] = useState<SimpleSelectOption[]>([])
     const [typeaheadOptions, setTypeaheadOptions] = useState<TypeaheadSelectOption[]>([])
-    const teams = useSelector(teamsSelector)
     useEffect(() => {
         fetchFolders(alerting).then(folders => {
             // the root folder is represented by a null object in the returned list

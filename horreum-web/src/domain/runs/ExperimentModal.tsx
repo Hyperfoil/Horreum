@@ -8,7 +8,7 @@ import { NavLink } from "react-router-dom"
 import {experimentApi, ExperimentResult} from "../../api"
 import { LogLevelIcon } from "../../components/LogModal"
 import { interleave } from "../../utils"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 

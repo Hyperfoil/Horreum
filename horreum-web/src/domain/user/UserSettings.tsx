@@ -1,19 +1,11 @@
 import {useState, useEffect, useRef, useContext} from "react"
-import {  useSelector } from "react-redux"
 import { NavLink } from "react-router-dom"
 
-import {
-    defaultTeamSelector,
-    teamToName,
-    useManagedTeams,
-    userProfileSelector
-} from "../../auth"
+import { teamToName } from "../../utils"
 import SavedTabs, { SavedTab, TabFunctions } from "../../components/SavedTabs"
-import { TryLoginAgain } from "../../auth"
-import {NotificationSettings, notificationsApi } from "../../api"
+import {NotificationSettings, notificationsApi, userApi} from "../../api"
 
 import {
-    Alert,
     Bullseye,
     Card,
     CardBody,
@@ -30,20 +22,23 @@ import TeamSelect, { createTeam, Team } from "../../components/TeamSelect"
 import { NotificationSettingsList } from "./NotificationSettings"
 import Profile from "./Profile"
 import ManagedTeams from "./ManagedTeams"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import ApiKeys from "./ApiKeys";
 import {FragmentTab} from "../../components/FragmentTabs";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 export const UserProfileLink = () => {
-    const profile = useSelector(userProfileSelector)
-    if (profile?.username) {
+    const { isAuthenticated, name } = useContext(AuthBridgeContext) as AuthContextType;
+
+    if (isAuthenticated && name) {
         return (
             <div style={{ margin: "10px" }}>
                 <NavLink to="/usersettings">
                     <span style={{ color: "var(--pf-t--global--icon--color--regular)" }}>
-                        {`${profile.firstName} ${profile.lastName} `}
-                        <UserIcon />
+                        {name}
+                        <UserIcon style={{ paddingLeft: "4px" }} />
                     </span>
                 </NavLink>
             </div>
@@ -52,10 +47,13 @@ export const UserProfileLink = () => {
 }
 
 export function UserSettings() {
+    const { username } = useContext(AuthBridgeContext) as AuthContextType;
+
     document.title = "User settings | Horreum"
-    const { alerting, auth } = useContext(AppContext) as AppContextType;
-    const profile = useSelector(userProfileSelector)
-    const prevDefaultTeam = useSelector(defaultTeamSelector)
+
+    const { alerting } = useContext(AppContext) as AppContextType;
+    const { managedTeams, defaultTeam: prevDefaultTeam } = useContext(AuthBridgeContext) as AuthContextType;
+
     const [defaultTeam, setDefaultTeam] = useState<Team>(createTeam(prevDefaultTeam))
     useEffect(() => {
         setDefaultTeam(createTeam(prevDefaultTeam))
@@ -65,38 +63,33 @@ export function UserSettings() {
     const [team, setTeam] = useState<NotificationSettings[]>()
     const [modified, setModified] = useState(false)
     const loadPersonal = () => {
-        if (profile?.username) {
-            notificationsApi.settings(profile.username, false).then(
+        if (username) {
+            notificationsApi.settings(username, false).then(
                 response => setPersonal(response),
                 error => alerting.dispatchError("LOAD_SETTINGS", "Failed to load notification settings", error)
             )
         }
     }
-    useEffect(loadPersonal, [profile])
-    const managedTeams = useManagedTeams()
-    const teamFuncsRef = useRef<TabFunctions>(undefined)
+    useEffect(loadPersonal, [username])
+    const teamFuncsRef = useRef<TabFunctions | undefined>(undefined)
     function reportError(error: any) {
         return alerting.dispatchError(error, "UPDATE_SETTINGS", "Failed to update user settings")
     }
 
     function updateDefaultTeam(team: string) {
-        return auth.updateDefaultTeam(team,
-            () => alerting.dispatchInfo("SAVE", "Saved!", "User Settings were successfully updated!", 3000),
-            (error) => alerting.dispatchError(error, "SET_DEFAULT_TEAM", "Failed to update default team."))
+        return userApi.setDefaultTeam(team)
+            .then(
+                _ => alerting.dispatchInfo("SAVE", "Saved!", "User Settings were successfully updated!", 3000),
+                error => alerting.dispatchError(error, "SET_DEFAULT_TEAM", "Failed to update default team.")
+            )
     }
 
-    if (!profile) {
+    if (!username) {
         return (
             <Bullseye>
                 <Spinner size="xl" />
                 {"\u00A0"}Loading user profile...
             </Bullseye>
-        )
-    } else if (!profile.username) {
-        return (
-            <Alert variant="warning" title="Anonymous access to user settings">
-                <TryLoginAgain />
-            </Alert>
         )
     }
     return (
@@ -134,8 +127,7 @@ export function UserSettings() {
                             fragment="personal-notifications"
                             canSave={true}
                             onSave={() => {
-                                const username = profile?.username || "user-should-be-set"
-                                return notificationsApi.updateSettings(username, false, personal || []).catch(
+                                return notificationsApi.updateSettings(username || "user-should-be-set", false, personal || []).catch(
                                     reportError
                                 )
                             }}

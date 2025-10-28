@@ -1,7 +1,5 @@
 import {useMemo, useState, useEffect, useContext} from "react"
  
-
-import { useTester } from "../../auth"
 import {ChangeDetection, ConditionConfig, Variable, alertingApi, updateChangeDetection} from "../../api"
 import { NavLink } from "react-router-dom"
 
@@ -38,7 +36,7 @@ import DatasetLogModal from "./DatasetLogModal"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { Test } from "../../api"
 import VariableForm from "./VariableForm"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import { SimpleSelect } from "../../components/templates/SimpleSelect";
 
@@ -233,6 +231,7 @@ function groupNames(vars: Variable[]) {
 
 export default function ChangeDetectionForm({ test, onModified, funcsRef }: ChangeDetectionFormProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const [timelineLabels, setTimelineLabels] = useState(test.timelineLabels || [])
     const [timelineFunction, setTimelineFunction] = useState(test.timelineFunction)
     const [fingerprintLabels, setFingerprintLabels] = useState(test.fingerprintLabels || [])
@@ -272,7 +271,7 @@ export default function ChangeDetectionForm({ test, onModified, funcsRef }: Chan
             alerting.dispatchError(error, "FETCH_MODELS", "Failed to fetch available change detection models.")
         )
     }, [])
-    const isTester = useTester(test?.owner || "__no_owner__")
+    const isTester = isTesterFunc(test?.owner || "__no_owner__")
     funcsRef.current = {
         save: () => {
             let errMsg = undefined

@@ -1,5 +1,4 @@
 import {useContext, useEffect, useRef, useState} from "react"
-import { useSelector } from "react-redux"
 import {
     Button,
     FormGroup,
@@ -13,11 +12,12 @@ import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
 import TeamMembers, { TeamMembersFunctions } from "../user/TeamMembers"
 import NewUserModal from "../user/NewUserModal"
-import { isAdminSelector } from "../../auth"
 import {userApi} from "../../api"
 import { noop } from "../../utils"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 type Team = {
@@ -33,6 +33,7 @@ type TeamsProps = {
 
 export default function Teams(props: TeamsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isAdmin } = useContext(AuthBridgeContext) as AuthContextType;
     const [teams, setTeams] = useState<Team[]>([])
     const [selected, setSelected] = useState<Team>()
     const [loading, setLoading] = useState(false)
@@ -41,10 +42,9 @@ export default function Teams(props: TeamsProps) {
     const [membersModified, setMembersModified] = useState(false)
     const [nextTeam, setNextTeam] = useState<Team>()
     const [newUserModalOpen, setNewUserModalOpen] = useState(false)
-    const isAdmin = useSelector(isAdminSelector)
     const teamFuncsRef = useRef<TeamMembersFunctions>(undefined)
     useEffect(() => {
-        if (!isAdmin) {
+        if (!isAdmin()) {
             return // happens during reload
         }
         setLoading(true)

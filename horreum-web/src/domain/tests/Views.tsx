@@ -12,16 +12,16 @@ import {
     TextInput,
 } from "@patternfly/react-core"
 
-import { useTester } from "../../auth"
-
 import Labels from "../../components/Labels"
 import OptionalFunction from "../../components/OptionalFunction"
 import {deleteView, updateView, View, ViewComponent} from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {useLocation, useNavigate} from "react-router-dom";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 function swap(array: any[], i1: number, i2: number) {
     const temp = array[i1]
@@ -108,7 +108,8 @@ function deepCopy(views: View[]): ViewExtended[] {
 
 export default function Views({ testId, testOwner, funcsRef, onModified, ...props }: ViewsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const isTester = useTester(testOwner)
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
+    const isTester = isTesterFunc(testOwner)
     const [views, setViews] = useState<ViewExtended[]>([])
     const [deleted, setDeleted] = useState<number[]>([])
     const [selectedView, setSelectedView] = useState<ViewExtended>()

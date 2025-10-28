@@ -7,7 +7,7 @@ import { NavLink } from "react-router-dom"
 import JsonPathDocsLink from "../../components/JsonPathDocsLink"
 import Editor from "../../components/Editor/monaco/Editor"
 import {datasetApi, DatasetSummary, QueryResult, runApi, RunSummary, SortDirection, sqlApi} from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 

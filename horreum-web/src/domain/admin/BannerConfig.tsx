@@ -1,5 +1,4 @@
 import {useContext, useEffect, useState} from "react"
-import { useSelector } from "react-redux"
 
 import {
     ActionGroup,
@@ -16,10 +15,11 @@ import {
 } from "@patternfly/react-core"
 
 import Editor from "../../components/Editor/monaco/Editor"
-import { isAdminSelector } from "../../auth"
 import {bannerApi} from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 function setBanner(severity: string, title: string, message: string) {
     return bannerApi.setBanner({ severity, title, message, active: true })
@@ -27,11 +27,12 @@ function setBanner(severity: string, title: string, message: string) {
 
 export default function BannerConfig() {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isAdmin } = useContext(AuthBridgeContext) as AuthContextType;
     const [severity, setSeverity] = useState("danger")
     const [title, setTitle] = useState("")
     const [message, setMessage] = useState("")
     const [saving, setSaving] = useState(false)
-    const isAdmin = useSelector(isAdminSelector)
+
     useEffect(() => {
         bannerApi.getBanner().then(
             banner => {
@@ -45,7 +46,7 @@ export default function BannerConfig() {
         )
     }, [])
     document.title = "Banner | Horreum"
-    if (!isAdmin) {
+    if (!isAdmin()) {
         return null
     }
     return (

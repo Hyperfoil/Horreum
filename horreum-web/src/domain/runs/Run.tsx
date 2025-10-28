@@ -1,13 +1,10 @@
 import {useContext, useEffect, useState} from "react"
 import { Link, useParams } from "react-router-dom"
-import { useSelector } from "react-redux"
 
 import { formatDateTime } from "../../utils"
-import { teamsSelector, useTester } from "../../auth"
 
 import { Bullseye, Button, Card, CardHeader, CardBody, PageSection, Spinner, Toolbar, ToolbarContent, Breadcrumb, BreadcrumbItem } from "@patternfly/react-core"
 import { Table /* data-codemods */, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table"
-import { TrashIcon } from "@patternfly/react-icons"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 import OwnerAccess from "../../components/OwnerAccess"
 import { NavLink } from "react-router-dom"
@@ -24,13 +21,16 @@ import {
     trash,
     updateRunAccess
 } from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import { AppContextType} from "../../context/@types/appContextTypes";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 import ConfirmRestoreModal from "../../components/ConfirmRestoreModal";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 export default function Run() {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { teams, isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const { id } = useParams<any>()
     const idVal = parseInt(id ?? "-1")
     document.title = `Run ${idVal} | Horreum`
@@ -44,8 +44,7 @@ export default function Run() {
     const [confirmRestoreRunModalOpen, setConfirmRestoreRunModalOpen] = useState(false)
     const [isTrashed, setIsTrashed] = useState(run?.trashed || false)
 
-    const teams = useSelector(teamsSelector)
-    const isTester = useTester(run?.owner)
+    const isTester = isTesterFunc(run?.owner)
 
     const retransformClick = () => {
         if ( run !== undefined) {

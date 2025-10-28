@@ -1,14 +1,14 @@
-import { useState, useEffect, ReactElement, ReactNode } from "react"
+import {useState, useEffect, ReactElement, ReactNode, useContext} from "react"
 
-import { useTester } from "../auth"
 import { Access } from "../api"
 
-import ShareLinkModal from "./ShareLinkModal"
 import ChangeAccessModal from "./ChangeAccessModal"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
 import { Dropdown, DropdownItem, MenuToggle, MenuToggleElement } from "@patternfly/react-core"
 
 import EllipsisVIcon from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon';
+import {AuthBridgeContext} from "../context/AuthBridgeContext";
+import {AuthContextType} from "../context/@types/authContextTypes";
 
 interface MenuItemProvider<C> {
     (props: ActionMenuProps, isTester: boolean, close: () => void, config: C): {
@@ -25,47 +25,6 @@ export type ActionMenuProps = {
     access: Access
     description: string
     items: MenuItem<any>[]
-}
-
-type ShareLinkConfig = {
-    token?: string
-    tokenToLink(id: number, token: string): string
-    onTokenReset(id: number): void
-    onTokenDrop(id: number): void
-}
-
-export function useShareLink(config: ShareLinkConfig): MenuItem<ShareLinkConfig> {
-    const [shareLinkModalOpen, setShareLinkModalOpen] = useState(false)
-    return [
-        (props: ActionMenuProps, isTester: boolean, close: () => void, config: ShareLinkConfig) => {
-            return {
-                item: (
-                    <DropdownItem
-                        key="link"
-                        isDisabled={props.access === Access.Public || (!config.token && !isTester)}
-                        onClick={() => {
-                            close()
-                            setShareLinkModalOpen(true)
-                        }}
-                    >
-                        Shareable link
-                    </DropdownItem>
-                ),
-                modal: (
-                    <ShareLinkModal
-                        key="link"
-                        isOpen={shareLinkModalOpen}
-                        onClose={() => setShareLinkModalOpen(false)}
-                        isTester={isTester}
-                        link={config.token ? config.tokenToLink(props.id, config.token) : ""}
-                        onReset={() => config.onTokenReset(props.id)}
-                        onDrop={() => config.onTokenDrop(props.id)}
-                    />
-                ),
-            }
-        },
-        config,
-    ]
 }
 
 type ChangeAccessConfig = {
@@ -173,13 +132,13 @@ export function useDelete(config: DeleteConfig): MenuItem<DeleteConfig> {
 }
 
 export default function ActionMenu(props: ActionMenuProps) {
+    const { isTester } = useContext(AuthBridgeContext) as AuthContextType;
     const [menuOpen, setMenuOpen] = useState(false)
-    const isTester = useTester(props.owner)
     const onSelect = () => {
         setMenuOpen(false);
     };
 
-    const items = props.items.map(([provider, config]) => provider(props, isTester, () => setMenuOpen(false), config))
+    const items = props.items.map(([provider, config]) => provider(props, isTester(), () => setMenuOpen(false), config))
     return (
         <>
             <Dropdown

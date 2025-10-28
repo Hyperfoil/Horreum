@@ -17,7 +17,6 @@ import {
 } from '@patternfly/react-core';
 
 import {alertingApi, ConditionConfig, experimentApi, Test, Variable} from "../../api"
-import { useTester } from "../../auth"
 import HelpButton from "../../components/HelpButton"
 import Labels from "../../components/Labels"
 import { TabFunctionsRef } from "../../components/SavedTabs"
@@ -25,7 +24,7 @@ import SplitForm from "../../components/SplitForm"
 import { ExperimentProfile } from "../../generated/models/ExperimentProfile"
 import OptionalFunction from "../../components/OptionalFunction"
 import ConditionComponent from "../../components/ConditionComponent"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import { SimpleSelect } from "../../components/templates/SimpleSelect";
 
@@ -37,7 +36,9 @@ type ExperimentsProps = {
 
 export default function Experiments(props: ExperimentsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const isTester = useTester(props.test?.owner)
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
+
+    const isTester = isTesterFunc(props.test?.owner)
     const [profiles, setProfiles] = useState<ExperimentProfile[]>([])
     const [selected, setSelected] = useState<ExperimentProfile>()
     const [deleted, setDeleted] = useState<number[]>([])

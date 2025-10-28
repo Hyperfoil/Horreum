@@ -5,7 +5,7 @@ import { Bullseye, EmptyState, EmptyStateBody, Spinner, Tooltip, Truncate } from
 import {Modal} from '@patternfly/react-core/deprecated';
 
 import {datasetApi, LabelValue} from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 import { t_global_font_family_mono } from '@patternfly/react-tokens'

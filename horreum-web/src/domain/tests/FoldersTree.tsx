@@ -1,13 +1,13 @@
 import {useContext, useEffect, useState} from "react"
-import { useSelector } from "react-redux"
 
 import { TreeView, TreeViewDataItem } from "@patternfly/react-core"
 import { FolderIcon, FolderOpenIcon } from "@patternfly/react-icons"
 
-import { teamsSelector } from "../../auth"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {fetchFolders} from "../../api";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 type FoldersTreeProps = {
     folder: string
@@ -16,8 +16,8 @@ type FoldersTreeProps = {
 
 export default function FoldersTree(props: FoldersTreeProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { teams } = useContext(AuthBridgeContext) as AuthContextType;
     const [folders, setFolders] = useState<string[]>([])
-    const teams = useSelector(teamsSelector)
     useEffect(() => {
         fetchFolders(alerting).then(setFolders)
     }, [teams])

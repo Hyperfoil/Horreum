@@ -1,6 +1,4 @@
-import { CSSProperties, ReactElement, useEffect, useMemo, useState } from "react"
-import { useSelector } from "react-redux"
-import { teamsSelector } from "../auth"
+import {CSSProperties, ReactElement, useContext, useEffect, useMemo, useState} from "react"
 
 import {
 	Button,
@@ -64,6 +62,7 @@ type LabelsSelectProps = {
 }
 
 export default function LabelsSelect({disabled, selection, onSelect, source, emptyPlaceholder, fireOnPartial, showKeyHelper, addResetButton, style}: LabelsSelectProps) {
+    const { teams } = useContext(AuthBridgeContext) as AuthContextType;
     const [availableLabels, setAvailableLabels] = useState<any[]>([])
     const initialSelect = selection
         ? Object.entries(selection).reduce((acc, [key, value]) => {
@@ -75,7 +74,6 @@ export default function LabelsSelect({disabled, selection, onSelect, source, emp
         : {}
     const [partialSelect, setPartialSelect] = useState<any>(initialSelect)
 
-    const teams = useSelector(teamsSelector)
     useEffect(() => {
         source().then((response: any[]) => {
             setAvailableLabels(response)

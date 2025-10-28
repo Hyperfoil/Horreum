@@ -27,10 +27,10 @@ import {
     DatastoreTypeEnum,
     ElasticsearchDatastoreConfig, TypeConfig
 } from "../../api";
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import {useSelector} from "react-redux";
-import {defaultTeamSelector} from "../../auth";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 interface dataStoreTableProps {
     datastores: Datastore[]
@@ -125,10 +125,10 @@ const errorFormatter = (error: any) => {
 
 export default function Datastores() {
     const {alerting} = useContext(AppContext) as AppContextType;
-    const defaultTeam = useSelector(defaultTeamSelector) || SHOW_ALL.key;
+    const { defaultTeam } = useContext(AuthBridgeContext) as AuthContextType;
     const [datastores, setDatastores] = useState<Datastore[]>([])
     const [datastoreTypes, setDatastoreTypes] = useState<TypeConfig[]>([])
-    const [curTeam, setCurTeam] = useState<Team>(createTeam(defaultTeam));
+    const [curTeam, setCurTeam] = useState<Team>(createTeam(defaultTeam || SHOW_ALL.key));
 
     const newDataStore: Datastore = {
         id: -1,

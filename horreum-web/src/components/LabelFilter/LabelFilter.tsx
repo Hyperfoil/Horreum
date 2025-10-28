@@ -1,6 +1,4 @@
-import React, { CSSProperties, ReactElement, useEffect, useMemo, useState } from "react"
-import { useSelector } from "react-redux"
-import { teamsSelector } from "../../auth"
+import React, {CSSProperties, useContext, useEffect, useMemo, useState} from "react"
 
 import {
     FlexItem,
@@ -10,10 +8,12 @@ import {
     ToolbarToggleGroup
 } from '@patternfly/react-core';
 import { BanIcon } from "@patternfly/react-icons"
-import { deepEquals, noop } from "../../utils"
+import { noop } from "../../utils"
 import FilterIcon from "@patternfly/react-icons/dist/esm/icons/filter-icon";
 import ToolbarLabelFilter from "../ToolbarLabelFilter";
 import FilterDropDown from "./FilterDropDown";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 function convertLabelValue(value: any) {
     if (typeof value === "object") {
@@ -37,7 +37,7 @@ type LabelsSelectProps = {
 }
 
 export default function LabelFilter({selection, onSelect, source, clearCallback}: LabelsSelectProps) {
-    const teams = useSelector(teamsSelector)
+    const { teams } = useContext(AuthBridgeContext) as AuthContextType;
     const [availableLabels, setAvailableLabels] = useState<object>({})
 
     useEffect(() => {

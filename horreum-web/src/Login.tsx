@@ -1,11 +1,9 @@
 import {useContext, useEffect, useState} from "react";
-import {AppContext} from "./context/appContext";
-import {AppContextType} from "./context/@types/appContextTypes";
+import {AppContext} from "./context/AppContext";
 import {Button, Form, FormGroup, Spinner, TextInput} from '@patternfly/react-core';
 import {Modal} from '@patternfly/react-core/deprecated';
-import {userApi} from "./api";
-import store from "./store";
-import {BASIC_AUTH, UPDATE_ROLES, AFTER_LOGOUT, STORE_PROFILE, UPDATE_DEFAULT_TEAM} from "./auth";
+import {AuthBridgeContext} from "./context/AuthBridgeContext";
+import {AuthContextType} from "./context/@types/authContextTypes";
 
 type LoginModalProps = {
     username: string
@@ -17,7 +15,7 @@ type LoginModalProps = {
 }
 
 export default function LoginModal(props: LoginModalProps) {
-    const {alerting} = useContext(AppContext) as AppContextType;
+    const { signIn } = useContext(AuthBridgeContext) as AuthContextType;
     const [username, setUsername] = useState<string>()
     const [password, setPassword] = useState<string>()
     const [creating, setCreating] = useState(false)
@@ -26,6 +24,7 @@ export default function LoginModal(props: LoginModalProps) {
         setUsername(undefined)
         setPassword(undefined)
     }, [props.isOpen])
+
     return <Modal
         title="Horreum Login"
         isOpen={props.isOpen}
@@ -38,27 +37,7 @@ export default function LoginModal(props: LoginModalProps) {
                 key={"horreum-login-button"}
                 onClick={() => {
                     setCreating(true)
-                    store.dispatch({type: BASIC_AUTH, username, password});
-                    
-                    userApi.getRoles()
-                        .then(roles => {
-                                alerting.dispatchInfo("LOGIN", "Log in successful", "Successful log in of user " + username, 3000)
-                                store.dispatch({type: UPDATE_ROLES, authenticated: true, roles: roles});
-                                userApi.searchUsers(username!).then(
-                                    userData => store.dispatch({type: STORE_PROFILE, profile: userData.filter(u => u.username == username).at(0)}),
-                                    error => alerting.dispatchInfo("LOGIN", "Unable to get user profile", error, 30000))
-                                userApi.defaultTeam().then(
-                                    response => store.dispatch({ type: UPDATE_DEFAULT_TEAM, team: response }),
-                                    error => alerting.dispatchInfo("LOGIN", "Cannot retrieve default team", error, 30000)
-                                )
-                            },
-                            error => {
-                                alerting.dispatchInfo("LOGIN", "Failed to authenticate", error, 30000)
-                                store.dispatch({type: AFTER_LOGOUT});
-                                props.onLoginError?.()
-                            })
-                        .catch(error => alerting.dispatchInfo("LOGIN", "Could not perform authentication", error, 30000));
-
+                    void signIn(username, password)
                     setCreating(false);
                     props.onClose();
                     props.onLoginSuccess?.()

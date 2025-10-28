@@ -1,16 +1,17 @@
 import {ReactElement, useState, useEffect, useContext} from "react"
-import { useSelector } from "react-redux"
 import {Button, Form, FormGroup} from '@patternfly/react-core';
 import {DualListSelector} from '@patternfly/react-core/deprecated';
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import {userApi, UserData} from "../../api"
 import UserSearch from "../../components/UserSearch"
-import {isAdminSelector, userName} from "../../auth"
-import {AppContext} from "../../context/appContext";
+import { userName } from "../../utils"
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import NewUserModal from "../user/NewUserModal";
 import {noop} from "../../utils";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 function userElement(u: UserData) {
@@ -27,14 +28,15 @@ type AdministratorsProps = {
 
 export default function Administrators(props: AdministratorsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isAdmin } = useContext(AuthBridgeContext) as AuthContextType;
     const [modified, setModified] = useState(false)
     const [resetCounter, setResetCounter] = useState(0)
     const [createNewUser, setCreateNewUser] = useState(false)
     const [availableUsers, setAvailableUsers] = useState<ReactElement<any>[]>([])
     const [admins, setAdmins] = useState<ReactElement<any>[]>([])
-    const isAdmin = useSelector(isAdminSelector)
+
     useEffect(() => {
-        if (isAdmin) {
+        if (isAdmin()) {
             userApi.administrators().then(
                 list => setAdmins(list.map(userElement)),
                 error => alerting.dispatchError(error, "FETCH ADMINS", "Cannot fetch administrators")
