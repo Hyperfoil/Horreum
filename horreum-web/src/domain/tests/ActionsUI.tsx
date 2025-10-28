@@ -11,16 +11,16 @@ import {
     DataListCell,
     Title,
 } from "@patternfly/react-core"
-
-import { useTester } from "../../auth"
 import {Action, getTestActions, updateOrCreateActions, HttpActionConfig, ActionConfig} from "../../api"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import { testEventTypes } from "../actions/reducers"
 import ActionComponentForm from "../actions/ActionComponentForm"
 import ActionLogModal from "./ActionLogModal"
 import { useNavigate } from "react-router-dom"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 type ActionsProps = {
@@ -32,9 +32,10 @@ type ActionsProps = {
 
 export default function ActionsUI({ testId, testOwner, funcsRef, onModified }: ActionsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const [actions, setActions] = useState<Action[]>([])
     const [logModalOpen, setLogModalOpen] = useState(false)
-    const isTester = useTester(testOwner)
+    const isTester = isTesterFunc(testOwner)
     const hasDuplicates = new Set(actions.map(h => h.event + "_" + (h.config as HttpActionConfig).url)).size !== actions.length
 
     useEffect(() => {

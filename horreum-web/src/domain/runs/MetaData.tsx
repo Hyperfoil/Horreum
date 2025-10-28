@@ -7,7 +7,7 @@ import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"
 import { NoSchemaInRun } from "./NoSchema"
 import SchemaValidations from "./SchemaValidations"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 

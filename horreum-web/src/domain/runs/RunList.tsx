@@ -1,6 +1,5 @@
 import {useState, useMemo, useEffect, useContext} from "react"
 import { useParams } from "react-router-dom"
-import { useSelector } from "react-redux"
 import {
     Button,
     Checkbox,
@@ -16,7 +15,7 @@ import { NavLink } from "react-router-dom"
 import { Duration } from "luxon"
 import { toEpochMillis, noop } from "../../utils"
 
-import {isAuthenticatedSelector, teamsSelector, teamToName} from "../../auth"
+import { teamToName } from "../../utils"
 
 import { fetchTest } from "../../api"
 
@@ -25,19 +24,21 @@ import { NoSchemaInRun } from "./NoSchema"
 import { Description, ExecutionTime, Menu } from "./components"
 import SchemaList from "./SchemaList"
 import AccessIcon from "../../components/AccessIcon"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {RunImportModal} from "./RunImportModal";
 import CustomTable from "../../components/CustomTable"
 import { ColumnDef, ColumnSort, createColumnHelper } from "@tanstack/react-table"
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 const columnHelper = createColumnHelper<RunSummary>()
 
 export default function RunList() {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isAuthenticated, teams } = useContext(AuthBridgeContext) as AuthContextType;
     const { testId } = useParams()
     const testIdInt = parseInt(testId ?? "-1")
-    const isAuthenticated = useSelector(isAuthenticatedSelector)
 
     const [test, setTest] = useState<Test | undefined>(undefined)
     const [selectedRows, setSelectedRows] = useState<Record<string, boolean>>({})
@@ -49,7 +50,6 @@ export default function RunList() {
     const [showTrashed, setShowTrashed] = useState(false)
     const [runs, setRuns] = useState<RunSummary[] >([])
     const [runCount, setRunCount] =useState(0)
-    const teams = useSelector(teamsSelector)
     const [isLoading, setIsLoading] = useState(false)
     const [showNewRunModal, setShowNewRunModal] = useState(false)
 

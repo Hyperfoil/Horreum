@@ -10,7 +10,7 @@ import {
 } from '@patternfly/react-core';
 
 import { AllowedSite, getAllowedSites} from "../api"
-import {AppContext} from "../context/appContext";
+import {AppContext} from "../context/AppContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import { SimpleSelect } from "@patternfly/react-templates";
 

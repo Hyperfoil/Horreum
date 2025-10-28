@@ -1,5 +1,4 @@
 import { ReactNode, SetStateAction, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { useSelector } from "react-redux"
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -33,15 +32,16 @@ import { Link, NavLink } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, YAxis } from "recharts"
 
 import {datasetApi, fetchTest, fetchViews, Test, View} from "../../api"
-import { tokenSelector } from "../../auth"
 import { colors } from "../../charts"
 
 import PrintButton from "../../components/PrintButton"
 import FragmentTabs, { FragmentTab } from "../../components/FragmentTabs"
 
 import { renderValue } from "./components"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AlertContextType, AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 type Ds = {
@@ -317,9 +317,9 @@ type ViewComparisonProps = {
 }
 
 function ViewComparison({headers, view, datasets, alerting}: ViewComparisonProps) {
+    const { token } = useContext(AuthBridgeContext) as AuthContextType;
     const [loading, setLoading] = useState(false)
     const [rows, setRows] = useState<IRow[]>([])
-    const token = useSelector(tokenSelector)
 
     useEffect(() => {
         setLoading(true)

@@ -43,11 +43,12 @@ import Labels from "../../components/Labels"
 import HelpButton from "../../components/HelpButton"
 import ExportButton from "../../components/ExportButton"
 import OptionalFunction from "../../components/OptionalFunction"
-import TestSelect, { SelectedTest } from "../../components/TestSelect"
+import { SelectedTest } from "../../components/TestSelect"
 
-import { useTester } from "../../auth"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 type ReportConfigComponentProps = {
     component: ReportComponent
@@ -128,6 +129,7 @@ function ReportConfigComponent({ component, onChange, onDelete, readOnly }: Repo
 
 export default function TableReportConfigPage() {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const { testId, configId } = useParams<string>()
     const id = parseInt(configId ?? "-1")
     const currentTestId = parseInt(testId ?? "-1")
@@ -219,7 +221,7 @@ export default function TableReportConfigPage() {
             ],
         })
 
-    const isTester = useTester(config?.test?.owner)
+    const isTester = isTesterFunc(config?.test?.owner)
 
     function saveButton(reportId: number | undefined, label: string, variant: "primary" | "secondary") {
         return (

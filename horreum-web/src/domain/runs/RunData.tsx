@@ -1,7 +1,4 @@
 import {useContext, useEffect, useMemo, useState} from "react"
-import { useSelector } from "react-redux"
-
-import { useTester, teamsSelector } from "../../auth"
 
 import Editor from "../../components/Editor/monaco/Editor"
 
@@ -11,8 +8,10 @@ import ChangeSchemaModal from "./ChangeSchemaModal"
 import JsonPathSearchToolbar from "./JsonPathSearchToolbar"
 import { NoSchemaInRun } from "./NoSchema"
 import SchemaValidations from "./SchemaValidations"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 function findFirstValue(o: any) {
     if (!o || Object.keys(o).length !== 1) {
@@ -40,11 +39,11 @@ type RunDataProps = {
 
 export default function RunData(props: RunDataProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { teams, isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const [data, setData] = useState()
     const [editorData, setEditorData] = useState<string>()
 
     const [changeSchemaModalOpen, setChangeSchemaModalOpen] = useState(false)
-    const teams = useSelector(teamsSelector)
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const token = urlParams.get("token")
@@ -58,7 +57,7 @@ export default function RunData(props: RunDataProps) {
             )
     }, [ props.run.id, teams, props.updateCounter])
 
-    const isTester = useTester(props.run.owner)
+    const isTester = isTesterFunc(props.run.owner)
     const memoizedEditor = useMemo(() => {
         // TODO: height 100% doesn't work
         return (

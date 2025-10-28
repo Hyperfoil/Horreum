@@ -7,7 +7,7 @@ import {Modal} from '@patternfly/react-core/deprecated';
 import Editor from "../../components/Editor/monaco/Editor"
 import { toString } from "../../components/Editor"
 import {datasetApi, DatasetSummary, Label, SortDirection} from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 

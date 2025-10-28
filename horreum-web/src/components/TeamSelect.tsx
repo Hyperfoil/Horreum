@@ -1,8 +1,6 @@
-import {Ref, useState} from "react"
-import {State} from "../store"
-import {useSelector} from "react-redux"
+import {Ref, useContext, useState} from "react"
 
-import {isAuthenticatedSelector, teamsSelector as allTeamsSelector, teamToName} from "../auth"
+import {teamToName} from "../utils"
 import {
     Divider,
     MenuToggle,
@@ -12,6 +10,8 @@ import {
     SelectList,
     SelectOption,
 } from "@patternfly/react-core";
+import {AuthBridgeContext} from "../context/AuthBridgeContext";
+import {AuthContextType} from "../context/@types/authContextTypes";
 
 export interface Team {
     key: string
@@ -35,17 +35,18 @@ export const SHOW_ALL: Team = {key: "__all", toString: () => "Show all"}
 type TeamSelectProps = {
     includeGeneral: boolean
     selection: string | Team
-    teamsSelector?(state: State): string[]
+    selectedTeams?: string[]
     onSelect(selection: Team): void
 }
 
-export default function TeamSelect({includeGeneral, selection, teamsSelector, onSelect}: TeamSelectProps) {
+export default function TeamSelect({includeGeneral, selection, selectedTeams, onSelect}: TeamSelectProps) {
+    const { isAuthenticated, teams: allTeams } = useContext(AuthBridgeContext) as AuthContextType;
     const [isOpen, setIsOpen] = useState(false);
-    const teams = useSelector(teamsSelector || allTeamsSelector)
+    const teams = selectedTeams || allTeams
 
     const generalOptions = () =>
         <SelectList>
-            {(useSelector(isAuthenticatedSelector) ? [SHOW_ALL, ONLY_MY_OWN] : [SHOW_ALL])
+            {(isAuthenticated ? [SHOW_ALL, ONLY_MY_OWN] : [SHOW_ALL])
                 .map(t => <SelectOption key={t.key} value={t.key}>{t.toString()}</SelectOption>)}
         </SelectList>
 

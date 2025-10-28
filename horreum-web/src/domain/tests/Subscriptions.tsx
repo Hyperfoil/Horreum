@@ -3,11 +3,13 @@ import { noop } from "../../utils"
 import {Divider} from '@patternfly/react-core';
 import {DualListSelector} from '@patternfly/react-core/deprecated';
 import {getSubscription, updateSubscription, userApi, UserData} from "../../api"
-import { teamToName, useTester } from "../../auth"
+import { teamToName } from "../../utils"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import UserSearch from "../../components/UserSearch"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 type SubscriptionsProps = {
     testId: number
@@ -37,7 +39,9 @@ function teamElement(team: string): ReactElement<any> {
 
 export default function Subscriptions(props: SubscriptionsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const isTester = useTester(props.testOwner)
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
+
+    const isTester = isTesterFunc(props.testOwner)
     const [availableUsers, setAvailableUsers] = useState<ReactElement<any>[]>([])
     const [watchingUsers, setWatchingUsers] = useState<ReactElement<any>[]>([])
     const [optoutUsers, setOptoutUsers] = useState<ReactElement<any>[]>([])

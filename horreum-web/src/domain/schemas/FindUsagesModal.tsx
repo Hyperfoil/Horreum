@@ -25,7 +25,7 @@ import {
 } from "../../api"
 import ButtonLink from "../../components/ButtonLink"
 import NameUri from "../../components/NameUri"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 

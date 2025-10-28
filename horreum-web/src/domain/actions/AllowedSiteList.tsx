@@ -5,7 +5,7 @@ import { Bullseye, Button, Spinner, Toolbar, ToolbarContent, ToolbarItem } from 
 import { addSite, AllowedSite, deleteSite, getAllowedSites} from "../../api"
 
 import AddAllowedSiteModal from "./AddAllowedSiteModal"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
 import { ColumnDef, createColumnHelper } from "@tanstack/react-table"

@@ -16,11 +16,11 @@ import ActionMenu, {
     useDelete,
 } from "../../components/ActionMenu"
 import { formatDateTime, toEpochMillis } from "../../utils"
-import { useTester } from "../../auth"
 import {Access, recalculateDatasets, RunSummary, trash, updateDescription, updateRunAccess} from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
-import { Cell } from "@tanstack/react-table";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 export function Description(description: string) {
     const truncated = (
@@ -161,6 +161,7 @@ function useUpdateDescription(run: RunSummary): MenuItem<RunSummary> {
 
 export function Menu(run: RunSummary, refreshCallback: () => void, clearSelected: () => void) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
 
     const changeAccess = useChangeAccess({
         onAccessUpdate: (id, owner, access) => updateRunAccess(id, run.testid, owner, access, alerting).then(refreshCallback),
@@ -174,7 +175,7 @@ export function Menu(run: RunSummary, refreshCallback: () => void, clearSelected
     const menuItems: MenuItem<any>[] = [changeAccess, recalculate]
     menuItems.push(run.trashed ? restore : del)
 
-    const isTester = useTester(run.owner)
+    const isTester = isTesterFunc(run.owner)
     const updateDescription = useUpdateDescription(run)
     if (isTester) {
         menuItems.push(updateDescription)

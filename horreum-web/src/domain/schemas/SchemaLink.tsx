@@ -1,7 +1,7 @@
 import { schemaApi } from "../../api"
 import IndirectLink from "../../components/IndirectLink"
 import {useContext} from "react";
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 type SchemaLinkProps = {

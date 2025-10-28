@@ -16,7 +16,7 @@ import { NavLink } from "react-router-dom"
 
 import {alertingApi, DatapointRecalculationStatus, DatasetInfo} from "../../api"
 import TimeRangeSelect, { TimeRange } from "../../components/TimeRangeSelect"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 type RecalculateModalProps = {

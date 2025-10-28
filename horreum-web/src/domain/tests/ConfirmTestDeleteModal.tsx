@@ -2,7 +2,7 @@ import {useState, useEffect, useContext} from "react"
 import { runApi, RunCount } from "../../api"
 import {Bullseye, Button, ButtonVariant, TextInput, Spinner} from '@patternfly/react-core';
 import {Modal} from '@patternfly/react-core/deprecated';
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 type ConfirmTestDeleteModalProps = {

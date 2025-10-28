@@ -19,7 +19,7 @@ import { DateTime } from "luxon"
 import {alertingApi, AnnotationDefinition, FingerprintValue, TimeseriesTarget} from "../../api"
 import { fingerprintToString } from "../../utils"
 import { fetchDatapoints, fetchAllAnnotations } from "./Changes"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 function tsToDate(timestamp: number) {

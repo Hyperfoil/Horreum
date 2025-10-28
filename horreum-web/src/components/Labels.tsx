@@ -7,7 +7,7 @@ import {ExclamationCircleIcon} from "@patternfly/react-icons"
 
 import {LabelInfo, schemaApi} from "../api"
 
-import {AppContext} from "../context/appContext";
+import {AppContext} from "../context/AppContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import FilterIcon from "@patternfly/react-icons/dist/esm/icons/filter-icon";
 import { MultiTypeaheadSelect, SimpleDropdown, TypeaheadSelect } from "@patternfly/react-templates";

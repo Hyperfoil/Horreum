@@ -1,14 +1,14 @@
-import { useState, useRef } from "react"
-import { useSelector } from "react-redux"
+import {useState, useRef, useContext} from "react"
 import {Button, Form, FormGroup} from '@patternfly/react-core';
 import {Modal} from '@patternfly/react-core/deprecated';
 
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import TeamSelect, { createTeam, Team } from "../../components/TeamSelect"
-import { defaultTeamSelector, managedTeamsSelector } from "../../auth"
 import TeamMembers, { TeamMembersFunctions } from "./TeamMembers"
 import NewUserModal from "./NewUserModal"
 import { noop } from "../../utils"
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 type ManagedTeamsProps = {
     funcs: TabFunctionsRef
@@ -16,12 +16,9 @@ type ManagedTeamsProps = {
 }
 
 export default function ManagedTeams(props: ManagedTeamsProps) {
-    let defaultTeam = useSelector(defaultTeamSelector)
-    const managedTeams = useSelector(managedTeamsSelector)
-    if (!defaultTeam || !managedTeams.includes(defaultTeam)) {
-        defaultTeam = managedTeams.length > 0 ? managedTeams[0] : undefined
-    }
-    const [team, setTeam] = useState<Team>(createTeam(defaultTeam))
+    const { managedTeams, defaultTeam } = useContext(AuthBridgeContext) as AuthContextType;
+    const localDefaultTeam = (!defaultTeam || !managedTeams.includes(defaultTeam)) ? (managedTeams.length > 0 ? managedTeams[0] : undefined) : defaultTeam
+    const [team, setTeam] = useState<Team>(createTeam(localDefaultTeam))
     const [nextTeam, setNextTeam] = useState<Team>()
     const [createNewUser, setCreateNewUser] = useState(false)
     const [modified, setModified] = useState(false)
@@ -46,7 +43,7 @@ export default function ManagedTeams(props: ManagedTeamsProps) {
                     <TeamSelect
                         includeGeneral={false}
                         selection={team}
-                        teamsSelector={managedTeamsSelector}
+                        selectedTeams={managedTeams}
                         onSelect={anotherTeam => (modified && setNextTeam(anotherTeam)) || setTeam(anotherTeam)}
                     />
                 </FormGroup>

@@ -1,7 +1,5 @@
 import React, {useContext, useEffect, useMemo, useState} from "react"
 
-import {useSelector} from "react-redux"
-
 import {
     Breadcrumb,
     BreadcrumbHeading,
@@ -30,7 +28,7 @@ import FolderSelect from "../../components/FolderSelect"
 import ConfirmTestDeleteModal from "./ConfirmTestDeleteModal"
 import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
 
-import {isAuthenticatedSelector, teamsSelector, teamToName, userProfileSelector, useTester} from "../../auth"
+import { teamToName } from "../../utils"
 import {noop} from "../../utils"
 import {
     Access,
@@ -46,13 +44,15 @@ import {
     fetchFolders, testApi, TestExport
 } from "../../api"
 import AccessIcon from "../../components/AccessIcon"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import FoldersDropDown from "../../components/FoldersDropdown";
 import ImportButton from "../../components/ImportButton";
 import CustomTable from "../../components/CustomTable";
 import FilterSearchInput from "../../components/FilterSearchInput";
 import { ColumnDef, ColumnSort, createColumnHelper } from "@tanstack/react-table";
+import {AuthContextType} from "../../context/@types/authContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
 
 type WatchDropdownProps = {
     id: number
@@ -62,10 +62,16 @@ type WatchDropdownProps = {
 const DEFAULT_FOLDER = "";
 
 const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
+    const { username, teams } = useContext(AuthBridgeContext) as AuthContextType;
+
     const { alerting } = useContext(AppContext) as AppContextType;
     const [open, setOpen] = useState(false)
-    const teams = useSelector(teamsSelector)
-    const profile = useSelector(userProfileSelector)
+    const [self, setSelf] = useState<string>("__self")
+
+    useEffect(() => {
+        setSelf(username || "__self")
+    }, [username]);
+
     const onSelect = () => {
         setOpen(false);
     };
@@ -74,9 +80,9 @@ const WatchDropdown = ({ id, watching }: WatchDropdownProps) => {
         return <Spinner size="sm" />
     }
     const personalItems = []
-    const self = profile?.username || "__self"
+
     const isOptOut = watching.some(u => u.startsWith("!"))
-    if (watching.some(u => u === profile?.username)) {
+    if (watching.some(u => u === username)) {
         personalItems.push(
             <DropdownItem key="__self" onClick={() => removeUserOrTeam(id, self, alerting).catch(noop)}>
                 Stop watching personally
@@ -284,6 +290,7 @@ const columnHelper = createColumnHelper<TestStorage>()
 
 export default function AllTests() {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isAuthenticated, teams, isTester } = useContext(AuthBridgeContext) as AuthContextType;
     const navigate = useNavigate()
     const location = useLocation()
     const params = new URLSearchParams(location.search)
@@ -353,8 +360,6 @@ export default function AllTests() {
     )
 
     const [allTests, setTests] = useState<TestStorage[]>([])
-    const teams = useSelector(teamsSelector)
-    const isAuthenticated = useSelector(isAuthenticatedSelector)
     const rolesFilterFromQuery = params.get("filter")
     const [rolesFilter, setRolesFilter] = useState<Team>(rolesFilterFromQuery !== null ? createTeam(rolesFilterFromQuery) : ONLY_MY_OWN)
 
@@ -404,8 +409,6 @@ export default function AllTests() {
         navigate(location.pathname + query)
     }, [folder, rolesFilter])
 
-    const isTester = useTester()
-
     return (
         <PageSection>
             <Toolbar>
@@ -446,7 +449,7 @@ export default function AllTests() {
                             />
                         </ToolbarItem>
                     </ToolbarGroup>
-                    {isTester && (
+                    {isTester() && (
                         <ToolbarGroup variant="action-group" align={{ default: 'alignEnd' }}>
                             <ToolbarItem>
                                 <ImportButton
