@@ -66,6 +66,7 @@ import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.InMemoryAMQTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
+import io.quarkus.logging.Log;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -319,6 +320,145 @@ public class RunServiceTest extends BaseServiceTest {
         assertEquals(runId, elv.runId, "expected runId");
         assertTrue(elv.values.containsKey("value"));
         assertEquals(42, elv.values.get("value").asInt());
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesWithAllMatchMultipleExtractorsAndJs() {
+        Test t = createTest(createExampleTest("my-test"));
+
+        // create a schema with all match label extractor
+        Schema fooSchema = createSchema("foo", "urn:foo");
+        Extractor fooExtractor = new Extractor();
+        fooExtractor.name = "foo";
+        fooExtractor.jsonpath = "$.foo[*].inner";
+        fooExtractor.isArray = true;
+        Extractor barExtractor = new Extractor();
+        barExtractor.name = "bar";
+        barExtractor.jsonpath = "$.bar";
+
+        // pass the array of arrays to a js function
+        Label label = createLabelDto(fooSchema, "labelFoo", "val => val.foo", null, fooExtractor, barExtractor);
+        Response addLabelResponse = jsonRequest().body(List.of(label)).post("/api/schema/" + fooSchema.id + "/labels");
+        addLabelResponse.then().statusCode(201);
+
+        List<Integer> ids = uploadRun(
+                "{ \"bar\": \"test1\", \"foo\": [{\"inner\":[{\"id\": 1}, {\"id\": 2}]}, {\"inner\":[{\"id\": 3}]}, {\"inner\":[{\"id\": 4}, {\"id\": 5}]}]}",
+                t.name, fooSchema.uri);
+        assertEquals(1, ids.size());
+        // force to recalculate datasets and label values sync
+        recalculateDatasetForRun(ids.get(0));
+
+        // check the preview label
+
+        JsonNode preview = jsonRequest()
+                .body(label)
+                .post("/api/dataset/" + DatasetDAO.<DatasetDAO> find("runId = ?1", ids.get(0)).firstResult().id
+                        + "/previewLabel")
+                .then()
+                .statusCode(200)
+                .extract()
+                .as(JsonNode.class);
+
+        // expecting an array of arrays [[1, 2], [3], [4, 5]]
+        Log.info(preview.toString());
+        JsonNode previewValue = preview.get("value");
+        assertInstanceOf(ArrayNode.class, previewValue);
+        assertEquals(3, previewValue.size());
+        assertTrue(previewValue.get(0).isArray());
+
+        // check the actual label value
+
+        JsonNode response = jsonRequest()
+                .get("/api/run/" + ids.get(0) + "/labelValues?include=labelFoo")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(1, arrayResponse.size());
+        assertInstanceOf(ObjectNode.class, arrayResponse.get(0));
+        ObjectNode objectNode = (ObjectNode) arrayResponse.get(0).get("values");
+
+        Log.info(objectNode.toString());
+        assertTrue(objectNode.has("labelFoo"));
+        assertTrue(objectNode.get("labelFoo").isArray());
+        // expecting an array of arrays [[1, 2], [3], [4, 5]]
+        assertEquals(3, objectNode.get("labelFoo").size());
+        assertTrue(objectNode.get("labelFoo").get(0).isArray());
+
+        // check both, preview and actual label value return the same result after js application
+        assertEquals(previewValue, objectNode.get("labelFoo"));
+    }
+
+    @org.junit.jupiter.api.Test
+    public void labelValuesWithAllMatchSingleExtractorAndJs() {
+        Test t = createTest(createExampleTest("my-test"));
+
+        // create a schema with all match label extractor
+        Schema fooSchema = createSchema("foo", "urn:foo");
+        Extractor fooExtractor = new Extractor();
+        fooExtractor.name = "foo";
+        fooExtractor.jsonpath = "$.foo[*].inner";
+        fooExtractor.isArray = true;
+
+        // pass the array of arrays to a js function
+        Label label = createLabelDto(fooSchema, "labelFoo", "val => val", null, fooExtractor);
+        Response addLabelResponse = jsonRequest().body(List.of(label)).post("/api/schema/" + fooSchema.id + "/labels");
+        addLabelResponse.then().statusCode(201);
+
+        List<Integer> ids = uploadRun(
+                "{ \"foo\": [{\"inner\":[{\"id\": 1}, {\"id\": 2}]}, {\"inner\":[{\"id\": 3}]}, {\"inner\":[{\"id\": 4}, {\"id\": 5}]}]}",
+                t.name, fooSchema.uri);
+        assertEquals(1, ids.size());
+        // force to recalculate datasets and label values sync
+        recalculateDatasetForRun(ids.get(0));
+
+        // check the preview label
+
+        JsonNode preview = jsonRequest()
+                .body(label)
+                .post("/api/dataset/" + DatasetDAO.<DatasetDAO> find("runId = ?1", ids.get(0)).firstResult().id
+                        + "/previewLabel")
+                .then()
+                .statusCode(200)
+                .extract()
+                .as(JsonNode.class);
+
+        // expecting an array of arrays [[1, 2], [3], [4, 5]]
+        Log.info(preview.toString());
+        JsonNode previewValue = preview.get("value");
+        assertInstanceOf(ArrayNode.class, previewValue);
+        assertEquals(3, previewValue.size());
+        assertTrue(previewValue.get(0).isArray());
+
+        // check the actual label value
+
+        JsonNode response = jsonRequest()
+                .get("/api/run/" + ids.get(0) + "/labelValues?include=labelFoo")
+                .then()
+                .statusCode(200)
+                .extract()
+                .body()
+                .as(JsonNode.class);
+
+        assertInstanceOf(ArrayNode.class, response);
+        ArrayNode arrayResponse = (ArrayNode) response;
+        assertEquals(1, arrayResponse.size());
+        assertInstanceOf(ObjectNode.class, arrayResponse.get(0));
+        ObjectNode objectNode = (ObjectNode) arrayResponse.get(0).get("values");
+
+        Log.info(objectNode.toString());
+        assertTrue(objectNode.has("labelFoo"));
+        assertTrue(objectNode.get("labelFoo").isArray());
+        // expecting an array of arrays [[1, 2], [3], [4, 5]]
+        assertEquals(3, objectNode.get("labelFoo").size());
+        assertTrue(objectNode.get("labelFoo").get(0).isArray());
+
+        // check both, preview and actual label value return the same result after js application
+        assertEquals(previewValue, objectNode.get("labelFoo"));
     }
 
     private void assertNewDataset(BlockingQueue<Dataset.EventNew> dataSetQueue, int runId) throws InterruptedException {
