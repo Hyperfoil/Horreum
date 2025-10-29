@@ -574,6 +574,14 @@ public class BaseServiceTest {
 
     protected int postLabel(Schema schema, String name, String function, Consumer<Label> mutate,
             Extractor... extractors) {
+        Label l = createLabelDto(schema, name, function, mutate, extractors);
+        Response response = jsonRequest().body(List.of(l)).post("/api/schema/" + schema.id + "/labels");
+        response.then().statusCode(201);
+        return response.body().as(Integer[].class)[0];
+    }
+
+    protected Label createLabelDto(Schema schema, String name, String function, Consumer<Label> mutate,
+            Extractor... extractors) {
         Label l = new Label();
         l.name = name;
         l.function = function;
@@ -584,9 +592,8 @@ public class BaseServiceTest {
         if (mutate != null) {
             mutate.accept(l);
         }
-        Response response = jsonRequest().body(List.of(l)).post("/api/schema/" + schema.id + "/labels");
-        response.then().statusCode(201);
-        return response.body().as(Integer[].class)[0];
+
+        return l;
     }
 
     protected int putLabel(Schema schema, Integer labelId, String name, String function, Consumer<Label> mutate,
