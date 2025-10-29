@@ -66,7 +66,6 @@ import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.InMemoryAMQTestProfile;
 import io.hyperfoil.tools.horreum.test.PostgresResource;
 import io.hyperfoil.tools.horreum.test.TestUtil;
-import io.quarkus.logging.Log;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -342,7 +341,12 @@ public class RunServiceTest extends BaseServiceTest {
         addLabelResponse.then().statusCode(201);
 
         List<Integer> ids = uploadRun(
-                "{ \"bar\": \"test1\", \"foo\": [{\"inner\":[{\"id\": 1}, {\"id\": 2}]}, {\"inner\":[{\"id\": 3}]}, {\"inner\":[{\"id\": 4}, {\"id\": 5}]}]}",
+                """
+                        {
+                         "bar": "test1",
+                         "foo": [{"inner":[{"id": 1}, {"id": 2}]}, {"inner":[{"id": 3}]}, {"inner":[{"id": 4}, {"id": 5}]}]
+                        }
+                        """,
                 t.name, fooSchema.uri);
         assertEquals(1, ids.size());
         // force to recalculate datasets and label values sync
@@ -360,7 +364,6 @@ public class RunServiceTest extends BaseServiceTest {
                 .as(JsonNode.class);
 
         // expecting an array of arrays [[1, 2], [3], [4, 5]]
-        Log.info(preview.toString());
         JsonNode previewValue = preview.get("value");
         assertInstanceOf(ArrayNode.class, previewValue);
         assertEquals(3, previewValue.size());
@@ -382,7 +385,6 @@ public class RunServiceTest extends BaseServiceTest {
         assertInstanceOf(ObjectNode.class, arrayResponse.get(0));
         ObjectNode objectNode = (ObjectNode) arrayResponse.get(0).get("values");
 
-        Log.info(objectNode.toString());
         assertTrue(objectNode.has("labelFoo"));
         assertTrue(objectNode.get("labelFoo").isArray());
         // expecting an array of arrays [[1, 2], [3], [4, 5]]
@@ -410,7 +412,11 @@ public class RunServiceTest extends BaseServiceTest {
         addLabelResponse.then().statusCode(201);
 
         List<Integer> ids = uploadRun(
-                "{ \"foo\": [{\"inner\":[{\"id\": 1}, {\"id\": 2}]}, {\"inner\":[{\"id\": 3}]}, {\"inner\":[{\"id\": 4}, {\"id\": 5}]}]}",
+                """
+                        {
+                         "foo": [{"inner":[{"id": 1}, {"id": 2}]}, {"inner":[{"id": 3}]}, {"inner":[{"id": 4}, {"id": 5}]}]
+                        }
+                        """,
                 t.name, fooSchema.uri);
         assertEquals(1, ids.size());
         // force to recalculate datasets and label values sync
@@ -428,7 +434,6 @@ public class RunServiceTest extends BaseServiceTest {
                 .as(JsonNode.class);
 
         // expecting an array of arrays [[1, 2], [3], [4, 5]]
-        Log.info(preview.toString());
         JsonNode previewValue = preview.get("value");
         assertInstanceOf(ArrayNode.class, previewValue);
         assertEquals(3, previewValue.size());
@@ -450,7 +455,6 @@ public class RunServiceTest extends BaseServiceTest {
         assertInstanceOf(ObjectNode.class, arrayResponse.get(0));
         ObjectNode objectNode = (ObjectNode) arrayResponse.get(0).get("values");
 
-        Log.info(objectNode.toString());
         assertTrue(objectNode.has("labelFoo"));
         assertTrue(objectNode.get("labelFoo").isArray());
         // expecting an array of arrays [[1, 2], [3], [4, 5]]
@@ -478,7 +482,11 @@ public class RunServiceTest extends BaseServiceTest {
         addLabelResponse.then().statusCode(201);
 
         List<Integer> ids = uploadRun(
-                "{ \"foo\": [{\"inner\":[{\"id\": 1}, {\"id\": 2}]}, {\"inner\":[{\"id\": 3}]}, {\"inner\":[{\"id\": 4}, {\"id\": 5}]}]}",
+                """
+                        {
+                         "foo": [{"inner":[{"id": 1}, {"id": 2}]}, {"inner":[{"id": 3}]}, {"inner":[{"id": 4}, {"id": 5}]}]
+                        }
+                        """,
                 t.name, fooSchema.uri);
         assertEquals(1, ids.size());
         // force to recalculate datasets and label values sync
@@ -496,7 +504,6 @@ public class RunServiceTest extends BaseServiceTest {
                 .as(JsonNode.class);
 
         // expecting an array of arrays [1, 2]
-        Log.info(preview.toString());
         JsonNode previewValue = preview.get("value");
         assertInstanceOf(ArrayNode.class, previewValue);
         assertEquals(2, previewValue.size());
@@ -518,7 +525,6 @@ public class RunServiceTest extends BaseServiceTest {
         assertInstanceOf(ObjectNode.class, arrayResponse.get(0));
         ObjectNode objectNode = (ObjectNode) arrayResponse.get(0).get("values");
 
-        Log.info(objectNode.toString());
         assertTrue(objectNode.has("labelFoo"));
         assertTrue(objectNode.get("labelFoo").isArray());
         // expecting an array of arrays [1, 2]
