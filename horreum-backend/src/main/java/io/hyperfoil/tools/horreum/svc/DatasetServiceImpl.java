@@ -520,7 +520,7 @@ public class DatasetServiceImpl implements DatasetService {
         FingerprintDAO.deleteById(datasetId);
         Util.evaluateWithCombinationFunction(toCompute,
                 (row) -> (String) row[2],
-                (row) -> (row[3] instanceof ArrayNode ? flatten((ArrayNode) row[3]) : (JsonNode) row[3]),
+                (row) -> (JsonNode) row[3],
                 (row, result) -> createLabelValue(datasetId, (int) row[0], Util.convertToJson(result)),
                 (row) -> createLabelValue(datasetId, (int) row[0], (JsonNode) row[3]),
                 (row, e, jsCode) -> logMessage(datasetId, PersistentLogDAO.ERROR,
@@ -581,18 +581,6 @@ public class DatasetServiceImpl implements DatasetService {
         em.createNativeQuery("DELETE FROM dataset_view WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
         em.createNativeQuery("DELETE FROM fingerprint WHERE dataset_id = ?1").setParameter(1, datasetId).executeUpdate();
         em.createNativeQuery("DELETE FROM dataset WHERE id = ?1").setParameter(1, datasetId).executeUpdate();
-    }
-
-    private ArrayNode flatten(ArrayNode bucket) {
-        JsonNode data = bucket.get(0);
-        if (data == null)
-            return bucket;
-
-        if (data instanceof ArrayNode) {
-            bucket.removeAll();
-            data.forEach(bucket::add);
-        }
-        return bucket;
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
