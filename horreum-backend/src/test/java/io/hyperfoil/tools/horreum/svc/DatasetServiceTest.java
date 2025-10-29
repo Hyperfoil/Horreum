@@ -112,7 +112,7 @@ public class DatasetServiceTest extends BaseServiceTest {
     @org.junit.jupiter.api.Test
     public void testDatasetLabelSingleWithReduceFunctionArray() {
         withExampleSchemas((schemas) -> {
-            int labelReduce = addLabel(schemas[0], "sum", "value => { return value.reduce((a,b) => a+b); }",
+            int labelReduce = addLabel(schemas[0], "sum", "value => { return value[0].reduce((a,b) => a+b); }",
                     new Extractor("value", "$.samplesArray", true));
             List<Label.Value> values = withLabelValues(createSampleArray());
             assertEquals(30, values.stream().filter(v -> v.labelId == labelReduce).map(v -> v.value.numberValue()).findFirst()
@@ -123,7 +123,7 @@ public class DatasetServiceTest extends BaseServiceTest {
     @org.junit.jupiter.api.Test
     public void testDatasetLabelAsyncSingleWithReduceFunctionArray() {
         withExampleSchemas((schemas) -> {
-            int labelReduce = addLabel(schemas[0], "sum", "async (value) => { return value.reduce((a,b) => a+b); }",
+            int labelReduce = addLabel(schemas[0], "sum", "async (value) => { return value[0].reduce((a,b) => a+b); }",
                     new Extractor("value", "$.samplesArray", true));
             List<Label.Value> values = withLabelValues(createSampleArray());
             assertEquals(30, values.stream().filter(v -> v.labelId == labelReduce).map(v -> v.value.numberValue()).findFirst()
@@ -568,7 +568,12 @@ public class DatasetServiceTest extends BaseServiceTest {
         addLabelResponse.then().statusCode(201);
 
         List<Integer> ids = uploadRun(
-                "{ \"bar\": \"test1\", \"foo\": [{\"inner\":[{\"id\": 1}, {\"id\": 2}]}, {\"inner\":[{\"id\": 3}]}, {\"inner\":[{\"id\": 4}, {\"id\": 5}]}]}",
+                """
+                        {
+                         "bar": "test1",
+                         "foo": [{"inner":[{"id": 1}, {"id": 2}]}, {"inner":[{"id": 3}]}, {"inner":[{"id": 4}, {"id": 5}]}]
+                        }
+                        """,
                 t.name, fooSchema.uri);
         assertEquals(1, ids.size());
         // force to recalculate datasets and label values sync
@@ -586,7 +591,6 @@ public class DatasetServiceTest extends BaseServiceTest {
                 .as(JsonNode.class);
 
         // expecting an array of arrays [[1, 2], [3], [4, 5]]
-        Log.info(preview.toString());
         JsonNode previewValue = preview.get("value");
         assertInstanceOf(ArrayNode.class, previewValue);
         assertEquals(3, previewValue.size());
@@ -607,7 +611,6 @@ public class DatasetServiceTest extends BaseServiceTest {
         assertInstanceOf(ObjectNode.class, arrayResponse.get(0));
         ObjectNode objectNode = (ObjectNode) arrayResponse.get(0);
 
-        Log.info(objectNode.toString());
         assertEquals("labelFoo", objectNode.get("name").asText());
         assertTrue(objectNode.get("value").isArray());
         // expecting an array of arrays [[1, 2], [3], [4, 5]]
@@ -635,7 +638,12 @@ public class DatasetServiceTest extends BaseServiceTest {
         addLabelResponse.then().statusCode(201);
 
         List<Integer> ids = uploadRun(
-                "{ \"bar\": \"test1\", \"foo\": [{\"inner\":[{\"id\": 1}, {\"id\": 2}]}, {\"inner\":[{\"id\": 3}]}, {\"inner\":[{\"id\": 4}, {\"id\": 5}]}]}",
+                """
+                        {
+                         "bar": "test1",
+                         "foo": [{"inner":[{"id": 1}, {"id": 2}]}, {"inner":[{"id": 3}]}, {"inner":[{"id": 4}, {"id": 5}]}]
+                        }
+                        """,
                 t.name, fooSchema.uri);
         assertEquals(1, ids.size());
         // force to recalculate datasets and label values sync
@@ -653,7 +661,6 @@ public class DatasetServiceTest extends BaseServiceTest {
                 .as(JsonNode.class);
 
         // expecting an array of arrays [[1, 2], [3], [4, 5]]
-        Log.info(preview.toString());
         JsonNode previewValue = preview.get("value");
         assertInstanceOf(ArrayNode.class, previewValue);
         assertEquals(3, previewValue.size());
@@ -674,7 +681,6 @@ public class DatasetServiceTest extends BaseServiceTest {
         assertInstanceOf(ObjectNode.class, arrayResponse.get(0));
         ObjectNode objectNode = (ObjectNode) arrayResponse.get(0);
 
-        Log.info(objectNode.toString());
         assertEquals("labelFoo", objectNode.get("name").asText());
         assertTrue(objectNode.get("value").isArray());
         // expecting an array of arrays [[1, 2], [3], [4, 5]]
@@ -702,7 +708,12 @@ public class DatasetServiceTest extends BaseServiceTest {
         addLabelResponse.then().statusCode(201);
 
         List<Integer> ids = uploadRun(
-                "{ \"bar\": \"test1\", \"foo\": [{\"inner\":[{\"id\": 1}, {\"id\": 2}]}, {\"inner\":[{\"id\": 3}]}, {\"inner\":[{\"id\": 4}, {\"id\": 5}]}]}",
+                """
+                        {
+                         "bar": "test1",
+                         "foo": [{"inner":[{"id": 1}, {"id": 2}]}, {"inner":[{"id": 3}]}, {"inner":[{"id": 4}, {"id": 5}]}]
+                        }
+                        """,
                 t.name, fooSchema.uri);
         assertEquals(1, ids.size());
         // force to recalculate datasets and label values sync
@@ -720,7 +731,6 @@ public class DatasetServiceTest extends BaseServiceTest {
                 .as(JsonNode.class);
 
         // expecting an array of arrays [1, 2]
-        Log.info(preview.toString());
         JsonNode previewValue = preview.get("value");
         assertInstanceOf(ArrayNode.class, previewValue);
         assertEquals(2, previewValue.size());
@@ -741,7 +751,6 @@ public class DatasetServiceTest extends BaseServiceTest {
         assertInstanceOf(ObjectNode.class, arrayResponse.get(0));
         ObjectNode objectNode = (ObjectNode) arrayResponse.get(0);
 
-        Log.info(objectNode.toString());
         assertEquals("labelFoo", objectNode.get("name").asText());
         assertTrue(objectNode.get("value").isArray());
         // expecting an array of arrays [1, 2]
