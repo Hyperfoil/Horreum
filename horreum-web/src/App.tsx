@@ -46,9 +46,9 @@ import {createUserManager, onSigninCallback} from "./auth/oidc";
 import {AuthProvider} from "react-oidc-context";
 import {KeycloakConfig} from "./generated";
 import {configApi} from "./api";
-import SilentCheckSSO from "./auth/SilentCheckSSO";
 import AuthBridgeContextProvider, {AuthBridgeContext} from "./context/AuthBridgeContext";
 import {AuthContextType} from "./context/@types/authContextTypes";
+import CallbackSSO from "./auth/CallbackSSO";
 
 const router = createBrowserRouter(
     createRoutesFromElements(
@@ -68,8 +68,8 @@ const router = createBrowserRouter(
             <Route path="/admin" element={<Admin/>}/>
             <Route path="/usersettings" element={<UserSettings/>}/>
 
-            {/* matches the OIDC silent_redirect_uri configured in oidc.ts */}
-            <Route path="/silent-check-sso" element={<SilentCheckSSO/>}/>
+            {/* matches the OIDC redirect_uri configured in oidc.ts */}
+            <Route path="/callback-sso" element={<CallbackSSO/>}/>
         </Route>
     ), {
         future: {
