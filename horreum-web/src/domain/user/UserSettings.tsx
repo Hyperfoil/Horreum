@@ -52,7 +52,7 @@ export function UserSettings() {
     document.title = "User settings | Horreum"
 
     const { alerting } = useContext(AppContext) as AppContextType;
-    const { managedTeams, defaultTeam: prevDefaultTeam } = useContext(AuthBridgeContext) as AuthContextType;
+    const { isAuthenticated, managedTeams, defaultTeam: prevDefaultTeam } = useContext(AuthBridgeContext) as AuthContextType;
 
     const [defaultTeam, setDefaultTeam] = useState<Team>(createTeam(prevDefaultTeam))
     useEffect(() => {
@@ -82,6 +82,18 @@ export function UserSettings() {
                 _ => alerting.dispatchInfo("SAVE", "Saved!", "User Settings were successfully updated!", 3000),
                 error => alerting.dispatchError(error, "SET_DEFAULT_TEAM", "Failed to update default team.")
             )
+    }
+
+    if (!isAuthenticated){
+        return (
+            <PageSection>
+                <Card>
+                    <CardBody>
+                        You are not authorized to view this page
+                    </CardBody>
+                </Card>
+            </PageSection>
+        )
     }
 
     if (!username) {

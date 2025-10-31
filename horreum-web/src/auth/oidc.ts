@@ -5,8 +5,7 @@ export const createUserManager = (config: KeycloakConfig): UserManager => {
     return new UserManager({
         authority: config.url + "/realms/horreum",
         client_id: config.clientId ?? "",
-        redirect_uri: `${window.location.origin}${window.location.pathname}`,
-        silent_redirect_uri: `${window.location.origin}/silent-check-sso`,
+        redirect_uri: `${window.location.origin}/callback-sso`,
         post_logout_redirect_uri: window.location.origin,
         userStore: new WebStorageStateStore({ store: window.sessionStorage }),
         monitorSession: true, // this allows cross tab login/logout detection

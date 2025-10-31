@@ -30,6 +30,7 @@ function isTester(owner: string, roles: string[]) {
 }
 
 export const AuthBridgeContext = React.createContext<AuthContextType | null>(null);
+export const beforeLoginHistorySession = "beforeLoginPath"
 
 const signOutCallback = () => window.location.replace(window.location.origin)
 
@@ -40,10 +41,11 @@ type ContextProviderProps = {
 
 const AuthBridgeContextProvider: React.FC<ContextProviderProps> = ({ isOidc, children }) => {
     const auth = useAuth();
+
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-    const [name, setName] = useState<string|undefined>(undefined);
-    const [username, setUsername] = useState<string|undefined>(undefined);
-    const [token, setToken] = useState<string | undefined>(undefined);
+    const [name, setName] = useState<string | undefined>();
+    const [username, setUsername] = useState<string | undefined>();
+    const [token, setToken] = useState<string | undefined>();
     const [isBridgeTokenSet, setIsBridgeTokenSet] = useState<boolean>(false);
     const [roles, setRoles] = useState<string[]>([]);
     const [defaultTeam, setDefaultTeam] = useState<string|undefined>(undefined);
@@ -52,7 +54,11 @@ const AuthBridgeContextProvider: React.FC<ContextProviderProps> = ({ isOidc, chi
     AuthBridge.setIsOidc(isOidc)
 
     const signIn = isOidc ?
-        () => auth.signinRedirect() :
+        () => {
+            // save the current pathname in the local session to let the callback page redirect back
+            window.sessionStorage.setItem(beforeLoginHistorySession, window.location.pathname)
+            return auth.signinRedirect()
+        } :
         (username?: string, password?: string) => {
             setIsAuthenticated(true)
             setToken(window.btoa(username + ':' + password))
@@ -131,15 +137,15 @@ const AuthBridgeContextProvider: React.FC<ContextProviderProps> = ({ isOidc, chi
         signOut: signOut,
     };
 
-    if (isOidc && auth.isLoading) {
-        // we need this to let auth properly complete the authentication
-        // otherwise we are too fast
-        return (
-            <Bullseye>
-                <Spinner/>
-            </Bullseye>
-        )
-    }
+    // if (isOidc && auth.isLoading) {
+    //     // we need this to let auth properly complete the authentication
+    //     // otherwise we are too fast
+    //     return (
+    //         <Bullseye>
+    //             <Spinner/>
+    //         </Bullseye>
+    //     )
+    // }
 
     return <AuthBridgeContext.Provider value={ authCtx }>{children}</AuthBridgeContext.Provider>;
 };
