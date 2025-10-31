@@ -7,8 +7,9 @@ export const createUserManager = (config: KeycloakConfig): UserManager => {
         client_id: config.clientId ?? "",
         redirect_uri: `${window.location.origin}/callback-sso`,
         post_logout_redirect_uri: window.location.origin,
-        userStore: new WebStorageStateStore({ store: window.sessionStorage }),
+        userStore: new WebStorageStateStore({ store: window.localStorage }),
         monitorSession: true, // this allows cross tab login/logout detection
+        automaticSilentRenew: true,
     })
 }
 

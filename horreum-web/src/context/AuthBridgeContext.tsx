@@ -67,7 +67,7 @@ const AuthBridgeContextProvider: React.FC<ContextProviderProps> = ({ isOidc, chi
         };
 
     const signOut = isOidc ?
-        () => auth.removeUser().then(signOutCallback) :
+        () => auth.removeUser().then(() => window.localStorage.clear()).then(() => auth.clearStaleState()).then(signOutCallback) :
         () => {
             setToken(undefined)
             setIsAuthenticated(false)
