@@ -36,6 +36,7 @@ import io.hyperfoil.tools.horreum.entity.data.*;
 import io.hyperfoil.tools.horreum.mapper.VariableMapper;
 import io.hyperfoil.tools.horreum.server.CloseMe;
 import io.hyperfoil.tools.horreum.test.*;
+import io.quarkus.logging.Log;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -678,7 +679,7 @@ class TestServiceTest extends BaseServiceTest {
             assertNotNull(updates.poll(20, TimeUnit.SECONDS));
         }
 
-        System.out.println("Number of LabelValues: " + LabelValueDAO.count());
+        Log.info("Number of LabelValues: " + LabelValueDAO.count());
         assertEquals(currentNumberOfLabelValues + 2200, LabelValueDAO.count());
 
         OptionalInt maxId;
@@ -695,23 +696,17 @@ class TestServiceTest extends BaseServiceTest {
         for (int i = 0; i < 200; i++) {
             assertNotNull(updates.poll(20, TimeUnit.SECONDS));
         }
-        System.out.println("Number of LabelValues after 1 label update: " + LabelValueDAO.count());
-        /*
-         * try (Stream<DataPointDAO> datapoints = DataPointDAO.findAll().stream()) {
-         * maxId = datapoints.mapToInt(n -> n.id).max();
-         * }
-         *
-         * //lets update 11 labels
-         * updatedLabels = jsonRequest().body(labels2).put("/api/schema/" + schemaId2 + "/labels")
-         * .then().statusCode(200).extract().body().jsonPath().getList(".", Integer.class);
-         * assertEquals(11, updatedLabels.size());
-         *
-         * Thread.sleep(2000);
-         * int oldMaxId = maxId.getAsInt();
-         * try (Stream<DataPointDAO> datapoints = DataPointDAO.findAll().stream()) {
-         * maxId = datapoints.mapToInt(n -> n.id).max();
-         * }
-         * assertEquals(oldMaxId + 80, maxId.getAsInt());
-         */
+
+        Log.info("Number of LabelValues after 1 label update: " + LabelValueDAO.count());
+        maxId = DataPointDAO.<DataPointDAO> streamAll().mapToInt(dp -> dp.id).max();
+
+        //lets update 11 labels
+        updatedLabels = jsonRequest().body(labels2).put("/api/schema/" + schemaId2 + "/labels")
+                .then().statusCode(200).extract().body().jsonPath().getList(".", Integer.class);
+        assertEquals(11, updatedLabels.size());
+
+        Log.info("Waiting after labels update");
+        Thread.sleep(20 * 1000);
+        assertEquals(maxId.getAsInt() + 800, DataPointDAO.<DataPointDAO> streamAll().mapToInt(dp -> dp.id).max().getAsInt());
     }
 }
