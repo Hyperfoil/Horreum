@@ -1,6 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -247,13 +248,13 @@ public class ServiceMediator {
     @ActivateRequestContext
     public void processChangeDetectionEvent(ChangeDetectionEvent event) {
         alertingService.runChangeDetection(
-                event.testId, event.datasetId, event.variableId, event.timestamp, event.notification, true, true);
+                event.testId, event.datasetId, event.variableIds, event.timestamp, event.notification, true, true);
     }
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
     void queueChangeDetectionEvent(ChangeDetectionEvent event) {
         OutgoingAmqpMetadata meta = OutgoingAmqpMetadata.builder()
-                .withGroupId(event.testId + "v" + event.variableId) // serialize messages on a combination of test and variable
+                .withGroupId(event.testId.toString()) // serialize messages on a combination of test and variable
                 .build();
         changeDetectionEmitter.send(Message.of(event).addMetadata(meta));
     }
@@ -368,6 +369,6 @@ public class ServiceMediator {
     }
 
     public record ChangeDetectionEvent(
-            Integer testId, Integer datasetId, Integer variableId, Instant timestamp, boolean notification) {
+            Integer testId, Integer datasetId, Collection<Integer> variableIds, Instant timestamp, boolean notification) {
     }
 }

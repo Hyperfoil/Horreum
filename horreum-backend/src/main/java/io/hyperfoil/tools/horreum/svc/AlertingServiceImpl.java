@@ -182,7 +182,7 @@ public class AlertingServiceImpl implements AlertingService {
         """
         DELETE FROM change cc
         WHERE NOT cc.confirmed
-          AND cc.variable_id = :variableId
+          AND cc.variable_id IN :variableIds
           AND (cc.timestamp > :validTimestamp OR (cc.timestamp = :validTimestamp AND :exclusive))
           AND EXISTS (
               SELECT 1 FROM fingerprint fp
@@ -432,9 +432,10 @@ public class AlertingServiceImpl implements AlertingService {
         mediator.dataPointsProcessed(event);
 
         // queue change detection for variables not missing
-        values.stream().filter(v -> !missingValueVariables.contains(v))
-                .map(v -> new ServiceMediator.ChangeDetectionEvent(dataset.testid, dataset.id, v.variableId, timestamp, notify))
-                .forEach(mediator::queueChangeDetectionEvent);
+        values.removeIf(missingValueVariables::contains);
+        var changeDetectionEvent = new ServiceMediator.ChangeDetectionEvent(
+                dataset.testid, dataset.id, values.stream().map(v -> v.variableId).toList(), timestamp, notify);
+        mediator.queueChangeDetectionEvent(changeDetectionEvent);
     }
 
     private List<VariableData> fetchVariableValues(DatasetDAO dataset) {
@@ -625,47 +626,50 @@ public class AlertingServiceImpl implements AlertingService {
     }
 
     @Transactional
-    void runChangeDetection(int testId, int datasetId, int variableId, Instant timestamp, boolean notify,
+    void runChangeDetection(int testId, int datasetId, Collection<Integer> variableIds, Instant timestamp, boolean notify,
             boolean expectExists, boolean lastDatapoint) {
 
-        Log.debugf("Performing change detection on test {%d} and variable {%d]", testId, variableId);
+        Log.debugf("Performing change detection on test {%d} and variables %s after %s", testId, variableIds, timestamp);
 
         var fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(datasetId);
         JsonNode fpNode = fingerprint.map(f -> f.fingerprint).orElse(null);
         Integer fpHash = fingerprint.map(f -> f.fpHash).orElse(null);
 
-        deleteChangesByTimeframe(variableId, fpHash, timestamp);
+        deleteChangesByTimeframe(variableIds, fpHash, timestamp);
+        Instant changeTimestamp = fetchLastChangeTimestamp(variableIds, fpHash, timestamp);
 
-        Instant changeTimestamp = fetchLastChangeTimestamp(variableId, fpHash, timestamp);
-        List<DataPointDAO> dataPoints = fetchDataPoints(variableId, fpHash, changeTimestamp, timestamp);
+        for (var variableId : variableIds) {
+            List<DataPointDAO> dataPoints = fetchDataPoints(variableId, fpHash, changeTimestamp, timestamp);
 
-        if (dataPoints.isEmpty()) {
-            if (expectExists) {
-                Log.warn("The published datapoint should be already in the list");
+            if (dataPoints.isEmpty()) {
+                if (expectExists) {
+                    Log.warn("The published datapoint should be already in the list");
+                }
+            } else {
+                processChangeDetection(variableId, testId, fpNode, notify, lastDatapoint, dataPoints);
             }
-        } else {
-            processChangeDetection(variableId, testId, fpNode, notify, lastDatapoint, dataPoints);
         }
     }
 
-    private void deleteChangesByTimeframe(int variableId, Integer fpHash, Instant timestamp) {
+    private void deleteChangesByTimeframe(Collection<Integer> variableIds, Integer fpHash, Instant timestamp) {
         int numDeleted = session.createNativeQuery(DELETE_CHANGES_BY_TIMEFRAME, int.class)
-                .setParameter("variableId", variableId)
+                .setParameter("variableIds", variableIds)
                 .setParameter("validTimestamp", timestamp, StandardBasicTypes.INSTANT)
                 .setParameter("exclusive", false)
                 .setParameter("fpHash", fpHash)
                 .executeUpdate();
-        Log.debugf("Deleted %d changes > %s for variable %d, fingerprint %s", numDeleted, timestamp, variableId, fpHash);
+        Log.debugf("Deleted %d changes > %s for variables %d, fingerprint %s", numDeleted, timestamp, variableIds.toString(),
+                fpHash);
     }
 
-    private Instant fetchLastChangeTimestamp(int variableId, Integer fpHash, Instant timestamp) {
+    private Instant fetchLastChangeTimestamp(Collection<Integer> variableIds, Integer fpHash, Instant timestamp) {
         return session.createQuery("""
                 SELECT c.timestamp FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.datasetId
-                WHERE c.variable.id = :variableId AND fp.fpHash = :fpHash
+                WHERE c.variable.id IN :variableIds AND fp.fpHash = :fpHash
                 AND (c.timestamp < :validTimestamp OR (c.timestamp = :validTimestamp AND :exclusive = TRUE))
                 ORDER by c.timestamp DESC
                 """, Instant.class)
-                .setParameter("variableId", variableId)
+                .setParameter("variableIds", variableIds)
                 .setParameter("validTimestamp", timestamp != null ? timestamp : VERY_DISTANT_FUTURE)
                 .setParameter("exclusive", false)
                 .setParameter("fpHash", fpHash)
