@@ -120,7 +120,11 @@ export default function App() {
 function Main() {
     const { isManager, isAdmin } = useContext(AuthBridgeContext) as AuthContextType;
 
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(window.sessionStorage.getItem("sidebarOpen")?.toLowerCase() === "true");
+
+    useEffect(() => {
+        window.sessionStorage.setItem("sidebarOpen", sidebarOpen.toString())
+    }, [sidebarOpen]);
 
     const headerToolbar = (
         <Toolbar id="header-toolbar">
