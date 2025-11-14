@@ -30,7 +30,6 @@ function isTester(owner: string, roles: string[]) {
 }
 
 export const AuthBridgeContext = React.createContext<AuthContextType | null>(null);
-export const beforeLoginHistorySession = "beforeLoginPath"
 
 const signOutCallback = () => window.location.replace(window.location.origin)
 
@@ -56,8 +55,7 @@ const AuthBridgeContextProvider: React.FC<ContextProviderProps> = ({ isOidc, chi
     const signIn = isOidc ?
         () => {
             // save the current pathname in the local session to let the callback page redirect back
-            window.sessionStorage.setItem(beforeLoginHistorySession, window.location.pathname)
-            return auth.signinRedirect()
+            return auth.signinRedirect({state: { history: `${location.pathname}${location.search}` }})
         } :
         (username?: string, password?: string) => {
             setIsAuthenticated(true)
