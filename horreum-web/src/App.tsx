@@ -42,12 +42,13 @@ import About from "./About"
 import AppContextProvider from "./context/AppContext";
 import TableReportConfigPage from "./domain/reports/TableReportConfigPage";
 import TableReportPage from "./domain/reports/TableReportPage";
-import {createUserManager, onSigninCallback} from "./auth/oidc";
+import {createUserManager} from "./auth/oidc";
 import {AuthProvider} from "react-oidc-context";
 import {KeycloakConfig} from "./generated";
 import {configApi} from "./api";
 import AuthBridgeContextProvider, {AuthBridgeContext} from "./context/AuthBridgeContext";
 import {AuthContextType} from "./context/@types/authContextTypes";
+import {User} from "oidc-client-ts";
 import CallbackSSO from "./auth/CallbackSSO";
 
 const router = createBrowserRouter(
@@ -92,20 +93,33 @@ const router = createBrowserRouter(
 export default function App() {
     const [horreumOidcConfig, setHorreumOidcConfig] = useState<KeycloakConfig | undefined>()
 
+    const onSignInCallback = (user: User | undefined) => {
+        // TODO: find a way to get rid of the CallbackSSO route and use this callback to redirect to the last visited page
+        const redirectUrl = (user?.state as { history?: string }).history;
+        window.history.replaceState({}, document.title, redirectUrl);
+    };
+
+    const onSignOutCallback = () => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    };
+
     useEffect(() => {
         configApi.keycloak().then(setHorreumOidcConfig)
     }, []);
 
     if (!horreumOidcConfig) {
-        return <Bullseye>
-            <Spinner/>
-        </Bullseye>
+        return (
+            <Bullseye>
+                <Spinner/>
+            </Bullseye>
+        )
     }
 
     // if using oidc let's wrap the entire app with AuthProvider
     const userManager = createUserManager(horreumOidcConfig)
+
     return (
-        <AuthProvider userManager={userManager} onSigninCallback={onSigninCallback}>
+        <AuthProvider userManager={userManager} onSigninCallback={onSignInCallback} onSignoutCallback={onSignOutCallback}>
             {/* if url is empty or null -> use basic authentication */}
             <AuthBridgeContextProvider isOidc={horreumOidcConfig.url !== undefined && horreumOidcConfig.url !== ""}>
                 <AppContextProvider>

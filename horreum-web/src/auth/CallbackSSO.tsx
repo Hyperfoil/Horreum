@@ -1,7 +1,6 @@
 import {Bullseye, Spinner} from "@patternfly/react-core";
 import {useAuth} from "react-oidc-context";
 import {useNavigate} from "react-router-dom";
-import {AuthBridgeContext, beforeLoginHistorySession} from "../context/AuthBridgeContext";
 import {useEffect, useState} from "react";
 
 // Default callback sso component, which redirects to the last visited page when the login is completed
@@ -14,7 +13,7 @@ function CallbackSSO() {
     useEffect(() => {
         // redirect only once the authentication stopped loading
         if (!isLoading) {
-            const history = window.sessionStorage.getItem(beforeLoginHistorySession) ?? "/"
+            const history = (auth.user?.state as { history?: string }).history ?? "/";
             navigate(history, {replace: true});
         }
     }, [isLoading]);
