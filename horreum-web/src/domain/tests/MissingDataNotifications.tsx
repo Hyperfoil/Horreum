@@ -18,10 +18,11 @@ import SplitForm from "../../components/SplitForm"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 
 import {alertingApi, MissingDataRule, Test} from "../../api"
-import { useTester } from "../../auth"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {useLocation} from "react-router-dom";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 type MissingDataRuleExtended = MissingDataRule & {
@@ -47,6 +48,7 @@ function asWarning(text: string) {
 
 export default function MissingDataNotifications(props: MissingDataNotificationsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const [rules, setRules] = useState<MissingDataRuleExtended[]>()
     const [deleted, setDeleted] = useState<MissingDataRuleExtended[]>([])
     const [selectedRule, setSelectedRule] = useState<MissingDataRuleExtended>()
@@ -82,7 +84,7 @@ export default function MissingDataNotifications(props: MissingDataNotifications
         )
     }, [props.test, resetCounter])
 
-    const isTester = useTester(props.test?.owner)
+    const isTester = isTesterFunc(props.test?.owner)
     if (!props.test || !rules) {
         return (
             <Bullseye>

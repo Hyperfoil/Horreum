@@ -1,6 +1,5 @@
 import {useEffect, useState, useRef, useContext} from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { useSelector } from "react-redux"
 
 import {
     Alert,
@@ -26,7 +25,7 @@ import { ImportIcon } from "@patternfly/react-icons"
 import { Link } from "react-router-dom"
 import jsonpath from "jsonpath"
 
-import { defaultTeamSelector,  teamToName, useTester } from "../../auth"
+import { teamToName } from "../../utils"
 import { noop } from "../../utils"
 
 import { toString } from "../../components/Editor"
@@ -37,11 +36,13 @@ import SavedTabs, { SavedTab, TabFunctions, modifiedFunc, resetFunc, saveFunc } 
 import TeamSelect from "../../components/TeamSelect"
 import Transformers from "./Transformers"
 import Labels from "./Labels"
-import {Access, getSchema, Schema as SchemaDef, schemaApi, Banner as BannerData} from "../../api"
-import {AppContext} from "../../context/appContext";
+import {Access, getSchema, Schema as SchemaDef, schemaApi} from "../../api"
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import { TimeoutBanner, TimeoutBannerProps } from "../../Banner"
 import ExportButton from "../../components/ExportButton";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 type GeneralProps = {
@@ -53,8 +54,8 @@ type GeneralProps = {
 const SUPPORTED_SCHEMES = ["uri:", "urn:", "http:", "https:", "ftp:", "file:", "jar:"]
 
 function General(props: GeneralProps) {
-    const defaultTeam = useSelector(defaultTeamSelector)
-    const isTester = useTester(props.schema?.owner)
+    const { defaultTeam, isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
+    const isTester = isTesterFunc(props.schema?.owner)
     const [importFailed, setImportFailed] = useState(false)
 
     const schema: SchemaDef = props.schema || {
@@ -203,6 +204,7 @@ function General(props: GeneralProps) {
 export default function Schema() {
     const navigate = useNavigate()
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isTester } = useContext(AuthBridgeContext) as AuthContextType;
     const { schemaId } = useParams<any>()
     const [schemaIdVal, setSchemaIdVal] = useState(schemaId === "_new" ? -1 : Number.parseInt(schemaId ?? "-1"))
     const [schema, setSchema] = useState<SchemaDef | undefined>(undefined)
@@ -213,8 +215,7 @@ export default function Schema() {
     const [showMessageBanner, setShowMessageBanner] = useState(false)
 
     // any tester can save to add new labels/transformers
-    const isTester = useTester()
-    const isTesterForSchema = useTester(schema?.owner)
+    const isTesterForSchema = isTester(schema?.owner)
 
     useEffect(() => {
         if (schemaIdVal >= 0) {
@@ -307,7 +308,7 @@ export default function Schema() {
                             afterReset={() => {
                                 setModified(false)
                             }}
-                            canSave={isTester}
+                            canSave={isTester()}
                         >
                             <SavedTab
                                 title="General"
@@ -411,7 +412,7 @@ export default function Schema() {
                                 onReset={noop}
                                 canSave={false}
                                 onSave={() => Promise.resolve()}
-                                isHidden={!isTester}
+                                isHidden={!isTester()}
                                 isModified={() => false}
                             >
 

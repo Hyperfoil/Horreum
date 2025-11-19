@@ -19,13 +19,14 @@ import { CheckIcon } from "@patternfly/react-icons"
 import { NavLink } from "react-router-dom"
 import {alertingApi, Change, FingerprintValue, Variable} from "../../api"
 import { fingerprintToString, formatDateTime } from "../../utils"
-import { useTester } from "../../auth"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable";
 
 import EllipsisVIcon from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon';
 import { ColumnDef, createColumnHelper } from "@tanstack/react-table";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 const columnHelper = createColumnHelper<Change>()
 
@@ -162,6 +163,7 @@ type ChangesProps = {
 
 export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }: ChangesProps) => {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const [changes, setChanges] = useState<Change[]>([])
     useEffect(() => {
         alertingApi.changes(varId, fingerprintToString(fingerprint)).then(
@@ -169,7 +171,7 @@ export const ChangeTable = ({ varId, fingerprint, testOwner, selectedChangeId }:
             error => alerting.dispatchError(error, "DASHBOARD_FETCH", "Failed to fetch dashboard")
         )
     }, [varId])
-    const isTester = useTester(testOwner)
+    const isTester = isTesterFunc(testOwner)
     const columns: ColumnDef<Change, any>[] = [
         columnHelper.accessor('confirmed', {
             header: 'Confirmed',

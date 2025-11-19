@@ -16,7 +16,7 @@ import AccessChoice from "../../components/AccessChoice";
 import {Access as authAccess, Test} from "../../generated";
 import Editor from "../../components/Editor/monaco/Editor";
 import {apiCall, runApi} from "../../api";
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 interface RunImportModalProps {

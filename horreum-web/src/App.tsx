@@ -1,16 +1,16 @@
-import React, {useState} from "react"
+import React, {useContext, useEffect, useState} from "react"
 
 import "@patternfly/patternfly/patternfly.css" //have to use this import to customize scss-variables.scss
 import {BarsIcon} from '@patternfly/react-icons';
 
 import {
-    Brand,
+    Brand, Bullseye,
     Button,
     Masthead, MastheadBrand, MastheadContent, MastheadLogo, MastheadMain, MastheadToggle,
     Nav,
     NavItem,
     NavList,
-    Page, PageSidebar, PageSidebarBody, SkipToContent, Toolbar, ToolbarContent, ToolbarGroup, ToolbarItem
+    Page, PageSidebar, PageSidebarBody, SkipToContent, Spinner, Toolbar, ToolbarContent, ToolbarGroup, ToolbarItem
 } from '@patternfly/react-core';
 
 import {
@@ -21,12 +21,8 @@ import {
     RouterProvider,
 } from "react-router-dom"
 
-import {Provider, useSelector} from "react-redux"
-import {isAdminSelector, isManagerSelector, LoginLogout} from "./auth"
-import {initKeycloak} from "./keycloak"
+import {LoginLogout} from "./auth/auth"
 import {UserProfileLink, UserSettings} from "./domain/user/UserSettings"
-
-import store from "./store"
 
 import Run from "./domain/runs/Run"
 import AllTests from "./domain/tests/AllTests"
@@ -43,9 +39,17 @@ import Banner from "./Banner"
 import NotFound from "./404"
 
 import About from "./About"
-import ContextProvider from "./context/appContext";
+import AppContextProvider from "./context/AppContext";
 import TableReportConfigPage from "./domain/reports/TableReportConfigPage";
 import TableReportPage from "./domain/reports/TableReportPage";
+import {createUserManager} from "./auth/oidc";
+import {AuthProvider} from "react-oidc-context";
+import {KeycloakConfig} from "./generated";
+import {configApi} from "./api";
+import AuthBridgeContextProvider, {AuthBridgeContext} from "./context/AuthBridgeContext";
+import {AuthContextType} from "./context/@types/authContextTypes";
+import {User} from "oidc-client-ts";
+import CallbackSSO from "./auth/CallbackSSO";
 
 const router = createBrowserRouter(
     createRoutesFromElements(
@@ -64,6 +68,9 @@ const router = createBrowserRouter(
 
             <Route path="/admin" element={<Admin/>}/>
             <Route path="/usersettings" element={<UserSettings/>}/>
+
+            {/* matches the OIDC redirect_uri configured in oidc.ts */}
+            <Route path="/callback-sso" element={<CallbackSSO/>}/>
         </Route>
     ), {
         future: {
@@ -84,58 +91,54 @@ const router = createBrowserRouter(
 );
 
 export default function App() {
-    initKeycloak(store.getState())
+    const [horreumOidcConfig, setHorreumOidcConfig] = useState<KeycloakConfig | undefined>()
+
+    const onSignInCallback = (user: User | undefined) => {
+        // TODO: find a way to get rid of the CallbackSSO route and use this callback to redirect to the last visited page
+        const redirectUrl = (user?.state as { history?: string }).history;
+        window.history.replaceState({}, document.title, redirectUrl);
+    };
+
+    const onSignOutCallback = () => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+    };
+
+    useEffect(() => {
+        configApi.keycloak().then(setHorreumOidcConfig)
+    }, []);
+
+    if (!horreumOidcConfig) {
+        return (
+            <Bullseye>
+                <Spinner/>
+            </Bullseye>
+        )
+    }
+
+    // if using oidc let's wrap the entire app with AuthProvider
+    const userManager = createUserManager(horreumOidcConfig)
 
     return (
-        <Provider store={store}>
-            <ContextProvider>
-                <RouterProvider router={router}/>
-            </ContextProvider>
-        </Provider>
+        <AuthProvider userManager={userManager} onSigninCallback={onSignInCallback} onSignoutCallback={onSignOutCallback}>
+            {/* if url is empty or null -> use basic authentication */}
+            <AuthBridgeContextProvider isOidc={horreumOidcConfig.url !== undefined && horreumOidcConfig.url !== ""}>
+                <AppContextProvider>
+                    <RouterProvider router={router}/>
+                </AppContextProvider>
+            </AuthBridgeContextProvider>
+        </AuthProvider>
     )
+
 }
 
-
 function Main() {
-    const isAdmin = useSelector(isAdminSelector)
-    const isManager = useSelector(isManagerSelector)
-    /*
-        const isManager = useSelector(isManagerSelector)
-        const isAuthenticated = useSelector(isAuthenticatedSelector)
-        const [rolesFilter, setRolesFilter] = useState<Team>(ONLY_MY_OWN)
+    const { isManager, isAdmin } = useContext(AuthBridgeContext) as AuthContextType;
 
-        const [activeGroup, setActiveGroup] = useState('');
-        const [activeItem, setActiveItem] = useState('ungrouped_item-1');
+    const [sidebarOpen, setSidebarOpen] = useState(window.sessionStorage.getItem("sidebarOpen")?.toLowerCase() === "true");
 
-        const onSelect = (result: { itemId: number | string; groupId: number | string | null }) => {
-            setActiveGroup(result.groupId as string);
-            setActiveItem(result.itemId as string);
-        };
-
-        const profile = useSelector(userProfileSelector)
-        // const watchingTests = useSelector(selectors.watching)
-        const navWatching: any[] = []
-    */
-    /*
-        watchingTests.forEach((watching, id) => {
-            const test = selectors.get(id)
-            watching?.forEach((value, index) => {
-                if ( value === profile?.username) {
-                    navWatching.push(<NavItem id="test-62">
-                        <NavLink
-                            to="/test/"
-                            style={{color: "var(--pf-c-nav--m-horizontal__link--Color)"}}
-                        >
-                            {test}
-                        </NavLink>
-                    </NavItem>)
-                }
-            })
-
-        })
-    */
-
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    useEffect(() => {
+        window.sessionStorage.setItem("sidebarOpen", sidebarOpen.toString())
+    }, [sidebarOpen]);
 
     const headerToolbar = (
         <Toolbar id="header-toolbar">
@@ -144,11 +147,6 @@ function Main() {
                     <ToolbarItem>
                         <UserProfileLink/>
                     </ToolbarItem>
-                    {/* { isAdmin && (
-                        <ToolbarItem>
-                            <AdminLink />
-                        </ToolbarItem>
-                    )} */}
                     <ToolbarItem>
                         <LoginLogout/>
                     </ToolbarItem>
@@ -206,7 +204,7 @@ function Main() {
                         Schemas
                     </NavLink>
                 </NavItem>
-                {(isAdmin || isManager ) && (
+                {(isAdmin() || isManager() ) && (
                     <NavItem itemId={4}>
                         <NavLink to="/admin">
                             Administration

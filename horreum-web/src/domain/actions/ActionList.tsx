@@ -1,34 +1,34 @@
 import {useContext, useEffect, useMemo, useState} from "react"
-import { useSelector } from "react-redux"
 
 import { Button, Hint, HintBody, PageSection, Switch, Toolbar, ToolbarContent, ToolbarItem } from "@patternfly/react-core"
 
 import {allActions, addGlobalAction, deleteGlobalAction} from "../../api"
-import { isAdminSelector } from "../../auth"
 
 import AddActionModal from "./AddActionModal"
 import {Action} from "../../api"
 import ActionLogModal from "../tests/ActionLogModal"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
 import { ColumnDef, createColumnHelper } from "@tanstack/react-table"
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 const columnHelper = createColumnHelper<Action>()
 
 export default function ActionList() {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isAdmin } = useContext(AuthBridgeContext) as AuthContextType;
     const [logOpen, setLogOpen] = useState(false)
     const [isOpen, setOpen] = useState(false)
     const [actions, setActions] = useState<Action[]>([])
-    const isAdmin = useSelector(isAdminSelector)
 
     const fetchAllActions = () => {
         allActions(alerting).then(setActions)
     }
 
     useEffect(() => {
-        if (isAdmin) {
+        if (isAdmin()) {
             fetchAllActions()
         }
     }, [isAdmin])

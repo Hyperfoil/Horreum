@@ -1,5 +1,4 @@
 import {useContext, useEffect, useMemo, useState} from "react"
-import { useSelector } from "react-redux"
 
 import { NavLink } from "react-router-dom"
 import {
@@ -18,13 +17,14 @@ import { formatDateTime } from "../../utils"
 
 import {AllTableReports, reportApi, SortDirection, TableReportConfig, TableReportSummary} from "../../api"
 import ButtonLink from "../../components/ButtonLink"
-import { useTester, teamsSelector } from "../../auth"
 
 import ListReportsModal from "./ListReportsModal"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
 import { ColumnDef, ColumnSort, createColumnHelper } from "@tanstack/react-table"
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 const columnHelper = createColumnHelper<TableReportSummary>()
 
@@ -37,6 +37,7 @@ export default function Reports(props: ReportGroup) {
     document.title = "Reports | Horreum"
 
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { teams } = useContext(AuthBridgeContext) as AuthContextType;
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(20)
     const [sortBy, setSortBy] = useState<ColumnSort>({id: 'title', desc: true})
@@ -49,7 +50,6 @@ export default function Reports(props: ReportGroup) {
     const [loading, setLoading] = useState(false)
 
     const [tableReportGroup, setTableReportGroup] = useState<ReportGroup>()
-    const teams = useSelector(teamsSelector)
 
     useEffect(() => {
         setLoading(true)

@@ -19,7 +19,7 @@ import {
 
 import TimeRangeSelect, { TimeRange } from "./TimeRangeSelect"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
-import {AppContext} from "../context/appContext";
+import {AppContext} from "../context/AppContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 import {IRow, IRowCell, OuterScrollContainer, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 import { SimpleSelect } from "@patternfly/react-templates";

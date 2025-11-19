@@ -3,7 +3,7 @@ import React from "react"
 import {Button} from '@patternfly/react-core';
 import {Modal} from '@patternfly/react-core/deprecated';
 
-import { teamToName } from "../auth"
+import { teamToName } from "../utils"
 import { Access } from "../api"
 
 import AccessChoice from "./AccessChoice"

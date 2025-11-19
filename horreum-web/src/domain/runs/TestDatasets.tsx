@@ -6,7 +6,6 @@ import {
 
 import {useCallback, useContext, useEffect, useMemo, useState} from "react"
 import { useParams } from "react-router-dom"
-import { useSelector } from "react-redux"
 import {
     Button,
     Flex,
@@ -22,7 +21,7 @@ import { NavLink } from "react-router-dom"
 import { Duration } from "luxon"
 import { toEpochMillis, fingerprintToString } from "../../utils"
 
-import { teamsSelector, teamToName, tokenSelector } from "../../auth"
+import { teamToName } from "../../utils"
 
 import {
     DatasetSummary,
@@ -39,11 +38,13 @@ import { Description, ExecutionTime, renderCell } from "./components"
 import ButtonLink from "../../components/ButtonLink"
 import ViewSelect from "../../components/ViewSelect"
 import AccessIcon from "../../components/AccessIcon"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import CustomTable from "../../components/CustomTable"
 import { ColumnDef, ColumnSort, createColumnHelper } from '@tanstack/react-table';
 import LabelFilter from "../../components/LabelFilter/LabelFilter";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 const columnHelper = createColumnHelper<DatasetSummary>()
 
@@ -77,6 +78,7 @@ const staticColumns: ColumnDef<DatasetSummary, any>[] = [
 
 export default function TestDatasets() {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { token, teams } = useContext(AuthBridgeContext) as AuthContextType;
     const { testId } = useParams();
     const testIdInt = parseInt(testId ?? "-1")
     const [test, setTest] = useState<Test | undefined>(undefined)
@@ -89,8 +91,6 @@ export default function TestDatasets() {
     const [loading, setLoading] = useState(false)
     const [datasets, setDatasets] = useState<DatasetList>()
     const [comparedDatasets, setComparedDatasets] = useState<DatasetSummary[]>([])
-    const teams = useSelector(teamsSelector)
-    const token = useSelector(tokenSelector)
 
     const [views, setViews] = useState<View[]>([])
     useEffect(() => {

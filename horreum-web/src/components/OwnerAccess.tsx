@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Button } from "@patternfly/react-core"
 import { EditIcon } from "@patternfly/react-icons"
 
-import { teamToName } from "../auth"
+import { teamToName } from "../utils"
 import { Access } from "../api"
 import AccessIcon from "./AccessIcon"
 import ChangeAccessModal from "./ChangeAccessModal"

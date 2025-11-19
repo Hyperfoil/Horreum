@@ -2,10 +2,10 @@ import {ReactElement, useState, useEffect, useRef, MutableRefObject, useContext}
 import {TreeView} from '@patternfly/react-core';
 import {DualListSelector} from '@patternfly/react-core/deprecated';
 
-import { teamToName, userName } from "../../auth"
+import { teamToName, userName } from "../../utils"
 import UserSearch from "../../components/UserSearch"
 import {userApi, UserData} from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 

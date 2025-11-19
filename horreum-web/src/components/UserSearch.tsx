@@ -2,7 +2,7 @@ import {useContext, useState} from "react"
 import { Button, Flex, FlexItem, SearchInput } from "@patternfly/react-core"
 import { ArrowRightIcon } from "@patternfly/react-icons"
 import {userApi, UserData} from "../api"
-import {AppContext} from "../context/appContext";
+import {AppContext} from "../context/AppContext";
 import {AppContextType} from "../context/@types/appContextTypes";
 
 type UserSearchProps = {

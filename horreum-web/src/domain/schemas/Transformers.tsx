@@ -1,6 +1,4 @@
 import {useContext, useEffect, useState} from "react"
-import { useSelector } from "react-redux"
- 
 
 import { Button, 
     FormGroup,     
@@ -12,8 +10,6 @@ import { Button,
     TextArea, 
     TextInput } from "@patternfly/react-core"
 import { HelpIcon } from "@patternfly/react-icons"
-
-import { defaultTeamSelector, useTester } from "../../auth"
 import OwnerAccess from "../../components/OwnerAccess"
 import FunctionFormItem from "../../components/FunctionFormItem"
 import SchemaSelect from "../../components/SchemaSelect"
@@ -21,8 +17,10 @@ import { TabFunctionsRef } from "../../components/SavedTabs"
 import SplitForm from "../../components/SplitForm"
 import { schemaApi, Transformer, Access } from "../../api"
 import JsonExtractor from "./JsonExtractor"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 const TARGET_SCHEMA_HELP = (
@@ -71,13 +69,13 @@ type TransformerEx = {
 
 export default function Transformers(props: TransformersProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { defaultTeam, isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const [loading, setLoading] = useState(false)
     const [transformers, setTransformers] = useState<TransformerEx[]>([])
     const [selected, setSelected] = useState<TransformerEx>()
     const [deleted, setDeleted] = useState<Transformer[]>([])
-    const defaultTeam = useSelector(defaultTeamSelector)
-    const isTester = useTester()
-    const isTesterForTransformer = useTester(selected?.owner)
+    const isTester = isTesterFunc()
+    const isTesterForTransformer = isTesterFunc(selected?.owner)
     const update = (update: Partial<Transformer>) => {
         if (!selected) {
             return

@@ -1,4 +1,5 @@
 import { DateTime } from "luxon"
+import {UserData} from "./generated";
 
 export function noop() {
     /* noop */
@@ -151,4 +152,23 @@ export function fingerprintToString(fingerprint: unknown) {
         return ""
     }
     return JSON.stringify(fingerprint);
+}
+
+export const teamToName = (team?: string) => {
+    return team ? team.charAt(0).toUpperCase() + team.slice(1, -5) : undefined
+}
+
+export function userName(user: UserData) {
+    let str = ""
+    if (user.firstName) {
+        str += user.firstName + " "
+    }
+    if (user.lastName) {
+        str += user.lastName + " "
+    }
+    if (user.firstName || user.lastName) {
+        return str + " [" + user.username + "]"
+    } else {
+        return user.username
+    }
 }

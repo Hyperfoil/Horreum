@@ -12,9 +12,9 @@ import {
     Form,
     FormGroup
 } from "@patternfly/react-core";
-import {userName} from "../../auth";
+import { userName } from "../../utils";
 import {userApi} from "../../api";
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 export default function RemoveUsers() {

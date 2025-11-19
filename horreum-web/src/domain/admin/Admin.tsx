@@ -1,4 +1,4 @@
-import {useRef} from "react"
+import {useContext, useRef} from "react"
 import {Card, CardBody, PageSection} from "@patternfly/react-core"
 
 import SavedTabs, {SavedTab, TabFunctions, saveFunc, resetFunc, modifiedFunc} from "../../components/SavedTabs"
@@ -9,16 +9,17 @@ import BannerConfig from "./BannerConfig"
 import Notifications from "./Notifications"
 import Teams from "./Teams"
 import Administrators from "./Administrators"
-import {useSelector} from "react-redux";
-import {isAdminSelector, isManagerSelector} from "../../auth";
 import Datastores from "./Datastores";
 import RemoveUsers from "./RemoveUsers";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 export default function Admin() {
+    const { isManager: isManagerFunc, isAdmin: isAdminFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const adminFuncsRef = useRef<TabFunctions>(undefined)
     const teamsFuncsRef = useRef<TabFunctions>(undefined)
-    const isAdmin = useSelector(isAdminSelector)
-    const isManager = useSelector(isManagerSelector)
+    const isAdmin = isAdminFunc()
+    const isManager = isManagerFunc()
 
     if (isAdmin) {
         return (

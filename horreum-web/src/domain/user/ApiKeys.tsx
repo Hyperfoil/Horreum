@@ -13,7 +13,7 @@ import {
 import {Modal} from '@patternfly/react-core/deprecated';
 
 import {ApiKeyResponse, userApi} from "../../api";
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 import {ActionsColumn, Table, Tbody, Td, Th, Thead, Tr} from "@patternfly/react-table";
 

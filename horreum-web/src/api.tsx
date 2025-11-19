@@ -27,46 +27,27 @@ import {
     Test,
     TestListing, TestSummary, Transformer, View, Watch,
 } from "./generated"
-import store from "./store"
 import {AlertContextType} from "./context/@types/appContextTypes";
+import {AuthBridge} from "./context/AuthBridgeContext";
 export * from "./generated/models"
 
 const authMiddleware: Middleware = {
     pre: ctx => {
-        const keycloak = store.getState().auth.keycloak
-        const basicAuthToken = store.getState().auth.basicAuthToken
-        if (keycloak != null && keycloak.authenticated) {
-            return keycloak.updateToken(30).then(
-                () => {
-                    if (keycloak != null && keycloak.token != null) {
-                        return {
-                            url: ctx.url,
-                            init: {
-                                ...ctx.init,
-                                headers: {...ctx.init.headers, Authorization: "Bearer " + keycloak.token},
-                            },
-                        }
-                    }
+        if (AuthBridge.isOidc && AuthBridge.accessToken) {
+            return Promise.resolve({
+                url: ctx.url,
+                init: {
+                    ...ctx.init,
+                    headers: {...ctx.init.headers, Authorization: "Bearer " + AuthBridge.accessToken},
                 },
-            /* e => {
-                    store.dispatch({
-                        type: ADD_ALERT,
-                        alert: {
-                            type: "TOKEN_UPDATE_FAILED",
-                            title: "Token update failed",
-                            content: <TryLoginAgain/>,
-                        },
-                    })
-                    return Promise.reject(e)
-                } */
-            )
-        } else if (basicAuthToken) {
+            })
+        } else if (AuthBridge.accessToken) {
             return Promise.resolve({
                 url: ctx.url,
                 init: {
                     ...ctx.init,
                     credentials: "omit", // this prevents the browser from showing the native auth dialog
-                    headers: {...ctx.init.headers, Authorization: "Basic " + basicAuthToken},
+                    headers: {...ctx.init.headers, Authorization: "Basic " + AuthBridge.accessToken},
                 },
             })
         } else {
@@ -77,16 +58,6 @@ const authMiddleware: Middleware = {
         if (ctx.response.ok) {
             return Promise.resolve(ctx.response)
         } else if (ctx.response.status === 401 || ctx.response.status === 403) {
-/*
-            store.dispatch({
-                type: ADD_ALERT,
-                alert: {
-                    type: "REQUEST_FORBIDDEN",
-                    title: "Request failed due to insufficient permissions",
-                    content: <TryLoginAgain/>,
-                },
-            })
-*/
             const contentType = ctx.response.headers.get("content-type")
             if (contentType === "application/json") {
                 return ctx.response.json().then((body: any) => Promise.reject(body))
@@ -312,9 +283,6 @@ export function getSubscription(testId: number, alerting: AlertContextType) : Pr
 export function updateSubscription(watch: Watch, alerting: AlertContextType) : Promise<void> {
     return apiCall(subscriptionsApi.updateSubscription(watch.testId, watch), alerting, "SUBSCRIPTION_UPDATE", "Failed to update subscription");
 }
-
-
-
 
 export function updateTransformers(testId: number, transformers: Transformer[], alerting: AlertContextType) : Promise<void> {
     return apiCall(testApi.updateTransformers(testId, transformers.map(t => t.id)), alerting, "UPDATE_TRANSFORMERS", "Failed to update transformers for test " + testId);

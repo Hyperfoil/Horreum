@@ -1,6 +1,4 @@
 import {useState, useEffect, useContext} from "react"
-import { useSelector } from "react-redux"
- 
 
 import { Button, 
     Checkbox, 
@@ -12,8 +10,6 @@ import { Button,
     HelperTextItem,
     FormHelperText,    
     TextInput } from "@patternfly/react-core"
-
-import { defaultTeamSelector, useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import FindUsagesModal from "./FindUsagesModal"
 
@@ -25,8 +21,10 @@ import SplitForm from "../../components/SplitForm"
 import TestLabelModal from "./TestLabelModal"
 
 import { Label, schemaApi, Access } from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 const LABEL_FUNCTION_HELP = (
@@ -53,6 +51,7 @@ type LabelsProps = {
 
 export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { defaultTeam, isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const [loading, setLoading] = useState(false)
     const [labels, setLabels] = useState<LabelEx[]>([])
     const [selected, setSelected] = useState<LabelEx>()
@@ -60,9 +59,8 @@ export default function Labels({ schemaId, schemaUri, funcsRef }: LabelsProps) {
     const [deleted, setDeleted] = useState<Label[]>([])
     const [findUsagesLabel, setFindUsagesLabel] = useState<string>()
     const [testLabelModalOpen, setTestLabelModalOpen] = useState(false)
-    const isTester = useTester()
-    const isTesterForLabel = useTester(selected?.owner || "__no_owner__")
-    const defaultTeam = useSelector(defaultTeamSelector)
+    const isTester = isTesterFunc()
+    const isTesterForLabel = isTesterFunc(selected?.owner || "__no_owner__")
     funcsRef.current = {
         save: () =>{
             const labelsToUpdate = labels.filter(l => l.modified && l.id > 0);

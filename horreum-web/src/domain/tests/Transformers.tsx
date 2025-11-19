@@ -14,14 +14,14 @@ import {
     Tooltip
 } from '@patternfly/react-core';
 import {DualListSelector} from '@patternfly/react-core/deprecated';
-
-import { useTester } from "../../auth"
 import { TabFunctionsRef } from "../../components/SavedTabs"
 import {schemaApi, Transformer, Access, TransformerInfo, updateTransformers} from "../../api"
 import TransformationLogModal from "./TransformationLogModal"
 import RecalculateDatasetsModal from "./RecalculateDatasetsModal"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../../context/AuthBridgeContext";
+import {AuthContextType} from "../../context/@types/authContextTypes";
 
 
 type TransformersProps = {
@@ -108,6 +108,7 @@ function excludeSelected(tree: SchemaItem[], excluded: Transformer[]) {
 
 export default function Transformers(props: TransformersProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { isTester: isTesterFunc } = useContext(AuthBridgeContext) as AuthContextType;
     const [counter, setCounter] = useState(0)
     const [loading, setLoading] = useState(false)
     const [originalOptions, setOriginalOptions] = useState<SchemaItem[]>([])
@@ -115,7 +116,7 @@ export default function Transformers(props: TransformersProps) {
     const [chosen, setChosen] = useState<SchemaItem[]>([])
     const [logModalOpen, setLogModalOpen] = useState(false)
     const [recalculateModalOpen, setRecalculateModalOpen] = useState(false)
-    const isTester = useTester(props.owner)
+    const isTester = isTesterFunc(props.owner)
 
     useEffect(() => {
         setLoading(true)

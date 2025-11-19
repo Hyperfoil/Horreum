@@ -10,11 +10,11 @@ import {
     SplitItem
 } from '@patternfly/react-core';
 import {fetchTests, Test} from "../api"
-import {AppContext} from "../context/appContext";
+import {AppContext} from "../context/AppContext";
 import {AppContextType} from "../context/@types/appContextTypes";
-import {useSelector} from "react-redux";
-import {teamsSelector} from "../auth";
 import { SimpleSelect } from "@patternfly/react-templates";
+import {AuthBridgeContext} from "../context/AuthBridgeContext";
+import {AuthContextType} from "../context/@types/authContextTypes";
 
 export interface SelectedTest {
     id: number
@@ -57,7 +57,7 @@ function groupByFolder(tests: Test[] | undefined | false) {
 
 export default function TestSelect(props: TestSelectProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
-    const teams = useSelector(teamsSelector)
+    const { teams } = useContext(AuthBridgeContext) as AuthContextType;
     const [testList, setTestList] = useState<Test[]>()
     useMemo(() => {
         fetchTests(alerting, undefined, "*")

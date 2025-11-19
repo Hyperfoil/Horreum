@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, useRef, useContext } from "react"
 import {Bullseye, Button, Progress, Spinner} from '@patternfly/react-core';
 import {Modal} from '@patternfly/react-core/deprecated';
 import { fetchTest, RecalculationStatus, testApi, TestStorage } from "../../api"
-import {AppContext} from "../../context/appContext";
+import {AppContext} from "../../context/AppContext";
 import {AppContextType} from "../../context/@types/appContextTypes";
 
 

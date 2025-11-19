@@ -1,14 +1,14 @@
 import {useContext, useEffect, useState} from "react"
-import { useDispatch, useSelector } from "react-redux"
 
 import { Accordion, AccordionItem, AccordionContent, AccordionToggle } from '@patternfly/react-core';
 
-import { TreeView, TreeViewDataItem } from "@patternfly/react-core"
+import { TreeViewDataItem } from "@patternfly/react-core"
 
-import { teamsSelector } from "../auth"
 import {fetchFolders} from "../api";
-import {AppContext} from "../context/appContext";
+import {AppContext} from "../context/AppContext";
 import {AppContextType} from "../context/@types/appContextTypes";
+import {AuthBridgeContext} from "../context/AuthBridgeContext";
+import {AuthContextType} from "../context/@types/authContextTypes";
 
 type FoldersAccordianProps = {
     folder: string
@@ -17,8 +17,8 @@ type FoldersAccordianProps = {
 
 export default function FoldersAccordian(props: FoldersAccordianProps) {
     const { alerting } = useContext(AppContext) as AppContextType;
+    const { teams } = useContext(AuthBridgeContext) as AuthContextType;
     const [folders, setFolders] = useState<string[]>([])
-    const teams = useSelector(teamsSelector)
     const [expanded, setExpanded] = useState('')
 
     useEffect(() => {
