@@ -95,7 +95,7 @@
 
         <!--  dev services configuration -->
         <keycloak.version>26.0.6</keycloak.version>
-        <dev.images.postgres>postgres:16</dev.images.postgres>
+        <dev.images.postgres>mirror.gcr.io/library/postgres:16</dev.images.postgres>
         <dev.images.keycloak>quay.io/keycloak/keycloak:${keycloak.version}</dev.images.keycloak>
         <dev.images.horreum>quay.io/hyperfoil/horreum:${project.version}</dev.images.horreum>
         <!-- this is copied from the quarkus dev services impl -->

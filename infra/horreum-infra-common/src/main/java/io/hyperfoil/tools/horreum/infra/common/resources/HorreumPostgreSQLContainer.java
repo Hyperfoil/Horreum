@@ -30,7 +30,7 @@ public class HorreumPostgreSQLContainer<SELF extends HorreumPostgreSQLContainer<
 
     protected void configure() {
         super.configure();
-        if (params.size() > 0) {
+        if (!params.isEmpty()) {
             StringBuilder sb = new StringBuilder();
             sb.append("postgres -c fsync=off");
             params.forEach(param -> sb.append(" -c ").append(param));

@@ -23,6 +23,7 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.SelinuxContext;
 import org.testcontainers.images.builder.Transferable;
+import org.testcontainers.utility.DockerImageName;
 
 import io.hyperfoil.tools.horreum.infra.common.ResourceLifecycleManager;
 
@@ -49,7 +50,8 @@ public class PostgresResource implements ResourceLifecycleManager {
 
             networkAlias = initArgs.get(HORREUM_DEV_POSTGRES_NETWORK_ALIAS);
 
-            postgresContainer = new HorreumPostgreSQLContainer<>(POSTGRES_IMAGE,
+            postgresContainer = new HorreumPostgreSQLContainer<>(
+                    DockerImageName.parse(POSTGRES_IMAGE).asCompatibleSubstituteFor("postgres"),
                     initArgs.containsKey(HORREUM_DEV_POSTGRES_BACKUP) ? 1 : 2)
                     .withDatabaseName(initArgs.get(HORREUM_DEV_DB_DATABASE))
                     .withUsername(initArgs.get(HORREUM_DEV_DB_USERNAME))
@@ -156,7 +158,7 @@ public class PostgresResource implements ResourceLifecycleManager {
         return postgresContainer.getJdbcUrl();
     }
 
-    public PostgreSQLContainer getContainer() {
+    public PostgreSQLContainer<?> getContainer() {
         return this.postgresContainer;
     }
 
