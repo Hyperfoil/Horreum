@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 
@@ -21,7 +22,8 @@ public class PostgresResource implements QuarkusTestResourceLifecycleManager {
     @Override
     public void init(Map<String, String> initArgs) {
         if (ConfigProvider.getConfig().getOptionalValue("horreum.test.postgres.enabled", boolean.class).orElse(true)) {
-            postgresContainer = new PostgreSQLContainer<>(getProperty("horreum.dev-services.postgres.image"))
+            postgresContainer = new PostgreSQLContainer<>(DockerImageName
+                    .parse(getProperty("horreum.dev-services.postgres.image")).asCompatibleSubstituteFor("postgres"))
                     .withDatabaseName("horreum")
                     .withUsername("dbadmin")
                     .withPassword("secret");
