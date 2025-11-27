@@ -1,5 +1,7 @@
 package io.hyperfoil.tools.horreum.svc;
 
+import java.time.Instant;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -98,6 +100,10 @@ public class ServiceMediator {
     Emitter<Dataset.EventNew> dataSetEmitter;
 
     @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
+    @Channel("change-detection-event-out")
+    Emitter<ChangeDetectionEvent> changeDetectionEmitter;
+
+    @OnOverflow(value = OnOverflow.Strategy.BUFFER, bufferSize = 10000)
     @Channel("run-recalc-out")
     Emitter<Integer> runEmitter;
 
@@ -115,10 +121,6 @@ public class ServiceMediator {
     private Map<AsyncEventChannels, Map<Integer, BlockingQueue<Object>>> events = new ConcurrentHashMap<>();
 
     public ServiceMediator() {
-    }
-
-    void executeBlocking(Runnable runnable) {
-        Util.executeBlocking(vertx, runnable);
     }
 
     boolean testMode() {
@@ -157,6 +159,7 @@ public class ServiceMediator {
         datasetService.deleteDataset(datasetId);
     }
 
+    @Transactional
     void newChange(Change.Event event) {
         actionService.onNewChange(event);
         aggregator.onNewChange(event);
@@ -238,6 +241,22 @@ public class ServiceMediator {
         RunUpload upload = new RunUpload(start, stop, test, owner, access, schemaUri, description, metadata, jsonNode,
                 testEntity.id, identity.getRoles());
         runUploadEmitter.send(upload);
+    }
+
+    @Incoming("change-detection-event-in")
+    @Blocking("horreum.change-detection.pool") // the default `ordered = true` ensures messages with the same groupID are executed sequentially
+    @ActivateRequestContext
+    public void processChangeDetectionEvent(ChangeDetectionEvent event) {
+        alertingService.runChangeDetection(
+                event.testId, event.datasetId, event.variableIds, event.timestamp, event.notification, true, true);
+    }
+
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
+    void queueChangeDetectionEvent(ChangeDetectionEvent event) {
+        OutgoingAmqpMetadata meta = OutgoingAmqpMetadata.builder()
+                .withGroupId(event.testId.toString()) // serialize messages on a combination of test and variable
+                .build();
+        changeDetectionEmitter.send(Message.of(event).addMetadata(meta));
     }
 
     void dataPointsProcessed(DataPoint.DatasetProcessedEvent event) {
@@ -349,4 +368,7 @@ public class ServiceMediator {
         }
     }
 
+    public record ChangeDetectionEvent(
+            Integer testId, Integer datasetId, Collection<Integer> variableIds, Instant timestamp, boolean notification) {
+    }
 }

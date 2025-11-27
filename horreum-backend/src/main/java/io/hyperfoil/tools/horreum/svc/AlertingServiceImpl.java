@@ -12,7 +12,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -38,6 +37,7 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.graalvm.polyglot.Value;
 import org.hibernate.Session;
 import org.hibernate.query.NativeQuery;
 import org.hibernate.type.StandardBasicTypes;
@@ -54,7 +54,6 @@ import io.hyperfoil.tools.horreum.api.data.*;
 import io.hyperfoil.tools.horreum.api.data.changeDetection.ChangeDetectionModelType;
 import io.hyperfoil.tools.horreum.api.internal.services.AlertingService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
-import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionException;
 import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModel;
 import io.hyperfoil.tools.horreum.changedetection.ChangeDetectionModelResolver;
@@ -183,7 +182,7 @@ public class AlertingServiceImpl implements AlertingService {
         """
         DELETE FROM change cc
         WHERE NOT cc.confirmed
-          AND cc.variable_id = :variableId
+          AND cc.variable_id IN :variableIds
           AND (cc.timestamp > :validTimestamp OR (cc.timestamp = :validTimestamp AND :exclusive))
           AND EXISTS (
               SELECT 1 FROM fingerprint fp
@@ -201,9 +200,6 @@ public class AlertingServiceImpl implements AlertingService {
 
     @Inject
     EntityManager em;
-
-    @Inject
-    BlockingTaskDispatcher messageBus;
 
     @Inject
     SecurityIdentity identity;
@@ -234,10 +230,6 @@ public class AlertingServiceImpl implements AlertingService {
 
     // entries can be removed from timer thread while normally this is updated from one of blocking threads
     private final ConcurrentMap<Integer, Recalculation> recalcProgress = new ConcurrentHashMap<>();
-
-    // A new datapoint invalidates anything past its timestamp. Any attempt to recalculate starts
-    // at the timestamp.
-    private final ConcurrentMap<VarAndFingerprint, UpTo> validUpTo = new ConcurrentHashMap<>();
 
     static {
         System.setProperty("polyglot.engine.WarnInterpreterOnly", "false");
@@ -403,8 +395,51 @@ public class AlertingServiceImpl implements AlertingService {
 
     @Transactional
     void calculateDatapoints(DatasetDAO dataset, boolean notify, boolean debug, Recalculation recalculation) {
-        Set<String> missingValueVariables = new HashSet<>();
-        List<VariableData> values = session.createNativeQuery(LOOKUP_VARIABLES, Tuple.class)
+        Set<VariableData> missingValueVariables = new HashSet<>();
+
+        List<VariableData> values = fetchVariableValues(dataset);
+        if (debug) {
+            logFetchedValuesIfDebug(dataset, values);
+        }
+        Instant timestamp = resolveTimestamp(dataset);
+
+        Util.evaluateWithCombinationFunction(values,
+                data -> data.calculation,
+                data -> data.value,
+                (data, result) -> handleCalculatedValue(dataset, timestamp, data, result, notify, recalculation,
+                        missingValueVariables),
+                data -> handleNonCalculatedValue(dataset, timestamp, data, notify, recalculation, missingValueVariables),
+                (data, exception, code) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR,
+                        "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", data.fullName(), exception.getMessage(),
+                        code),
+                output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG,
+                        "Output while calculating variable: <pre>%s</pre>", output));
+
+        if (!missingValueVariables.isEmpty()) {
+            var variableNames = missingValueVariables.stream().map(VariableData::fullName).collect(Collectors.toSet());
+            MissingValuesEvent event = new MissingValuesEvent(dataset.getInfo(), variableNames, notify);
+            if (mediator.testMode()) {
+                mediator.publishEvent(AsyncEventChannels.DATASET_MISSING_VALUES, dataset.testid, event);
+            }
+            mediator.missingValuesDataset(event);
+        }
+        DataPoint.DatasetProcessedEvent event = new DataPoint.DatasetProcessedEvent(DatasetMapper.fromInfo(dataset.getInfo()),
+                notify);
+        if (mediator.testMode()) {
+            Util.registerTxSynchronization(tm,
+                    txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_PROCESSED, dataset.testid, event));
+        }
+        mediator.dataPointsProcessed(event);
+
+        // queue change detection for variables not missing
+        values.removeIf(missingValueVariables::contains);
+        var changeDetectionEvent = new ServiceMediator.ChangeDetectionEvent(
+                dataset.testid, dataset.id, values.stream().map(v -> v.variableId).toList(), timestamp, notify);
+        mediator.queueChangeDetectionEvent(changeDetectionEvent);
+    }
+
+    private List<VariableData> fetchVariableValues(DatasetDAO dataset) {
+        return session.createNativeQuery(LOOKUP_VARIABLES, Tuple.class)
                 .setParameter(1, dataset.testid)
                 .setParameter(2, dataset.id)
                 .addScalar("variableId", StandardBasicTypes.INTEGER)
@@ -424,12 +459,16 @@ public class AlertingServiceImpl implements AlertingService {
                     return data;
                 })
                 .getResultList();
-        if (debug) {
-            for (VariableData data : values) {
-                logCalculationMessage(dataset, PersistentLogDAO.DEBUG, "Fetched value for variable %s: <pre>%s</pre>",
-                        data.fullName(), data.value);
-            }
+    }
+
+    private void logFetchedValuesIfDebug(DatasetDAO dataset, List<VariableData> values) {
+        for (VariableData data : values) {
+            logCalculationMessage(dataset, PersistentLogDAO.DEBUG,
+                    "Fetched value for variable %s: <pre>%s</pre>", data.fullName(), data.value);
         }
+    }
+
+    private Instant resolveTimestamp(DatasetDAO dataset) {
         List<Object[]> timestampList = session
                 .createNativeQuery(LOOKUP_TIMESTAMP, Object[].class)
                 .setParameter(1, dataset.testid)
@@ -437,96 +476,94 @@ public class AlertingServiceImpl implements AlertingService {
                 .addScalar("timeline_function", StandardBasicTypes.TEXT)
                 .addScalar("value", JsonBinaryType.INSTANCE)
                 .getResultList();
-        Instant timestamp = dataset.start;
-        if (!timestampList.isEmpty()) {
-            String timestampFunction = (String) timestampList.get(0)[0];
-            JsonNode value = (JsonNode) timestampList.get(0)[1];
-            if (timestampFunction != null && !timestampFunction.isBlank()) {
-                value = Util.evaluateOnce(timestampFunction, value, Util::convertToJson,
-                        (code, throwable) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR,
-                                "Evaluation of timestamp failed: '%s' Code: <code><pre>%s</pre></code>", throwable.getMessage(),
-                                code),
-                        output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG,
-                                "Output while calculating timestamp: <pre>%s</pre>", output));
-            }
-            timestamp = Util.toInstant(value);
-            if (timestamp == null) {
-                logCalculationMessage(dataset, PersistentLogDAO.ERROR,
-                        "Cannot parse timestamp, must be number or ISO-8601 timestamp: %s", value);
-                timestamp = dataset.start;
-            }
-        }
-        Instant finalTimestamp = timestamp;
-        Util.evaluateWithCombinationFunction(values, data -> data.calculation, data -> data.value,
-                (data, result) -> {
-                    Double value = Util.toDoubleOrNull(result,
-                            error -> logCalculationMessage(dataset, PersistentLogDAO.ERROR,
-                                    "Evaluation of variable %s failed: %s", data.fullName(), error),
-                            info -> logCalculationMessage(dataset, PersistentLogDAO.INFO, "Evaluation of variable %s: %s",
-                                    data.fullName(), info));
-                    if (value != null) {
-                        createDataPoint(dataset, finalTimestamp, data.variableId, value, notify, recalculation);
-                    } else {
-                        if (recalculation != null) {
-                            recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
-                        }
-                        missingValueVariables.add(data.fullName());
-                    }
-                },
-                data -> {
-                    if (data.numLabels > 1) {
-                        logCalculationMessage(dataset, PersistentLogDAO.WARN,
-                                "Variable %s has more than one label (%s) but no calculation function.", data.fullName(),
-                                data.value.fieldNames());
-                    }
-                    if (data.value == null || data.value.isNull()) {
-                        logCalculationMessage(dataset, PersistentLogDAO.INFO,
-                                "Null value for variable %s - datapoint is not created", data.fullName());
-                        if (recalculation != null) {
-                            recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
-                        }
-                        missingValueVariables.add(data.fullName());
-                        return;
-                    }
 
-                    Double value = null;
-                    if (data.value.isNumber()) {
-                        value = data.value.asDouble();
-                    } else if (data.value.isTextual()) {
-                        try {
-                            value = Double.parseDouble(data.value.asText());
-                        } catch (NumberFormatException e) {
-                            // ignore
-                        }
-                    }
-                    if (value == null) {
-                        logCalculationMessage(dataset, PersistentLogDAO.ERROR,
-                                "Cannot turn %s into a floating-point value for variable %s", data.value, data.fullName());
-                        if (recalculation != null) {
-                            recalculation.errors++;
-                        }
-                        missingValueVariables.add(data.fullName());
-                    } else {
-                        createDataPoint(dataset, finalTimestamp, data.variableId, value, notify, recalculation);
-                    }
-                },
-                (data, exception, code) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR,
-                        "Evaluation of variable %s failed: '%s' Code:<pre>%s</pre>", data.fullName(), exception.getMessage(),
-                        code),
-                output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG,
-                        "Output while calculating variable: <pre>%s</pre>", output));
-        if (!missingValueVariables.isEmpty()) {
-            MissingValuesEvent event = new MissingValuesEvent(dataset.getInfo(), missingValueVariables, notify);
-            if (mediator.testMode())
-                mediator.publishEvent(AsyncEventChannels.DATASET_MISSING_VALUES, dataset.testid, event);
-            mediator.missingValuesDataset(event);
+        if (timestampList.isEmpty()) {
+            return dataset.start;
         }
-        DataPoint.DatasetProcessedEvent event = new DataPoint.DatasetProcessedEvent(DatasetMapper.fromInfo(dataset.getInfo()),
-                notify);
-        if (mediator.testMode())
-            Util.registerTxSynchronization(tm,
-                    txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_PROCESSED, dataset.testid, event));
-        mediator.dataPointsProcessed(event);
+
+        String timestampFunction = (String) timestampList.get(0)[0];
+        JsonNode value = (JsonNode) timestampList.get(0)[1];
+
+        if (timestampFunction != null && !timestampFunction.isBlank()) {
+            value = Util.evaluateOnce(
+                    timestampFunction,
+                    value,
+                    Util::convertToJson,
+                    (code, throwable) -> logCalculationMessage(dataset, PersistentLogDAO.ERROR,
+                            "Evaluation of timestamp failed: '%s' Code: <code><pre>%s</pre></code>", throwable.getMessage(),
+                            code),
+                    output -> logCalculationMessage(dataset, PersistentLogDAO.DEBUG,
+                            "Output while calculating timestamp: <pre>%s</pre>", output));
+        }
+
+        Instant ts = Util.toInstant(value);
+        if (ts == null) {
+            logCalculationMessage(dataset, PersistentLogDAO.ERROR,
+                    "Cannot parse timestamp, must be number or ISO-8601 timestamp: %s", value);
+            ts = dataset.start;
+        }
+        return ts;
+    }
+
+    private void handleCalculatedValue(DatasetDAO dataset, Instant timestamp, VariableData data,
+            Value result, boolean notify, Recalculation recalculation, Set<VariableData> missingValueVariables) {
+        Double value = Util.toDoubleOrNull(result,
+                error -> logCalculationMessage(dataset, PersistentLogDAO.ERROR,
+                        "Evaluation of variable %s failed: %s", data.fullName(), error),
+                info -> logCalculationMessage(dataset, PersistentLogDAO.INFO,
+                        "Evaluation of variable %s: %s", data.fullName(), info));
+
+        if (value != null) {
+            createDataPoint(dataset, timestamp, data.variableId, value, notify, recalculation);
+            return;
+        }
+
+        if (recalculation != null) {
+            recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
+        }
+        missingValueVariables.add(data);
+    }
+
+    private void handleNonCalculatedValue(DatasetDAO dataset, Instant timestamp, VariableData data, boolean notify,
+            Recalculation recalculation, Set<VariableData> missingValueVariables) {
+        if (data.numLabels > 1) {
+            logCalculationMessage(dataset, PersistentLogDAO.WARN,
+                    "Variable %s has more than one label (%s) but no calculation function.", data.fullName(),
+                    data.value.fieldNames());
+        }
+
+        if (data.value == null || data.value.isNull()) {
+            logCalculationMessage(dataset, PersistentLogDAO.INFO,
+                    "Null value for variable %s - datapoint is not created", data.fullName());
+            if (recalculation != null) {
+                recalculation.datasetsWithoutValue.put(dataset.id, dataset.getInfo());
+            }
+            missingValueVariables.add(data);
+            return;
+        }
+
+        Double value = null;
+        if (data.value.isNumber()) {
+            value = data.value.asDouble();
+        } else if (data.value.isTextual()) {
+            try {
+                value = Double.parseDouble(data.value.asText());
+            } catch (NumberFormatException ignored) {
+                // keep value as null
+            }
+        }
+
+        if (value == null) {
+            logCalculationMessage(dataset, PersistentLogDAO.ERROR,
+                    "Cannot turn %s into a floating-point value for variable %s", data.value, data.fullName());
+            if (recalculation != null) {
+                recalculation.errors++;
+            }
+            missingValueVariables.add(data);
+            return;
+        }
+
+        createDataPoint(dataset, timestamp, data.variableId, value, notify, recalculation);
     }
 
     @Transactional
@@ -546,12 +583,11 @@ public class AlertingServiceImpl implements AlertingService {
                     Parameters.with("dataset", dataset).and("variable", variableDAO)).firstResult();
         }
         if (dataPoint != null) {
-            DataPoint.Event event = new DataPoint.Event(dataPoint.id, dataset.id, notify);
-            onNewDataPoint(event, recalculation.lastDatapoint); //Test failure if we do not start a new thread and new tx
-
-            if (mediator.testMode())
+            if (mediator.testMode()) {
+                DataPoint.Event event = new DataPoint.Event(dataPoint.id, dataset.id, notify);
                 Util.registerTxSynchronization(tm,
                         txStatus -> mediator.publishEvent(AsyncEventChannels.DATAPOINT_NEW, dataset.testid, event));
+            }
         } else {
             Log.debugf("DataPoint for dataset %d, variable %d, timestamp %s, value %f not found", dataset.id, variableId,
                     timestamp, value);
@@ -589,98 +625,64 @@ public class AlertingServiceImpl implements AlertingService {
                 level, "changes", msg).persist();
     }
 
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
     @Transactional
-    void onNewDataPoint(DataPoint.Event event, boolean lastDatapoint) {
-        DataPointDAO dataPoint = DataPointDAO.findById(event.dataPointId);
-        if (dataPoint.variable != null) {
-            VariableDAO variable = dataPoint.variable;
-            Log.debugf("Processing new datapoint for dataset %d at %s, variable %d (%s), value %f",
-                    event.datasetId, dataPoint.timestamp, variable.id, variable.name, dataPoint.value);
+    void runChangeDetection(int testId, int datasetId, Collection<Integer> variableIds, Instant timestamp, boolean notify,
+            boolean expectExists, boolean lastDatapoint) {
 
-            FingerprintDAO fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(event.datasetId).orElse(null);
-            JsonNode fpNode = fingerprint != null ? fingerprint.fingerprint : null;
-            Integer fpHash = fingerprint != null ? fingerprint.fpHash : null;
+        Log.debugf("Performing change detection on test {%d} and variables %s after %s", testId, variableIds, timestamp);
 
-            VarAndFingerprint key = new VarAndFingerprint(variable.id, fpHash);
-            Log.debugf("Invalidating variable %d FP %s timestamp %s, current value is %s", variable.id, fingerprint,
-                    dataPoint.timestamp, validUpTo.get(key));
-            validUpTo.compute(key, (ignored, current) -> {
-                if (current == null || !dataPoint.timestamp.isAfter(current.timestamp)) {
-                    return new UpTo(dataPoint.timestamp, false);
-                } else {
-                    return current;
+        var fingerprint = FingerprintDAO.<FingerprintDAO> findByIdOptional(datasetId);
+        JsonNode fpNode = fingerprint.map(f -> f.fingerprint).orElse(null);
+        Integer fpHash = fingerprint.map(f -> f.fpHash).orElse(null);
+
+        deleteChangesByTimeframe(variableIds, fpHash, timestamp);
+        Instant changeTimestamp = fetchLastChangeTimestamp(variableIds, fpHash, timestamp);
+
+        for (var variableId : variableIds) {
+            List<DataPointDAO> dataPoints = fetchDataPoints(variableId, fpHash, changeTimestamp, timestamp);
+
+            if (dataPoints.isEmpty()) {
+                if (expectExists) {
+                    Log.warn("The published datapoint should be already in the list");
                 }
-            });
-            runChangeDetection(variable.id, variable.testId, fpNode, fpHash, event.notify, true, lastDatapoint);
-        } else {
-            Log.warnf("Could not process new datapoint for dataset %d when the supplied variable or id reference is null ",
-                    event.datasetId);
+            } else {
+                processChangeDetection(variableId, testId, fpNode, notify, lastDatapoint, dataPoints);
+            }
         }
     }
 
-    @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Transactional
-    void tryRunChangeDetection(int variableId, int testId, JsonNode fingerprint, Integer fpHash, boolean notify) {
-        runChangeDetection(variableId, testId, fingerprint, fpHash, notify, false, false);
-    }
-
-    @Transactional
-    void runChangeDetection(int variableId, int testId, JsonNode fingerprint, Integer fpHash, boolean notify,
-            boolean expectExists,
-            boolean lastDatapoint) {
-        UpTo valid = validUpTo.get(new VarAndFingerprint(variableId, fpHash));
-        Instant nextTimestamp = session.createNativeQuery(
-                "SELECT MIN(timestamp) FROM datapoint dp LEFT JOIN fingerprint fp ON dp.dataset_id = fp.dataset_id " +
-                        "WHERE dp.variable_id = :variableId " +
-                        "AND (timestamp > :validTimestamp OR (timestamp = :validTimestamp AND :exclusive)) " +
-                        "AND fp.fp_hash = :fpHash",
-                Instant.class)
-                .setParameter("variableId", variableId)
-                .setParameter("validTimestamp", valid != null ? valid.timestamp : LONG_TIME_AGO, StandardBasicTypes.INSTANT)
-                .setParameter("exclusive", valid == null || !valid.inclusive)
+    private void deleteChangesByTimeframe(Collection<Integer> variableIds, Integer fpHash, Instant timestamp) {
+        int numDeleted = session.createNativeQuery(DELETE_CHANGES_BY_TIMEFRAME, int.class)
+                .setParameter("variableIds", variableIds)
+                .setParameter("validTimestamp", timestamp, StandardBasicTypes.INSTANT)
+                .setParameter("exclusive", false)
                 .setParameter("fpHash", fpHash)
-                .getResultStream().filter(Objects::nonNull).findFirst().orElse(null);
-        if (nextTimestamp == null) {
-            // this is the exit clause to stops the recursive invocation
-            Log.debugf("No further datapoints for change detection");
-            return;
-        }
+                .executeUpdate();
+        Log.debugf("Deleted %d changes > %s for variables %d, fingerprint %s", numDeleted, timestamp, variableIds.toString(),
+                fpHash);
+    }
 
-        // this should happen only after reboot, let's start with last change
-        // FIXME: this is happening also when updating a single label for a schema
-        if (valid != null) {
-            int numDeleted = session.createNativeQuery(DELETE_CHANGES_BY_TIMEFRAME, int.class)
-                    .setParameter("variableId", variableId)
-                    .setParameter("validTimestamp", valid.timestamp, StandardBasicTypes.INSTANT)
-                    .setParameter("exclusive", !valid.inclusive)
-                    .setParameter("fpHash", fpHash)
-                    .executeUpdate();
-            Log.debugf("Deleted %d changes %s %s for variable %d, fingerprint %s", numDeleted, valid.inclusive ? ">" : ">=",
-                    valid.timestamp, variableId, fpHash);
-        }
+    private Instant fetchLastChangeTimestamp(Collection<Integer> variableIds, Integer fpHash, Instant timestamp) {
+        return session.createQuery("""
+                SELECT c.timestamp FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.datasetId
+                WHERE c.variable.id IN :variableIds AND fp.fpHash = :fpHash
+                AND (c.timestamp < :validTimestamp OR (c.timestamp = :validTimestamp AND :exclusive = TRUE))
+                ORDER by c.timestamp DESC
+                """, Instant.class)
+                .setParameter("variableIds", variableIds)
+                .setParameter("validTimestamp", timestamp != null ? timestamp : VERY_DISTANT_FUTURE)
+                .setParameter("exclusive", false)
+                .setParameter("fpHash", fpHash)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst()
+                .orElse(LONG_TIME_AGO);
+    }
 
-        var changeQuery = session
-                .createQuery("SELECT c FROM Change c LEFT JOIN Fingerprint fp ON c.dataset.id = fp.datasetId " +
-                        "WHERE c.variable.id = :variableId AND fp.fpHash = :fpHash " +
-                        "AND (c.timestamp < :validTimestamp OR (c.timestamp = :validTimestamp AND :exclusive = TRUE)) " +
-                        "ORDER by c.timestamp DESC", ChangeDAO.class);
-        changeQuery
-                .setParameter("variableId", variableId)
-                .setParameter("validTimestamp", valid != null ? valid.timestamp : VERY_DISTANT_FUTURE)
-                .setParameter("exclusive", valid == null || valid.inclusive)
-                .setParameter("fpHash", fpHash);
-        ChangeDAO lastChange = changeQuery.setMaxResults(1).getResultStream().findFirst().orElse(null);
-
-        Instant changeTimestamp = LONG_TIME_AGO;
-        if (lastChange != null) {
-            Log.debugf("Filtering DP between %s (change %d) and %s", lastChange.timestamp, lastChange.id, nextTimestamp);
-            changeTimestamp = lastChange.timestamp;
-        }
-
-        List<DataPointDAO> dataPoints = session.createQuery(
+    private List<DataPointDAO> fetchDataPoints(int variableId, Integer fpHash, Instant changeTimestamp, Instant nextTimestamp) {
+        return session.createQuery(
                 "SELECT dp FROM DataPoint dp LEFT JOIN Fingerprint fp ON dp.dataset.id = fp.datasetId " +
-                        "JOIN dp.dataset " + // ignore datapoints (that were not deleted yet) from deleted datasets
+                        "JOIN dp.dataset " +
                         "WHERE dp.variable.id = :variableId AND dp.timestamp BETWEEN :changeTimestamp AND :nextTimestamp " +
                         "AND fp.fpHash = :fpHash " +
                         "ORDER BY dp.timestamp DESC, dp.dataset.id DESC",
@@ -690,61 +692,39 @@ public class AlertingServiceImpl implements AlertingService {
                 .setParameter("nextTimestamp", nextTimestamp)
                 .setParameter("fpHash", fpHash)
                 .getResultList();
-        // Last datapoint is already in the list
-        if (dataPoints.isEmpty()) {
-            if (expectExists) {
-                Log.warn("The published datapoint should be already in the list");
+    }
+
+    private void processChangeDetection(int variableId, int testId, JsonNode fingerprint, boolean notify,
+            boolean lastDatapoint, List<DataPointDAO> dataPoints) {
+        int datasetId = dataPoints.get(0).getDatasetId();
+        for (ChangeDetectionDAO detection : ChangeDetectionDAO.<ChangeDetectionDAO> find("variable.id", variableId).list()) {
+            ChangeDetectionModel model = modelResolver.getModel(ChangeDetectionModelType.fromString(detection.model));
+            if (model == null) {
+                logChangeDetectionMessage(variableId, datasetId, PersistentLogDAO.ERROR,
+                        "Cannot find change detection model %s", detection.model);
+                continue;
             }
-        } else {
-            int datasetId = dataPoints.get(0).getDatasetId();
-            for (ChangeDetectionDAO detection : ChangeDetectionDAO.<ChangeDetectionDAO> find("variable.id", variableId)
-                    .list()) {
-                ChangeDetectionModel model = modelResolver.getModel(ChangeDetectionModelType.fromString(detection.model));
-                if (model == null) {
-                    logChangeDetectionMessage(variableId, datasetId, PersistentLogDAO.ERROR,
-                            "Cannot find change detection model %s", detection.model);
-                    continue;
-                }
-                //Only run bulk models on the last datapoint, otherwise run on every datapoint
-                if (model.getType() == ModelType.CONTINOUS || (model.getType() == ModelType.BULK && lastDatapoint)) {
-                    try {
-                        model.analyze(dataPoints, detection.config, change -> {
-                            logChangeDetectionMessage(testId, datasetId, PersistentLogDAO.DEBUG,
-                                    "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
-                            em.persist(change);
-                            //                            Hibernate.initialize(change.dataset.run.id);
-                            String testName = TestDAO.<TestDAO> findByIdOptional(testId).map(test -> test.name)
-                                    .orElse("<unknown>");
-                            Change.Event event = new Change.Event(ChangeMapper.from(change), testId, testName, notify);
-                            if (mediator.testMode())
-                                Util.registerTxSynchronization(tm, txStatus -> mediator
-                                        .publishEvent(AsyncEventChannels.CHANGE_NEW, change.dataset.testid, event));
-                            mediator.executeBlocking(() -> mediator.newChange(event));
-                        });
-                    } catch (ChangeDetectionException e) {
-                        new ChangeDetectionLogDAO(variableId, fingerprint, PersistentLogDAO.ERROR, e.getLocalizedMessage())
-                                .persist();
-                        Log.error("An error occurred while running change detection!", e);
-                    }
+            if (model.getType() == ModelType.CONTINOUS || (model.getType() == ModelType.BULK && lastDatapoint)) {
+                try {
+                    model.analyze(dataPoints, detection.config, change -> {
+                        logChangeDetectionMessage(testId, datasetId, PersistentLogDAO.DEBUG,
+                                "Change %s detected using datapoints %s", change, reversedAndLimited(dataPoints));
+                        em.persist(change);
+                        String testName = TestDAO.<TestDAO> findByIdOptional(testId).map(test -> test.name).orElse("<unknown>");
+                        Change.Event event = new Change.Event(ChangeMapper.from(change), testId, testName, notify);
+                        if (mediator.testMode()) {
+                            Util.registerTxSynchronization(tm, txStatus -> mediator
+                                    .publishEvent(AsyncEventChannels.CHANGE_NEW, change.dataset.testid, event));
+                        }
+                        mediator.newChange(event);
+                    });
+                } catch (ChangeDetectionException e) {
+                    new ChangeDetectionLogDAO(variableId, fingerprint, PersistentLogDAO.ERROR, e.getLocalizedMessage())
+                            .persist();
+                    Log.error("An error occurred while running change detection!", e);
                 }
             }
         }
-        Util.doAfterCommit(tm, () -> {
-            validateUpTo(variableId, fpHash, nextTimestamp);
-            //assume not last datapoint if we have found more
-            messageBus.executeForTest(testId, () -> tryRunChangeDetection(variableId, testId, fingerprint, fpHash, notify));
-        });
-    }
-
-    private void validateUpTo(int variableId, int fpHash, Instant timestamp) {
-        validUpTo.compute(new VarAndFingerprint(variableId, fpHash), (ignored, current) -> {
-            Log.debugf("Attempt %s, valid up to %s", timestamp, current);
-            if (current == null || !current.timestamp.isAfter(timestamp)) {
-                return new UpTo(timestamp, true);
-            } else {
-                return current;
-            }
-        });
     }
 
     private String reversedAndLimited(List<DataPointDAO> list) {
@@ -983,9 +963,7 @@ public class AlertingServiceImpl implements AlertingService {
             throw ServiceException.forbidden("This user cannot trigger the recalculation");
         }
 
-        messageBus.executeForTest(testId, () -> {
-            startRecalculation(testId, notify, debug, clearDatapoints == null || clearDatapoints, from, to);
-        });
+        startRecalculation(testId, notify, debug, clearDatapoints == null || clearDatapoints, from, to);
     }
 
     // It doesn't make sense to limit access to particular user when doing the recalculation,
@@ -1248,11 +1226,7 @@ public class AlertingServiceImpl implements AlertingService {
         }
         // The recalculations are executed in independent transactions, therefore we need to make sure that
         // this rule is committed in DB before starting to reevaluate it.
-        Util.doAfterCommit(tm, () -> {
-            messageBus.executeForTest(testId, () -> {
-                recalculateMissingDataRules(testId, rule);
-            });
-        });
+        recalculateMissingDataRules(testId, rule);
         return rule.id;
     }
 
@@ -1268,7 +1242,7 @@ public class AlertingServiceImpl implements AlertingService {
     }
 
     @WithRoles(extras = Roles.HORREUM_SYSTEM)
-    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    @Transactional
     void recalculateMissingDataRule(int datasetId, Instant timestamp, MissingDataRuleDAO rule) {
         JsonNode value = (JsonNode) em.createNativeQuery(LOOKUP_LABEL_VALUE_FOR_RULE)
                 .setParameter(1, datasetId).setParameter(2, rule.id)
@@ -1386,48 +1360,6 @@ public class AlertingServiceImpl implements AlertingService {
         public Recalculation(boolean lastDatapoint, boolean clearDatapoints) {
             this.lastDatapoint = lastDatapoint;
             this.clearDatapoints = clearDatapoints;
-        }
-    }
-
-    static final class VarAndFingerprint {
-        final int varId;
-        final Integer fingerprint;
-
-        VarAndFingerprint(int varId, Integer fingerprint) {
-            this.varId = varId;
-            this.fingerprint = fingerprint;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o)
-                return true;
-            if (o == null || getClass() != o.getClass())
-                return false;
-            VarAndFingerprint that = (VarAndFingerprint) o;
-            return varId == that.varId && Objects.equals(fingerprint, that.fingerprint);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(varId, fingerprint);
-        }
-    }
-
-    private static class UpTo {
-        final Instant timestamp;
-        final boolean inclusive;
-
-        private UpTo(Instant timestamp, boolean inclusive) {
-            this.timestamp = timestamp;
-            this.inclusive = inclusive;
-        }
-
-        @Override
-        public String toString() {
-            return "{ts=" + timestamp +
-                    ", incl=" + inclusive +
-                    '}';
         }
     }
 }
