@@ -261,7 +261,7 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
                                     
                                 >
                                     <Button
-                                        style={{ width: "51%" }}
+                                        style={{ width: "100%" }}
                                         variant="control"
                                         isDisabled={i === 0}
                                         onClick={() => {
@@ -274,7 +274,7 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
                                         Move up
                                     </Button>
                                     <Button
-                                        style={{ width: "51%" }}
+                                        style={{ width: "100%" }}
                                         variant="primary"
                                         onClick={() => {
                                             selectedView.components.splice(i, 1)
@@ -285,7 +285,7 @@ export default function Views({ testId, testOwner, funcsRef, onModified, ...prop
                                         Delete
                                     </Button>
                                     <Button
-                                        style={{ width: "51%" }}
+                                        style={{ width: "100%" }}
                                         variant="control"
                                         isDisabled={i === selectedView.components.length - 1}
                                         onClick={() => {
