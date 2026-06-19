@@ -33,10 +33,10 @@ That's it, Grafana is ready to start consuming data from Horreum. The next steps
 
 ### Key Metrics in Grafana
 
-Horreum accepts any json format for a run and uses Labels (TODO link) to extract or calculate key metrics.
+Horreum accepts any json format for a run and uses [Labels](/docs/tasks/define-schema-and-views/) to extract or calculate key metrics.
 Metric values, referred to as Label Values in horreum, are automatically calculated for each upload. There is an API
 to retrieve the values for a specific upload but that would be tedious for comparing across runs. 
-The test api endpoint has a `/labelValues` (TODO link to documentation) that can retrieve a filtered list of all the label values from each upload.
+The test api endpoint has a [`/labelValues`](/docs/reference/extracting-data-via-labelvalues/) endpoint that can retrieve a filtered list of all the label values from each upload.
 
 > /test/${testId}/labelValues
 
@@ -82,6 +82,7 @@ At this point, customizing the grafana panel depends on what values are found in
 
 There is a good chance you only want data from certain runs. 
 The `/labelValues` endpoint supports a `filter` query parameter to filter out datasets.
+See [Extracting data via labelValues](/docs/reference/extracting-data-via-labelvalues/) for the full reference including ordering, pagination, and additional examples.
 There are 2 ways to filter:
 1. provide a json object that must exist in the label values.
    
@@ -116,7 +117,7 @@ query parameter options on the `/labelValues` endpoint.
 
 ### Include
 Adding `include=foo` to the `/labelValues` endpoint query tells Horreum to only include the `foo` label and its value in the `values` part of the 
-`/labelValues` response. You can specify multiple labels with `incude=foo&include=bar` or `include=foo,bar` using url encoding or with curl:
+`/labelValues` response. You can specify multiple labels with `include=foo&include=bar` or `include=foo,bar` using url encoding or with curl:
 ```bash
 curl --query-param "include=foo" --query-param "include=bar" ...
 ```
