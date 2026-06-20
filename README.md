@@ -12,16 +12,7 @@
 ---
 ## What is Horreum?
 
-Horreum is a service for storing performance data and regression analysis.
-
-Please, visit our project website: 
-
-[https://horreum.hyperfoil.io](https://horreum.hyperfoil.io)
-
-for more information.
-
-Horreum is a [Quarkus](https://quarkus.io/) based application which uses
-[Quinoa](https://quarkiverse.github.io/quarkiverse-docs/quarkus-quinoa/dev/) as its [nodejs](https://nodejs.org/en) engine.
+[Horreum](https://horreum.hyperfoil.io) is a web-based platform for storing, managing and visualizing the results of your performance experiment. It provides a user-friendly interface for monitoring the experiments, as well as for analyzing and visualizing the results. It also provides an automated way to detect performance anomaly. Horreum is designed to be scalable and can handle large amount of data, making it a popular choice for tracking performance regressions.
 
 ## Prerequisites
 
