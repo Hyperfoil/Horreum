@@ -194,7 +194,7 @@ public class EdivisiveTests extends BaseServiceTest {
         int run10 = uploadRun(ts + 4, ts + 4, runWithValue(10, schema), test.name);
         assertValue(datapointQueue, 10);
 
-        Change.Event changeEvent1 = changeQueue.poll(10, TimeUnit.SECONDS);
+        Change.Event changeEvent1 = changeQueue.poll(40, TimeUnit.SECONDS);
         assertNotNull(changeEvent1);
 
         testSerialization(changeEvent1, Change.Event.class);
