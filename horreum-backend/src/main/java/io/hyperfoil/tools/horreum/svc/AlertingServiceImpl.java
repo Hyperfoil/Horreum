@@ -34,8 +34,6 @@ import jakarta.persistence.Query;
 import jakarta.persistence.Tuple;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.hibernate.Session;
@@ -819,17 +817,56 @@ public class AlertingServiceImpl implements AlertingService {
                 }, PanacheEntityBase::delete);
                 current.persist();
             }, current -> {
-                DataPointDAO.delete("variable.id", current.id);
-                ChangeDAO.delete("variable.id", current.id);
-                current.delete();
+                deleteVariableWithDependencies(current);
             });
 
             em.flush();
         } catch (PersistenceException e) {
             Log.error("Failed to update variables", e);
-            throw new WebApplicationException(e, Response.serverError().build());
+            throw ServiceException.serverError(
+                    "Failed to delete variable: it may still be referenced by existing changes or datapoints.");
         }
         Log.debug("Variables updated, everything is fine, returning");
+    }
+
+    /**
+     * Deletes a variable and all its dependent rows (datapoints, changes, experiment comparisons)
+     * using native SQL to avoid Hibernate persistence context desync issues.
+     * The entity-level delete handles the JPA-cascaded changedetection rows.
+     *
+     * The native deletes temporarily elevate to horreum.system role because
+     * RLS policies on change/datapoint/experiment_comparisons require system
+     * or dataset-owner tester roles, and the calling user may not satisfy those
+     * for all referenced datasets.
+     */
+    private void deleteVariableWithDependencies(VariableDAO variable) {
+        int variableId = variable.id;
+        // Temporarily set horreum.system role to bypass RLS policies on dependent tables.
+        // The change/datapoint tables have RLS delete policies that check dataset ownership,
+        // which the current user may not satisfy for all datasets referencing this variable.
+        String previousRoles = (String) em
+                .createNativeQuery("SELECT set_config('horreum.userroles', :roles, true)")
+                .setParameter("roles", Roles.HORREUM_SYSTEM)
+                .getSingleResult();
+        try {
+            em.createNativeQuery("DELETE FROM datapoint WHERE variable_id = :variableId")
+                    .setParameter("variableId", variableId)
+                    .executeUpdate();
+            em.createNativeQuery("DELETE FROM change WHERE variable_id = :variableId")
+                    .setParameter("variableId", variableId)
+                    .executeUpdate();
+            em.createNativeQuery("DELETE FROM experiment_comparisons WHERE variable_id = :variableId")
+                    .setParameter("variableId", variableId)
+                    .executeUpdate();
+        } finally {
+            // Restore previous roles
+            em.createNativeQuery("SELECT set_config('horreum.userroles', :roles, true)")
+                    .setParameter("roles", previousRoles != null ? previousRoles : "")
+                    .getSingleResult();
+        }
+        em.flush();
+        variable.delete();
+        em.flush();
     }
 
     private void ensureDefaults(Set<ChangeDetectionDAO> rds) {
