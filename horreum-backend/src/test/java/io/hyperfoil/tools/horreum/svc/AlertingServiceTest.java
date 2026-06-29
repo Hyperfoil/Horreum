@@ -153,7 +153,7 @@ public class AlertingServiceTest extends BaseServiceTest {
         int run4 = uploadRun(ts + 3, ts + 3, runWithValue(2, schema), test.name);
         assertValue(datapointQueue, 2);
 
-        assertNull(changeQueue.poll(50, TimeUnit.MILLISECONDS));
+        assertNull(changeQueue.poll(500, TimeUnit.MILLISECONDS));
 
         uploadRun(ts + 4, ts + 4, runWithValue(3, schema), test.name);
         assertValue(datapointQueue, 3);
@@ -186,7 +186,7 @@ public class AlertingServiceTest extends BaseServiceTest {
         assertValue(datapointQueue, 1.5);
 
         // mean of previous values is 1.5, now the min is 1.5 => no change
-        assertNull(changeQueue.poll(50, TimeUnit.MILLISECONDS));
+        assertNull(changeQueue.poll(500, TimeUnit.MILLISECONDS));
 
         uploadRun(ts + 6, ts + 6, runWithValue(2, schema), test.name);
         assertValue(datapointQueue, 2);
