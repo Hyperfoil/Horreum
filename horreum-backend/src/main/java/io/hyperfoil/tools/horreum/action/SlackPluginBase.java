@@ -55,7 +55,7 @@ public abstract class SlackPluginBase {
         }
         RequestOptions options = new RequestOptions()
                 .setHost(url.getHost())
-                .setPort(url.getPort())
+                .setPort(url.getPort() > 0 ? url.getPort() : url.getDefaultPort())
                 .setURI(url.getPath())
                 .setSsl("https".equalsIgnoreCase(url.getProtocol()));
         return client.httpClient().request(HttpMethod.POST, options)
