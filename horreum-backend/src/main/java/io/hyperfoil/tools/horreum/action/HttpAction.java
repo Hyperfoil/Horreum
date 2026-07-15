@@ -5,11 +5,13 @@ import java.net.URL;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.entity.data.AllowedSiteDAO;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
@@ -31,6 +33,9 @@ public class HttpAction implements ActionPlugin {
 
     @Inject
     Vertx reactiveVertx;
+
+    @Inject
+    Instance<BodyFormatter> formatters;
 
     @ConfigProperty(name = "horreum.hook.tls.insecure", defaultValue = "false")
     boolean insecureTls;
@@ -88,10 +93,12 @@ public class HttpAction implements ActionPlugin {
                 .setPort(url.getPort() >= 0 ? url.getPort() : url.getDefaultPort())
                 .setURI(url.getFile())
                 .setSsl("https".equalsIgnoreCase(url.getProtocol()));
+        Buffer requestBody = buildBody(config, payload, body);
+
         Log.infof("Sending event to %s", url);
         return http1xClient.request(HttpMethod.POST, options)
                 .putHeader("Content-Type", "application/json")
-                .sendBuffer(Buffer.buffer(body.toString()))
+                .sendBuffer(requestBody)
                 .onItem().transform(response -> {
                     if (response.statusCode() < 400) {
                         return "Successfully(" + response.statusCode() + ") notified hook: " + url;
@@ -100,5 +107,20 @@ public class HttpAction implements ActionPlugin {
                                 + ": " + response.bodyAsString());
                     }
                 }).onFailure().transform(t -> new RuntimeException("Failed to POST " + url + ": " + t.getMessage()));
+    }
+
+    private Buffer buildBody(JsonNode config, Object payload, JsonNode rawBody) {
+        String formatterName = config.path("formatter").asText(null);
+        if (formatterName == null || formatterName.isBlank()) {
+            return Buffer.buffer(rawBody.toString());
+        }
+        BodyFormatter formatter = formatters.stream()
+                .filter(f -> f.name().equals(formatterName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown formatter '" + formatterName + "'"));
+        String text = formatter.format(config, payload);
+        ObjectNode slackPayload = Util.OBJECT_MAPPER.createObjectNode();
+        slackPayload.put("text", text);
+        return Buffer.buffer(slackPayload.toString());
     }
 }

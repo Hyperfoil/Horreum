@@ -118,15 +118,36 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                 </FormHelperText>
             </FormGroup>
             {props.action.type === "http" && (
-                <HttpActionUrlSelector
-                    active={props.isTester}
-                    value={(props.action.config as Http)?.url || ""}
-                    setValue={value => {
-                        updateConfig({ url: value })
-                    }}
-                    isReadOnly={!props.isTester}
-                    setValid={props.setValid}
-                />
+                <>
+                    <HttpActionUrlSelector
+                        active={props.isTester}
+                        value={(props.action.config as Http)?.url || ""}
+                        setValue={value => {
+                            updateConfig({ url: value })
+                        }}
+                        isReadOnly={!props.isTester}
+                        setValid={props.setValid}
+                    />
+                    <FormGroup label="Formatter" fieldId="formatter">
+                        <SimpleSelect
+                            initialOptions={
+                                (props.action.event === CHANGE_NEW
+                                    ? [{value: "changeToMarkdown", content: "Change to Markdown"}]
+                                    : props.action.event === EXPERIMENT_RESULT_NEW
+                                        ? [{value: "experimentsResultToMarkdown", content: "Experiment result to Markdown"}]
+                                        : props.action.event === TEST_NEW
+                                            ? [{value: "testToSlack", content: "Test to Slack Markdown"}]
+                                            : []
+                                ).map(o => ({...o, selected: o.value === (props.action.config as Http).formatter}))
+                            }
+                            placeholderText="None (send raw JSON)"
+                            selected={(props.action.config as Http).formatter}
+                            onSelect={(_, value) => updateConfig({formatter: value as string})}
+                            isDisabled={!props.isTester}
+                            toggleWidth="100%"
+                        />
+                    </FormGroup>
+                </>
             )}
             {props.action.type === "github-issue-comment" && (
                 <>
