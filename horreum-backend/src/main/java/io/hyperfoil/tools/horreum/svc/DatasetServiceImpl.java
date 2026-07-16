@@ -178,8 +178,8 @@ public class DatasetServiceImpl implements DatasetService {
          SELECT dataset.id as dataset_id,
             COALESCE(jsonb_object_agg(label.name, lv.value) FILTER (WHERE label.name IS NOT NULL), '{}'::jsonb) AS values
          FROM dataset
-         LEFT JOIN label_values lv ON dataset.id = lv.dataset_id
-         LEFT JOIN label ON label.id = label_id
+         JOIN label_values lv ON dataset.id = lv.dataset_id
+         JOIN label ON label.id = lv.label_id
          """;
 
     private static final String GET_FINGERPRINT_FROM_LABEL_VALUES = """
@@ -220,7 +220,8 @@ public class DatasetServiceImpl implements DatasetService {
                 .append("), ").append(VALIDATION_SELECT);
         JsonNode jsonFilter = null;
         if (filter != null && !filter.isBlank() && !filter.equals("{}")) {
-            sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE testid = :testId GROUP BY dataset.id)");
+            sql.append(", all_labels AS (").append(ALL_LABELS_SELECT)
+                    .append(" WHERE testid = :testId AND label.name IN (SELECT jsonb_object_keys(:jsonFilter)) GROUP BY dataset.id)");
             sql.append(DATASET_SUMMARY_SELECT);
             addViewIdCondition(sql, viewId);
             sql.append(
@@ -257,7 +258,8 @@ public class DatasetServiceImpl implements DatasetService {
 
         JsonNode jsonFilter = null;
         if (filter != null && !filter.isBlank() && !filter.equals("{}")) {
-            sql.append(", all_labels AS (").append(ALL_LABELS_SELECT).append(" WHERE runid = :runId GROUP BY dataset.id)");
+            sql.append(", all_labels AS (").append(ALL_LABELS_SELECT)
+                    .append(" WHERE runid = :runId AND label.name IN (SELECT jsonb_object_keys(:jsonFilter)) GROUP BY dataset.id)");
             sql.append(DATASET_SUMMARY_SELECT);
             addViewIdCondition(sql, viewId);
             sql.append(
