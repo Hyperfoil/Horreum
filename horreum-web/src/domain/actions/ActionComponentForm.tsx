@@ -132,7 +132,10 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         <SimpleSelect
                             initialOptions={
                                 (props.action.event === CHANGE_NEW
-                                    ? [{value: "changeToMarkdown", content: "Change to Markdown"}]
+                                    ? [
+                                        {value: "changeToMarkdown", content: "Change to Markdown"},
+                                        {value: "changeToSlackWebhook", content: "Change to Slack Webhook"}
+                                      ]
                                     : props.action.event === EXPERIMENT_RESULT_NEW
                                         ? [{value: "experimentsResultToMarkdown", content: "Experiment result to Markdown"}]
                                         : props.action.event === TEST_NEW
@@ -140,7 +143,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                             : []
                                 ).map(o => ({...o, selected: o.value === (props.action.config as Http).formatter}))
                             }
-                            placeholderText="None (send raw JSON)"
+                            placeholder="None (send raw JSON)"
                             selected={(props.action.config as Http).formatter}
                             onSelect={(_, value) => updateConfig({formatter: value as string})}
                             isDisabled={!props.isTester}
