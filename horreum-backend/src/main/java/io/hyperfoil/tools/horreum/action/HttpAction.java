@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.entity.data.AllowedSiteDAO;
 import io.hyperfoil.tools.horreum.svc.ServiceException;
@@ -117,6 +118,13 @@ public class HttpAction implements ActionPlugin {
                 .filter(f -> f.name().equals(formatterName))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown formatter '" + formatterName + "'"));
-        return Buffer.buffer(formatter.format(config, payload));
+        String text = formatter.format(config, payload);
+        String url=config.path("url").asText("");
+        if (url.contains("hooks.slack.com")) {
+            ObjectNode slackPayload = Util.OBJECT_MAPPER.createObjectNode();
+            slackPayload.put("text", text);
+            return Buffer.buffer(slackPayload.toString());
+        }
+        return Buffer.buffer(text);
     }
 }
