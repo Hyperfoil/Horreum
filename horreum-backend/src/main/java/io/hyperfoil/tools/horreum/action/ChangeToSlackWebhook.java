@@ -8,17 +8,15 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.hyperfoil.tools.horreum.api.alerting.Change;
 import io.hyperfoil.tools.horreum.entity.data.DatasetDAO;
-import io.hyperfoil.tools.horreum.svc.Util;
 import io.quarkus.qute.Location;
 import io.quarkus.qute.Template;
 
 @ApplicationScoped
 public class ChangeToSlackWebhook implements BodyFormatter {
-    @Location("new_issue_from_change")
+    @Location("slack_from_change")
     Template template;
 
     @ConfigProperty(name = "horreum.url")
@@ -49,8 +47,6 @@ public class ChangeToSlackWebhook implements BodyFormatter {
                 .data("datasetOrdinal", event.change.dataset.ordinal)
                 .data("description", change.description)
                 .render();
-        ObjectNode body = Util.OBJECT_MAPPER.createObjectNode();
-        body.put("text", text);
-        return body.toString();
+        return text;
     }
 }
