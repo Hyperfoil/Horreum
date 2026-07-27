@@ -1023,6 +1023,10 @@ components:
         url:
           type: string
           description: HTTP address
+        formatter:
+          type: string
+          description: "Optional formatter to transform payload before sending; when\
+            \ set, wraps formatted text in {\"text\": \"...\"}"
     IndexedLabelValueMap:
       type: object
       additionalProperties:
