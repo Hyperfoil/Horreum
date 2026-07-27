@@ -119,7 +119,7 @@ public class HttpAction implements ActionPlugin {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown formatter '" + formatterName + "'"));
         String text = formatter.format(config, payload);
-        String url=config.path("url").asText("");
+        String url = config.path("url").asText("");
         if (url.contains("hooks.slack.com")) {
             ObjectNode slackPayload = Util.OBJECT_MAPPER.createObjectNode();
             slackPayload.put("text", text);
