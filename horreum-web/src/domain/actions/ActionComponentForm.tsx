@@ -137,7 +137,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                         {value: "changeToSlackWebhook", content: "Change to Slack Webhook"}
                                       ]
                                     : props.action.event === EXPERIMENT_RESULT_NEW
-                                        ? [{value: "experimentsResultToMarkdown", content: "Experiment result to Markdown"}]
+                                        ? [{value: "experimentResultToMarkdown", content: "Experiment result to Markdown"}]
                                         : props.action.event === TEST_NEW
                                             ? [{value: "testToSlack", content: "Test to Slack Markdown"}]
                                             : []
@@ -221,7 +221,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                         <SimpleSelect
                             initialOptions={
                                 (props.action.event === EXPERIMENT_RESULT_NEW
-                                        ? [{value: "experimentsResultToMarkdown", content: "Experiment result to Markdown"}]
+                                        ? [{value: "experimentResultToMarkdown", content: "Experiment result to Markdown"}]
                                         : []
                                 ).map(
                                     o => ({...o, selected: o.value == (props.action.config as GithubIssueComment).formatter})
@@ -299,7 +299,7 @@ export default function ActionComponentForm(props: ActionComponentFormProps) {
                                 (props.action.event === CHANGE_NEW
                                         ? [{value: "changeToMarkdown", content: "Change to Markdown"}]
                                         : props.action.event === EXPERIMENT_RESULT_NEW
-                                            ? [{value: "experimentsResultToMarkdown", content: "Experiment result to Markdown"}]
+                                            ? [{value: "experimentResultToMarkdown", content: "Experiment result to Markdown"}]
                                             : props.action.event === TEST_NEW
                                                 ? [{value: "testToSlack", content: "Test to Slack Markdown"}]
                                                 : []
