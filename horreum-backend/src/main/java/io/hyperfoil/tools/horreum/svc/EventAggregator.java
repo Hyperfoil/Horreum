@@ -51,7 +51,7 @@ public class EventAggregator {
             if (next == null) {
                 return;
             } else if (next.emitTimestamp() <= now) {
-                mediator.executeBlocking(() -> mediator.newDatasetChanges(next));
+                mediator.newDatasetChanges(next);
                 datasetChanges.remove(next.dataset.id);
             } else {
                 if (timerId >= 0) {
