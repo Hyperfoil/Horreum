@@ -62,7 +62,6 @@ import io.hyperfoil.tools.horreum.api.services.ExperimentService;
 import io.hyperfoil.tools.horreum.api.services.RunService;
 import io.hyperfoil.tools.horreum.api.services.TestService;
 import io.hyperfoil.tools.horreum.bus.AsyncEventChannels;
-import io.hyperfoil.tools.horreum.bus.BlockingTaskDispatcher;
 import io.hyperfoil.tools.horreum.entity.ExperimentProfileDAO;
 import io.hyperfoil.tools.horreum.entity.FingerprintDAO;
 import io.hyperfoil.tools.horreum.entity.alerting.*;
@@ -99,9 +98,6 @@ public class BaseServiceTest {
 
     @Inject
     protected RoleManager roleManager;
-
-    @Inject
-    BlockingTaskDispatcher messageBus;
 
     @Inject
     ObjectMapper mapper;

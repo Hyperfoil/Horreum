@@ -528,20 +528,6 @@ public class Util {
         return causes.toString();
     }
 
-    public static void executeBlocking(Vertx vertx, Runnable runnable) {
-        Runnable wrapped = wrapForBlockingExecution(runnable);
-        vertx.executeBlocking(promise -> {
-            try {
-                wrapped.run();
-            } catch (Exception e) {
-                Log.error("Failed to execute blocking task", e);
-            } finally {
-                promise.complete();
-            }
-        }, result -> {
-        });
-    }
-
     public static Runnable wrapForBlockingExecution(Runnable runnable) {
         // CDI needs to be propagated - without that the interceptors wouldn't run.
         // Without thread context propagation we would get an exception in Run.findById, though the interceptors would be invoked correctly.

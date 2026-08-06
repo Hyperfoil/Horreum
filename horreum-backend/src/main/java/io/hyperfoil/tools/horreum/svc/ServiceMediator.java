@@ -117,10 +117,6 @@ public class ServiceMediator {
     public ServiceMediator() {
     }
 
-    void executeBlocking(Runnable runnable) {
-        Util.executeBlocking(vertx, runnable);
-    }
-
     boolean testMode() {
         return testMode;
     }
@@ -157,6 +153,7 @@ public class ServiceMediator {
         datasetService.deleteDataset(datasetId);
     }
 
+    @Transactional
     void newChange(Change.Event event) {
         actionService.onNewChange(event);
         aggregator.onNewChange(event);
