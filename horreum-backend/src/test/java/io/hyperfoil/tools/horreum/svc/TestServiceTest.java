@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.Ignore;
 import org.junit.jupiter.api.TestInfo;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -224,7 +225,7 @@ class TestServiceTest extends BaseServiceTest {
         addMissingDataRule(test, "Let me know", JsonNodeFactory.instance.arrayNode().add("foo"), null,
                 (int) TimeUnit.DAYS.toMillis(1));
 
-        addExperimentProfile(test, "Some profile", VariableDAO.<VariableDAO> listAll().get(0));
+        addExperimentProfile(test, "Some profile", VariableDAO.<VariableDAO>listAll().get(0));
         addSubscription(test);
 
         HashMap<String, List<JsonNode>> db = dumpDatabaseContents();
@@ -277,7 +278,7 @@ class TestServiceTest extends BaseServiceTest {
 
         String t = readFile(p.resolve("quarkus_sb_test.json").toFile());
         jsonRequest().body(t).post("/api/test/import").then().statusCode(201);
-        TestDAO test = TestDAO.<TestDAO> find("name", "quarkus-spring-boot-comparison").firstResult();
+        TestDAO test = TestDAO.<TestDAO>find("name", "quarkus-spring-boot-comparison").firstResult();
         assertEquals(1, test.transformers.size());
 
         List<SchemaService.SchemaDescriptor> descriptors = jsonRequest().get("/api/schema/descriptors")
@@ -312,7 +313,7 @@ class TestServiceTest extends BaseServiceTest {
 
         assertEquals(2, TestDAO.count());
 
-        TestDAO imported = TestDAO.<TestDAO> find("name", "imported-test").firstResult();
+        TestDAO imported = TestDAO.<TestDAO>find("name", "imported-test").firstResult();
         assertNotNull(imported);
         assertNotEquals(test.id, imported.id);
 
@@ -351,7 +352,7 @@ class TestServiceTest extends BaseServiceTest {
 
         assertEquals(2, TestDAO.count());
 
-        TestDAO imported = TestDAO.<TestDAO> find("name", "imported-test").firstResult();
+        TestDAO imported = TestDAO.<TestDAO>find("name", "imported-test").firstResult();
         assertNotNull(imported);
         assertNotEquals(test.id, imported.id);
 
@@ -463,9 +464,9 @@ class TestServiceTest extends BaseServiceTest {
         TestExport testExport = jsonRequest().get("/api/test/" + importedId + "/export").then()
                 .statusCode(200).extract().as(TestExport.class);
         assertEquals(importedId, testExport.id);
-        assertNull(VariableDAO.<VariableDAO> find("name", "Max RSS (v2)").firstResult());
+        assertNull(VariableDAO.<VariableDAO>find("name", "Max RSS (v2)").firstResult());
 
-        VariableDAO maxRSS = VariableDAO.<VariableDAO> find("name", "Max RSS").firstResult();
+        VariableDAO maxRSS = VariableDAO.<VariableDAO>find("name", "Max RSS").firstResult();
         assertNotNull(maxRSS);
         assertEquals("Max RSS", maxRSS.name);
         Variable var = VariableMapper.from(maxRSS);
@@ -481,7 +482,7 @@ class TestServiceTest extends BaseServiceTest {
                 .as(Integer.class);
         assertEquals(importedId, updatedId);
 
-        VariableDAO varDAO = VariableDAO.<VariableDAO> find("name", "Max RSS (v2)").firstResult();
+        VariableDAO varDAO = VariableDAO.<VariableDAO>find("name", "Max RSS (v2)").firstResult();
         assertNotNull(varDAO);
     }
 
@@ -496,7 +497,7 @@ class TestServiceTest extends BaseServiceTest {
                 .statusCode(200).extract().as(TestExport.class);
         assertEquals(importedId, testExport.id);
 
-        VariableDAO maxRSS = VariableDAO.<VariableDAO> find("name", "Max RSS").firstResult();
+        VariableDAO maxRSS = VariableDAO.<VariableDAO>find("name", "Max RSS").firstResult();
         assertNotNull(maxRSS);
         assertEquals("Max RSS", maxRSS.name);
         Variable var = VariableMapper.from(maxRSS);
@@ -533,7 +534,7 @@ class TestServiceTest extends BaseServiceTest {
                 .as(Integer.class);
         assertEquals(importedId, updatedId);
 
-        ExperimentProfileDAO epDAO = ExperimentProfileDAO.<ExperimentProfileDAO> find("name", "acme Quarkus experiment")
+        ExperimentProfileDAO epDAO = ExperimentProfileDAO.<ExperimentProfileDAO>find("name", "acme Quarkus experiment")
                 .firstResult();
         assertNotNull(epDAO);
         assertEquals(1, epDAO.comparisons.size());
@@ -577,7 +578,7 @@ class TestServiceTest extends BaseServiceTest {
 
     // utility to get list of schemas
     private TestService.TestQueryResult listTests(String token, String roles, Integer limit, Integer page, String sort,
-            SortDirection direction) {
+                                                  SortDirection direction) {
         StringBuilder query = new StringBuilder("/api/test/");
         if (roles != null || limit != null || page != null || sort != null || direction != null) {
             query.append("?");
@@ -629,7 +630,7 @@ class TestServiceTest extends BaseServiceTest {
         String t = readFile(p.resolve("quarkus_sb_test.json").toFile());
         Integer testId = jsonRequest().body(t).post("/api/test/import").then().statusCode(201).extract().as(Integer.class);
 
-        TestDAO test = TestDAO.<TestDAO> find("name", "quarkus-spring-boot-comparison").firstResult();
+        TestDAO test = TestDAO.<TestDAO>find("name", "quarkus-spring-boot-comparison").firstResult();
         assertEquals(1, test.transformers.size());
 
         //let's get all the labels to make sure they're all there
@@ -703,4 +704,47 @@ class TestServiceTest extends BaseServiceTest {
         }
         assertEquals(oldMaxId + 80, maxId.getAsInt());
     }
+
+    @org.junit.jupiter.api.Test
+    void testDeleteVariable() throws IOException, InterruptedException {
+        Path p = new File(getClass().getClassLoader().getResource(".").getPath()).toPath();
+        p = p.getParent().getParent().getParent().resolve("infra-legacy/example-data/");
+        ObjectMapper mapper = new ObjectMapper();
+        String s = readFile(p.resolve("quarkus_sb_schema.json").toFile());
+        Integer schemaId = jsonRequest().body(s).post("/api/schema/import").then().statusCode(201).extract().as(Integer.class);
+
+        s = readFile(p.resolve("quarkus_sb_compare_ds.json").toFile());
+        Integer schemaId2 = jsonRequest().body(s).post("/api/schema/import").then().statusCode(201).extract().as(Integer.class);
+        assertTrue(schemaId2 > schemaId);
+
+        String t = readFile(p.resolve("quarkus_sb_test.json").toFile());
+        Integer testId = jsonRequest().body(t).post("/api/test/import").then().statusCode(201).extract().as(Integer.class);
+
+        TestDAO test = TestDAO.<TestDAO>find("name", "quarkus-spring-boot-comparison").firstResult();
+        assertEquals(1, test.transformers.size());
+
+        //let's get all the labels to make sure they're all there
+        List<Label> labels = jsonRequest().get("/api/schema/" + schemaId + "/labels")
+                .then().statusCode(200).extract().body().jsonPath().getList(".", Label.class);
+        assertEquals(30, labels.size());
+
+        List<Label> labels2 = jsonRequest().get("/api/schema/" + schemaId2 + "/labels")
+                .then().statusCode(200).extract().body().jsonPath().getList(".", Label.class);
+        assertEquals(11, labels2.size());
+
+        List<ChangeDetectionDAO> changes = ChangeDetectionDAO.list("variable.testId", testId);
+        assertEquals(8, changes.size());
+        List<Variable> variables = variables(testId);
+        assertEquals(4, variables.size());
+        variables.remove(0);
+        variables.remove(0);
+
+        updateVariables(testId, variables);
+
+        List<Variable> variables2 = variables(testId);
+        assertEquals(2, variables2.size());
+        changes = ChangeDetectionDAO.list("variable.testId", testId);
+        assertEquals(4, changes.size());
+    }
+
 }
